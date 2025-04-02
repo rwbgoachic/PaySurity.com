@@ -191,6 +191,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add route to add funds from bank account to wallet
+  app.post("/api/bank-accounts/:id/add-funds", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const bankAccountId = parseInt(req.params.id);
+      const { walletId, amount } = z.object({ 
+        walletId: z.number(),
+        amount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+          message: "Amount must be a positive number"
+        })
+      }).parse(req.body);
+      
+      // Get the bank account to check ownership
+      const bankAccount = await storage.getBankAccount(bankAccountId);
+      if (!bankAccount) {
+        return res.status(404).json({ message: "Bank account not found" });
+      }
+      
+      // Check if the user owns the bank account
+      if (bankAccount.userId !== req.user?.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Get the wallet to check ownership
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+      
+      // Check if the user owns the wallet
+      if (wallet.userId !== req.user?.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Add funds to the wallet
+      const updatedWallet = await storage.allocateFunds(walletId, amount);
+      
+      // Create a transaction record
+      const transaction = await storage.createTransaction({
+        walletId,
+        userId: req.user.id,
+        amount,
+        type: "incoming",
+        method: "ach",
+        merchantName: bankAccount.bankName,
+        expenseType: "deposit",
+        sourceOfFunds: `${bankAccount.bankName} - ${bankAccount.accountType} (${bankAccount.accountNumber})`,
+      });
+      
+      res.status(200).json({ wallet: updatedWallet, transaction });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Fund request routes
   app.get("/api/fund-requests", async (req, res, next) => {
     try {
