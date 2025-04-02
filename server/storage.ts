@@ -1,4 +1,20 @@
-import { users, wallets, transactions, bankAccounts, fundRequests, type User, type InsertUser, type Wallet, type InsertWallet, type Transaction, type InsertTransaction, type BankAccount, type InsertBankAccount, type FundRequest, type InsertFundRequest } from "@shared/schema";
+import { 
+  users, wallets, transactions, bankAccounts, fundRequests, 
+  payrollEntries, timeEntries, accountRequests, spendingControls, 
+  educationalContent, savingsGoals, accountingIntegrations,
+  type User, type InsertUser, 
+  type Wallet, type InsertWallet, 
+  type Transaction, type InsertTransaction, 
+  type BankAccount, type InsertBankAccount, 
+  type FundRequest, type InsertFundRequest,
+  type PayrollEntry, type InsertPayrollEntry,
+  type TimeEntry, type InsertTimeEntry,
+  type AccountRequest, type InsertAccountRequest,
+  type SpendingControl, type InsertSpendingControl,
+  type EducationalContent, type InsertEducationalContent,
+  type SavingsGoal, type InsertSavingsGoal,
+  type AccountingIntegration, type InsertAccountingIntegration
+} from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -13,6 +29,10 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUsersByRole(role: string): Promise<User[]>;
+  getChildrenByParentId(parentId: number): Promise<User[]>;
+  getEmployeesByEmployerId(employerId: number): Promise<User[]>;
+  updateUser(id: number, userData: Partial<InsertUser>): Promise<User>;
   
   // Session store
   sessionStore: session.Store;
@@ -20,17 +40,25 @@ export interface IStorage {
   // Wallet operations
   getWallet(id: number): Promise<Wallet | undefined>;
   getWalletsByUserId(userId: number): Promise<Wallet[]>;
+  getWalletsByType(userId: number, walletType: string): Promise<Wallet[]>;
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   updateWalletBalance(id: number, balance: string): Promise<Wallet>;
+  updateWalletLimits(id: number, dailyLimit?: string, weeklyLimit?: string, monthlyLimit?: string): Promise<Wallet>;
+  updateWalletRestrictions(id: number, categoryRestrictions?: string, merchantRestrictions?: string): Promise<Wallet>;
+  updateWalletRefillSettings(id: number, autoRefill: boolean, refillAmount?: string, refillFrequency?: string): Promise<Wallet>;
   allocateFunds(walletId: number, amount: string): Promise<Wallet>;
   transferFundsToBank(walletId: number, bankAccountId: number, amount: string): Promise<Wallet>;
+  transferBetweenWallets(sourceWalletId: number, targetWalletId: number, amount: string): Promise<[Wallet, Wallet]>;
   
   // Transaction operations
   getTransaction(id: number): Promise<Transaction | undefined>;
   getTransactionsByUserId(userId: number): Promise<Transaction[]>;
+  getTransactionsByWalletId(walletId: number): Promise<Transaction[]>;
   getAllTransactions(): Promise<Transaction[]>;
+  getPendingApprovalTransactions(approverId: number): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransactionExpenseType(id: number, expenseType: string): Promise<Transaction>;
+  updateTransactionApprovalStatus(id: number, status: string, approverId: number, rejectionReason?: string): Promise<Transaction>;
   
   // Bank account operations
   getBankAccount(id: number): Promise<BankAccount | undefined>;
@@ -45,6 +73,60 @@ export interface IStorage {
   createFundRequest(fundRequest: InsertFundRequest): Promise<FundRequest>;
   approveFundRequest(id: number, approverId: number): Promise<FundRequest>;
   rejectFundRequest(id: number, approverId: number, reason?: string): Promise<FundRequest>;
+  
+  // Payroll operations
+  getPayrollEntry(id: number): Promise<PayrollEntry | undefined>;
+  getPayrollEntriesByUserId(userId: number): Promise<PayrollEntry[]>;
+  getPayrollEntriesByEmployerId(employerId: number): Promise<PayrollEntry[]>;
+  createPayrollEntry(payrollEntry: InsertPayrollEntry): Promise<PayrollEntry>;
+  updatePayrollEntryStatus(id: number, status: string): Promise<PayrollEntry>;
+  processPayrollEntry(id: number): Promise<PayrollEntry>;
+  
+  // Time tracking operations
+  getTimeEntry(id: number): Promise<TimeEntry | undefined>;
+  getTimeEntriesByUserId(userId: number): Promise<TimeEntry[]>;
+  getTimeEntriesByEmployerId(employerId: number): Promise<TimeEntry[]>;
+  createTimeEntry(timeEntry: InsertTimeEntry): Promise<TimeEntry>;
+  updateTimeEntryStatus(id: number, status: string): Promise<TimeEntry>;
+  
+  // HSA and Retirement Account operations
+  getAccountRequest(id: number): Promise<AccountRequest | undefined>;
+  getAccountRequestsByUserId(userId: number): Promise<AccountRequest[]>;
+  getAccountRequestsByEmployerId(employerId: number): Promise<AccountRequest[]>;
+  createAccountRequest(accountRequest: InsertAccountRequest): Promise<AccountRequest>;
+  approveAccountRequest(id: number): Promise<AccountRequest>;
+  rejectAccountRequest(id: number, notes?: string): Promise<AccountRequest>;
+  
+  // Spending Controls operations
+  getSpendingControl(id: number): Promise<SpendingControl | undefined>;
+  getSpendingControlsByWalletId(walletId: number): Promise<SpendingControl[]>;
+  getSpendingControlsByCreatedById(createdById: number): Promise<SpendingControl[]>;
+  createSpendingControl(spendingControl: InsertSpendingControl): Promise<SpendingControl>;
+  updateSpendingControl(id: number, data: Partial<InsertSpendingControl>): Promise<SpendingControl>;
+  deleteSpendingControl(id: number): Promise<void>;
+  
+  // Educational Content operations
+  getEducationalContent(id: number): Promise<EducationalContent | undefined>;
+  getEducationalContentByCategory(category: string): Promise<EducationalContent[]>;
+  getEducationalContentByAgeGroup(targetAgeGroup: string): Promise<EducationalContent[]>;
+  createEducationalContent(educationalContent: InsertEducationalContent): Promise<EducationalContent>;
+  updateEducationalContent(id: number, data: Partial<InsertEducationalContent>): Promise<EducationalContent>;
+  deleteEducationalContent(id: number): Promise<void>;
+  
+  // Savings Goals operations
+  getSavingsGoal(id: number): Promise<SavingsGoal | undefined>;
+  getSavingsGoalsByUserId(userId: number): Promise<SavingsGoal[]>;
+  getSavingsGoalsByWalletId(walletId: number): Promise<SavingsGoal[]>;
+  createSavingsGoal(savingsGoal: InsertSavingsGoal): Promise<SavingsGoal>;
+  updateSavingsGoalProgress(id: number, currentAmount: string): Promise<SavingsGoal>;
+  completeSavingsGoal(id: number): Promise<SavingsGoal>;
+  
+  // Accounting Integrations operations
+  getAccountingIntegration(id: number): Promise<AccountingIntegration | undefined>;
+  getAccountingIntegrationsByUserId(userId: number): Promise<AccountingIntegration[]>;
+  createAccountingIntegration(accountingIntegration: InsertAccountingIntegration): Promise<AccountingIntegration>;
+  updateAccountingIntegration(id: number, data: Partial<InsertAccountingIntegration>): Promise<AccountingIntegration>;
+  deleteAccountingIntegration(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -79,6 +161,35 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
+  
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role as any, role));
+  }
+  
+  async getChildrenByParentId(parentId: number): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.parentId, parentId));
+  }
+  
+  async getEmployeesByEmployerId(employerId: number): Promise<User[]> {
+    return await db.select().from(users).where(and(
+      eq(users.role, "employee"),
+      eq(users.organizationId, employerId)
+    ));
+  }
+  
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    
+    return updatedUser;
+  }
 
   // Wallet operations
   async getWallet(id: number): Promise<Wallet | undefined> {
@@ -88,6 +199,13 @@ export class DatabaseStorage implements IStorage {
 
   async getWalletsByUserId(userId: number): Promise<Wallet[]> {
     return await db.select().from(wallets).where(eq(wallets.userId, userId));
+  }
+  
+  async getWalletsByType(userId: number, walletType: string): Promise<Wallet[]> {
+    return await db.select().from(wallets).where(and(
+      eq(wallets.userId, userId),
+      eq(wallets.walletType as any, walletType)
+    ));
   }
 
   async createWallet(insertWallet: InsertWallet): Promise<Wallet> {
@@ -99,6 +217,84 @@ export class DatabaseStorage implements IStorage {
     const [updatedWallet] = await db
       .update(wallets)
       .set({ balance })
+      .where(eq(wallets.id, id))
+      .returning();
+    
+    if (!updatedWallet) {
+      throw new Error(`Wallet with id ${id} not found`);
+    }
+    
+    return updatedWallet;
+  }
+  
+  async updateWalletLimits(id: number, dailyLimit?: string, weeklyLimit?: string, monthlyLimit?: string): Promise<Wallet> {
+    const updateData: Partial<Wallet> = {};
+    
+    if (dailyLimit !== undefined) {
+      updateData.dailyLimit = dailyLimit;
+    }
+    
+    if (weeklyLimit !== undefined) {
+      updateData.weeklyLimit = weeklyLimit;
+    }
+    
+    if (monthlyLimit !== undefined) {
+      updateData.monthlyLimit = monthlyLimit;
+    }
+    
+    const [updatedWallet] = await db
+      .update(wallets)
+      .set(updateData)
+      .where(eq(wallets.id, id))
+      .returning();
+    
+    if (!updatedWallet) {
+      throw new Error(`Wallet with id ${id} not found`);
+    }
+    
+    return updatedWallet;
+  }
+  
+  async updateWalletRestrictions(id: number, categoryRestrictions?: string, merchantRestrictions?: string): Promise<Wallet> {
+    const updateData: Partial<Wallet> = {};
+    
+    if (categoryRestrictions !== undefined) {
+      updateData.categoryRestrictions = categoryRestrictions;
+    }
+    
+    if (merchantRestrictions !== undefined) {
+      updateData.merchantRestrictions = merchantRestrictions;
+    }
+    
+    const [updatedWallet] = await db
+      .update(wallets)
+      .set(updateData)
+      .where(eq(wallets.id, id))
+      .returning();
+    
+    if (!updatedWallet) {
+      throw new Error(`Wallet with id ${id} not found`);
+    }
+    
+    return updatedWallet;
+  }
+  
+  async updateWalletRefillSettings(id: number, autoRefill: boolean, refillAmount?: string, refillFrequency?: string): Promise<Wallet> {
+    const updateData: Partial<Wallet> = {
+      autoRefill,
+    };
+    
+    if (refillAmount !== undefined) {
+      updateData.refillAmount = refillAmount;
+    }
+    
+    if (refillFrequency !== undefined) {
+      updateData.refillFrequency = refillFrequency;
+    }
+    
+    const [updatedWallet] = await db
+      .update(wallets)
+      .set(updateData)
       .where(eq(wallets.id, id))
       .returning();
     
@@ -143,6 +339,22 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Bank account does not belong to the wallet owner");
     }
     
+    // Check if wallet is HSA or retirement and has withdrawal restrictions
+    if (wallet.walletType === "hsa" || wallet.walletType === "retirement") {
+      // For HSA, we might need additional validation for qualified medical expenses
+      // For retirement, we might need to check age restrictions
+      // This is a simplified implementation
+      if (wallet.walletType === "hsa") {
+        // In a real implementation, we would check if the withdrawal is for a qualified medical expense
+        // We might also require a receipt upload
+      }
+      
+      if (wallet.walletType === "retirement") {
+        // In a real implementation, we would check the user's age and possible penalties
+        // We might also need to handle tax implications
+      }
+    }
+    
     // Convert to numbers for calculation
     const currentBalance = parseFloat(wallet.balance.toString());
     const transferAmount = parseFloat(amount);
@@ -171,6 +383,67 @@ export class DatabaseStorage implements IStorage {
     // Update the wallet balance
     return this.updateWalletBalance(walletId, newBalance);
   }
+  
+  async transferBetweenWallets(sourceWalletId: number, targetWalletId: number, amount: string): Promise<[Wallet, Wallet]> {
+    // Get source wallet
+    const sourceWallet = await this.getWallet(sourceWalletId);
+    if (!sourceWallet) {
+      throw new Error(`Source wallet with id ${sourceWalletId} not found`);
+    }
+    
+    // Get target wallet
+    const targetWallet = await this.getWallet(targetWalletId);
+    if (!targetWallet) {
+      throw new Error(`Target wallet with id ${targetWalletId} not found`);
+    }
+    
+    // Convert to numbers for calculation
+    const sourceBalance = parseFloat(sourceWallet.balance.toString());
+    const targetBalance = parseFloat(targetWallet.balance.toString());
+    const transferAmount = parseFloat(amount);
+    
+    // Check if source wallet has enough funds
+    if (sourceBalance < transferAmount) {
+      throw new Error("Insufficient funds in source wallet");
+    }
+    
+    // Subtract from source wallet
+    const newSourceBalance = (sourceBalance - transferAmount).toString();
+    
+    // Add to target wallet
+    const newTargetBalance = (targetBalance + transferAmount).toString();
+    
+    // Create transaction records for this transfer
+    await this.createTransaction({
+      userId: sourceWallet.userId,
+      walletId: sourceWalletId,
+      type: "outgoing",
+      method: "wallet",
+      merchantName: "Wallet Transfer",
+      amount: transferAmount.toString(),
+      expenseType: "transfer",
+      isPersonal: false,
+      sourceOfFunds: `Wallet ID: ${sourceWalletId}`,
+    });
+    
+    await this.createTransaction({
+      userId: targetWallet.userId,
+      walletId: targetWalletId,
+      type: "incoming",
+      method: "wallet",
+      merchantName: "Wallet Transfer",
+      amount: transferAmount.toString(),
+      expenseType: "transfer",
+      isPersonal: false,
+      sourceOfFunds: `Wallet ID: ${sourceWalletId}`,
+    });
+    
+    // Update wallet balances
+    const updatedSourceWallet = await this.updateWalletBalance(sourceWalletId, newSourceBalance);
+    const updatedTargetWallet = await this.updateWalletBalance(targetWalletId, newTargetBalance);
+    
+    return [updatedSourceWallet, updatedTargetWallet];
+  }
 
   // Transaction operations
   async getTransaction(id: number): Promise<Transaction | undefined> {
@@ -181,9 +454,24 @@ export class DatabaseStorage implements IStorage {
   async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
     return await db.select().from(transactions).where(eq(transactions.userId, userId));
   }
+  
+  async getTransactionsByWalletId(walletId: number): Promise<Transaction[]> {
+    return await db.select().from(transactions).where(eq(transactions.walletId, walletId));
+  }
 
   async getAllTransactions(): Promise<Transaction[]> {
     return await db.select().from(transactions);
+  }
+  
+  async getPendingApprovalTransactions(approverId: number): Promise<Transaction[]> {
+    // Get all transactions that need approval and are related to wallets that this approver manages
+    // This is a simplified implementation that would need more complex logic in a real app
+    return await db.select()
+      .from(transactions)
+      .where(and(
+        eq(transactions.needsApproval, true),
+        eq(transactions.approvalStatus, "pending")
+      ));
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
@@ -193,6 +481,46 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Wallet with id ${insertTransaction.walletId} not found`);
     }
     
+    // Check if the wallet requires approval for transactions
+    if (wallet.requiresApproval && !insertTransaction.needsApproval) {
+      insertTransaction.needsApproval = true;
+      insertTransaction.approvalStatus = "pending";
+    }
+    
+    // Check if the transaction needs to be reviewed based on wallet restrictions
+    if (wallet.categoryRestrictions && wallet.categoryRestrictions.length > 0) {
+      // Parse category restrictions (comma-separated list)
+      const allowedCategories = wallet.categoryRestrictions.split(',').map(c => c.trim().toLowerCase());
+      
+      // If expenseType is provided and not in allowed categories, require approval
+      if (insertTransaction.expenseType && 
+          !allowedCategories.includes(insertTransaction.expenseType.toLowerCase())) {
+        insertTransaction.needsApproval = true;
+        insertTransaction.approvalStatus = "pending";
+      }
+    }
+    
+    // Check merchant restrictions if provided
+    if (wallet.merchantRestrictions && wallet.merchantRestrictions.length > 0 && 
+        insertTransaction.merchantName) {
+      // Parse merchant restrictions (comma-separated list)
+      const allowedMerchants = wallet.merchantRestrictions.split(',').map(m => m.trim().toLowerCase());
+      
+      // If merchant is not in allowed list, require approval
+      if (!allowedMerchants.includes(insertTransaction.merchantName.toLowerCase())) {
+        insertTransaction.needsApproval = true;
+        insertTransaction.approvalStatus = "pending";
+      }
+    }
+    
+    // If transaction requires approval, don't update the balance yet
+    if (insertTransaction.needsApproval && insertTransaction.approvalStatus === "pending") {
+      // Create the transaction without updating the balance
+      const [transaction] = await db.insert(transactions).values(insertTransaction).returning();
+      return transaction;
+    }
+    
+    // Normal transaction processing for approved transactions
     const currentBalance = parseFloat(wallet.balance.toString());
     const transactionAmount = parseFloat(insertTransaction.amount.toString());
     
@@ -226,6 +554,64 @@ export class DatabaseStorage implements IStorage {
     
     if (!updatedTransaction) {
       throw new Error(`Transaction with id ${id} not found`);
+    }
+    
+    return updatedTransaction;
+  }
+  
+  async updateTransactionApprovalStatus(id: number, status: string, approverId: number, rejectionReason?: string): Promise<Transaction> {
+    // Get the transaction
+    const transaction = await this.getTransaction(id);
+    if (!transaction) {
+      throw new Error(`Transaction with id ${id} not found`);
+    }
+    
+    // Get the wallet
+    const wallet = await this.getWallet(transaction.walletId);
+    if (!wallet) {
+      throw new Error(`Wallet with id ${transaction.walletId} not found`);
+    }
+    
+    // Update approval status
+    const updateData: Partial<Transaction> = {
+      approvalStatus: status,
+      approvedBy: approverId,
+      approvalDate: new Date(),
+    };
+    
+    if (status === "rejected" && rejectionReason) {
+      updateData.rejectionReason = rejectionReason;
+    }
+    
+    const [updatedTransaction] = await db
+      .update(transactions)
+      .set(updateData)
+      .where(eq(transactions.id, id))
+      .returning();
+    
+    if (!updatedTransaction) {
+      throw new Error(`Transaction with id ${id} not found after update`);
+    }
+    
+    // If approved, update wallet balance
+    if (status === "approved" && transaction.needsApproval) {
+      const currentBalance = parseFloat(wallet.balance.toString());
+      const transactionAmount = parseFloat(transaction.amount.toString());
+      
+      let newBalance: number;
+      if (transaction.type === "incoming") {
+        newBalance = currentBalance + transactionAmount;
+      } else {
+        newBalance = currentBalance - transactionAmount;
+        
+        // Check if there are sufficient funds
+        if (newBalance < 0) {
+          throw new Error("Insufficient funds in wallet");
+        }
+      }
+      
+      // Update wallet balance
+      await this.updateWalletBalance(wallet.id, newBalance.toString());
     }
     
     return updatedTransaction;
@@ -321,6 +707,529 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedRequest;
+  }
+  
+  // Payroll operations
+  async getPayrollEntry(id: number): Promise<PayrollEntry | undefined> {
+    const [payrollEntry] = await db.select().from(payrollEntries).where(eq(payrollEntries.id, id));
+    return payrollEntry;
+  }
+  
+  async getPayrollEntriesByUserId(userId: number): Promise<PayrollEntry[]> {
+    return await db.select().from(payrollEntries).where(eq(payrollEntries.userId, userId));
+  }
+  
+  async getPayrollEntriesByEmployerId(employerId: number): Promise<PayrollEntry[]> {
+    return await db.select().from(payrollEntries).where(eq(payrollEntries.employerId, employerId));
+  }
+  
+  async createPayrollEntry(payrollEntry: InsertPayrollEntry): Promise<PayrollEntry> {
+    const [entry] = await db.insert(payrollEntries).values(payrollEntry).returning();
+    return entry;
+  }
+  
+  async updatePayrollEntryStatus(id: number, status: string): Promise<PayrollEntry> {
+    const [updatedEntry] = await db
+      .update(payrollEntries)
+      .set({ 
+        status,
+        ...(status === "completed" ? { processedAt: new Date() } : {})
+      })
+      .where(eq(payrollEntries.id, id))
+      .returning();
+    
+    if (!updatedEntry) {
+      throw new Error(`Payroll entry with id ${id} not found`);
+    }
+    
+    return updatedEntry;
+  }
+  
+  async processPayrollEntry(id: number): Promise<PayrollEntry> {
+    // Get the payroll entry
+    const payrollEntry = await this.getPayrollEntry(id);
+    if (!payrollEntry) {
+      throw new Error(`Payroll entry with id ${id} not found`);
+    }
+    
+    // Check if it's already been processed
+    if (payrollEntry.status === "completed") {
+      throw new Error(`Payroll entry with id ${id} has already been processed`);
+    }
+    
+    // Get the employee's main wallet
+    const wallets = await this.getWalletsByUserId(payrollEntry.userId);
+    const mainWallet = wallets.find(w => w.isMain);
+    
+    if (!mainWallet) {
+      throw new Error(`No main wallet found for user ${payrollEntry.userId}`);
+    }
+    
+    // Process HSA contribution if applicable
+    if (payrollEntry.hsaContribution && parseFloat(payrollEntry.hsaContribution.toString()) > 0) {
+      // Find or create HSA wallet
+      let hsaWallet = wallets.find(w => w.walletType === "hsa");
+      
+      if (!hsaWallet) {
+        // Create an HSA wallet if one doesn't exist
+        hsaWallet = await this.createWallet({
+          userId: payrollEntry.userId,
+          balance: "0",
+          walletType: "hsa",
+          isMain: false,
+          taxAdvantaged: true,
+        });
+      }
+      
+      // Process employee contribution
+      await this.createTransaction({
+        userId: payrollEntry.userId,
+        walletId: hsaWallet.id,
+        type: "incoming",
+        method: "ach",
+        merchantName: "Payroll - HSA Contribution",
+        amount: payrollEntry.hsaContribution.toString(),
+        expenseType: "deposit",
+        isPersonal: false,
+      });
+      
+      // Process employer match if applicable
+      if (payrollEntry.employerHsaMatch && parseFloat(payrollEntry.employerHsaMatch.toString()) > 0) {
+        await this.createTransaction({
+          userId: payrollEntry.userId,
+          walletId: hsaWallet.id,
+          type: "incoming",
+          method: "ach",
+          merchantName: "Payroll - Employer HSA Match",
+          amount: payrollEntry.employerHsaMatch.toString(),
+          expenseType: "deposit",
+          isPersonal: false,
+        });
+      }
+    }
+    
+    // Process retirement contribution if applicable
+    if (payrollEntry.retirementContribution && parseFloat(payrollEntry.retirementContribution.toString()) > 0) {
+      // Find or create retirement wallet
+      let retirementWallet = wallets.find(w => w.walletType === "retirement");
+      
+      if (!retirementWallet) {
+        // Create a retirement wallet if one doesn't exist
+        retirementWallet = await this.createWallet({
+          userId: payrollEntry.userId,
+          balance: "0",
+          walletType: "retirement",
+          isMain: false,
+          taxAdvantaged: true,
+        });
+      }
+      
+      // Process employee contribution
+      await this.createTransaction({
+        userId: payrollEntry.userId,
+        walletId: retirementWallet.id,
+        type: "incoming",
+        method: "ach",
+        merchantName: "Payroll - Retirement Contribution",
+        amount: payrollEntry.retirementContribution.toString(),
+        expenseType: "deposit",
+        isPersonal: false,
+      });
+      
+      // Process employer match if applicable
+      if (payrollEntry.employerRetirementMatch && parseFloat(payrollEntry.employerRetirementMatch.toString()) > 0) {
+        await this.createTransaction({
+          userId: payrollEntry.userId,
+          walletId: retirementWallet.id,
+          type: "incoming",
+          method: "ach",
+          merchantName: "Payroll - Employer Retirement Match",
+          amount: payrollEntry.employerRetirementMatch.toString(),
+          expenseType: "deposit",
+          isPersonal: false,
+        });
+      }
+    }
+    
+    // Process main payroll deposit
+    await this.createTransaction({
+      userId: payrollEntry.userId,
+      walletId: mainWallet.id,
+      type: "incoming",
+      method: "ach",
+      merchantName: "Payroll - Net Pay",
+      amount: payrollEntry.netPay.toString(),
+      expenseType: "salary",
+      isPersonal: false,
+    });
+    
+    // Update the payroll entry as completed
+    return this.updatePayrollEntryStatus(id, "completed");
+  }
+  
+  // Time tracking operations
+  async getTimeEntry(id: number): Promise<TimeEntry | undefined> {
+    const [timeEntry] = await db.select().from(timeEntries).where(eq(timeEntries.id, id));
+    return timeEntry;
+  }
+  
+  async getTimeEntriesByUserId(userId: number): Promise<TimeEntry[]> {
+    return await db.select().from(timeEntries).where(eq(timeEntries.userId, userId));
+  }
+  
+  async getTimeEntriesByEmployerId(employerId: number): Promise<TimeEntry[]> {
+    return await db.select().from(timeEntries).where(eq(timeEntries.employerId, employerId));
+  }
+  
+  async createTimeEntry(timeEntry: InsertTimeEntry): Promise<TimeEntry> {
+    const [entry] = await db.insert(timeEntries).values(timeEntry).returning();
+    return entry;
+  }
+  
+  async updateTimeEntryStatus(id: number, status: string): Promise<TimeEntry> {
+    const [updatedEntry] = await db
+      .update(timeEntries)
+      .set({ status })
+      .where(eq(timeEntries.id, id))
+      .returning();
+    
+    if (!updatedEntry) {
+      throw new Error(`Time entry with id ${id} not found`);
+    }
+    
+    return updatedEntry;
+  }
+  
+  // HSA and Retirement Account operations
+  async getAccountRequest(id: number): Promise<AccountRequest | undefined> {
+    const [accountRequest] = await db.select().from(accountRequests).where(eq(accountRequests.id, id));
+    return accountRequest;
+  }
+  
+  async getAccountRequestsByUserId(userId: number): Promise<AccountRequest[]> {
+    return await db.select().from(accountRequests).where(eq(accountRequests.userId, userId));
+  }
+  
+  async getAccountRequestsByEmployerId(employerId: number): Promise<AccountRequest[]> {
+    return await db.select().from(accountRequests).where(eq(accountRequests.employerId, employerId));
+  }
+  
+  async createAccountRequest(accountRequest: InsertAccountRequest): Promise<AccountRequest> {
+    const [request] = await db.insert(accountRequests).values(accountRequest).returning();
+    return request;
+  }
+  
+  async approveAccountRequest(id: number): Promise<AccountRequest> {
+    // Get the account request
+    const accountRequest = await this.getAccountRequest(id);
+    if (!accountRequest) {
+      throw new Error(`Account request with id ${id} not found`);
+    }
+    
+    // Get the wallet
+    const wallet = await this.getWallet(accountRequest.walletId);
+    if (!wallet) {
+      throw new Error(`Wallet with id ${accountRequest.walletId} not found`);
+    }
+    
+    // Update account request status
+    const [updatedRequest] = await db
+      .update(accountRequests)
+      .set({ 
+        status: "approved",
+        approvedAt: new Date()
+      })
+      .where(eq(accountRequests.id, id))
+      .returning();
+    
+    if (!updatedRequest) {
+      throw new Error(`Account request with id ${id} not found after update`);
+    }
+    
+    // Process the contribution
+    await this.createTransaction({
+      userId: accountRequest.userId,
+      walletId: accountRequest.walletId,
+      type: "incoming",
+      method: "ach",
+      merchantName: `${accountRequest.requestType === "hsa_contribution" ? "HSA" : "Retirement"} Contribution`,
+      amount: accountRequest.amount.toString(),
+      expenseType: "deposit",
+      isPersonal: false,
+    });
+    
+    // Process employer match if applicable
+    if (accountRequest.employerMatchAmount && parseFloat(accountRequest.employerMatchAmount.toString()) > 0) {
+      await this.createTransaction({
+        userId: accountRequest.userId,
+        walletId: accountRequest.walletId,
+        type: "incoming",
+        method: "ach",
+        merchantName: `Employer ${accountRequest.requestType === "hsa_contribution" ? "HSA" : "Retirement"} Match`,
+        amount: accountRequest.employerMatchAmount.toString(),
+        expenseType: "deposit",
+        isPersonal: false,
+      });
+    }
+    
+    return updatedRequest;
+  }
+  
+  async rejectAccountRequest(id: number, notes?: string): Promise<AccountRequest> {
+    const [updatedRequest] = await db
+      .update(accountRequests)
+      .set({ 
+        status: "rejected",
+        notes
+      })
+      .where(eq(accountRequests.id, id))
+      .returning();
+    
+    if (!updatedRequest) {
+      throw new Error(`Account request with id ${id} not found`);
+    }
+    
+    return updatedRequest;
+  }
+  
+  // Spending Controls operations
+  async getSpendingControl(id: number): Promise<SpendingControl | undefined> {
+    const [spendingControl] = await db.select().from(spendingControls).where(eq(spendingControls.id, id));
+    return spendingControl;
+  }
+  
+  async getSpendingControlsByWalletId(walletId: number): Promise<SpendingControl[]> {
+    return await db.select().from(spendingControls).where(eq(spendingControls.walletId, walletId));
+  }
+  
+  async getSpendingControlsByCreatedById(createdById: number): Promise<SpendingControl[]> {
+    return await db.select().from(spendingControls).where(eq(spendingControls.createdById, createdById));
+  }
+  
+  async createSpendingControl(spendingControl: InsertSpendingControl): Promise<SpendingControl> {
+    const [control] = await db.insert(spendingControls).values(spendingControl).returning();
+    return control;
+  }
+  
+  async updateSpendingControl(id: number, data: Partial<InsertSpendingControl>): Promise<SpendingControl> {
+    const [updatedControl] = await db
+      .update(spendingControls)
+      .set(data)
+      .where(eq(spendingControls.id, id))
+      .returning();
+    
+    if (!updatedControl) {
+      throw new Error(`Spending control with id ${id} not found`);
+    }
+    
+    return updatedControl;
+  }
+  
+  async deleteSpendingControl(id: number): Promise<void> {
+    const [deletedControl] = await db
+      .delete(spendingControls)
+      .where(eq(spendingControls.id, id))
+      .returning();
+    
+    if (!deletedControl) {
+      throw new Error(`Spending control with id ${id} not found`);
+    }
+  }
+  
+  // Educational Content operations
+  async getEducationalContent(id: number): Promise<EducationalContent | undefined> {
+    const [content] = await db.select().from(educationalContent).where(eq(educationalContent.id, id));
+    return content;
+  }
+  
+  async getEducationalContentByCategory(category: string): Promise<EducationalContent[]> {
+    return await db.select().from(educationalContent).where(eq(educationalContent.category, category));
+  }
+  
+  async getEducationalContentByAgeGroup(targetAgeGroup: string): Promise<EducationalContent[]> {
+    return await db.select().from(educationalContent).where(eq(educationalContent.targetAgeGroup, targetAgeGroup));
+  }
+  
+  async createEducationalContent(content: InsertEducationalContent): Promise<EducationalContent> {
+    const [newContent] = await db.insert(educationalContent).values(content).returning();
+    return newContent;
+  }
+  
+  async updateEducationalContent(id: number, data: Partial<InsertEducationalContent>): Promise<EducationalContent> {
+    const [updatedContent] = await db
+      .update(educationalContent)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(educationalContent.id, id))
+      .returning();
+    
+    if (!updatedContent) {
+      throw new Error(`Educational content with id ${id} not found`);
+    }
+    
+    return updatedContent;
+  }
+  
+  async deleteEducationalContent(id: number): Promise<void> {
+    const [deletedContent] = await db
+      .delete(educationalContent)
+      .where(eq(educationalContent.id, id))
+      .returning();
+    
+    if (!deletedContent) {
+      throw new Error(`Educational content with id ${id} not found`);
+    }
+  }
+  
+  // Savings Goals operations
+  async getSavingsGoal(id: number): Promise<SavingsGoal | undefined> {
+    const [goal] = await db.select().from(savingsGoals).where(eq(savingsGoals.id, id));
+    return goal;
+  }
+  
+  async getSavingsGoalsByUserId(userId: number): Promise<SavingsGoal[]> {
+    return await db.select().from(savingsGoals).where(eq(savingsGoals.userId, userId));
+  }
+  
+  async getSavingsGoalsByWalletId(walletId: number): Promise<SavingsGoal[]> {
+    return await db.select().from(savingsGoals).where(eq(savingsGoals.walletId, walletId));
+  }
+  
+  async createSavingsGoal(savingsGoal: InsertSavingsGoal): Promise<SavingsGoal> {
+    const [goal] = await db.insert(savingsGoals).values(savingsGoal).returning();
+    return goal;
+  }
+  
+  async updateSavingsGoalProgress(id: number, currentAmount: string): Promise<SavingsGoal> {
+    // Get the savings goal
+    const goal = await this.getSavingsGoal(id);
+    if (!goal) {
+      throw new Error(`Savings goal with id ${id} not found`);
+    }
+    
+    // Check if goal is already completed
+    if (goal.isCompleted) {
+      throw new Error(`Savings goal with id ${id} is already completed`);
+    }
+    
+    // Parse amounts
+    const targetAmount = parseFloat(goal.targetAmount.toString());
+    const newCurrentAmount = parseFloat(currentAmount);
+    
+    // Check if goal has been reached
+    const isCompleted = newCurrentAmount >= targetAmount;
+    
+    // Update the goal
+    const [updatedGoal] = await db
+      .update(savingsGoals)
+      .set({ 
+        currentAmount: currentAmount.toString(),
+        isCompleted,
+        updatedAt: new Date()
+      })
+      .where(eq(savingsGoals.id, id))
+      .returning();
+    
+    if (!updatedGoal) {
+      throw new Error(`Savings goal with id ${id} not found after update`);
+    }
+    
+    // If parent matching is enabled and this is a child's goal
+    if (goal.parentMatchPercentage && 
+        parseFloat(goal.parentMatchPercentage.toString()) > 0) {
+      // Get the child user
+      const childUser = await this.getUser(goal.userId);
+      if (childUser && childUser.parentId) {
+        // Get the parent wallet (assuming main wallet)
+        const parentWallets = await this.getWalletsByUserId(childUser.parentId);
+        const parentMainWallet = parentWallets.find(w => w.isMain);
+        
+        if (parentMainWallet) {
+          // Calculate the match amount (as a percentage of the new contribution)
+          const previousAmount = parseFloat(goal.currentAmount.toString());
+          const contribution = newCurrentAmount - previousAmount;
+          const matchPercentage = parseFloat(goal.parentMatchPercentage.toString());
+          const matchAmount = (contribution * matchPercentage / 100);
+          
+          if (matchAmount > 0) {
+            // Transfer the match amount from parent to child
+            // For now, we'll just credit the child's wallet directly
+            const childWallet = await this.getWallet(goal.walletId);
+            if (childWallet) {
+              await this.transferBetweenWallets(
+                parentMainWallet.id, 
+                childWallet.id, 
+                matchAmount.toString()
+              );
+            }
+          }
+        }
+      }
+    }
+    
+    return updatedGoal;
+  }
+  
+  async completeSavingsGoal(id: number): Promise<SavingsGoal> {
+    const [updatedGoal] = await db
+      .update(savingsGoals)
+      .set({ 
+        isCompleted: true,
+        updatedAt: new Date()
+      })
+      .where(eq(savingsGoals.id, id))
+      .returning();
+    
+    if (!updatedGoal) {
+      throw new Error(`Savings goal with id ${id} not found`);
+    }
+    
+    return updatedGoal;
+  }
+  
+  // Accounting Integrations operations
+  async getAccountingIntegration(id: number): Promise<AccountingIntegration | undefined> {
+    const [integration] = await db.select().from(accountingIntegrations).where(eq(accountingIntegrations.id, id));
+    return integration;
+  }
+  
+  async getAccountingIntegrationsByUserId(userId: number): Promise<AccountingIntegration[]> {
+    return await db.select().from(accountingIntegrations).where(eq(accountingIntegrations.userId, userId));
+  }
+  
+  async createAccountingIntegration(accountingIntegration: InsertAccountingIntegration): Promise<AccountingIntegration> {
+    const [integration] = await db.insert(accountingIntegrations).values(accountingIntegration).returning();
+    return integration;
+  }
+  
+  async updateAccountingIntegration(id: number, data: Partial<InsertAccountingIntegration>): Promise<AccountingIntegration> {
+    const [updatedIntegration] = await db
+      .update(accountingIntegrations)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(accountingIntegrations.id, id))
+      .returning();
+    
+    if (!updatedIntegration) {
+      throw new Error(`Accounting integration with id ${id} not found`);
+    }
+    
+    return updatedIntegration;
+  }
+  
+  async deleteAccountingIntegration(id: number): Promise<void> {
+    const [deletedIntegration] = await db
+      .delete(accountingIntegrations)
+      .where(eq(accountingIntegrations.id, id))
+      .returning();
+    
+    if (!deletedIntegration) {
+      throw new Error(`Accounting integration with id ${id} not found`);
+    }
   }
 }
 
