@@ -247,6 +247,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add route to transfer funds from wallet to bank account
+  app.post("/api/wallets/:id/transfer-to-bank", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const walletId = parseInt(req.params.id);
+      const { bankAccountId, amount } = z.object({ 
+        bankAccountId: z.number(),
+        amount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+          message: "Amount must be a positive number"
+        })
+      }).parse(req.body);
+      
+      // Get the wallet to check ownership
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+      
+      // Check if the user owns the wallet
+      if (wallet.userId !== req.user?.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Transfer funds to bank account
+      const updatedWallet = await storage.transferFundsToBank(walletId, bankAccountId, amount);
+      
+      res.status(200).json({ wallet: updatedWallet });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Fund request routes
   app.get("/api/fund-requests", async (req, res, next) => {
     try {

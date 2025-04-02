@@ -23,6 +23,7 @@ export interface IStorage {
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   updateWalletBalance(id: number, balance: string): Promise<Wallet>;
   allocateFunds(walletId: number, amount: string): Promise<Wallet>;
+  transferFundsToBank(walletId: number, bankAccountId: number, amount: string): Promise<Wallet>;
   
   // Transaction operations
   getTransaction(id: number): Promise<Transaction | undefined>;
@@ -121,6 +122,53 @@ export class DatabaseStorage implements IStorage {
     // Add the amount to the wallet balance
     const newBalance = (currentBalance + allocationAmount).toString();
     
+    return this.updateWalletBalance(walletId, newBalance);
+  }
+
+  async transferFundsToBank(walletId: number, bankAccountId: number, amount: string): Promise<Wallet> {
+    // Get wallet
+    const wallet = await this.getWallet(walletId);
+    if (!wallet) {
+      throw new Error(`Wallet with id ${walletId} not found`);
+    }
+    
+    // Get bank account to verify it exists and belongs to the same user
+    const bankAccount = await this.getBankAccount(bankAccountId);
+    if (!bankAccount) {
+      throw new Error(`Bank account with id ${bankAccountId} not found`);
+    }
+    
+    // Verify the bank account belongs to the same user as the wallet
+    if (bankAccount.userId !== wallet.userId) {
+      throw new Error("Bank account does not belong to the wallet owner");
+    }
+    
+    // Convert to numbers for calculation
+    const currentBalance = parseFloat(wallet.balance.toString());
+    const transferAmount = parseFloat(amount);
+    
+    // Check if wallet has enough funds
+    if (currentBalance < transferAmount) {
+      throw new Error("Insufficient funds in wallet");
+    }
+    
+    // Subtract the amount from the wallet balance
+    const newBalance = (currentBalance - transferAmount).toString();
+    
+    // Create a transaction record for this transfer
+    await this.createTransaction({
+      userId: wallet.userId,
+      walletId,
+      type: "outgoing",
+      method: "ach",
+      merchantName: "Bank Transfer",
+      amount: transferAmount.toString(),
+      expenseType: "transfer",
+      isPersonal: false,
+      sourceOfFunds: `Wallet ID: ${walletId}`,
+    });
+    
+    // Update the wallet balance
     return this.updateWalletBalance(walletId, newBalance);
   }
 

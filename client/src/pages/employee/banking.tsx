@@ -9,9 +9,11 @@ import { useAuth } from "@/hooks/use-auth";
 import BankConnectModal from "@/components/modals/bank-connect-modal";
 import NewBankAccountModal from "@/components/modals/new-bank-account-modal";
 import AddFundsModal from "@/components/modals/add-funds-modal";
+import TransferToBankModal from "@/components/modals/transfer-to-bank-modal";
 import { type BankAccount } from "@/components/modals/bank-connect-modal";
 import { type NewBankAccountFormData } from "@/components/modals/new-bank-account-modal";
-import { Plus, Building, AlertTriangle, ArrowRight } from "lucide-react";
+import { type Wallet } from "@/components/modals/transfer-to-bank-modal";
+import { Plus, Building, AlertTriangle, ArrowRight, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function EmployeeBanking() {
@@ -20,7 +22,9 @@ export default function EmployeeBanking() {
   const [bankConnectModalOpen, setBankConnectModalOpen] = useState(false);
   const [newBankAccountModalOpen, setNewBankAccountModalOpen] = useState(false);
   const [addFundsModalOpen, setAddFundsModalOpen] = useState(false);
+  const [transferToBankModalOpen, setTransferToBankModalOpen] = useState(false);
   const [selectedBankAccount, setSelectedBankAccount] = useState<BankAccount | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
 
   // Fetch bank accounts
   const { data: bankAccounts = [], isLoading: isLoadingBankAccounts, error: bankAccountsError } = useQuery({
@@ -153,6 +157,39 @@ export default function EmployeeBanking() {
     addFundsMutation.mutate({ bankAccountId, walletId, amount });
   };
 
+  // Transfer to bank mutation
+  const transferToBankMutation = useMutation({
+    mutationFn: async ({ walletId, bankAccountId, amount }: { walletId: number, bankAccountId: string, amount: string }) => {
+      const res = await apiRequest("POST", `/api/wallets/${walletId}/transfer-to-bank`, { bankAccountId: parseInt(bankAccountId), amount });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to transfer funds to bank account");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      setTransferToBankModalOpen(false);
+      toast({
+        title: "Funds transferred",
+        description: "Funds have been successfully transferred to your bank account.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle transferring funds to bank
+  const handleTransferToBank = (walletId: number, bankAccountId: string, amount: string) => {
+    transferToBankMutation.mutate({ walletId, bankAccountId, amount });
+  };
+
   // Get transaction history
   const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery({
     queryKey: ["/api/transactions"],
@@ -236,15 +273,30 @@ export default function EmployeeBanking() {
                       )}
                       
                       {formattedBankAccounts.length > 0 ? (
-                        <Button 
-                          className="w-full mt-4"
-                          onClick={() => {
-                            setSelectedBankAccount(formattedBankAccounts[0]);
-                            setAddFundsModalOpen(true);
-                          }}
-                        >
-                          Add Funds to Wallet
-                        </Button>
+                        <div className="flex gap-2 mt-4">
+                          <Button 
+                            className="flex-1"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedBankAccount(formattedBankAccounts[0]);
+                              setAddFundsModalOpen(true);
+                            }}
+                          >
+                            <ArrowRight className="h-4 w-4 mr-2" />
+                            Add Funds
+                          </Button>
+                          <Button 
+                            className="flex-1"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedWallet(wallet);
+                              setTransferToBankModalOpen(true);
+                            }}
+                          >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Transfer to Bank
+                          </Button>
+                        </div>
                       ) : (
                         <Button 
                           className="w-full mt-4"
@@ -407,6 +459,19 @@ export default function EmployeeBanking() {
             onAddFunds={handleAddFunds}
             isSubmitting={addFundsMutation.isPending}
             error={addFundsMutation.error?.message}
+          />
+        )}
+
+        {/* Transfer to Bank Modal */}
+        {selectedWallet && (
+          <TransferToBankModal
+            isOpen={transferToBankModalOpen}
+            onClose={() => setTransferToBankModalOpen(false)}
+            bankAccounts={formattedBankAccounts}
+            wallets={[selectedWallet]}
+            onTransferFunds={handleTransferToBank}
+            isSubmitting={transferToBankMutation.isPending}
+            error={transferToBankMutation.error?.message}
           />
         )}
       </div>
