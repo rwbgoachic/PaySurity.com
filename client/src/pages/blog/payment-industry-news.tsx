@@ -5,24 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { askPerplexity } from "@/lib/perplexity";
-
-interface NewsItem {
-  title: string;
-  source: string;
-  url: string;
-  date: string;
-  summary: string;
-  category: "Innovation" | "Regulation" | "Market Trends" | "Security";
-}
+import { fetchPaymentNews, type NewsItem, type NewsCategory } from "@/lib/newsapi";
 
 export default function PaymentIndustryNewsPage() {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("all");
-  const [hasPerplexityKey, setHasPerplexityKey] = useState(false);
+  const [hasNewsApiKey, setHasNewsApiKey] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample news data to use when Perplexity API isn't available
+  // Sample news data to use when NewsAPI isn't available or fails
   const sampleNewsItems: NewsItem[] = [
     {
       title: "Visa Enhances Digital Payment Security with New AI Tools",
@@ -30,7 +22,8 @@ export default function PaymentIndustryNewsPage() {
       url: "https://www.pymnts.com/",
       date: "April 2, 2025",
       summary: "Visa has introduced a new suite of AI-powered security tools aimed at reducing digital payment fraud. The technology can detect unusual patterns in real-time and adapt to evolving threats.",
-      category: "Security"
+      category: "Security",
+      urlToImage: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=1470&auto=format&fit=crop"
     },
     {
       title: "Stripe Expands Merchant Services in Asian Markets",
@@ -38,7 +31,8 @@ export default function PaymentIndustryNewsPage() {
       url: "https://techcrunch.com/",
       date: "April 1, 2025",
       summary: "Stripe announced a significant expansion in Southeast Asian markets, introducing localized payment options and currency support for merchants in Indonesia, Thailand, and Vietnam.",
-      category: "Market Trends"
+      category: "Market Trends",
+      urlToImage: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?q=80&w=2070&auto=format&fit=crop"
     },
     {
       title: "New EU Regulations Target Payment Processing Fees",
@@ -46,7 +40,8 @@ export default function PaymentIndustryNewsPage() {
       url: "https://www.ft.com/",
       date: "March 30, 2025",
       summary: "European regulators have approved new rules aiming to reduce interchange fees for cross-border payments within the EU, potentially saving merchants billions annually.",
-      category: "Regulation"
+      category: "Regulation",
+      urlToImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2070&auto=format&fit=crop"
     },
     {
       title: "Apple Pay Later Rolls Out Globally After Successful US Launch",
@@ -90,54 +85,42 @@ export default function PaymentIndustryNewsPage() {
     }
   ];
 
-  const fetchPaymentIndustryNews = async () => {
+  const getPaymentIndustryNews = async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      // Check for Perplexity API key in environment variables
-      // Note: In production, we would use the API directly
-      const hasKey = await checkForPerplexityKey();
-      setHasPerplexityKey(hasKey);
+      // Check for NewsAPI key in environment variables
+      const hasKey = import.meta.env.NEWS_API_KEY ? true : false;
+      setHasNewsApiKey(hasKey);
       
       if (hasKey) {
-        // Get news from Perplexity API
-        const prompt = "Provide the latest 8 payment industry news stories from the past week. Format the response as a JSON array with these properties for each item: title (string), source (string), url (string), date (string in format 'Month Day, Year'), summary (1-2 sentence string), and category (must be exactly one of: 'Innovation', 'Regulation', 'Market Trends', or 'Security'). Only include actual, factual news from reputable sources. Don't use placeholder text.";
+        // Fetch news from NewsAPI
+        const news = await fetchPaymentNews();
         
-        const response = await askPerplexity(prompt);
-        let parsedNews;
-        
-        try {
-          // Extract JSON from the response
-          const jsonMatch = response.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            parsedNews = JSON.parse(jsonMatch[0]);
-            setNewsItems(parsedNews);
-          } else {
-            // Fallback to sample data if response doesn't contain valid JSON
-            setNewsItems(sampleNewsItems);
-          }
-        } catch (parseError) {
-          console.error("Failed to parse Perplexity response:", parseError);
+        if (news && news.length > 0) {
+          setNewsItems(news);
+        } else {
+          // Fallback to sample data if no news returned
+          console.warn("No news items returned from API, using sample data");
           setNewsItems(sampleNewsItems);
         }
       } else {
         // Use sample data if no API key
+        console.warn("No NewsAPI key found, using sample data");
         setNewsItems(sampleNewsItems);
       }
     } catch (error) {
       console.error("Error fetching payment industry news:", error);
+      setError("Unable to load news data. Please try again later.");
       setNewsItems(sampleNewsItems);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const checkForPerplexityKey = async (): Promise<boolean> => {
-    // In a real implementation, we would check if the environment variable exists
-    // For demo purposes, we'll assume it doesn't exist
-    return false;
-  };
-
   useEffect(() => {
-    fetchPaymentIndustryNews();
+    getPaymentIndustryNews();
   }, []);
 
   const filteredNews = selectedTab === "all" 
@@ -227,13 +210,22 @@ export default function PaymentIndustryNewsPage() {
             </div>
           ) : (
             <>
-              {!hasPerplexityKey && (
+              {!hasNewsApiKey && (
                 <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8 text-amber-800">
                   <p className="flex items-start gap-2">
                     <span className="font-semibold">Note:</span> 
                     <span>
-                      This page is showing sample news data. To display real-time industry news, set up the Perplexity API integration.
+                      This page is showing sample news data. To display real-time industry news, set up the NewsAPI integration.
                     </span>
+                  </p>
+                </div>
+              )}
+              
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-8 text-red-800">
+                  <p className="flex items-start gap-2">
+                    <span className="font-semibold">Error:</span> 
+                    <span>{error}</span>
                   </p>
                 </div>
               )}
@@ -248,6 +240,20 @@ export default function PaymentIndustryNewsPage() {
                         item.category === "Market Trends" ? "bg-green-500" :
                         "bg-red-500"
                       }`}></div>
+                      {item.urlToImage && (
+                        <div className="relative h-40 w-full overflow-hidden">
+                          <img 
+                            src={item.urlToImage} 
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Hide image on error
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
                       <div className="p-6 flex flex-col h-full">
                         <div className="mb-3">
                           <Badge variant="outline" className={`
