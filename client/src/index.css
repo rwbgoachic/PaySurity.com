@@ -56,6 +56,7 @@
 
 /* Mobile optimizations */
 @layer utilities {
+  /* Safe area insets for mobile devices with notches */
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
@@ -64,7 +65,76 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Better touch targets for mobile */
   .touchable {
     @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+  
+  /* Mobile-specific optimizations */
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-background border-t z-50 py-2 safe-bottom flex justify-around;
+  }
+  
+  .pos-button {
+    @apply min-h-[60px] text-lg font-medium shadow-sm;
+  }
+  
+  /* Optimizations for POS systems */
+  .pos-container {
+    @apply min-h-[100dvh] overflow-hidden flex flex-col;
+  }
+  
+  .pos-content {
+    @apply flex-1 overflow-y-auto overscroll-contain pb-safe;
+  }
+  
+  /* Digital wallet specific styling */
+  .wallet-card {
+    @apply relative overflow-hidden rounded-2xl shadow-lg p-5 bg-gradient-to-br;
+  }
+  
+  /* Optimized grid layouts for different screen sizes */
+  .responsive-grid {
+    @apply grid grid-cols-1 gap-4;
+    @apply sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
+  }
+  
+  /* Optimized images with aspect ratio */
+  .optimized-image {
+    @apply w-full h-auto aspect-video object-cover;
+  }
+  
+  /* Skeleton loading states */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+  }
+  
+  /* Fluid typography for better responsiveness */
+  .fluid-text-sm {
+    font-size: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  }
+  
+  .fluid-text-base {
+    font-size: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  }
+  
+  .fluid-text-lg {
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  }
+  
+  .fluid-text-xl {
+    font-size: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  }
+  
+  .fluid-text-2xl {
+    font-size: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
   }
 }

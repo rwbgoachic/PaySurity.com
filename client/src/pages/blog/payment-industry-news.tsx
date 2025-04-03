@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, ArrowRight, Clock, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -121,9 +121,42 @@ export default function PaymentIndustryNewsPage() {
     }
   };
 
+  // Using Intersection Observer for lazy loading
+  const [shouldLoadNews, setShouldLoadNews] = useState(false);
+  
+  // Set up the intersection observer for lazy loading
+  const newsObserverRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    getPaymentIndustryNews();
+    // Create intersection observer to detect when news section is about to be visible
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When the news section comes into view
+        if (entry.isIntersecting) {
+          setShouldLoadNews(true);
+          // Disconnect observer after triggering load
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 } // Start loading when 10% of element is visible
+    );
+    
+    // Start observing the reference element
+    if (newsObserverRef.current) {
+      observer.observe(newsObserverRef.current);
+    }
+    
+    return () => {
+      observer.disconnect();
+    };
   }, []);
+  
+  // Load news when needed
+  useEffect(() => {
+    if (shouldLoadNews) {
+      getPaymentIndustryNews();
+    }
+  }, [shouldLoadNews]);
 
   const filteredNews = selectedTab === "all" 
     ? newsItems 
@@ -220,6 +253,9 @@ export default function PaymentIndustryNewsPage() {
               </TabsList>
             </Tabs>
           </div>
+          
+          {/* Intersection Observer reference point */}
+          <div ref={newsObserverRef} className="h-4 w-full"></div>
 
           {/* News content */}
           {isLoading ? (

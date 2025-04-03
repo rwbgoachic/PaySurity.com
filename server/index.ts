@@ -16,14 +16,34 @@ app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
   
   // Performance headers
-  res.setHeader('Vary', 'Accept-Encoding');
+  res.setHeader('Vary', 'Accept-Encoding, User-Agent');
   
-  // Cache static assets for better performance (1 day)
-  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-  } else {
+  // Advanced caching strategy for different types of assets
+  const path = req.path;
+  
+  // Cache fonts and immutable assets for 1 year (immutable, 31536000s)
+  if (path.match(/\.(woff|woff2|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  // Cache images and media for 1 week (604800s)
+  else if (path.match(/\.(png|jpg|jpeg|gif|ico|svg|webp|avif|mp4|webm)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+  }
+  // Cache CSS/JS for 1 day (86400s)
+  else if (path.match(/\.(css|js)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
+  }
+  // Don't cache HTML and API endpoints
+  else if (path.match(/\.(html)$/) || path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  // Default - no cache for everything else
+  else {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   }
   

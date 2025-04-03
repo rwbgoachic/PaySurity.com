@@ -30,9 +30,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
   
-  // NewsAPI route for payment industry news
+  // NewsAPI route for payment industry news with caching
+  let newsCache: {
+    data: any | null;
+    timestamp: number;
+  } = {
+    data: null,
+    timestamp: 0
+  };
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+  
   app.get("/api/news/payment-industry", async (req, res, next) => {
     try {
+      // Check if we have cached data that's still valid
+      const now = Date.now();
+      if (newsCache.data && (now - newsCache.timestamp < CACHE_DURATION)) {
+        console.log('Serving cached news data');
+        return res.json(newsCache.data);
+      }
+      
       // Check if the NewsAPI key is available
       if (!process.env.NEWS_API_KEY) {
         return res.status(503).json({
@@ -55,11 +71,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         q: paymentKeywords,
         language: 'en',
         sortBy: 'publishedAt',
-        pageSize: '15', // More than we need, in case some don't have descriptions
-        domains: 'pymnts.com,techcrunch.com,finextra.com,paymentssource.com,bankingdive.com,forbes.com,cnbc.com,businesswire.com,reuters.com,wsj.com,ft.com,bloomberg.com',
+        pageSize: '10', // Reduced size for faster loading
+        domains: 'pymnts.com,techcrunch.com,finextra.com,paymentssource.com,bankingdive.com,forbes.com,cnbc.com,businesswire.com',
         apiKey: process.env.NEWS_API_KEY
       });
       
+      console.log('Fetching fresh news data');
       const response = await fetch(`${endpoint}?${params}`);
       
       if (!response.ok) {
@@ -72,6 +89,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const data = await response.json();
+      
+      // Update cache with fresh data
+      newsCache.data = data;
+      newsCache.timestamp = Date.now();
+      
       res.json(data);
     } catch (error) {
       console.error('Error fetching news:', error);
