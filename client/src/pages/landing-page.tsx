@@ -38,10 +38,16 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-neutral-900 mb-4">
-                  <span className="text-primary">Payment Processing</span> Tailored for High-Volume Merchants
+                  Choose <span className="text-primary">PaySurity's Payment Solutions</span> to make your CFO smile
                 </h1>
+                <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+                  {/* CFO smiling at downward trending expense graph image */}
+                  <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
+                    <p className="text-neutral-400">CFO smiling at downward trending expense graph</p>
+                  </div>
+                </div>
                 <p className="text-lg text-neutral-600 mb-8">
-                  Paysurity delivers transparent pricing, industry-specific solutions, and advanced POS systems for businesses processing over $100K monthly.
+                  Paysurity delivers transparent pricing, industry-specific solutions, and advanced POS systems for businesses of all sizes.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
@@ -80,8 +86,8 @@ export default function LandingPage() {
               </div>
               <div className="rounded-lg bg-white p-8 shadow-xl border">
                 <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold">Why High-Volume Merchants Choose Us</h2>
-                  <p className="text-neutral-600">Businesses processing $100K+ monthly save an average of 22% on payment fees</p>
+                  <h2 className="text-2xl font-bold">Why Merchants Choose Us</h2>
+                  <p className="text-neutral-600">Businesses that use PaySurity save 20% plus on average on processing fees</p>
                 </div>
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
@@ -89,8 +95,8 @@ export default function LandingPage() {
                       <DollarSign className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Volume-Based Pricing</h3>
-                      <p className="text-sm text-neutral-600">Lower rates as your transaction volume increases</p>
+                      <h3 className="font-medium">Competitive Pricing</h3>
+                      <p className="text-sm text-neutral-600">Save on payment processing with our transparent pricing model</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -171,7 +177,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                      <span className="text-sm">Volume-based discounted rates</span>
+                      <span className="text-sm">Competitive discounted rates</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
@@ -523,9 +529,9 @@ export default function LandingPage() {
       <section id="pricing" className="py-20 bg-gradient-to-br from-neutral-50 to-neutral-100">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold mb-4">Transparent, Volume-Based Pricing</h2>
+            <h2 className="text-3xl font-bold mb-4">Transparent, Competitive Pricing</h2>
             <p className="text-neutral-600">
-              As your transaction volume increases, your rates decrease. No hidden fees, no surprises.
+              Save 20% or more on your payment processing fees. No hidden charges, no surprises.
             </p>
           </div>
 
@@ -617,7 +623,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                      <span className="text-sm">Volume-based custom rates</span>
+                      <span className="text-sm">Custom rates with maximum savings</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
@@ -646,7 +652,7 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Payment Processing?</h2>
             <p className="text-primary-50 mb-8 text-lg">
-              Join thousands of high-volume merchants who trust Paysurity for their payment processing needs.
+              Join thousands of merchants who trust Paysurity for their payment processing needs and save on fees.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -676,7 +682,7 @@ export default function LandingPage() {
             <div>
               <h3 className="text-white font-bold text-lg mb-4">Paysurity</h3>
               <p className="text-sm mb-4">
-                Comprehensive payment processing and business management solutions for high-volume merchants.
+                Comprehensive payment processing and business management solutions for businesses of all sizes.
               </p>
             </div>
             <div>
