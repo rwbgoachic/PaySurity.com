@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, numeric, timestamp, pgEnum, date, jsonb, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -904,7 +905,7 @@ export const merchantReferrals = pgTable("merchant_referrals", {
   affiliateId: integer("affiliate_id").notNull(), // Link to affiliate profile
   merchantId: integer("merchant_id").notNull(), // Link to merchant profile
   referralCode: text("referral_code").notNull(), // Code used for tracking
-  status: text("status", { enum: ["pending", "active", "churned", "suspended"] }).notNull().default("pending"),
+  status: referralStatusEnum("status").notNull().default("pending"),
   sevenDayMilestoneReached: boolean("seven_day_milestone_reached").default(false),
   thirtyDayMilestoneReached: boolean("thirty_day_milestone_reached").default(false),
   ninetyDayMilestoneReached: boolean("ninety_day_milestone_reached").default(false),
@@ -933,6 +934,9 @@ export const insertMerchantReferralSchema = createInsertSchema(merchantReferrals
   notes: true,
 });
 
+// Enum for payout status
+export const payoutStatusEnum = pgEnum("payout_status", ["pending", "paid", "clawed_back", "canceled"]);
+
 // Affiliate payouts schema
 export const affiliatePayouts = pgTable("affiliate_payouts", {
   id: serial("id").primaryKey(),
@@ -940,7 +944,7 @@ export const affiliatePayouts = pgTable("affiliate_payouts", {
   referralId: integer("referral_id").notNull(), // Link to merchant referral
   milestoneName: text("milestone_name").notNull(), // 7_day, 30_day, 90_day, 180_day, recurring, loyalty, high_volume, bulk
   amount: numeric("amount").notNull(),
-  status: text("status", { enum: ["pending", "paid", "clawed_back", "canceled"] }).notNull().default("pending"),
+  status: payoutStatusEnum("status").notNull().default("pending"),
   scheduledDate: date("scheduled_date"),
   processedDate: date("processed_date"),
   transactionId: text("transaction_id"), // Reference to payment transaction
@@ -967,3 +971,737 @@ export type MerchantReferral = typeof merchantReferrals.$inferSelect;
 export type InsertMerchantReferral = z.infer<typeof insertMerchantReferralSchema>;
 export type AffiliatePayout = typeof affiliatePayouts.$inferSelect;
 export type InsertAffiliatePayout = z.infer<typeof insertAffiliatePayoutSchema>;
+
+// POS (Point of Sale) related schemas - BistroBeast System
+
+// Inventory unit types
+export const inventoryUnitEnum = pgEnum("inventory_unit", [
+  "each", "lb", "kg", "oz", "g", "l", "ml", "gal", "qt", "pt", "fl_oz", "cup", "tbsp", "tsp", "piece", "box", "case", "pack"
+]);
+
+// Menu item types
+export const menuItemTypeEnum = pgEnum("menu_item_type", [
+  "appetizer", "main", "side", "dessert", "beverage", "special", "combo"
+]);
+
+// Taxation settings
+export const taxRateTypeEnum = pgEnum("tax_rate_type", [
+  "food", "alcohol", "merchandise", "service", "delivery", "takeout"
+]);
+
+// Order status enum
+export const orderStatusEnum = pgEnum("order_status", [
+  "draft", "placed", "preparing", "ready", "served", "completed", "cancelled", "refunded"
+]);
+
+// Payment status enum
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending", "authorized", "paid", "partially_paid", "refunded", "voided", "failed"
+]);
+
+// POS Locations - Each merchant can have multiple locations
+export const posLocations = pgTable("pos_locations", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // References merchantProfiles
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zipCode: text("zip_code").notNull(),
+  country: text("country").notNull().default("USA"),
+  phoneNumber: text("phone_number"),
+  email: text("email"),
+  timezone: text("timezone").notNull().default("America/New_York"),
+  tax1Name: text("tax1_name").default("Sales Tax"),
+  tax1Rate: numeric("tax1_rate").default("0"),
+  tax2Name: text("tax2_name"),
+  tax2Rate: numeric("tax2_rate"),
+  tax3Name: text("tax3_name"),
+  tax3Rate: numeric("tax3_rate"),
+  isActive: boolean("is_active").default(true),
+  operatingHours: jsonb("operating_hours"), // JSON with days and hours
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosLocationSchema = createInsertSchema(posLocations).pick({
+  merchantId: true,
+  name: true,
+  address: true,
+  city: true,
+  state: true,
+  zipCode: true,
+  country: true,
+  phoneNumber: true,
+  email: true,
+  timezone: true,
+  tax1Name: true,
+  tax1Rate: true,
+  tax2Name: true,
+  tax2Rate: true,
+  tax3Name: true,
+  tax3Rate: true,
+  isActive: true,
+  operatingHours: true,
+});
+
+// Inventory Categories
+export const posCategories = pgTable("pos_categories", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  name: text("name").notNull(),
+  description: text("description"),
+  isInventoryCategory: boolean("is_inventory_category").default(true),
+  isMenuCategory: boolean("is_menu_category").default(false),
+  sortOrder: integer("sort_order").default(0),
+  color: text("color"), // Hex color for UI representation
+  icon: text("icon"), // Icon name or path
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosCategorySchema = createInsertSchema(posCategories).pick({
+  locationId: true,
+  name: true,
+  description: true,
+  isInventoryCategory: true,
+  isMenuCategory: true,
+  sortOrder: true,
+  color: true,
+  icon: true,
+  isActive: true,
+});
+
+// Inventory Items - Raw ingredients and supplies
+export const posInventoryItems = pgTable("pos_inventory_items", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  categoryId: integer("category_id"), // References posCategories
+  name: text("name").notNull(),
+  description: text("description"),
+  sku: text("sku"),
+  barcode: text("barcode"),
+  unit: text("unit", { enum: ["each", "lb", "kg", "oz", "g", "l", "ml", "gal", "qt", "pt", "fl_oz", "cup", "tbsp", "tsp", "piece", "box", "case", "pack"] }).notNull(),
+  quantity: numeric("quantity").notNull().default("0"),
+  lowStockThreshold: numeric("low_stock_threshold"),
+  reorderPoint: numeric("reorder_point"),
+  reorderQuantity: numeric("reorder_quantity"),
+  costPerUnit: numeric("cost_per_unit"),
+  lastCostPerUnit: numeric("last_cost_per_unit"),
+  vendorId: integer("vendor_id"), // References vendors/suppliers
+  lastOrderDate: date("last_order_date"),
+  shelfLife: integer("shelf_life"), // In days
+  storageLocation: text("storage_location"),
+  isActive: boolean("is_active").default(true),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosInventoryItemSchema = createInsertSchema(posInventoryItems).pick({
+  locationId: true,
+  categoryId: true,
+  name: true,
+  description: true,
+  sku: true,
+  barcode: true,
+  unit: true,
+  quantity: true,
+  lowStockThreshold: true,
+  reorderPoint: true,
+  reorderQuantity: true,
+  costPerUnit: true,
+  lastCostPerUnit: true,
+  vendorId: true,
+  lastOrderDate: true,
+  shelfLife: true,
+  storageLocation: true,
+  isActive: true,
+  imageUrl: true,
+});
+
+// Vendors / Suppliers
+export const posVendors = pgTable("pos_vendors", {
+  id: serial("id").primaryKey(), 
+  merchantId: integer("merchant_id").notNull(), // References merchantProfiles
+  name: text("name").notNull(),
+  contactName: text("contact_name"),
+  email: text("email"),
+  phoneNumber: text("phone_number"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country").default("USA"),
+  website: text("website"),
+  notes: text("notes"),
+  paymentTerms: text("payment_terms"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosVendorSchema = createInsertSchema(posVendors).pick({
+  merchantId: true,
+  name: true,
+  contactName: true,
+  email: true,
+  phoneNumber: true,
+  address: true,
+  city: true,
+  state: true,
+  zipCode: true,
+  country: true,
+  website: true,
+  notes: true,
+  paymentTerms: true,
+  isActive: true,
+});
+
+// Menu Items - Products sold to customers
+export const posMenuItems = pgTable("pos_menu_items", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  categoryId: integer("category_id"), // References posCategories
+  name: text("name").notNull(),
+  description: text("description"),
+  price: numeric("price").notNull(),
+  cost: numeric("cost"), // Calculated cost based on recipe
+  sku: text("sku"),
+  barcode: text("barcode"),
+  imageUrl: text("image_url"),
+  itemType: text("item_type", { enum: ["appetizer", "main", "side", "dessert", "beverage", "special", "combo"] }).default("main"),
+  taxRateType: text("tax_rate_type", { enum: ["food", "alcohol", "merchandise", "service", "delivery", "takeout"] }).default("food"),
+  isActive: boolean("is_active").default(true),
+  isFeatured: boolean("is_featured").default(false),
+  isDiscountable: boolean("is_discountable").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosMenuItemSchema = createInsertSchema(posMenuItems).pick({
+  locationId: true,
+  categoryId: true,
+  name: true,
+  description: true,
+  price: true,
+  cost: true,
+  sku: true,
+  barcode: true,
+  imageUrl: true,
+  itemType: true,
+  taxRateType: true,
+  isActive: true,
+  isFeatured: true,
+  isDiscountable: true,
+});
+
+// Recipe Items - Links inventory items to menu items
+export const posRecipeItems = pgTable("pos_recipe_items", {
+  id: serial("id").primaryKey(),
+  menuItemId: integer("menu_item_id").notNull(), // References posMenuItems
+  inventoryItemId: integer("inventory_item_id").notNull(), // References posInventoryItems
+  quantity: numeric("quantity").notNull(), // Quantity of inventory item used
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosRecipeItemSchema = createInsertSchema(posRecipeItems).pick({
+  menuItemId: true,
+  inventoryItemId: true,
+  quantity: true,
+});
+
+// Modifiers - Options or add-ons for menu items
+export const posModifiers = pgTable("pos_modifiers", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  name: text("name").notNull(), // e.g., "Size", "Toppings", "Temperature"
+  description: text("description"),
+  required: boolean("required").default(false), // Must choose at least one option
+  multiSelect: boolean("multi_select").default(false), // Can select multiple options
+  minSelections: integer("min_selections").default(0),
+  maxSelections: integer("max_selections"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosModifierSchema = createInsertSchema(posModifiers).pick({
+  locationId: true,
+  name: true,
+  description: true,
+  required: true,
+  multiSelect: true,
+  minSelections: true,
+  maxSelections: true,
+  isActive: true,
+});
+
+// Modifier Options - Individual choices within a modifier
+export const posModifierOptions = pgTable("pos_modifier_options", {
+  id: serial("id").primaryKey(),
+  modifierId: integer("modifier_id").notNull(), // References posModifiers
+  name: text("name").notNull(), // e.g., "Small", "Medium", "Large"
+  description: text("description"),
+  priceAdjustment: numeric("price_adjustment").default("0"), // Additional cost
+  isDefault: boolean("is_default").default(false),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosModifierOptionSchema = createInsertSchema(posModifierOptions).pick({
+  modifierId: true,
+  name: true,
+  description: true,
+  priceAdjustment: true,
+  isDefault: true,
+  sortOrder: true,
+  isActive: true,
+});
+
+// Menu Item Modifiers - Links modifiers to menu items
+export const posMenuItemModifiers = pgTable("pos_menu_item_modifiers", {
+  id: serial("id").primaryKey(),
+  menuItemId: integer("menu_item_id").notNull(), // References posMenuItems
+  modifierId: integer("modifier_id").notNull(), // References posModifiers
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosMenuItemModifierSchema = createInsertSchema(posMenuItemModifiers).pick({
+  menuItemId: true,
+  modifierId: true,
+  sortOrder: true,
+});
+
+// Tables - For restaurant seating
+export const posTables = pgTable("pos_tables", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  name: text("name").notNull(), // e.g., "Table 1", "Bar 2"
+  capacity: integer("capacity").default(4),
+  status: text("status").default("available"), // available, occupied, reserved, needs_cleaning
+  areaId: integer("area_id"), // References posAreas (e.g., "Patio", "Main Dining", "Private Room")
+  xPosition: integer("x_position").default(0), // For visual layout
+  yPosition: integer("y_position").default(0), // For visual layout
+  width: integer("width").default(100), // For visual layout
+  height: integer("height").default(100), // For visual layout
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosTableSchema = createInsertSchema(posTables).pick({
+  locationId: true,
+  name: true,
+  capacity: true,
+  status: true,
+  areaId: true,
+  xPosition: true,
+  yPosition: true,
+  width: true,
+  height: true,
+  isActive: true,
+});
+
+// Areas - Sections of the restaurant
+export const posAreas = pgTable("pos_areas", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  name: text("name").notNull(), // e.g., "Main Dining", "Patio", "Bar"
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosAreaSchema = createInsertSchema(posAreas).pick({
+  locationId: true,
+  name: true,
+  description: true,
+  isActive: true,
+});
+
+// Staff members
+export const posStaff = pgTable("pos_staff", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(), // References users
+  locationId: integer("location_id").notNull(), // References posLocations
+  position: text("position").notNull(), // e.g., "Server", "Manager", "Chef"
+  permissionLevel: text("permission_level").default("employee"), // employee, manager, admin
+  pin: text("pin"), // For quick login
+  isActive: boolean("is_active").default(true),
+  hireDate: date("hire_date"),
+  hourlyRate: numeric("hourly_rate"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosStaffSchema = createInsertSchema(posStaff).pick({
+  userId: true,
+  locationId: true,
+  position: true,
+  permissionLevel: true,
+  pin: true,
+  isActive: true,
+  hireDate: true,
+  hourlyRate: true,
+});
+
+// Shifts - Staff work periods
+export const posShifts = pgTable("pos_shifts", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(), // References posStaff
+  locationId: integer("location_id").notNull(), // References posLocations
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  hoursWorked: numeric("hours_worked"),
+  breakMinutes: numeric("break_minutes").default("0"),
+  totalSales: numeric("total_sales").default("0"),
+  totalTips: numeric("total_tips").default("0"),
+  shiftNotes: text("shift_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosShiftSchema = createInsertSchema(posShifts).pick({
+  staffId: true,
+  locationId: true,
+  startTime: true,
+  endTime: true,
+  hoursWorked: true,
+  breakMinutes: true,
+  totalSales: true,
+  totalTips: true,
+  shiftNotes: true,
+});
+
+// Orders - Customer orders
+export const posOrders = pgTable("pos_orders", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  orderNumber: text("order_number").notNull(),
+  tableId: integer("table_id"), // References posTables, null for takeout/delivery
+  customerId: integer("customer_id"), // References users or customers
+  staffId: integer("staff_id").notNull(), // References posStaff who took the order
+  status: text("status", { enum: ["draft", "placed", "preparing", "ready", "served", "completed", "cancelled", "refunded"] }).default("draft"),
+  type: text("type").notNull(), // dine_in, takeout, delivery, online
+  subtotal: numeric("subtotal").notNull().default("0"),
+  taxAmount: numeric("tax_amount").notNull().default("0"),
+  tipAmount: numeric("tip_amount").default("0"),
+  discountAmount: numeric("discount_amount").default("0"),
+  totalAmount: numeric("total_amount").notNull().default("0"),
+  paymentStatus: text("payment_status", { enum: ["pending", "authorized", "paid", "partially_paid", "refunded", "voided", "failed"] }).default("pending"),
+  notes: text("notes"),
+  orderDate: timestamp("order_date").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  // For deliveries
+  deliveryAddress: text("delivery_address"),
+  deliveryInstructions: text("delivery_instructions"),
+  deliveryFee: numeric("delivery_fee").default("0"),
+  deliveryStatus: text("delivery_status"), // assigned, en_route, delivered
+  // For online orders
+  estimatedPickupTime: timestamp("estimated_pickup_time"),
+  estimatedDeliveryTime: timestamp("estimated_delivery_time"),
+});
+
+export const insertPosOrderSchema = createInsertSchema(posOrders).pick({
+  locationId: true,
+  orderNumber: true,
+  tableId: true,
+  customerId: true,
+  staffId: true,
+  status: true,
+  type: true,
+  subtotal: true,
+  taxAmount: true,
+  tipAmount: true,
+  discountAmount: true,
+  totalAmount: true,
+  paymentStatus: true,
+  notes: true,
+  orderDate: true,
+  completedAt: true,
+  deliveryAddress: true,
+  deliveryInstructions: true,
+  deliveryFee: true,
+  deliveryStatus: true,
+  estimatedPickupTime: true,
+  estimatedDeliveryTime: true,
+});
+
+// Order Items - Individual items in an order
+export const posOrderItems = pgTable("pos_order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(), // References posOrders
+  menuItemId: integer("menu_item_id").notNull(), // References posMenuItems
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: numeric("unit_price").notNull(),
+  subtotal: numeric("subtotal").notNull(),
+  discount: numeric("discount").default("0"),
+  taxAmount: numeric("tax_amount").notNull().default("0"),
+  totalAmount: numeric("total_amount").notNull(),
+  notes: text("notes"),
+  // String array of modifier options in format "Modifier: Option" (e.g., "Size: Large, Toppings: Pepperoni")
+  selectedModifiers: text("selected_modifiers").array().default([]),
+  status: text("status").default("pending"), // pending, cooking, ready, delivered, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosOrderItemSchema = createInsertSchema(posOrderItems).pick({
+  orderId: true,
+  menuItemId: true,
+  quantity: true,
+  unitPrice: true,
+  subtotal: true,
+  discount: true,
+  taxAmount: true,
+  totalAmount: true,
+  notes: true,
+  selectedModifiers: true,
+  status: true,
+});
+
+// Payments - Payment records for orders
+export const posPayments = pgTable("pos_payments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(), // References posOrders
+  paymentMethod: text("payment_method").notNull(), // cash, credit_card, debit_card, gift_card, mobile_wallet
+  amount: numeric("amount").notNull(),
+  status: text("status", { enum: ["pending", "authorized", "completed", "failed", "refunded", "voided"] }).default("pending"),
+  transactionId: text("transaction_id"), // External payment processor ID
+  cardType: text("card_type"), // visa, mastercard, amex, etc.
+  last4: text("last4"), // Last 4 digits of card
+  receiptNumber: text("receipt_number"),
+  staffId: integer("staff_id"), // Staff who processed the payment
+  notes: text("notes"),
+  refundedAmount: numeric("refunded_amount").default("0"),
+  refundedAt: timestamp("refunded_at"),
+  refundReason: text("refund_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosPaymentSchema = createInsertSchema(posPayments).pick({
+  orderId: true,
+  paymentMethod: true,
+  amount: true,
+  status: true,
+  transactionId: true,
+  cardType: true,
+  last4: true,
+  receiptNumber: true,
+  staffId: true,
+  notes: true,
+  refundedAmount: true,
+  refundedAt: true,
+  refundReason: true,
+});
+
+// Discounts - Promotions and coupons
+export const posDiscounts = pgTable("pos_discounts", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  name: text("name").notNull(),
+  code: text("code"),
+  type: text("type").notNull(), // percentage, fixed_amount
+  value: numeric("value").notNull(), // Percentage or amount
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  minOrderAmount: numeric("min_order_amount").default("0"),
+  maxUsage: integer("max_usage"), // Max number of times this discount can be used
+  usageCount: integer("usage_count").default(0), // Number of times used
+  isActive: boolean("is_active").default(true),
+  applicableMenuItems: integer("applicable_menu_items").array(), // Array of menu item IDs, empty means all
+  applicableCategories: integer("applicable_categories").array(), // Array of category IDs, empty means all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosDiscountSchema = createInsertSchema(posDiscounts).pick({
+  locationId: true,
+  name: true,
+  code: true,
+  type: true,
+  value: true,
+  startDate: true,
+  endDate: true,
+  minOrderAmount: true,
+  maxUsage: true,
+  usageCount: true,
+  isActive: true,
+  applicableMenuItems: true,
+  applicableCategories: true,
+});
+
+// Inventory Transactions - Track inventory changes
+export const posInventoryTransactions = pgTable("pos_inventory_transactions", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  inventoryItemId: integer("inventory_item_id").notNull(), // References posInventoryItems
+  type: text("type").notNull(), // purchase, usage, adjustment, waste, transfer
+  quantity: numeric("quantity").notNull(), // Positive for additions, negative for removals
+  unitCost: numeric("unit_cost"), // Cost per unit for this transaction
+  totalCost: numeric("total_cost"), // Total cost of this transaction
+  orderId: integer("order_id"), // References posOrders if type is 'usage'
+  vendorId: integer("vendor_id"), // References posVendors if type is 'purchase'
+  referenceNumber: text("reference_number"), // Invoice number, PO number, etc.
+  notes: text("notes"),
+  staffId: integer("staff_id"), // Staff who performed the transaction
+  date: timestamp("date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPosInventoryTransactionSchema = createInsertSchema(posInventoryTransactions).pick({
+  locationId: true,
+  inventoryItemId: true,
+  type: true,
+  quantity: true,
+  unitCost: true,
+  totalCost: true,
+  orderId: true,
+  vendorId: true,
+  referenceNumber: true,
+  notes: true,
+  staffId: true,
+  date: true,
+});
+
+// Reservations
+export const posReservations = pgTable("pos_reservations", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  partySize: integer("party_size").notNull(),
+  reservationDate: date("reservation_date").notNull(),
+  reservationTime: varchar("reservation_time", { length: 10 }).notNull(),
+  status: text("status").default("confirmed"), // confirmed, seated, completed, no_show, cancelled
+  tableId: integer("table_id"), // References posTables, may be null until assigned
+  notes: text("notes"),
+  specialRequests: text("special_requests"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosReservationSchema = createInsertSchema(posReservations).pick({
+  locationId: true,
+  customerName: true,
+  customerEmail: true,
+  customerPhone: true,
+  partySize: true,
+  reservationDate: true,
+  reservationTime: true,
+  status: true,
+  tableId: true,
+  notes: true,
+  specialRequests: true,
+});
+
+// Daily totals for accounting/reporting
+export const posDailyTotals = pgTable("pos_daily_totals", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  date: date("date").notNull(),
+  salesTotal: numeric("sales_total").default("0"),
+  taxTotal: numeric("tax_total").default("0"),
+  tipTotal: numeric("tip_total").default("0"),
+  discountTotal: numeric("discount_total").default("0"),
+  refundTotal: numeric("refund_total").default("0"),
+  netTotal: numeric("net_total").default("0"),
+  orderCount: integer("order_count").default(0),
+  itemsSold: integer("items_sold").default(0),
+  averageOrderValue: numeric("average_order_value").default("0"),
+  cashTotal: numeric("cash_total").default("0"),
+  cardTotal: numeric("card_total").default("0"),
+  otherPaymentTotal: numeric("other_payment_total").default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosDailyTotalSchema = createInsertSchema(posDailyTotals).pick({
+  locationId: true,
+  date: true,
+  salesTotal: true,
+  taxTotal: true,
+  tipTotal: true,
+  discountTotal: true,
+  refundTotal: true,
+  netTotal: true,
+  orderCount: true,
+  itemsSold: true,
+  averageOrderValue: true,
+  cashTotal: true,
+  cardTotal: true,
+  otherPaymentTotal: true,
+});
+
+// Type definitions for POS BistroBeast system
+export type PosLocation = typeof posLocations.$inferSelect;
+export type InsertPosLocation = z.infer<typeof insertPosLocationSchema>;
+
+export type PosCategory = typeof posCategories.$inferSelect;
+export type InsertPosCategory = z.infer<typeof insertPosCategorySchema>;
+
+export type PosInventoryItem = typeof posInventoryItems.$inferSelect;
+export type InsertPosInventoryItem = z.infer<typeof insertPosInventoryItemSchema>;
+
+export type PosVendor = typeof posVendors.$inferSelect;
+export type InsertPosVendor = z.infer<typeof insertPosVendorSchema>;
+
+export type PosMenuItem = typeof posMenuItems.$inferSelect;
+export type InsertPosMenuItem = z.infer<typeof insertPosMenuItemSchema>;
+
+export type PosRecipeItem = typeof posRecipeItems.$inferSelect;
+export type InsertPosRecipeItem = z.infer<typeof insertPosRecipeItemSchema>;
+
+export type PosModifier = typeof posModifiers.$inferSelect;
+export type InsertPosModifier = z.infer<typeof insertPosModifierSchema>;
+
+export type PosModifierOption = typeof posModifierOptions.$inferSelect;
+export type InsertPosModifierOption = z.infer<typeof insertPosModifierOptionSchema>;
+
+export type PosMenuItemModifier = typeof posMenuItemModifiers.$inferSelect;
+export type InsertPosMenuItemModifier = z.infer<typeof insertPosMenuItemModifierSchema>;
+
+export type PosTable = typeof posTables.$inferSelect;
+export type InsertPosTable = z.infer<typeof insertPosTableSchema>;
+
+export type PosArea = typeof posAreas.$inferSelect;
+export type InsertPosArea = z.infer<typeof insertPosAreaSchema>;
+
+export type PosStaff = typeof posStaff.$inferSelect;
+export type InsertPosStaff = z.infer<typeof insertPosStaffSchema>;
+
+export type PosShift = typeof posShifts.$inferSelect;
+export type InsertPosShift = z.infer<typeof insertPosShiftSchema>;
+
+export type PosOrder = typeof posOrders.$inferSelect;
+export type InsertPosOrder = z.infer<typeof insertPosOrderSchema>;
+
+export type PosOrderItem = typeof posOrderItems.$inferSelect;
+export type InsertPosOrderItem = z.infer<typeof insertPosOrderItemSchema>;
+
+export type PosPayment = typeof posPayments.$inferSelect;
+export type InsertPosPayment = z.infer<typeof insertPosPaymentSchema>;
+
+export type PosDiscount = typeof posDiscounts.$inferSelect;
+export type InsertPosDiscount = z.infer<typeof insertPosDiscountSchema>;
+
+export type PosInventoryTransaction = typeof posInventoryTransactions.$inferSelect;
+export type InsertPosInventoryTransaction = z.infer<typeof insertPosInventoryTransactionSchema>;
+
+export type PosReservation = typeof posReservations.$inferSelect;
+export type InsertPosReservation = z.infer<typeof insertPosReservationSchema>;
+
+export type PosDailyTotal = typeof posDailyTotals.$inferSelect;
+export type InsertPosDailyTotal = z.infer<typeof insertPosDailyTotalSchema>;
