@@ -1,36 +1,145 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Check, CreditCard, DollarSign, LineChart, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Check, CreditCard, DollarSign, LineChart, ShieldCheck, Users, 
+         LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu } from "lucide-react";
 import LandingBlogSection from "@/components/landing-blog-section";
+import { Badge } from "@/components/ui/badge";
+import { OrganizationSchema, WebsiteSchema } from "@/components/seo/json-ld";
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const [email, setEmail] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // SEO Optimizations
+  useEffect(() => {
+    // Set title and meta description for better SEO
+    document.title = "Paysurity - Secure Payment Solutions for Any Business";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute("content", 
+        "Paysurity offers secure, PCI-compliant payment processing, digital wallets, and industry-specific POS solutions with transparent pricing.");
+    }
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Structured Data for SEO */}
+      <OrganizationSchema 
+        name="Paysurity"
+        url="https://paysurity.com"
+        logo="https://paysurity.com/logo.png"
+        description="Secure payment processing solutions for businesses of all sizes"
+      />
+      <WebsiteSchema
+        name="Paysurity - Payment Solutions"
+        url="https://paysurity.com"
+        description="Secure payment processing with digital wallets and POS solutions"
+      />
+      
       {/* Navbar */}
-      <header className="border-b bg-white sticky top-0 z-10">
+      <header className="border-b bg-white sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto py-4 px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <h1 className="text-2xl font-bold text-primary">Paysurity</h1>
-            <nav className="hidden md:flex items-center gap-6">
+            <div className="flex items-center">
+              <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200 hidden sm:flex">
+                <LockKeyhole className="h-3 w-3 mr-1" /> PCI Compliant
+              </Badge>
+              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 hidden sm:flex">
+                <ShieldCheck className="h-3 w-3 mr-1" /> SSL Secured
+              </Badge>
+            </div>
+            <nav className="hidden lg:flex items-center gap-6">
               <a href="#solutions" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Solutions</a>
               <a href="#industries" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Industries</a>
               <a href="#pos" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">POS Systems</a>
+              <a href="#digital-wallet" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Digital Wallet</a>
               <a href="#pricing" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Pricing</a>
               <a href="/blog" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Blog</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate("/auth")}>Login</Button>
-            <Button onClick={() => navigate("/auth")}>Get Started</Button>
+            <div className="hidden md:block">
+              <Button variant="outline" onClick={() => navigate("/auth")}>Login</Button>
+              <Button onClick={() => navigate("/auth")} className="ml-2">Sign Up</Button>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="lg:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
           </div>
         </div>
+        
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden py-4 px-4 border-t bg-white absolute w-full z-50">
+            <nav className="flex flex-col space-y-4">
+              <a 
+                href="#solutions" 
+                className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Solutions
+              </a>
+              <a 
+                href="#industries" 
+                className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Industries
+              </a>
+              <a 
+                href="#pos" 
+                className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                POS Systems
+              </a>
+              <a 
+                href="#digital-wallet" 
+                className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Digital Wallet
+              </a>
+              <a 
+                href="#pricing" 
+                className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
+              </a>
+              <a 
+                href="/blog" 
+                className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Blog
+              </a>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => navigate("/auth")} className="flex-1">Login</Button>
+                <Button onClick={() => navigate("/auth")} className="flex-1">Sign Up</Button>
+              </div>
+              <div className="flex items-center gap-2 justify-center pt-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <LockKeyhole className="h-3 w-3 mr-1" /> PCI Compliant
+                </Badge>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <ShieldCheck className="h-3 w-3 mr-1" /> SSL Secured
+                </Badge>
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero section */}
@@ -142,12 +251,101 @@ export default function LandingPage() {
             <p className="text-neutral-600 font-medium">Trusted by businesses across the United States</p>
           </div>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            {/* Here you would normally include actual logos - using text placeholders */}
+            {/* Logos would be displayed here */}
             <div className="text-neutral-400 font-bold text-xl">Company A</div>
             <div className="text-neutral-400 font-bold text-xl">Company B</div>
             <div className="text-neutral-400 font-bold text-xl">Company C</div>
             <div className="text-neutral-400 font-bold text-xl">Company D</div>
             <div className="text-neutral-400 font-bold text-xl">Company E</div>
+          </div>
+          
+          {/* Security and Compliance Badges */}
+          <div className="mt-10 flex flex-wrap justify-center gap-6 border-t pt-10">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                <LockKeyhole className="h-8 w-8" />
+              </div>
+              <p className="text-sm font-medium">SSL Encrypted</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-2">
+                <ShieldCheck className="h-8 w-8" />
+              </div>
+              <p className="text-sm font-medium">PCI DSS Compliant</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
+                <Check className="h-8 w-8" />
+              </div>
+              <p className="text-sm font-medium">NACHA Certified</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-2">
+                <Users className="h-8 w-8" />
+              </div>
+              <p className="text-sm font-medium">HIPAA Compliant</p>
+            </div>
+          </div>
+          
+          {/* Client Testimonials */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-neutral-50 p-6 rounded-lg border">
+              <div className="flex items-center mb-4">
+                <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
+                  <span className="text-lg font-bold">JD</span>
+                </div>
+                <div>
+                  <p className="font-medium">Jane Doe</p>
+                  <p className="text-sm text-neutral-500">CFO, Restaurant Chain</p>
+                </div>
+              </div>
+              <p className="italic text-neutral-600">"Paysurity's BistroBeast POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."</p>
+              <div className="mt-4 flex">
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+              </div>
+            </div>
+            <div className="bg-neutral-50 p-6 rounded-lg border">
+              <div className="flex items-center mb-4">
+                <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
+                  <span className="text-lg font-bold">JS</span>
+                </div>
+                <div>
+                  <p className="font-medium">John Smith</p>
+                  <p className="text-sm text-neutral-500">Owner, Legal Practice</p>
+                </div>
+              </div>
+              <p className="italic text-neutral-600">"The secure payment processing and HIPAA compliance features have made Paysurity the perfect solution for our healthcare billing needs. Highly recommended!"</p>
+              <div className="mt-4 flex">
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+              </div>
+            </div>
+            <div className="bg-neutral-50 p-6 rounded-lg border md:col-span-2 lg:col-span-1">
+              <div className="flex items-center mb-4">
+                <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
+                  <span className="text-lg font-bold">AR</span>
+                </div>
+                <div>
+                  <p className="font-medium">Amanda Rodriguez</p>
+                  <p className="text-sm text-neutral-500">CEO, Retail Chain</p>
+                </div>
+              </div>
+              <p className="italic text-neutral-600">"The digital wallet features have helped us create a seamless omnichannel experience for our customers. Integration was simple and the support team is always available."</p>
+              <div className="mt-4 flex">
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+                <Star className="h-4 w-4 text-amber-400" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -644,6 +842,127 @@ export default function LandingPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Digital Wallet Section */}
+      <section id="digital-wallet" className="py-20 bg-gradient-to-br from-primary/5 to-primary/10">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge variant="outline" className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1">
+              Available on Web & Mobile App
+            </Badge>
+            <h2 className="text-3xl font-bold mb-4">Secure Digital Wallet Solutions</h2>
+            <p className="text-neutral-600">
+              Our digital wallet technology offers secure, convenient, and flexible payment management for both businesses and consumers.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="order-2 lg:order-1">
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden border">
+                <div className="p-8">
+                  <h3 className="text-2xl font-bold mb-6">Key Features</h3>
+                  
+                  <div className="space-y-6">
+                    <div className="flex">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <AppWindow className="h-5 w-5 text-primary" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <h4 className="text-lg font-medium">Multi-Device Access</h4>
+                        <p className="text-neutral-600 mt-1">Seamlessly access your wallet across all your devices with real-time synchronization.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <LockKeyhole className="h-5 w-5 text-primary" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <h4 className="text-lg font-medium">Enhanced Security</h4>
+                        <p className="text-neutral-600 mt-1">Advanced encryption, biometric authentication, and transaction monitoring for maximum protection.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-primary" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <h4 className="text-lg font-medium">Family Accounts</h4>
+                        <p className="text-neutral-600 mt-1">Create parent-child relationships with spending controls and expense tracking for family members.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <FileEdit className="h-5 w-5 text-primary" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <h4 className="text-lg font-medium">Business Expense Management</h4>
+                        <p className="text-neutral-600 mt-1">Integrated expense tracking, receipt capture, and reporting for business purchases.</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8">
+                    <Button className="mr-4">Learn More</Button>
+                    <Button variant="outline">Download App</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="order-1 lg:order-2">
+              <div className="bg-white p-4 rounded-lg shadow-lg border">
+                <div className="aspect-[4/3] bg-neutral-100 rounded flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <p className="text-neutral-400 text-center">Digital Wallet Mobile App Interface</p>
+                  </div>
+                  <div className="absolute top-0 right-0 bottom-0 w-[40%] bg-gradient-to-l from-white/80 to-transparent"></div>
+                  <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 z-10 w-32">
+                    <div className="h-2 w-16 bg-primary rounded-full mb-2"></div>
+                    <div className="h-2 w-12 bg-neutral-200 rounded-full mb-2"></div>
+                    <div className="h-2 w-20 bg-neutral-200 rounded-full"></div>
+                    <div className="mt-4 flex justify-between">
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Phone className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 p-4 bg-white rounded-lg border shadow">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 mr-4">
+                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <Check className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Mobile & Web Compatible</h4>
+                    <p className="text-sm text-neutral-600">Our digital wallet is available as both a mobile app and web application for cross-platform flexibility.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -12,13 +12,30 @@ const JsonLd: React.FC<JsonLdProps> = ({ data }) => (
 );
 
 // Organization schema
-export const OrganizationSchema: React.FC = () => {
+interface OrganizationSchemaProps {
+  name?: string;
+  url?: string;
+  logo?: string;
+  description?: string;
+}
+
+export const OrganizationSchema: React.FC<OrganizationSchemaProps> = ({
+  name = "Paysurity",
+  url,
+  logo,
+  description = "Secure payment processing solutions for businesses of all sizes"
+}) => {
+  const siteUrl = window.location.origin;
+  const siteUrl2 = url || siteUrl;
+  const logoUrl = logo || `${siteUrl}/logo192.png`;
+  
   const data = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Paysurity",
-    "url": window.location.origin,
-    "logo": `${window.location.origin}/logo192.png`,
+    "name": name,
+    "url": siteUrl2,
+    "logo": logoUrl,
+    "description": description,
     "sameAs": [
       "https://twitter.com/paysurity",
       "https://www.facebook.com/paysurity",
@@ -177,6 +194,37 @@ export const BreadcrumbSchema: React.FC<BreadcrumbSchemaProps> = ({ items }) => 
       "name": item.name,
       "item": `${siteUrl}${item.url.startsWith("/") ? item.url : `/${item.url}`}`
     }))
+  };
+  
+  return <JsonLd data={data} />;
+};
+
+// Website schema
+interface WebsiteSchemaProps {
+  name: string;
+  url: string;
+  description: string;
+}
+
+export const WebsiteSchema: React.FC<WebsiteSchemaProps> = ({
+  name,
+  url,
+  description
+}) => {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": name,
+    "url": url,
+    "description": description,
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `${url}/search?q={search_term_string}`
+      },
+      "query-input": "required name=search_term_string"
+    }
   };
   
   return <JsonLd data={data} />;
