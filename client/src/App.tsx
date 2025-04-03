@@ -15,6 +15,12 @@ import EmployeeTransactions from "./pages/employee/transactions";
 import EmployeeBanking from "./pages/employee/banking";
 import EmployeeFundRequests from "./pages/employee/fund-requests";
 import EmployeeSettings from "./pages/employee/settings";
+import MerchantDashboard from "./pages/merchant/dashboard";
+import MerchantOnboarding from "./pages/merchant/onboarding";
+import MerchantVerification from "./pages/merchant/verification";
+import PaymentGateways from "./pages/merchant/payment-gateways/index";
+import NewPaymentGateway from "./pages/merchant/payment-gateways/new";
+import LoyaltyPrograms from "./pages/merchant/loyalty-programs/index";
 import { AuthProvider } from "./hooks/use-auth";
 
 function Router() {
@@ -32,6 +38,12 @@ function Router() {
       <ProtectedRoute path="/employee/banking" component={EmployeeBanking} />
       <ProtectedRoute path="/employee/fund-requests" component={EmployeeFundRequests} />
       <ProtectedRoute path="/employee/settings" component={EmployeeSettings} />
+      <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboard} />
+      <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboarding} />
+      <ProtectedRoute path="/merchant/verification" component={MerchantVerification} />
+      <ProtectedRoute path="/merchant/payment-gateways" component={PaymentGateways} />
+      <ProtectedRoute path="/merchant/payment-gateways/new" component={NewPaymentGateway} />
+      <ProtectedRoute path="/merchant/loyalty-programs" component={LoyaltyPrograms} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
