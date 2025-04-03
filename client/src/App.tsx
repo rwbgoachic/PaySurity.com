@@ -115,7 +115,8 @@ function App() {
       />
       <OrganizationSchema />
       <Router />
-      <WebSocketHandler />
+      {/* Only include WebSocketHandler on pages that need it,
+          now also included directly in applications-management.tsx */}
       <Toaster />
     </AuthProvider>
   );

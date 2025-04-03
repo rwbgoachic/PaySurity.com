@@ -39,10 +39,10 @@ app.use(helmet({
   }
 }));
 
-// Global rate limiter - preventing DoS attacks
+// Global rate limiter - preventing DoS attacks but more generous for development
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // Increased to 1000 requests per windowMs for development
   standardHeaders: true,
   legacyHeaders: false,
   message: "Too many requests from this IP, please try again after 15 minutes"
@@ -51,21 +51,21 @@ const globalLimiter = rateLimit({
 // Apply rate limiting to all requests
 app.use(globalLimiter);
 
-// Stricter rate limit for authentication endpoints
+// Less strict rate limit for authentication endpoints during development
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 attempts per hour
+  max: 100, // Increased to 100 attempts per hour for development
   standardHeaders: true,
   legacyHeaders: false,
   message: "Too many login attempts, please try again after an hour"
 });
 
-// Brute force protection for login
+// Brute force protection for login - more lenient for development
 const store = new ExpressBrute.MemoryStore();
 const bruteforce = new ExpressBrute(store, {
-  freeRetries: 5,
-  minWait: 60 * 1000, // 1 minute
-  maxWait: 60 * 60 * 1000, // 1 hour
+  freeRetries: 20, // Increased for development
+  minWait: 10 * 1000, // 10 seconds - reduced for development
+  maxWait: 15 * 60 * 1000, // 15 minutes - reduced for development
   failCallback: (_req: Request, res: Response, _next: NextFunction, nextValidRequestDate: Date) => {
     const waitTime = Math.ceil((nextValidRequestDate.getTime() - Date.now()) / 1000);
     res.status(429).json({
