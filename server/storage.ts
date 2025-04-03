@@ -37,7 +37,12 @@ import {
   // Affiliate system types
   type AffiliateProfile, type InsertAffiliateProfile,
   type MerchantReferral, type InsertMerchantReferral,
-  type AffiliatePayout, type InsertAffiliatePayout
+  type AffiliatePayout, type InsertAffiliatePayout,
+  
+  // Merchant Application types
+  type MerchantApplication, type MerchantApplicationPersonalInfo,
+  type MerchantApplicationBusinessInfo, type MerchantApplicationAddressInfo,
+  type MerchantApplicationPaymentProcessing
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
@@ -261,11 +266,18 @@ export interface IStorage {
   updateAffiliatePayoutStatus(id: number, status: string): Promise<AffiliatePayout>;
   markAffiliatePayoutAsPaid(id: number, transactionId: string): Promise<AffiliatePayout>;
   clawbackAffiliatePayout(id: number, notes?: string): Promise<AffiliatePayout>;
+  
+  // Merchant Application operations
+  createMerchantApplication(application: MerchantApplication): Promise<MerchantApplication>;
+  getMerchantApplication(id: string): Promise<MerchantApplication | undefined>;
+  getMerchantApplicationsByStatus(status: string): Promise<MerchantApplication[]>;
+  updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
   private pool: Pool;
+  private _merchantApplications: MerchantApplication[] = [];
 
   constructor() {
     if (!process.env.DATABASE_URL) {
@@ -2583,6 +2595,71 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedPayout;
+  }
+  
+  // Merchant Application operations
+  async createMerchantApplication(application: MerchantApplication): Promise<MerchantApplication> {
+    // Since we're using MemStorage for prototyping, we'll store applications in memory
+    if (!this._merchantApplications) {
+      this._merchantApplications = [];
+    }
+    
+    // Add to in-memory array (in a real DB implementation, we would use db.insert)
+    this._merchantApplications.push(application);
+    
+    return application;
+  }
+  
+  async getMerchantApplication(id: string): Promise<MerchantApplication | undefined> {
+    // Check if we have applications in memory
+    if (!this._merchantApplications) {
+      return undefined;
+    }
+    
+    // Find the application by ID
+    return this._merchantApplications.find(app => app.id === id);
+  }
+  
+  async getMerchantApplicationsByStatus(status: string): Promise<MerchantApplication[]> {
+    // Check if we have applications in memory
+    if (!this._merchantApplications) {
+      return [];
+    }
+    
+    // If status is "all", return all applications
+    if (status === "all") {
+      return this._merchantApplications;
+    }
+    
+    // Filter applications by status
+    return this._merchantApplications.filter(app => app.status === status);
+  }
+  
+  async updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined> {
+    // Check if we have applications in memory
+    if (!this._merchantApplications) {
+      return undefined;
+    }
+    
+    // Find the application index
+    const appIndex = this._merchantApplications.findIndex(app => app.id === id);
+    
+    if (appIndex === -1) {
+      return undefined;
+    }
+    
+    // Update the application status
+    const updatedApp = {
+      ...this._merchantApplications[appIndex],
+      status: status as "pending" | "reviewing" | "approved" | "rejected",
+      notes: notes || this._merchantApplications[appIndex].notes,
+      updatedAt: new Date()
+    };
+    
+    // Update the application in memory
+    this._merchantApplications[appIndex] = updatedApp;
+    
+    return updatedApp;
   }
 }
 

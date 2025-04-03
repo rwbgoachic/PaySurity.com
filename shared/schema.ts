@@ -1703,6 +1703,55 @@ export type InsertPosReservation = z.infer<typeof insertPosReservationSchema>;
 export type PosDailyTotal = typeof posDailyTotals.$inferSelect;
 export type InsertPosDailyTotal = z.infer<typeof insertPosDailyTotalSchema>;
 
+// Merchant Application types
+export interface MerchantApplicationPersonalInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+export interface MerchantApplicationBusinessInfo {
+  businessName: string;
+  businessType: string;
+  industry: string;
+  yearsInBusiness: string;
+  estimatedMonthlyVolume: string;
+  businessDescription?: string;
+  employeeCount: string;
+}
+
+export interface MerchantApplicationAddressInfo {
+  address1: string;
+  address2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+export interface MerchantApplicationPaymentProcessing {
+  acceptsCardPresent?: boolean;
+  acceptsOnlinePayments?: boolean;
+  acceptsACH?: boolean;
+  acceptsRecurringPayments?: boolean;
+  needsPOS?: boolean;
+  needsPaymentGateway?: boolean;
+  currentProcessor?: string;
+}
+
+export interface MerchantApplication {
+  id: string;
+  status: "pending" | "reviewing" | "approved" | "rejected";
+  personalInfo: MerchantApplicationPersonalInfo;
+  businessInfo: MerchantApplicationBusinessInfo;
+  addressInfo: MerchantApplicationAddressInfo;
+  paymentProcessing: MerchantApplicationPaymentProcessing;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Table relationships are defined through foreign keys in the table definitions above
 // We've documented these relationships in /docs/database-relationships.md for clarity
 // The schema uses explicit foreign key constraints where possible, but some circular references

@@ -24,7 +24,9 @@ import {
   // Affiliate system schemas
   insertAffiliateProfileSchema,
   insertMerchantReferralSchema,
-  insertAffiliatePayoutSchema
+  insertAffiliatePayoutSchema,
+  // Merchant application types
+  MerchantApplication
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1306,6 +1308,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const payout = await storage.clawbackAffiliatePayout(payoutId, notes);
       res.json(payout);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ********** Merchant Onboarding API routes **********
+  
+  // Merchant application submission endpoint
+  app.post("/api/merchant/applications", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Validation schema for the entire application
+      const applicationSchema = z.object({
+        personalInfo: z.object({
+          firstName: z.string().min(2),
+          lastName: z.string().min(2),
+          email: z.string().email(),
+          phone: z.string().min(10),
+        }),
+        businessInfo: z.object({
+          businessName: z.string().min(2),
+          businessType: z.string().min(1),
+          industry: z.string().min(1),
+          yearsInBusiness: z.string().min(1),
+          estimatedMonthlyVolume: z.string().min(1),
+          businessDescription: z.string().optional(),
+          employeeCount: z.string().min(1),
+        }),
+        addressInfo: z.object({
+          address1: z.string().min(5),
+          address2: z.string().optional(),
+          city: z.string().min(2),
+          state: z.string().min(2),
+          zipCode: z.string().min(5),
+          country: z.string().min(2),
+        }),
+        paymentProcessing: z.object({
+          acceptsCardPresent: z.boolean().optional(),
+          acceptsOnlinePayments: z.boolean().optional(),
+          acceptsACH: z.boolean().optional(),
+          acceptsRecurringPayments: z.boolean().optional(),
+          needsPOS: z.boolean().optional(),
+          needsPaymentGateway: z.boolean().optional(),
+          currentProcessor: z.string().optional(),
+        }),
+      });
+
+      // Validate the request body
+      const validatedData = applicationSchema.parse(req.body);
+      
+      // Generate a unique application ID
+      const applicationId = `APP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      
+      // Store the application in the database
+      const application = await storage.createMerchantApplication({
+        id: applicationId,
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...validatedData,
+      });
+      
+      // Respond with the application ID
+      res.status(201).json({ 
+        applicationId: application.id,
+        message: "Application submitted successfully" 
+      });
+      
+    } catch (error) {
+      console.error("Error submitting merchant application:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to submit application. Please try again later." 
+      });
+    }
+  });
+
+  // Get merchant application by ID
+  app.get("/api/merchant/applications/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const applicationId = req.params.id;
+      
+      // Retrieve the application from the database
+      const application = await storage.getMerchantApplication(applicationId);
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // Only allow the user who created the application or admins to view it
+      if (application.personalInfo.email !== req.user?.email && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized to view this application" });
+      }
+      
+      res.status(200).json(application);
+      
+    } catch (error) {
+      console.error("Error retrieving merchant application:", error);
+      next(error);
+    }
+  });
+  
+  // List merchant applications (admin only)
+  app.get("/api/merchant/applications", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can view all applications" });
+      
+      const status = req.query.status as string || "all";
+      const applications = await storage.getMerchantApplicationsByStatus(status);
+      
+      res.status(200).json(applications);
+      
+    } catch (error) {
+      console.error("Error listing merchant applications:", error);
+      next(error);
+    }
+  });
+  
+  // Update merchant application status (admin only)
+  app.patch("/api/merchant/applications/:id/status", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can update application status" });
+      
+      const applicationId = req.params.id;
+      const { status, notes } = z.object({ 
+        status: z.enum(["pending", "reviewing", "approved", "rejected"]),
+        notes: z.string().optional()
+      }).parse(req.body);
+      
+      const application = await storage.updateMerchantApplicationStatus(applicationId, status, notes);
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.status(200).json(application);
+      
+    } catch (error) {
+      console.error("Error updating merchant application status:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      
+      next(error);
+    }
+  });
+  
+  // ********** End of Merchant Onboarding API routes **********
+
+  // Merchant Application routes
+  app.post("/api/merchant/applications", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Generate a unique ID for the application
+      const applicationId = `APP-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      
+      // Create the application with required fields
+      const application: MerchantApplication = {
+        id: applicationId,
+        status: "pending",
+        personalInfo: req.body.personalInfo,
+        businessInfo: req.body.businessInfo,
+        addressInfo: req.body.addressInfo,
+        paymentProcessing: req.body.paymentProcessing,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      // Save the application
+      const savedApplication = await storage.createMerchantApplication(application);
+      
+      res.status(201).json({ applicationId: savedApplication.id });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/merchant/applications/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const applicationId = req.params.id;
+      const application = await storage.getMerchantApplication(applicationId);
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(application);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/merchant/applications", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Only admins can see all applications
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const status = req.query.status as string || "pending";
+      const applications = await storage.getMerchantApplicationsByStatus(status);
+      
+      res.json(applications);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/merchant/applications/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Only admins can update applications
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const applicationId = req.params.id;
+      const { status, notes } = z.object({ 
+        status: z.enum(["pending", "reviewing", "approved", "rejected"]) as z.ZodEnum<["pending", "reviewing", "approved", "rejected"]>,
+        notes: z.string().optional() 
+      }).parse(req.body);
+      
+      const updatedApplication = await storage.updateMerchantApplicationStatus(
+        applicationId, 
+        status as "pending" | "reviewing" | "approved" | "rejected", 
+        notes
+      );
+      
+      if (!updatedApplication) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(updatedApplication);
     } catch (error) {
       next(error);
     }
