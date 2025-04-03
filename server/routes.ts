@@ -18,6 +18,7 @@ import {
   insertLoyaltyProgramSchema,
   insertCustomerLoyaltyAccountSchema,
   insertPromotionalCampaignSchema,
+  insertPosTenantSchema,
   insertAnalyticsReportSchema,
   insertBusinessFinancingSchema,
   insertVirtualTerminalSchema,
@@ -33,7 +34,9 @@ import {
   insertEmployeeTaxProfileSchema,
   insertTaxCalculationSchema,
   // Merchant application types
-  MerchantApplication
+  MerchantApplication,
+  // POS Tenant types
+  PosTenant, InsertPosTenant
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -2004,6 +2007,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const result = await storage.calculatePayrollTaxes(payrollEntryId, req.user.id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // POS Tenant Management API routes
+  app.get("/api/pos/tenants", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can access tenant information" });
+      
+      const tenants = await storage.getAllPosTenants();
+      res.json(tenants);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/pos/tenants/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can access tenant information" });
+      
+      const tenantId = parseInt(req.params.id);
+      const tenant = await storage.getPosTenant(tenantId);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      
+      res.json(tenant);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/pos/tenants", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can create tenants" });
+      
+      // Convert additionalFeatures from frontend to features array for database
+      if (req.body.additionalFeatures) {
+        req.body.features = JSON.stringify(req.body.additionalFeatures);
+        delete req.body.additionalFeatures;
+      }
+      
+      // Format the data for insertion
+      const posTenantData: InsertPosTenant = {
+        businessName: req.body.businessName,
+        subdomain: req.body.businessName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, ''),
+        customDomain: req.body.customDomain,
+        industry: req.body.industry as "restaurant" | "retail" | "grocery" | "healthcare" | "legal" | "salon" | "other",
+        subscriptionType: (req.body.subscriptionType || 'basic') as "basic" | "standard" | "premium" | "enterprise",
+        status: "pending",
+        contactName: req.body.contactName,
+        contactEmail: req.body.contactEmail,
+        contactPhone: req.body.contactPhone,
+        logoUrl: req.body.logoUrl,
+        primaryColor: req.body.primaryColor || '#4F46E5',
+        secondaryColor: req.body.secondaryColor || '#10B981',
+        features: req.body.features || '[]',
+        notes: req.body.notes
+      };
+      
+      const tenant = await storage.createPosTenant(posTenantData);
+      res.status(201).json(tenant);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/pos/tenants/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can update tenants" });
+      
+      const tenantId = parseInt(req.params.id);
+      
+      // Convert additionalFeatures from frontend to features array for database
+      if (req.body.additionalFeatures) {
+        req.body.features = JSON.stringify(req.body.additionalFeatures);
+        delete req.body.additionalFeatures;
+      }
+      
+      const tenant = await storage.updatePosTenant(tenantId, req.body);
+      res.json(tenant);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/pos/tenants/:id/status", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can update tenant status" });
+      
+      const tenantId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!['active', 'pending', 'inactive', 'suspended'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      const tenant = await storage.updatePosTenantStatus(
+        tenantId, 
+        status as "active" | "pending" | "inactive" | "suspended"
+      );
+      res.json(tenant);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/pos/tenants/:id/generate", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Only admins can generate tenant instances" });
+      
+      const tenantId = parseInt(req.params.id);
+      const result = await storage.generatePosTenantInstance(tenantId);
+      
       res.json(result);
     } catch (error) {
       next(error);

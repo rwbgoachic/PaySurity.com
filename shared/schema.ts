@@ -522,12 +522,57 @@ export const insertPaymentGatewaySchema = createInsertSchema(paymentGateways).pi
   processingFeeSettings: true,
 });
 
+// POS Tenant Management Schema
+export const posTenantStatusEnum = pgEnum("pos_tenant_status", ["active", "pending", "inactive", "suspended"]);
+export const posSubscriptionTypeEnum = pgEnum("pos_subscription_type", ["basic", "standard", "premium", "enterprise"]);
+export const posIndustryTypeEnum = pgEnum("pos_industry_type", ["restaurant", "retail", "grocery", "healthcare", "legal", "salon", "other"]);
+
+export const posTenants = pgTable("pos_tenants", {
+  id: serial("id").primaryKey(),
+  businessName: text("business_name").notNull(),
+  subdomain: text("subdomain").notNull().unique(), // Automatically generated from business name
+  customDomain: text("custom_domain"),
+  industry: text("industry", { enum: ["restaurant", "retail", "grocery", "healthcare", "legal", "salon", "other"] }).notNull(),
+  subscriptionType: text("subscription_type", { enum: ["basic", "standard", "premium", "enterprise"] }).notNull().default("basic"),
+  status: text("status", { enum: ["active", "pending", "inactive", "suspended"] }).notNull().default("pending"),
+  contactName: text("contact_name").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color").notNull().default("#4F46E5"),
+  secondaryColor: text("secondary_color").default("#10B981"),
+  activeInstancesCount: integer("active_instances_count").notNull().default(0),
+  features: jsonb("features").default("[]"),
+  notes: text("notes"),
+  activatedAt: timestamp("activated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosTenantSchema = createInsertSchema(posTenants).pick({
+  businessName: true,
+  subdomain: true, 
+  customDomain: true,
+  industry: true,
+  subscriptionType: true,
+  status: true,
+  contactName: true,
+  contactEmail: true,
+  contactPhone: true,
+  logoUrl: true,
+  primaryColor: true,
+  secondaryColor: true,
+  features: true,
+  notes: true,
+});
+
 // Point of Sale Schema
 export const posTypes = pgEnum("pos_type", ["mobile", "countertop", "kiosk", "virtual"]);
 
 export const pointOfSaleSystems = pgTable("point_of_sale_systems", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(),
+  tenantId: integer("tenant_id"), // References posTenants 
   deviceId: text("device_id").notNull(), // Unique device identifier
   deviceName: text("device_name").notNull(),
   deviceType: text("device_type", { enum: ["mobile", "countertop", "kiosk", "virtual"] }).notNull(),
@@ -1960,6 +2005,10 @@ export type InsertEmployeeTaxProfile = z.infer<typeof insertEmployeeTaxProfileSc
 
 export type TaxCalculation = typeof taxCalculations.$inferSelect;
 export type InsertTaxCalculation = z.infer<typeof insertTaxCalculationSchema>;
+
+// POS Tenant types
+export type PosTenant = typeof posTenants.$inferSelect;
+export type InsertPosTenant = z.infer<typeof insertPosTenantSchema>;
 
 // Table relationships are defined through foreign keys in the table definitions above
 // We've documented these relationships in /docs/database-relationships.md for clarity

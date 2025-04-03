@@ -11,6 +11,8 @@ import {
   // Tax calculation system entities
   federalTaxBrackets, stateTaxBrackets, ficaRates, taxAllowances,
   employeeTaxProfiles, taxCalculations,
+  // POS Tenant entities
+  posTenants,
   
   // Core types
   type User, type InsertUser, 
@@ -50,6 +52,9 @@ import {
   type EmployeeTaxProfile, type InsertEmployeeTaxProfile,
   type TaxCalculation, type InsertTaxCalculation,
   
+  // POS Tenant types
+  type PosTenant, type InsertPosTenant,
+  
   // Merchant Application types
   type MerchantApplication, type MerchantApplicationPersonalInfo,
   type MerchantApplicationBusinessInfo, type MerchantApplicationAddressInfo,
@@ -75,6 +80,17 @@ export interface IStorage {
   getEmployeesByEmployerId(employerId: number): Promise<User[]>;
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User>;
   updateLastLogin(id: number): Promise<User>;
+  
+  // POS Tenant operations
+  getPosTenant(id: number): Promise<PosTenant | undefined>;
+  getPosTenantBySubdomain(subdomain: string): Promise<PosTenant | undefined>;
+  getPosTenantsByStatus(status: string): Promise<PosTenant[]>;
+  getAllPosTenants(): Promise<PosTenant[]>;
+  createPosTenant(tenant: InsertPosTenant): Promise<PosTenant>;
+  updatePosTenant(id: number, data: Partial<InsertPosTenant>): Promise<PosTenant>;
+  updatePosTenantStatus(id: number, status: string): Promise<PosTenant>;
+  incrementPosTenantActiveInstances(id: number): Promise<PosTenant>;
+  generatePosTenantInstance(id: number): Promise<{instanceUrl: string}>;
   
   // Session store
   sessionStore: session.Store;
@@ -274,6 +290,17 @@ export interface IStorage {
   getAffiliateStats(affiliateId: number, range: string): Promise<any>;
   getAffiliateMarketingMaterials(): Promise<any>;
   createAffiliatePayout(payout: InsertAffiliatePayout): Promise<AffiliatePayout>;
+  
+  // POS Tenant operations
+  getPosTenant(id: number): Promise<PosTenant | undefined>;
+  getPosTenantBySubdomain(subdomain: string): Promise<PosTenant | undefined>;
+  getPosTenantsByStatus(status: string): Promise<PosTenant[]>;
+  createPosTenant(tenant: InsertPosTenant): Promise<PosTenant>;
+  updatePosTenant(id: number, data: Partial<InsertPosTenant>): Promise<PosTenant>;
+  updatePosTenantStatus(id: number, status: string): Promise<PosTenant>;
+  incrementPosTenantActiveInstances(id: number): Promise<PosTenant>;
+  generatePosTenantInstance(id: number): Promise<{instanceUrl: string}>;
+  getAllPosTenants(): Promise<PosTenant[]>;
   updateAffiliatePayoutStatus(id: number, status: string): Promise<AffiliatePayout>;
   markAffiliatePayoutAsPaid(id: number, transactionId: string): Promise<AffiliatePayout>;
   clawbackAffiliatePayout(id: number, notes?: string): Promise<AffiliatePayout>;
@@ -3268,6 +3295,115 @@ export class DatabaseStorage implements IStorage {
       additionalMedicare: additionalMedicareTax.toFixed(2),
       total: totalFicaTax.toFixed(2)
     };
+  }
+
+  // POS Tenant operations
+  async getPosTenant(id: number): Promise<PosTenant | undefined> {
+    const [tenant] = await db.select().from(posTenants).where(eq(posTenants.id, id));
+    return tenant;
+  }
+  
+  async getPosTenantBySubdomain(subdomain: string): Promise<PosTenant | undefined> {
+    const [tenant] = await db.select().from(posTenants).where(eq(posTenants.subdomain, subdomain));
+    return tenant;
+  }
+  
+  async getPosTenantsByStatus(status: string): Promise<PosTenant[]> {
+    return await db.select().from(posTenants).where(eq(posTenants.status, status));
+  }
+  
+  async getAllPosTenants(): Promise<PosTenant[]> {
+    return await db.select().from(posTenants);
+  }
+  
+  async createPosTenant(tenant: InsertPosTenant): Promise<PosTenant> {
+    // Generate a subdomain from business name if not provided
+    if (!tenant.subdomain) {
+      tenant.subdomain = tenant.businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    }
+    
+    const [newTenant] = await db.insert(posTenants).values(tenant).returning();
+    return newTenant;
+  }
+  
+  async updatePosTenant(id: number, data: Partial<InsertPosTenant>): Promise<PosTenant> {
+    const [updatedTenant] = await db
+      .update(posTenants)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(posTenants.id, id))
+      .returning();
+    
+    if (!updatedTenant) {
+      throw new Error(`Tenant with id ${id} not found`);
+    }
+    
+    return updatedTenant;
+  }
+  
+  async updatePosTenantStatus(id: number, status: string): Promise<PosTenant> {
+    const [updatedTenant] = await db
+      .update(posTenants)
+      .set({
+        status,
+        updatedAt: new Date(),
+        ...(status === 'active' ? { activatedAt: new Date() } : {})
+      })
+      .where(eq(posTenants.id, id))
+      .returning();
+    
+    if (!updatedTenant) {
+      throw new Error(`Tenant with id ${id} not found`);
+    }
+    
+    return updatedTenant;
+  }
+  
+  async incrementPosTenantActiveInstances(id: number): Promise<PosTenant> {
+    const tenant = await this.getPosTenant(id);
+    if (!tenant) {
+      throw new Error(`Tenant with id ${id} not found`);
+    }
+    
+    const [updatedTenant] = await db
+      .update(posTenants)
+      .set({
+        activeInstancesCount: tenant.activeInstancesCount + 1,
+        updatedAt: new Date()
+      })
+      .where(eq(posTenants.id, id))
+      .returning();
+    
+    return updatedTenant;
+  }
+  
+  async generatePosTenantInstance(id: number): Promise<{instanceUrl: string}> {
+    const tenant = await this.getPosTenant(id);
+    if (!tenant) {
+      throw new Error(`Tenant with id ${id} not found`);
+    }
+    
+    // Update the tenant status to active if it's pending
+    if (tenant.status === 'pending') {
+      await this.updatePosTenantStatus(id, 'active');
+    }
+    
+    // Increment the active instances count
+    await this.incrementPosTenantActiveInstances(id);
+    
+    // In a production environment, this would trigger the actual deployment
+    // of a new instance with the tenant's configuration
+    
+    // Generate the instance URL
+    const instanceUrl = tenant.customDomain || `https://${tenant.subdomain}.paysurity.com`;
+    
+    return { instanceUrl };
   }
 
   async calculatePayrollTaxes(payrollEntryId: number, performedBy: number): Promise<TaxCalculation> {
