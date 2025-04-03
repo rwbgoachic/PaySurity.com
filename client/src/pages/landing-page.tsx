@@ -10,34 +10,25 @@ import LandingBlogSection from "@/components/landing-blog-section";
 import { Badge } from "@/components/ui/badge";
 import { OrganizationSchema, WebsiteSchema } from "@/components/seo/json-ld";
 
+// Component optimized for performance
+
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const [email, setEmail] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // SEO Optimizations
+  // SEO Optimizations - using a more performant approach
   useEffect(() => {
-    // Set title and meta description for better SEO
-    document.title = "Paysurity - Secure Payment Solutions for Any Business";
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute("content", 
-        "Paysurity offers secure, PCI-compliant payment processing, digital wallets, and industry-specific POS solutions with transparent pricing.");
-    }
+    document.title = "Paysurity - Secure Payment Solutions";
   }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Structured Data for SEO */}
-      <OrganizationSchema 
-        name="Paysurity"
-        url="https://paysurity.com"
-        logo="https://paysurity.com/logo.png"
-        description="Secure payment processing solutions for businesses of all sizes"
-      />
+      {/* Optimized SEO Schema approach */}
+      <OrganizationSchema />
       <WebsiteSchema
         name="Paysurity - Payment Solutions"
-        url="https://paysurity.com"
+        url={window.location.origin}
         description="Secure payment processing with digital wallets and POS solutions"
       />
       

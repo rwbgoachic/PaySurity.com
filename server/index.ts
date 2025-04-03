@@ -24,27 +24,28 @@ app.use((req, res, next) => {
   // Advanced caching strategy for different types of assets
   const path = req.path;
   
+  // Optimized pattern matching for better performance - use RegExp.test instead of String.match
   // Cache fonts and immutable assets for 1 year (immutable, 31536000s)
-  if (path.match(/\.(woff|woff2|ttf|eot)$/)) {
+  if (/\.(woff|woff2|ttf|eot)$/.test(path)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
-  // Cache images and media for 1 week (604800s)
-  else if (path.match(/\.(png|jpg|jpeg|gif|ico|svg|webp|avif|mp4|webm)$/)) {
+  // Cache images and media for 1 week (604800s) with improved stale-while-revalidate
+  else if (/\.(png|jpg|jpeg|gif|ico|svg|webp|avif|mp4|webm)$/.test(path)) {
     res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
   }
-  // Cache CSS/JS for 1 day (86400s)
-  else if (path.match(/\.(css|js)$/)) {
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
+  // Cache CSS/JS for 1 day (86400s) with improved stale-while-revalidate
+  else if (/\.(css|js)$/.test(path)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=43200');
   }
   // Don't cache HTML and API endpoints
-  else if (path.match(/\.(html)$/) || path.startsWith('/api/')) {
+  else if (/\.html$/.test(path) || path.startsWith('/api/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
   }
-  // Default - no cache for everything else
+  // Default - short cache for everything else (30 seconds) for better performance
   else {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'public, max-age=30, must-revalidate');
   }
   
   next();

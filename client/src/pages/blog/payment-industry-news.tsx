@@ -1,13 +1,71 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ArrowRight, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { fetchPaymentNews, type NewsItem, type NewsCategory } from "@/lib/newsapi";
+import { fetchPaymentNews, type NewsItem } from "@/lib/newsapi";
 import { OrganizationSchema } from "@/components/seo/json-ld";
 import { usePageMeta } from "@/hooks/use-page-meta";
+
+// Memoized news card component for better performance
+const NewsCard = memo(({ item }: { item: NewsItem }) => (
+  <Card className="overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+    <CardContent className="p-0">
+      <div className={`h-2 ${
+        item.category === "Innovation" ? "bg-blue-500" :
+        item.category === "Regulation" ? "bg-amber-500" :
+        item.category === "Market Trends" ? "bg-green-500" :
+        "bg-red-500"
+      }`}></div>
+      {item.urlToImage && (
+        <div className="relative h-40 w-full overflow-hidden">
+          <img 
+            src={item.urlToImage} 
+            alt={item.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              // Hide image on error
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      <div className="p-6 flex flex-col h-full">
+        <div className="mb-3">
+          <Badge variant="outline" className={`
+            ${item.category === "Innovation" ? "text-blue-500 border-blue-200" :
+              item.category === "Regulation" ? "text-amber-500 border-amber-200" :
+              item.category === "Market Trends" ? "text-green-500 border-green-200" :
+              "text-red-500 border-red-200"}
+          `}>
+            {item.category}
+          </Badge>
+        </div>
+        <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+        <p className="text-neutral-600 mb-4 flex-grow">{item.summary}</p>
+        <div className="flex items-center justify-between text-sm text-neutral-500 mb-4">
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 mr-1" />
+            <span>{item.date}</span>
+          </div>
+          <div>{item.source}</div>
+        </div>
+        <a 
+          href={item.url} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-primary font-medium flex items-center hover:underline"
+        >
+          Read full article <ExternalLink className="ml-2 h-4 w-4" />
+        </a>
+      </div>
+    </CardContent>
+  </Card>
+));
 
 export default function PaymentIndustryNewsPage() {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
@@ -287,59 +345,7 @@ export default function PaymentIndustryNewsPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredNews.map((item, index) => (
-                  <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
-                    <CardContent className="p-0">
-                      <div className={`h-2 ${
-                        item.category === "Innovation" ? "bg-blue-500" :
-                        item.category === "Regulation" ? "bg-amber-500" :
-                        item.category === "Market Trends" ? "bg-green-500" :
-                        "bg-red-500"
-                      }`}></div>
-                      {item.urlToImage && (
-                        <div className="relative h-40 w-full overflow-hidden">
-                          <img 
-                            src={item.urlToImage} 
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Hide image on error
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      )}
-                      <div className="p-6 flex flex-col h-full">
-                        <div className="mb-3">
-                          <Badge variant="outline" className={`
-                            ${item.category === "Innovation" ? "text-blue-500 border-blue-200" :
-                              item.category === "Regulation" ? "text-amber-500 border-amber-200" :
-                              item.category === "Market Trends" ? "text-green-500 border-green-200" :
-                              "text-red-500 border-red-200"}
-                          `}>
-                            {item.category}
-                          </Badge>
-                        </div>
-                        <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                        <p className="text-neutral-600 mb-4 flex-grow">{item.summary}</p>
-                        <div className="flex items-center justify-between text-sm text-neutral-500 mb-4">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            <span>{item.date}</span>
-                          </div>
-                          <div>{item.source}</div>
-                        </div>
-                        <a 
-                          href={item.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-primary font-medium flex items-center hover:underline"
-                        >
-                          Read full article <ExternalLink className="ml-2 h-4 w-4" />
-                        </a>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <NewsCard key={index} item={item} />
                 ))}
               </div>
 

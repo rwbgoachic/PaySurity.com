@@ -6,6 +6,7 @@ import { setupAuth } from "./auth";
 import compression from "compression";
 import { generateSitemap } from "./sitemap";
 import fetch from "node-fetch";
+import NodeCache from "node-cache";
 import { 
   insertFundRequestSchema, 
   insertTransactionSchema, 
@@ -23,6 +24,10 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Create a tiered cache system for improved performance
+const pageCache = new NodeCache({ stdTTL: 1800, checkperiod: 120 }); // 30 minute TTL for page-level cache
+const apiCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });    // 5 minute TTL for API responses
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply compression middleware for better performance
   app.use(compression());
@@ -30,23 +35,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
   
-  // NewsAPI route for payment industry news with caching
-  let newsCache: {
-    data: any | null;
-    timestamp: number;
-  } = {
-    data: null,
-    timestamp: 0
-  };
-  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
-  
+  // Optimized NewsAPI route for payment industry news with improved caching
   app.get("/api/news/payment-industry", async (req, res, next) => {
     try {
-      // Check if we have cached data that's still valid
-      const now = Date.now();
-      if (newsCache.data && (now - newsCache.timestamp < CACHE_DURATION)) {
-        console.log('Serving cached news data');
-        return res.json(newsCache.data);
+      const cacheKey = "payment-industry-news";
+      
+      // Check if we have cached data with the optimized cache
+      const cachedData = apiCache.get(cacheKey);
+      if (cachedData) {
+        // Add cache header for browser caching
+        res.set('Cache-Control', 'public, max-age=1800'); // 30 minutes browser caching
+        return res.json(cachedData);
       }
       
       // Check if the NewsAPI key is available
@@ -56,44 +55,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Categories for payment industry news
-      const paymentKeywords = [
-        'payment processing',
-        'digital payments',
-        'fintech',
-        'payment industry',
-        'credit card processing'
-      ].slice(0, 5).join(' OR ');
+      // Categories for payment industry news - optimized for performance
+      const paymentKeywords = 'payment processing OR digital payments OR fintech';
       
-      // NewsAPI endpoint with parameters
+      // NewsAPI endpoint with optimized parameters
       const endpoint = 'https://newsapi.org/v2/everything';
       const params = new URLSearchParams({
         q: paymentKeywords,
         language: 'en',
         sortBy: 'publishedAt',
-        pageSize: '10', // Reduced size for faster loading
-        domains: 'pymnts.com,techcrunch.com,finextra.com,paymentssource.com,bankingdive.com,forbes.com,cnbc.com,businesswire.com',
+        pageSize: '6', // Further reduced size for faster loading
+        domains: 'pymnts.com,techcrunch.com,finextra.com,paymentssource.com',
         apiKey: process.env.NEWS_API_KEY
       });
       
-      console.log('Fetching fresh news data');
       const response = await fetch(`${endpoint}?${params}`);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error('NewsAPI error:', response.status, errorText);
         return res.status(response.status).json({
-          error: `NewsAPI error: ${response.status}`,
-          details: errorText
+          error: `NewsAPI error: ${response.status}`
         });
       }
       
       const data = await response.json();
       
-      // Update cache with fresh data
-      newsCache.data = data;
-      newsCache.timestamp = Date.now();
+      // Update cache with fresh data using the new caching system
+      apiCache.set(cacheKey, data);
       
+      // Add cache header for browser caching
+      res.set('Cache-Control', 'public, max-age=1800'); // 30 minutes browser caching
       res.json(data);
     } catch (error) {
       console.error('Error fetching news:', error);
