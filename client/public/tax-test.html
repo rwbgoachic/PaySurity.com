@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tax Calculation API Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0069d9;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tax Calculation API Test</h1>
+  
+  <h2>Federal Tax Calculator</h2>
+  <div class="form-group">
+    <label for="income">Annual Income ($):</label>
+    <input type="number" id="income" value="120000">
+  </div>
+  
+  <div class="form-group">
+    <label for="filingStatus">Filing Status:</label>
+    <select id="filingStatus">
+      <option value="single">Single</option>
+      <option value="married_joint">Married Filing Jointly</option>
+      <option value="married_separate">Married Filing Separately</option>
+      <option value="head_of_household">Head of Household</option>
+      <option value="qualifying_widow">Qualifying Widow(er)</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="year">Tax Year:</label>
+    <input type="number" id="year" value="2025">
+  </div>
+  
+  <button id="calculateFederal">Calculate Federal Tax</button>
+  <div id="federalResult" class="result" style="display: none;"></div>
+  <div id="error" class="error" style="display: none;"></div>
+  
+  <h2>State Tax Calculator</h2>
+  <div class="form-group">
+    <label for="stateIncome">Annual Income ($):</label>
+    <input type="number" id="stateIncome" value="120000">
+  </div>
+  
+  <div class="form-group">
+    <label for="state">State:</label>
+    <input type="text" id="state" value="CA" maxlength="2">
+  </div>
+  
+  <div class="form-group">
+    <label for="stateFilingStatus">Filing Status:</label>
+    <select id="stateFilingStatus">
+      <option value="single">Single</option>
+      <option value="married_joint">Married Filing Jointly</option>
+      <option value="married_separate">Married Filing Separately</option>
+      <option value="head_of_household">Head of Household</option>
+      <option value="qualifying_widow">Qualifying Widow(er)</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="stateYear">Tax Year:</label>
+    <input type="number" id="stateYear" value="2025">
+  </div>
+  
+  <button id="calculateState">Calculate State Tax</button>
+  <div id="stateResult" class="result" style="display: none;"></div>
+  
+  <h2>FICA Tax Calculator</h2>
+  <div class="form-group">
+    <label for="ficaIncome">Income for this Pay Period ($):</label>
+    <input type="number" id="ficaIncome" value="5000">
+  </div>
+  
+  <div class="form-group">
+    <label for="ytdEarnings">Year-to-Date Earnings ($):</label>
+    <input type="number" id="ytdEarnings" value="50000">
+  </div>
+  
+  <div class="form-group">
+    <label for="ficaFilingStatus">Filing Status:</label>
+    <select id="ficaFilingStatus">
+      <option value="single">Single</option>
+      <option value="married_joint">Married Filing Jointly</option>
+      <option value="married_separate">Married Filing Separately</option>
+      <option value="head_of_household">Head of Household</option>
+      <option value="qualifying_widow">Qualifying Widow(er)</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="ficaYear">Tax Year:</label>
+    <input type="number" id="ficaYear" value="2025">
+  </div>
+  
+  <button id="calculateFica">Calculate FICA Tax</button>
+  <div id="ficaResult" class="result" style="display: none;"></div>
+
+  <script>
+    // Function to get CSRF token from cookie
+    function getCsrfToken() {
+      return document.cookie.split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+    }
+
+    // Federal tax calculation
+    document.getElementById('calculateFederal').addEventListener('click', async () => {
+      const income = document.getElementById('income').value;
+      const filingStatus = document.getElementById('filingStatus').value;
+      const year = parseInt(document.getElementById('year').value);
+      
+      const resultDiv = document.getElementById('federalResult');
+      const errorDiv = document.getElementById('error');
+      
+      try {
+        const response = await fetch('/api/tax/calculate-federal', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': getCsrfToken()
+          },
+          body: JSON.stringify({ income, filingStatus, year }),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+        
+        const data = await response.json();
+        resultDiv.innerHTML = `
+          <h3>Federal Tax Calculation Results</h3>
+          <p><strong>Federal Tax:</strong> $${parseFloat(data.tax).toFixed(2)}</p>
+          <p><strong>Effective Tax Rate:</strong> ${(parseFloat(data.effectiveRate) * 100).toFixed(2)}%</p>
+          <p><strong>Marginal Tax Rate:</strong> ${(parseFloat(data.marginRate) * 100).toFixed(2)}%</p>
+        `;
+        resultDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+      }
+    });
+
+    // State tax calculation
+    document.getElementById('calculateState').addEventListener('click', async () => {
+      const income = document.getElementById('stateIncome').value;
+      const state = document.getElementById('state').value.toUpperCase();
+      const filingStatus = document.getElementById('stateFilingStatus').value;
+      const year = parseInt(document.getElementById('stateYear').value);
+      
+      const resultDiv = document.getElementById('stateResult');
+      const errorDiv = document.getElementById('error');
+      
+      try {
+        const response = await fetch('/api/tax/calculate-state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': getCsrfToken()
+          },
+          body: JSON.stringify({ income, state, filingStatus, year }),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+        
+        const data = await response.json();
+        resultDiv.innerHTML = `
+          <h3>State Tax Calculation Results (${state})</h3>
+          <p><strong>State Tax:</strong> $${parseFloat(data.tax).toFixed(2)}</p>
+          <p><strong>Effective Tax Rate:</strong> ${(parseFloat(data.effectiveRate) * 100).toFixed(2)}%</p>
+          <p><strong>Marginal Tax Rate:</strong> ${(parseFloat(data.marginRate) * 100).toFixed(2)}%</p>
+        `;
+        resultDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+      }
+    });
+
+    // FICA tax calculation
+    document.getElementById('calculateFica').addEventListener('click', async () => {
+      const income = document.getElementById('ficaIncome').value;
+      const ytdEarnings = document.getElementById('ytdEarnings').value;
+      const filingStatus = document.getElementById('ficaFilingStatus').value;
+      const year = parseInt(document.getElementById('ficaYear').value);
+      
+      const resultDiv = document.getElementById('ficaResult');
+      const errorDiv = document.getElementById('error');
+      
+      try {
+        const response = await fetch('/api/tax/calculate-fica', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': getCsrfToken()
+          },
+          body: JSON.stringify({ income, ytdEarnings, filingStatus, year }),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+        
+        const data = await response.json();
+        resultDiv.innerHTML = `
+          <h3>FICA Tax Calculation Results</h3>
+          <p><strong>Social Security Tax:</strong> $${parseFloat(data.socialSecurityTax).toFixed(2)}</p>
+          <p><strong>Medicare Tax:</strong> $${parseFloat(data.medicareTax).toFixed(2)}</p>
+          <p><strong>Additional Medicare Tax:</strong> $${parseFloat(data.additionalMedicareTax || 0).toFixed(2)}</p>
+          <p><strong>Total FICA Tax:</strong> $${parseFloat(data.totalFicaTax).toFixed(2)}</p>
+        `;
+        resultDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = `Error: ${error.message}`;
+        errorDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

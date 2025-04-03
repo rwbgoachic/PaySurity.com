@@ -25,6 +25,13 @@ import {
   insertAffiliateProfileSchema,
   insertMerchantReferralSchema,
   insertAffiliatePayoutSchema,
+  // Tax calculation system schemas
+  insertFederalTaxBracketSchema,
+  insertStateTaxBracketSchema,
+  insertFicaRateSchema,
+  insertTaxAllowanceSchema,
+  insertEmployeeTaxProfileSchema,
+  insertTaxCalculationSchema,
   // Merchant application types
   MerchantApplication
 } from "@shared/schema";
@@ -1608,6 +1615,396 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(updatedApplication);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Tax Calculation System Routes
+  
+  // Federal Tax Brackets
+  app.get("/api/tax/federal-brackets", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin" && req.user?.role !== "employer") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const federalBrackets = await storage.getFederalTaxBracketsByYear(year);
+      res.json(federalBrackets);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/tax/federal-brackets/filing-status/:status", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin" && req.user?.role !== "employer") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const filingStatus = req.params.status;
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      
+      const federalBrackets = await storage.getFederalTaxBracketsByFilingStatus(year, filingStatus);
+      res.json(federalBrackets);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/federal-brackets", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertFederalTaxBracketSchema.parse(req.body);
+      const bracket = await storage.createFederalTaxBracket(validatedData);
+      res.status(201).json(bracket);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // State Tax Brackets
+  app.get("/api/tax/state-brackets", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin" && req.user?.role !== "employer") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const state = (req.query.state as string) || "";
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      
+      if (!state) {
+        return res.status(400).json({ message: "State is required" });
+      }
+      
+      const stateBrackets = await storage.getStateTaxBracketsByState(state, year);
+      res.json(stateBrackets);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/state-brackets", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertStateTaxBracketSchema.parse(req.body);
+      const bracket = await storage.createStateTaxBracket(validatedData);
+      res.status(201).json(bracket);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // FICA Rates
+  app.get("/api/tax/fica-rates", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin" && req.user?.role !== "employer") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const ficaRate = await storage.getFicaRateByYear(year);
+      
+      if (!ficaRate) {
+        return res.status(404).json({ message: "FICA rates not found for the specified year" });
+      }
+      
+      res.json(ficaRate);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/fica-rates", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertFicaRateSchema.parse(req.body);
+      const ficaRate = await storage.createFicaRate(validatedData);
+      res.status(201).json(ficaRate);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Tax Allowances
+  app.get("/api/tax/allowances", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin" && req.user?.role !== "employer") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const allowance = await storage.getTaxAllowanceByYear(year);
+      
+      if (!allowance) {
+        return res.status(404).json({ message: "Tax allowances not found for the specified year" });
+      }
+      
+      res.json(allowance);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/allowances", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertTaxAllowanceSchema.parse(req.body);
+      const allowance = await storage.createTaxAllowance(validatedData);
+      res.status(201).json(allowance);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Employee Tax Profiles
+  app.get("/api/tax/employee-profiles", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      
+      if (req.user?.role === "admin" || req.user?.role === "employer") {
+        // Admins and employers can see all profiles
+        const profiles = await storage.getEmployeeTaxProfilesByYear(year);
+        return res.json(profiles);
+      } else {
+        // Employees can only see their own profile
+        const profile = await storage.getEmployeeTaxProfileByUserId(req.user.id, year);
+        
+        if (!profile) {
+          return res.status(404).json({ message: "Tax profile not found" });
+        }
+        
+        return res.json(profile);
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/tax/employee-profiles/:userId", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const userId = parseInt(req.params.userId);
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      
+      // Regular employees can only access their own profiles
+      if (req.user?.role !== "admin" && req.user?.role !== "employer" && req.user?.id !== userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const profile = await storage.getEmployeeTaxProfileByUserId(userId, year);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Tax profile not found" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/employee-profiles", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const validatedData = insertEmployeeTaxProfileSchema.parse(req.body);
+      
+      // Regular employees can only create profiles for themselves
+      if (req.user?.role !== "admin" && req.user?.role !== "employer" && req.user?.id !== validatedData.userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const profile = await storage.createEmployeeTaxProfile(validatedData);
+      res.status(201).json(profile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/tax/employee-profiles/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const profileId = parseInt(req.params.id);
+      
+      // Get the profile to check ownership
+      const profile = await storage.getEmployeeTaxProfile(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: "Tax profile not found" });
+      }
+      
+      // Regular employees can only update their own profiles
+      if (req.user?.role !== "admin" && req.user?.role !== "employer" && req.user?.id !== profile.userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Create a partial update object
+      const updateData = req.body;
+      
+      // Prevent users from updating another user's profile
+      if (updateData.userId && updateData.userId !== profile.userId && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Cannot change profile ownership" });
+      }
+      
+      const updatedProfile = await storage.updateEmployeeTaxProfile(profileId, updateData);
+      res.json(updatedProfile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Tax Calculations
+  app.get("/api/tax/calculations", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Filter by payroll entry if provided
+      if (req.query.payrollEntryId) {
+        const payrollEntryId = parseInt(req.query.payrollEntryId as string);
+        
+        // Verify the user has access to this payroll entry
+        const payrollEntry = await storage.getPayrollEntry(payrollEntryId);
+        if (!payrollEntry) {
+          return res.status(404).json({ message: "Payroll entry not found" });
+        }
+        
+        // Regular employees can only access their own payroll entries
+        if (req.user?.role !== "admin" && req.user?.role !== "employer" && payrollEntry.userId !== req.user?.id) {
+          return res.status(403).json({ message: "Forbidden" });
+        }
+        
+        const calculations = await storage.getTaxCalculationsByPayrollEntryId(payrollEntryId);
+        return res.json(calculations);
+      }
+      
+      // If no filters, return calculations based on role
+      if (req.user?.role === "admin" || req.user?.role === "employer") {
+        // Return all calculations performed by the user
+        const calculations = await storage.getTaxCalculationsByPerformedBy(req.user.id);
+        return res.json(calculations);
+      } else {
+        // Regular employees can only see calculations for their payroll entries
+        // This would require a custom query not shown in the storage interface
+        return res.status(400).json({ message: "Please specify a payrollEntryId" });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Tax Calculation Operations
+  app.post("/api/tax/calculate-federal", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const { income, filingStatus, year } = z.object({
+        income: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+          message: "Income must be a non-negative number"
+        }),
+        filingStatus: z.string(),
+        year: z.number().optional()
+      }).parse(req.body);
+      
+      const calculationYear = year || new Date().getFullYear();
+      
+      const result = await storage.calculateFederalTax(income, filingStatus, calculationYear);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/calculate-state", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const { income, state, filingStatus, year } = z.object({
+        income: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+          message: "Income must be a non-negative number"
+        }),
+        state: z.string().length(2),
+        filingStatus: z.string(),
+        year: z.number().optional()
+      }).parse(req.body);
+      
+      const calculationYear = year || new Date().getFullYear();
+      
+      const result = await storage.calculateStateTax(income, state, filingStatus, calculationYear);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/calculate-fica", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const { income, ytdEarnings, filingStatus, year } = z.object({
+        income: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+          message: "Income must be a non-negative number"
+        }),
+        ytdEarnings: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+          message: "YTD earnings must be a non-negative number"
+        }),
+        filingStatus: z.string(),
+        year: z.number().optional()
+      }).parse(req.body);
+      
+      const calculationYear = year || new Date().getFullYear();
+      
+      const result = await storage.calculateFicaTax(income, ytdEarnings, filingStatus, calculationYear);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/tax/calculate-payroll", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin" && req.user?.role !== "employer") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const { payrollEntryId } = z.object({
+        payrollEntryId: z.number()
+      }).parse(req.body);
+      
+      // Verify the payroll entry exists
+      const payrollEntry = await storage.getPayrollEntry(payrollEntryId);
+      if (!payrollEntry) {
+        return res.status(404).json({ message: "Payroll entry not found" });
+      }
+      
+      const result = await storage.calculatePayrollTaxes(payrollEntryId, req.user.id);
+      res.json(result);
     } catch (error) {
       next(error);
     }

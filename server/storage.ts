@@ -8,6 +8,9 @@ import {
   businessFinancing, virtualTerminals,
   // Affiliate system entities
   affiliateProfiles, merchantReferrals, affiliatePayouts,
+  // Tax calculation system entities
+  federalTaxBrackets, stateTaxBrackets, ficaRates, taxAllowances,
+  employeeTaxProfiles, taxCalculations,
   
   // Core types
   type User, type InsertUser, 
@@ -38,6 +41,14 @@ import {
   type AffiliateProfile, type InsertAffiliateProfile,
   type MerchantReferral, type InsertMerchantReferral,
   type AffiliatePayout, type InsertAffiliatePayout,
+  
+  // Tax calculation system types
+  type FederalTaxBracket, type InsertFederalTaxBracket,
+  type StateTaxBracket, type InsertStateTaxBracket,
+  type FicaRate, type InsertFicaRate,
+  type TaxAllowance, type InsertTaxAllowance,
+  type EmployeeTaxProfile, type InsertEmployeeTaxProfile,
+  type TaxCalculation, type InsertTaxCalculation,
   
   // Merchant Application types
   type MerchantApplication, type MerchantApplicationPersonalInfo,
@@ -285,6 +296,52 @@ export interface IStorage {
     currentPage: number;
   }>;
   updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined>;
+  
+  // Tax Calculation System operations
+  // Federal Tax Brackets
+  getFederalTaxBracket(id: number): Promise<FederalTaxBracket | undefined>;
+  getFederalTaxBracketsByYear(year: number): Promise<FederalTaxBracket[]>;
+  getFederalTaxBracketsByFilingStatus(year: number, filingStatus: string): Promise<FederalTaxBracket[]>;
+  createFederalTaxBracket(bracket: InsertFederalTaxBracket): Promise<FederalTaxBracket>;
+  updateFederalTaxBracket(id: number, data: Partial<InsertFederalTaxBracket>): Promise<FederalTaxBracket>;
+  
+  // State Tax Brackets
+  getStateTaxBracket(id: number): Promise<StateTaxBracket | undefined>;
+  getStateTaxBracketsByState(state: string, year: number): Promise<StateTaxBracket[]>;
+  getStateTaxBracketsByFilingStatus(state: string, year: number, filingStatus: string): Promise<StateTaxBracket[]>;
+  createStateTaxBracket(bracket: InsertStateTaxBracket): Promise<StateTaxBracket>;
+  updateStateTaxBracket(id: number, data: Partial<InsertStateTaxBracket>): Promise<StateTaxBracket>;
+  
+  // FICA Rates
+  getFicaRate(id: number): Promise<FicaRate | undefined>;
+  getFicaRateByYear(year: number): Promise<FicaRate | undefined>;
+  createFicaRate(rate: InsertFicaRate): Promise<FicaRate>;
+  updateFicaRate(id: number, data: Partial<InsertFicaRate>): Promise<FicaRate>;
+  
+  // Tax Allowances
+  getTaxAllowance(id: number): Promise<TaxAllowance | undefined>;
+  getTaxAllowanceByYear(year: number): Promise<TaxAllowance | undefined>;
+  createTaxAllowance(allowance: InsertTaxAllowance): Promise<TaxAllowance>;
+  updateTaxAllowance(id: number, data: Partial<InsertTaxAllowance>): Promise<TaxAllowance>;
+  
+  // Employee Tax Profiles
+  getEmployeeTaxProfile(id: number): Promise<EmployeeTaxProfile | undefined>;
+  getEmployeeTaxProfileByUserId(userId: number, year: number): Promise<EmployeeTaxProfile | undefined>;
+  getEmployeeTaxProfilesByYear(year: number): Promise<EmployeeTaxProfile[]>;
+  createEmployeeTaxProfile(profile: InsertEmployeeTaxProfile): Promise<EmployeeTaxProfile>;
+  updateEmployeeTaxProfile(id: number, data: Partial<InsertEmployeeTaxProfile>): Promise<EmployeeTaxProfile>;
+  
+  // Tax Calculations
+  getTaxCalculation(id: number): Promise<TaxCalculation | undefined>;
+  getTaxCalculationsByPayrollEntryId(payrollEntryId: number): Promise<TaxCalculation[]>;
+  getTaxCalculationsByPerformedBy(userId: number): Promise<TaxCalculation[]>;
+  createTaxCalculation(calculation: InsertTaxCalculation): Promise<TaxCalculation>;
+  
+  // Tax Calculation Operations
+  calculateFederalTax(income: string, filingStatus: string, year: number): Promise<{tax: string, effectiveRate: string, marginRate: string}>;
+  calculateStateTax(income: string, state: string, filingStatus: string, year: number): Promise<{tax: string, effectiveRate: string}>;
+  calculateFicaTax(income: string, ytdEarnings: string, filingStatus: string, year: number): Promise<{socialSecurity: string, medicare: string, additionalMedicare: string, total: string}>;
+  calculatePayrollTaxes(payrollEntryId: number, performedBy: number): Promise<TaxCalculation>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2783,6 +2840,560 @@ export class DatabaseStorage implements IStorage {
     this._merchantApplications[appIndex] = updatedApp;
     
     return updatedApp;
+  }
+
+  // Tax Calculation System Implementation
+
+  // Federal Tax Brackets
+  async getFederalTaxBracket(id: number): Promise<FederalTaxBracket | undefined> {
+    const [bracket] = await db.select().from(federalTaxBrackets).where(eq(federalTaxBrackets.id, id));
+    return bracket;
+  }
+
+  async getFederalTaxBracketsByYear(year: number): Promise<FederalTaxBracket[]> {
+    return await db.select().from(federalTaxBrackets).where(eq(federalTaxBrackets.year, year))
+      .orderBy(federalTaxBrackets.bracketOrder);
+  }
+
+  async getFederalTaxBracketsByFilingStatus(year: number, filingStatus: string): Promise<FederalTaxBracket[]> {
+    return await db.select().from(federalTaxBrackets)
+      .where(and(
+        eq(federalTaxBrackets.year, year),
+        eq(federalTaxBrackets.filingStatus, filingStatus as any)
+      ))
+      .orderBy(federalTaxBrackets.bracketOrder);
+  }
+
+  async createFederalTaxBracket(bracket: InsertFederalTaxBracket): Promise<FederalTaxBracket> {
+    const [newBracket] = await db.insert(federalTaxBrackets).values(bracket).returning();
+    return newBracket;
+  }
+
+  async updateFederalTaxBracket(id: number, data: Partial<InsertFederalTaxBracket>): Promise<FederalTaxBracket> {
+    const [updated] = await db
+      .update(federalTaxBrackets)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(federalTaxBrackets.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error(`Federal tax bracket with id ${id} not found`);
+    }
+    
+    return updated;
+  }
+
+  // State Tax Brackets
+  async getStateTaxBracket(id: number): Promise<StateTaxBracket | undefined> {
+    const [bracket] = await db.select().from(stateTaxBrackets).where(eq(stateTaxBrackets.id, id));
+    return bracket;
+  }
+
+  async getStateTaxBracketsByState(state: string, year: number): Promise<StateTaxBracket[]> {
+    return await db.select().from(stateTaxBrackets)
+      .where(and(
+        eq(stateTaxBrackets.state, state),
+        eq(stateTaxBrackets.year, year)
+      ))
+      .orderBy(stateTaxBrackets.bracketOrder);
+  }
+
+  async getStateTaxBracketsByFilingStatus(state: string, year: number, filingStatus: string): Promise<StateTaxBracket[]> {
+    return await db.select().from(stateTaxBrackets)
+      .where(and(
+        eq(stateTaxBrackets.state, state),
+        eq(stateTaxBrackets.year, year),
+        eq(stateTaxBrackets.filingStatus, filingStatus as any)
+      ))
+      .orderBy(stateTaxBrackets.bracketOrder);
+  }
+
+  async createStateTaxBracket(bracket: InsertStateTaxBracket): Promise<StateTaxBracket> {
+    const [newBracket] = await db.insert(stateTaxBrackets).values(bracket).returning();
+    return newBracket;
+  }
+
+  async updateStateTaxBracket(id: number, data: Partial<InsertStateTaxBracket>): Promise<StateTaxBracket> {
+    const [updated] = await db
+      .update(stateTaxBrackets)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(stateTaxBrackets.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error(`State tax bracket with id ${id} not found`);
+    }
+    
+    return updated;
+  }
+
+  // FICA Rates
+  async getFicaRate(id: number): Promise<FicaRate | undefined> {
+    const [rate] = await db.select().from(ficaRates).where(eq(ficaRates.id, id));
+    return rate;
+  }
+
+  async getFicaRateByYear(year: number): Promise<FicaRate | undefined> {
+    const [rate] = await db.select().from(ficaRates).where(eq(ficaRates.year, year));
+    return rate;
+  }
+
+  async createFicaRate(rate: InsertFicaRate): Promise<FicaRate> {
+    const [newRate] = await db.insert(ficaRates).values(rate).returning();
+    return newRate;
+  }
+
+  async updateFicaRate(id: number, data: Partial<InsertFicaRate>): Promise<FicaRate> {
+    const [updated] = await db
+      .update(ficaRates)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(ficaRates.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error(`FICA rate with id ${id} not found`);
+    }
+    
+    return updated;
+  }
+
+  // Tax Allowances
+  async getTaxAllowance(id: number): Promise<TaxAllowance | undefined> {
+    const [allowance] = await db.select().from(taxAllowances).where(eq(taxAllowances.id, id));
+    return allowance;
+  }
+
+  async getTaxAllowanceByYear(year: number): Promise<TaxAllowance | undefined> {
+    const [allowance] = await db.select().from(taxAllowances).where(eq(taxAllowances.year, year));
+    return allowance;
+  }
+
+  async createTaxAllowance(allowance: InsertTaxAllowance): Promise<TaxAllowance> {
+    const [newAllowance] = await db.insert(taxAllowances).values(allowance).returning();
+    return newAllowance;
+  }
+
+  async updateTaxAllowance(id: number, data: Partial<InsertTaxAllowance>): Promise<TaxAllowance> {
+    const [updated] = await db
+      .update(taxAllowances)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(taxAllowances.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error(`Tax allowance with id ${id} not found`);
+    }
+    
+    return updated;
+  }
+
+  // Employee Tax Profiles
+  async getEmployeeTaxProfile(id: number): Promise<EmployeeTaxProfile | undefined> {
+    const [profile] = await db.select().from(employeeTaxProfiles).where(eq(employeeTaxProfiles.id, id));
+    return profile;
+  }
+
+  async getEmployeeTaxProfileByUserId(userId: number, year: number): Promise<EmployeeTaxProfile | undefined> {
+    const [profile] = await db.select().from(employeeTaxProfiles)
+      .where(and(
+        eq(employeeTaxProfiles.userId, userId),
+        eq(employeeTaxProfiles.year, year)
+      ));
+    return profile;
+  }
+
+  async getEmployeeTaxProfilesByYear(year: number): Promise<EmployeeTaxProfile[]> {
+    return await db.select().from(employeeTaxProfiles).where(eq(employeeTaxProfiles.year, year));
+  }
+
+  async createEmployeeTaxProfile(profile: InsertEmployeeTaxProfile): Promise<EmployeeTaxProfile> {
+    const [newProfile] = await db.insert(employeeTaxProfiles).values(profile).returning();
+    return newProfile;
+  }
+
+  async updateEmployeeTaxProfile(id: number, data: Partial<InsertEmployeeTaxProfile>): Promise<EmployeeTaxProfile> {
+    const [updated] = await db
+      .update(employeeTaxProfiles)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(employeeTaxProfiles.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error(`Employee tax profile with id ${id} not found`);
+    }
+    
+    return updated;
+  }
+
+  // Tax Calculations
+  async getTaxCalculation(id: number): Promise<TaxCalculation | undefined> {
+    const [calculation] = await db.select().from(taxCalculations).where(eq(taxCalculations.id, id));
+    return calculation;
+  }
+
+  async getTaxCalculationsByPayrollEntryId(payrollEntryId: number): Promise<TaxCalculation[]> {
+    return await db.select().from(taxCalculations).where(eq(taxCalculations.payrollEntryId, payrollEntryId));
+  }
+
+  async getTaxCalculationsByPerformedBy(userId: number): Promise<TaxCalculation[]> {
+    return await db.select().from(taxCalculations).where(eq(taxCalculations.performedBy, userId));
+  }
+
+  async createTaxCalculation(calculation: InsertTaxCalculation): Promise<TaxCalculation> {
+    const [newCalculation] = await db.insert(taxCalculations).values(calculation).returning();
+    return newCalculation;
+  }
+
+  // Tax Calculation Operations
+  async calculateFederalTax(income: string, filingStatus: string, year: number): Promise<{tax: string, effectiveRate: string, marginRate: string}> {
+    // Get the federal tax brackets for the specified year and filing status
+    const brackets = await this.getFederalTaxBracketsByFilingStatus(year, filingStatus);
+    
+    if (brackets.length === 0) {
+      throw new Error(`No federal tax brackets found for year ${year} and filing status ${filingStatus}`);
+    }
+    
+    // Get tax allowances for the year
+    const allowance = await this.getTaxAllowanceByYear(year);
+    
+    if (!allowance) {
+      throw new Error(`No tax allowances found for year ${year}`);
+    }
+    
+    // Get standard deduction based on filing status
+    let standardDeduction = 0;
+    switch (filingStatus) {
+      case "single":
+        standardDeduction = parseFloat(allowance.standardDeductionSingle);
+        break;
+      case "married_joint":
+        standardDeduction = parseFloat(allowance.standardDeductionJoint);
+        break;
+      case "head_of_household":
+        standardDeduction = parseFloat(allowance.standardDeductionHeadOfHousehold);
+        break;
+      default:
+        standardDeduction = parseFloat(allowance.standardDeductionSingle);
+    }
+    
+    // Calculate taxable income after standard deduction
+    const grossIncome = parseFloat(income);
+    const taxableIncome = Math.max(grossIncome - standardDeduction, 0);
+    
+    // Calculate tax using progressive brackets
+    let tax = 0;
+    let marginRate = 0;
+    
+    for (let i = 0; i < brackets.length; i++) {
+      const bracket = brackets[i];
+      const bracketStart = parseFloat(bracket.incomeFrom.toString());
+      const bracketEnd = bracket.incomeTo ? parseFloat(bracket.incomeTo.toString()) : Infinity;
+      const rate = parseFloat(bracket.rate.toString());
+      
+      if (taxableIncome > bracketStart) {
+        // This is the marginal tax rate if this is the highest bracket the income falls into
+        marginRate = rate;
+        
+        // Calculate tax for this bracket
+        const incomeInBracket = Math.min(taxableIncome, bracketEnd) - bracketStart;
+        
+        if (bracket.baseAmount) {
+          // If the bracket has a base amount, use that plus the rate times the excess
+          if (i === 0) {
+            // If this is the first bracket, just use the rate times income
+            tax += incomeInBracket * rate;
+          } else {
+            // Otherwise, for higher brackets we add the base amount from previous brackets
+            // and calculate the tax on the income in this bracket
+            tax = parseFloat(bracket.baseAmount.toString()) + (taxableIncome - bracketStart) * rate;
+            break; // We've found the correct bracket, so we can stop
+          }
+        } else {
+          // If no base amount is provided, calculate normally
+          tax += incomeInBracket * rate;
+        }
+      }
+    }
+    
+    // Calculate effective tax rate
+    const effectiveRate = taxableIncome > 0 ? (tax / taxableIncome) : 0;
+    
+    return {
+      tax: tax.toFixed(2),
+      effectiveRate: (effectiveRate * 100).toFixed(2),
+      marginRate: (marginRate * 100).toFixed(2)
+    };
+  }
+
+  async calculateStateTax(income: string, state: string, filingStatus: string, year: number): Promise<{tax: string, effectiveRate: string}> {
+    // Get the state tax brackets for the specified state, year, and filing status
+    const brackets = await this.getStateTaxBracketsByFilingStatus(state, year, filingStatus);
+    
+    if (brackets.length === 0) {
+      // Some states don't have income tax
+      if (['WY', 'WA', 'TX', 'SD', 'NV', 'FL', 'AK'].includes(state.toUpperCase())) {
+        return { tax: "0.00", effectiveRate: "0.00" };
+      }
+      throw new Error(`No state tax brackets found for state ${state}, year ${year}, and filing status ${filingStatus}`);
+    }
+    
+    // Get tax allowances for the year
+    const allowance = await this.getTaxAllowanceByYear(year);
+    
+    if (!allowance) {
+      throw new Error(`No tax allowances found for year ${year}`);
+    }
+    
+    // Calculate taxable income (most states start with federal AGI/taxable income)
+    // This is a simplified version - in reality, states have varying deductions and credits
+    const grossIncome = parseFloat(income);
+    const taxableIncome = grossIncome;
+    
+    // Calculate tax using progressive brackets
+    let tax = 0;
+    
+    for (let i = 0; i < brackets.length; i++) {
+      const bracket = brackets[i];
+      const bracketStart = parseFloat(bracket.incomeFrom.toString());
+      const bracketEnd = bracket.incomeTo ? parseFloat(bracket.incomeTo.toString()) : Infinity;
+      const rate = parseFloat(bracket.rate.toString());
+      
+      if (taxableIncome > bracketStart) {
+        // Calculate tax for this bracket
+        const incomeInBracket = Math.min(taxableIncome, bracketEnd) - bracketStart;
+        
+        if (bracket.baseAmount) {
+          // If the bracket has a base amount, use that plus the rate times the excess
+          if (i === 0) {
+            // If this is the first bracket, just use the rate times income
+            tax += incomeInBracket * rate;
+          } else {
+            // For higher brackets, add base amount and calculate tax on income in this bracket
+            tax = parseFloat(bracket.baseAmount.toString()) + (taxableIncome - bracketStart) * rate;
+            break; // We've found the correct bracket, so we can stop
+          }
+        } else {
+          // If no base amount is provided, calculate normally
+          tax += incomeInBracket * rate;
+        }
+      }
+    }
+    
+    // Calculate effective tax rate
+    const effectiveRate = taxableIncome > 0 ? (tax / taxableIncome) : 0;
+    
+    return {
+      tax: tax.toFixed(2),
+      effectiveRate: (effectiveRate * 100).toFixed(2)
+    };
+  }
+
+  async calculateFicaTax(income: string, ytdEarnings: string, filingStatus: string, year: number): Promise<{socialSecurity: string, medicare: string, additionalMedicare: string, total: string}> {
+    // Get FICA rates for the year
+    const ficaRate = await this.getFicaRateByYear(year);
+    
+    if (!ficaRate) {
+      throw new Error(`No FICA rates found for year ${year}`);
+    }
+    
+    const grossIncome = parseFloat(income);
+    const ytdGrossEarnings = parseFloat(ytdEarnings);
+    
+    // Calculate Social Security tax (subject to wage cap)
+    const ssRate = parseFloat(ficaRate.socialSecurityRate.toString());
+    const ssWageCap = parseFloat(ficaRate.socialSecurityWageCap.toString());
+    
+    // If YTD earnings have already exceeded the wage cap, no SS tax is due
+    // If the current income will put them over the wage cap, only tax the portion up to the cap
+    let socialSecurityTaxableIncome = 0;
+    if (ytdGrossEarnings >= ssWageCap) {
+      socialSecurityTaxableIncome = 0;
+    } else if (ytdGrossEarnings + grossIncome > ssWageCap) {
+      socialSecurityTaxableIncome = ssWageCap - ytdGrossEarnings;
+    } else {
+      socialSecurityTaxableIncome = grossIncome;
+    }
+    
+    const socialSecurityTax = socialSecurityTaxableIncome * ssRate;
+    
+    // Calculate Medicare tax (no income limit for basic rate)
+    const medicareRate = parseFloat(ficaRate.medicareRate.toString());
+    const medicareAdditionalRate = parseFloat(ficaRate.additionalMedicareRate.toString());
+    
+    // Determine the threshold for additional Medicare tax based on filing status
+    let additionalMedicareThreshold;
+    if (filingStatus === "married_joint") {
+      additionalMedicareThreshold = parseFloat(ficaRate.additionalMedicareThresholdJoint?.toString() || ficaRate.additionalMedicareThreshold.toString());
+    } else {
+      additionalMedicareThreshold = parseFloat(ficaRate.additionalMedicareThreshold.toString());
+    }
+    
+    // Calculate regular Medicare tax
+    const medicareTax = grossIncome * medicareRate;
+    
+    // Calculate additional Medicare tax if applicable
+    let additionalMedicareTax = 0;
+    if (ytdGrossEarnings + grossIncome > additionalMedicareThreshold) {
+      // Only apply additional tax to the portion exceeding the threshold
+      const incomeExceedingThreshold = Math.max(0, 
+        (ytdGrossEarnings > additionalMedicareThreshold)
+          ? grossIncome // All income is above threshold if YTD already exceeds threshold
+          : (ytdGrossEarnings + grossIncome - additionalMedicareThreshold) // Only the portion that puts them over
+      );
+      
+      additionalMedicareTax = incomeExceedingThreshold * medicareAdditionalRate;
+    }
+    
+    // Calculate total FICA tax
+    const totalFicaTax = socialSecurityTax + medicareTax + additionalMedicareTax;
+    
+    return {
+      socialSecurity: socialSecurityTax.toFixed(2),
+      medicare: medicareTax.toFixed(2),
+      additionalMedicare: additionalMedicareTax.toFixed(2),
+      total: totalFicaTax.toFixed(2)
+    };
+  }
+
+  async calculatePayrollTaxes(payrollEntryId: number, performedBy: number): Promise<TaxCalculation> {
+    // Get the payroll entry
+    const payrollEntry = await this.getPayrollEntry(payrollEntryId);
+    if (!payrollEntry) {
+      throw new Error(`Payroll entry with id ${payrollEntryId} not found`);
+    }
+    
+    // Get the employee
+    const employee = await this.getUser(payrollEntry.employeeId);
+    if (!employee) {
+      throw new Error(`Employee with id ${payrollEntry.employeeId} not found`);
+    }
+    
+    // Get the employee's tax profile for the current year
+    const currentYear = new Date().getFullYear();
+    const taxProfile = await this.getEmployeeTaxProfileByUserId(employee.id, currentYear);
+    
+    if (!taxProfile) {
+      throw new Error(`No tax profile found for employee ${employee.id} for year ${currentYear}`);
+    }
+    
+    // Calculate gross income for this pay period
+    const grossIncome = parseFloat(payrollEntry.grossAmount);
+    
+    // Get year-to-date earnings before this payroll
+    const pastPayrolls = await this.getPayrollEntriesByUserId(employee.id);
+    const ytdEarnings = pastPayrolls
+      .filter(entry => entry.id !== payrollEntryId && new Date(entry.payPeriodEnd).getFullYear() === currentYear)
+      .reduce((sum, entry) => sum + parseFloat(entry.grossAmount), 0);
+    
+    // Calculate federal tax withholding (if not exempt)
+    let federalWithholding = 0;
+    let federalTaxableIncome = grossIncome;
+    
+    if (!taxProfile.exemptFromFederal) {
+      // Apply federal tax calculation
+      const federalTaxResult = await this.calculateFederalTax(
+        grossIncome.toString(),
+        taxProfile.filingStatus,
+        currentYear
+      );
+      federalWithholding = parseFloat(federalTaxResult.tax);
+    }
+    
+    // Calculate state tax withholding (if not exempt)
+    let stateWithholding = 0;
+    let stateTaxableIncome = grossIncome;
+    
+    if (!taxProfile.exemptFromState) {
+      // Apply state tax calculation
+      const stateTaxResult = await this.calculateStateTax(
+        grossIncome.toString(),
+        taxProfile.stateOfEmployment,
+        taxProfile.filingStatus,
+        currentYear
+      );
+      stateWithholding = parseFloat(stateTaxResult.tax);
+    }
+    
+    // Calculate FICA taxes
+    const ficaResult = await this.calculateFicaTax(
+      grossIncome.toString(),
+      ytdEarnings.toString(),
+      taxProfile.filingStatus,
+      currentYear
+    );
+    
+    const socialSecurityWithholding = parseFloat(ficaResult.socialSecurity);
+    const medicareWithholding = parseFloat(ficaResult.medicare) + parseFloat(ficaResult.additionalMedicare);
+    
+    // Calculate local tax if applicable
+    let localTaxWithholding = 0;
+    if (!taxProfile.exemptFromLocalTax && taxProfile.localTaxRate) {
+      localTaxWithholding = grossIncome * parseFloat(taxProfile.localTaxRate.toString());
+    }
+    
+    // Add additional withholding if specified in tax profile
+    if (taxProfile.additionalWithholding) {
+      federalWithholding += parseFloat(taxProfile.additionalWithholding.toString());
+    }
+    
+    // Calculate total withholding
+    const totalWithholding = federalWithholding + stateWithholding + 
+                            socialSecurityWithholding + medicareWithholding + 
+                            localTaxWithholding;
+    
+    // Calculate YTD totals including this payroll
+    const ytdGrossEarnings = ytdEarnings + grossIncome;
+    
+    // Get previous tax calculations for the year
+    const previousTaxCalcs = await this.getTaxCalculationsByPerformedBy(performedBy);
+    const yearTaxCalcs = previousTaxCalcs.filter(calc => {
+      const payroll = pastPayrolls.find(p => p.id === calc.payrollEntryId);
+      return payroll && new Date(payroll.payPeriodEnd).getFullYear() === currentYear;
+    });
+    
+    // Calculate YTD tax totals
+    const ytdFederalWithholding = yearTaxCalcs.reduce((sum, calc) => sum + parseFloat(calc.federalWithholding.toString()), 0) + federalWithholding;
+    const ytdStateWithholding = yearTaxCalcs.reduce((sum, calc) => sum + parseFloat(calc.stateWithholding.toString()), 0) + stateWithholding;
+    const ytdSocialSecurityWithholding = yearTaxCalcs.reduce((sum, calc) => sum + parseFloat(calc.socialSecurityWithholding.toString()), 0) + socialSecurityWithholding;
+    const ytdMedicareWithholding = yearTaxCalcs.reduce((sum, calc) => sum + parseFloat(calc.medicareWithholding.toString()), 0) + medicareWithholding;
+    
+    // Create and save the tax calculation record
+    const taxCalculation: InsertTaxCalculation = {
+      payrollEntryId,
+      federalTaxableIncome: federalTaxableIncome.toString(),
+      stateTaxableIncome: stateTaxableIncome.toString(),
+      federalWithholding: federalWithholding.toString(),
+      stateWithholding: stateWithholding.toString(),
+      socialSecurityWithholding: socialSecurityWithholding.toString(),
+      medicareWithholding: medicareWithholding.toString(),
+      localTaxWithholding: localTaxWithholding.toString(),
+      totalWithholding: totalWithholding.toString(),
+      ytdGrossEarnings: ytdGrossEarnings.toString(),
+      ytdFederalWithholding: ytdFederalWithholding.toString(),
+      ytdStateWithholding: ytdStateWithholding.toString(),
+      ytdSocialSecurityWithholding: ytdSocialSecurityWithholding.toString(),
+      ytdMedicareWithholding: ytdMedicareWithholding.toString(),
+      calculationMethod: "percentage", // Or "wage_bracket" depending on implementation
+      calculationNotes: `Calculated for pay period ending ${payrollEntry.payPeriodEnd}`,
+      performedBy
+    };
+    
+    return await this.createTaxCalculation(taxCalculation);
   }
 }
 

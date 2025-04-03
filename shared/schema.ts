@@ -1752,6 +1752,215 @@ export interface MerchantApplication {
   updatedAt: Date;
 }
 
+// Tax System - For advanced payroll tax calculations
+
+// Tax Filing Status Enum
+export const taxFilingStatusEnum = pgEnum("tax_filing_status", [
+  "single", "married_joint", "married_separate", "head_of_household", "qualifying_widow"
+]);
+
+// Federal Tax Brackets Table
+export const federalTaxBrackets = pgTable("federal_tax_brackets", {
+  id: serial("id").primaryKey(),
+  year: integer("year").notNull(),
+  filingStatus: taxFilingStatusEnum("filing_status").notNull(),
+  bracketOrder: integer("bracket_order").notNull(), // To maintain the correct order of brackets
+  incomeFrom: numeric("income_from").notNull(),
+  incomeTo: numeric("income_to"),  // Null for the highest bracket
+  rate: numeric("rate").notNull(), // Stored as decimal (e.g., 0.22 for 22%)
+  baseAmount: numeric("base_amount"), // Base tax amount for this bracket
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFederalTaxBracketSchema = createInsertSchema(federalTaxBrackets).pick({
+  year: true,
+  filingStatus: true,
+  bracketOrder: true, 
+  incomeFrom: true,
+  incomeTo: true,
+  rate: true,
+  baseAmount: true,
+});
+
+// State Tax Brackets Table
+export const stateTaxBrackets = pgTable("state_tax_brackets", {
+  id: serial("id").primaryKey(),
+  state: text("state").notNull(), // Two-letter state code
+  year: integer("year").notNull(),
+  filingStatus: taxFilingStatusEnum("filing_status").notNull(),
+  bracketOrder: integer("bracket_order").notNull(),
+  incomeFrom: numeric("income_from").notNull(),
+  incomeTo: numeric("income_to"), // Null for the highest bracket
+  rate: numeric("rate").notNull(), // Stored as decimal (e.g., 0.05 for 5%)
+  baseAmount: numeric("base_amount"), // Base tax amount for this bracket
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStateTaxBracketSchema = createInsertSchema(stateTaxBrackets).pick({
+  state: true,
+  year: true,
+  filingStatus: true,
+  bracketOrder: true,
+  incomeFrom: true,
+  incomeTo: true,
+  rate: true,
+  baseAmount: true,
+});
+
+// FICA Rates Table (Social Security and Medicare)
+export const ficaRates = pgTable("fica_rates", {
+  id: serial("id").primaryKey(),
+  year: integer("year").notNull(),
+  socialSecurityRate: numeric("social_security_rate").notNull(), // Employee rate
+  socialSecurityWageCap: numeric("social_security_wage_cap").notNull(), // Annual wage cap
+  medicareRate: numeric("medicare_rate").notNull(), // Base Medicare rate
+  additionalMedicareRate: numeric("additional_medicare_rate").notNull(), // Additional rate for high earners
+  additionalMedicareThreshold: numeric("additional_medicare_threshold").notNull(), // Income threshold for additional rate
+  additionalMedicareThresholdJoint: numeric("additional_medicare_threshold_joint"), // For married filing jointly
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFicaRateSchema = createInsertSchema(ficaRates).pick({
+  year: true,
+  socialSecurityRate: true, 
+  socialSecurityWageCap: true,
+  medicareRate: true,
+  additionalMedicareRate: true,
+  additionalMedicareThreshold: true,
+  additionalMedicareThresholdJoint: true,
+});
+
+// Tax Allowances and Deductions
+export const taxAllowances = pgTable("tax_allowances", {
+  id: serial("id").primaryKey(),
+  year: integer("year").notNull(),
+  standardDeductionSingle: numeric("standard_deduction_single").notNull(),
+  standardDeductionJoint: numeric("standard_deduction_joint").notNull(),
+  standardDeductionHeadOfHousehold: numeric("standard_deduction_head_of_household").notNull(),
+  personalExemptionAmount: numeric("personal_exemption_amount").notNull(),
+  personalExemptionPhaseoutStart: numeric("personal_exemption_phaseout_start"), // Income where phaseout begins
+  personalExemptionPhaseoutEnd: numeric("personal_exemption_phaseout_end"), // Income where fully phased out
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTaxAllowanceSchema = createInsertSchema(taxAllowances).pick({
+  year: true,
+  standardDeductionSingle: true,
+  standardDeductionJoint: true,
+  standardDeductionHeadOfHousehold: true,
+  personalExemptionAmount: true,
+  personalExemptionPhaseoutStart: true,
+  personalExemptionPhaseoutEnd: true,
+});
+
+// Employee Tax Withholding Profiles
+export const employeeTaxProfiles = pgTable("employee_tax_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(), // References user table
+  year: integer("year").notNull(),
+  filingStatus: taxFilingStatusEnum("filing_status").notNull().default("single"),
+  allowances: integer("allowances").notNull().default(0), // W-4 allowances
+  additionalWithholding: numeric("additional_withholding").default("0"), // Additional withholding per paycheck
+  exemptFromFederal: boolean("exempt_from_federal").default(false),
+  exemptFromState: boolean("exempt_from_state").default(false),
+  exemptFromLocalTax: boolean("exempt_from_local_tax").default(false),
+  stateOfResidence: text("state_of_residence").notNull(), // State used for state income tax
+  stateOfEmployment: text("state_of_employment").notNull(), // Where the work is performed
+  localTaxJurisdiction: text("local_tax_jurisdiction"), // City, county, etc. for local taxes
+  localTaxRate: numeric("local_tax_rate").default("0"), // Local tax rate
+  annualSalaryEstimate: numeric("annual_salary_estimate"), // For calculating tax brackets
+  hasMultipleJobs: boolean("has_multiple_jobs").default(false),
+  spouseWorks: boolean("spouse_works").default(false), // For joint filing calculation
+  specialTaxCredits: jsonb("special_tax_credits"), // Additional tax credits (child tax credit, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEmployeeTaxProfileSchema = createInsertSchema(employeeTaxProfiles).pick({
+  userId: true,
+  year: true,
+  filingStatus: true,
+  allowances: true,
+  additionalWithholding: true,
+  exemptFromFederal: true,
+  exemptFromState: true,
+  exemptFromLocalTax: true,
+  stateOfResidence: true,
+  stateOfEmployment: true,
+  localTaxJurisdiction: true,
+  localTaxRate: true,
+  annualSalaryEstimate: true,
+  hasMultipleJobs: true,
+  spouseWorks: true,
+  specialTaxCredits: true,
+});
+
+// Tax Calculation History
+export const taxCalculations = pgTable("tax_calculations", {
+  id: serial("id").primaryKey(),
+  payrollEntryId: integer("payroll_entry_id").notNull(), // References payroll_entries table
+  federalTaxableIncome: numeric("federal_taxable_income").notNull(),
+  stateTaxableIncome: numeric("state_taxable_income").notNull(),
+  federalWithholding: numeric("federal_withholding").notNull(),
+  stateWithholding: numeric("state_withholding").notNull(),
+  socialSecurityWithholding: numeric("social_security_withholding").notNull(),
+  medicareWithholding: numeric("medicare_withholding").notNull(),
+  localTaxWithholding: numeric("local_tax_withholding").default("0"),
+  totalWithholding: numeric("total_withholding").notNull(),
+  ytdGrossEarnings: numeric("ytd_gross_earnings").notNull(), // Year-to-date earnings
+  ytdFederalWithholding: numeric("ytd_federal_withholding").notNull(),
+  ytdStateWithholding: numeric("ytd_state_withholding").notNull(),
+  ytdSocialSecurityWithholding: numeric("ytd_social_security_withholding").notNull(),
+  ytdMedicareWithholding: numeric("ytd_medicare_withholding").notNull(),
+  calculationMethod: text("calculation_method").notNull(), // percentage, wage bracket, etc.
+  calculationNotes: text("calculation_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  performedBy: integer("performed_by").notNull(), // User ID of who ran the calculation
+});
+
+export const insertTaxCalculationSchema = createInsertSchema(taxCalculations).pick({
+  payrollEntryId: true,
+  federalTaxableIncome: true,
+  stateTaxableIncome: true,
+  federalWithholding: true,
+  stateWithholding: true,
+  socialSecurityWithholding: true,
+  medicareWithholding: true,
+  localTaxWithholding: true,
+  totalWithholding: true,
+  ytdGrossEarnings: true,
+  ytdFederalWithholding: true,
+  ytdStateWithholding: true,
+  ytdSocialSecurityWithholding: true,
+  ytdMedicareWithholding: true,
+  calculationMethod: true,
+  calculationNotes: true,
+  performedBy: true,
+});
+
+// Export tax types
+export type FederalTaxBracket = typeof federalTaxBrackets.$inferSelect;
+export type InsertFederalTaxBracket = z.infer<typeof insertFederalTaxBracketSchema>;
+
+export type StateTaxBracket = typeof stateTaxBrackets.$inferSelect;
+export type InsertStateTaxBracket = z.infer<typeof insertStateTaxBracketSchema>;
+
+export type FicaRate = typeof ficaRates.$inferSelect;
+export type InsertFicaRate = z.infer<typeof insertFicaRateSchema>;
+
+export type TaxAllowance = typeof taxAllowances.$inferSelect;
+export type InsertTaxAllowance = z.infer<typeof insertTaxAllowanceSchema>;
+
+export type EmployeeTaxProfile = typeof employeeTaxProfiles.$inferSelect;
+export type InsertEmployeeTaxProfile = z.infer<typeof insertEmployeeTaxProfileSchema>;
+
+export type TaxCalculation = typeof taxCalculations.$inferSelect;
+export type InsertTaxCalculation = z.infer<typeof insertTaxCalculationSchema>;
+
 // Table relationships are defined through foreign keys in the table definitions above
 // We've documented these relationships in /docs/database-relationships.md for clarity
 // The schema uses explicit foreign key constraints where possible, but some circular references
