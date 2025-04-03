@@ -1,144 +1,320 @@
+import { useState } from "react";
 import { Link } from "wouter";
+import { ArrowRight, ArrowLeft, Utensils, Search, X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, Clock, Tag, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import BlogPostGrid from "@/components/blog-post-grid";
+import { restaurantPosts } from "@/data/blog-posts";
 
 export default function RestaurantBlogPage() {
-  // Mock blog posts for restaurant industry
-  const blogPosts = [
-    {
-      id: 1,
-      title: "7 Ways Restaurants Can Streamline Payment Processing",
-      summary: "Discover how modern payment technologies can help your restaurant increase efficiency and improve customer satisfaction.",
-      author: "Sarah Johnson",
-      date: "March 28, 2025",
-      tags: ["Payments", "Efficiency", "POS"],
-      imageUrl: "https://images.unsplash.com/photo-1559329007-40df8a9345d8?q=80&w=1000&auto=format&fit=crop"
-    },
-    {
-      id: 2,
-      title: "How Integrated POS Systems Are Transforming Restaurant Operations",
-      summary: "Learn how BistroBeast and other integrated POS solutions are helping restaurants manage staff, inventory, and payments in one platform.",
-      author: "Michael Chen",
-      date: "March 25, 2025",
-      tags: ["POS", "Operations", "Management"],
-      imageUrl: "https://images.unsplash.com/photo-1516685125522-3c528b8023fb?q=80&w=1000&auto=format&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Restaurant Payment Trends for 2025",
-      summary: "Stay ahead of the curve with these emerging payment technologies and trends that are reshaping the restaurant industry.",
-      author: "Emily Rodriguez",
-      date: "March 20, 2025",
-      tags: ["Trends", "Innovation", "Digital Payments"],
-      imageUrl: "https://images.unsplash.com/photo-1565895405140-6b9830a88c19?q=80&w=1000&auto=format&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Optimizing Tip Management for Restaurant Staff",
-      summary: "Effective strategies for restaurants to manage and distribute tips fairly while maximizing staff satisfaction and retention.",
-      author: "David Wilson",
-      date: "March 15, 2025",
-      tags: ["Staff", "Tips", "Management"],
-      imageUrl: "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?q=80&w=1000&auto=format&fit=crop"
-    },
-    {
-      id: 5,
-      title: "Reducing Payment Processing Costs for Your Restaurant",
-      summary: "Practical tips to help restaurant owners reduce payment processing fees and save thousands annually.",
-      author: "Jessica Kim",
-      date: "March 10, 2025",
-      tags: ["Cost Savings", "Fees", "Optimization"],
-      imageUrl: "https://images.unsplash.com/photo-1437419764061-2473afe69fc2?q=80&w=1000&auto=format&fit=crop"
-    },
-    {
-      id: 6,
-      title: "How to Choose the Right Payment Processor for Your Restaurant",
-      summary: "A comprehensive guide to evaluating and selecting the perfect payment processing solution for your restaurant's specific needs.",
-      author: "Robert Taylor",
-      date: "March 5, 2025",
-      tags: ["Selection Guide", "Comparison", "Decision Making"],
-      imageUrl: "https://images.unsplash.com/photo-1577626997835-ae5e33c2a90d?q=80&w=1000&auto=format&fit=crop"
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [visibleFilters, setVisibleFilters] = useState(false);
+
+  // Extract all unique tags from restaurant posts
+  const allTags = Array.from(
+    new Set(
+      restaurantPosts
+        .flatMap(post => post.tags || [])
+        .filter(Boolean)
+    )
+  );
+
+  const handleTagToggle = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
     }
-  ];
+  };
+
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setSearchTerm("");
+  };
+
+  const filteredPosts = restaurantPosts.filter(post => {
+    const matchesSearch = searchTerm === "" || 
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTags = selectedTags.length === 0 || 
+      post.tags?.some(tag => selectedTags.includes(tag));
+    
+    return matchesSearch && matchesTags;
+  });
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="container mx-auto py-12 px-4 md:px-6">
-        <div className="flex items-center mb-8">
-          <Link href="/blog">
-            <Button variant="ghost" className="mr-4 p-2">
-              <ChevronLeft className="h-5 w-5" />
-              <span className="ml-1">Back to Blog</span>
-            </Button>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="border-b bg-white sticky top-0 z-10">
+        <div className="container mx-auto py-4 px-4 md:px-6 flex items-center justify-between">
+          <Link href="/">
+            <h1 className="text-2xl font-bold text-primary cursor-pointer">Paysurity</h1>
           </Link>
-          <Link href="/merchant/pos/bistro">
-            <Button variant="outline" className="ml-auto">
-              Explore BistroBeast POS
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-4">Restaurant Industry Insights</h1>
-          <p className="text-xl text-neutral-600 max-w-3xl">
-            Expert advice, trends, and strategies for restaurant owners looking to optimize payment processing and operations.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {blogPosts.map((post) => (
-            <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="aspect-video w-full overflow-hidden bg-neutral-200">
-                <img 
-                  src={post.imageUrl} 
-                  alt={post.title} 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2 text-sm text-neutral-500 mb-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{post.date}</span>
-                  <span className="mx-1">•</span>
-                  <User className="h-4 w-4" />
-                  <span>{post.author}</span>
-                </div>
-                <CardTitle className="text-xl mb-1 line-clamp-2">{post.title}</CardTitle>
-                <CardDescription className="line-clamp-3">{post.summary}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {post.tags.map((tag, index) => (
-                    <div key={index} className="inline-flex items-center text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                      <Tag className="h-3 w-3 mr-1" />
-                      {tag}
-                    </div>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" className="text-primary">
-                  Read more
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="mt-16 bg-primary/5 p-8 rounded-lg">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-4">Ready to transform your restaurant operations?</h2>
-            <p className="text-neutral-600 mb-6">
-              Discover how PaySurity's BistroBeast POS system can streamline your payment processing, staff management, 
-              and inventory tracking while providing valuable analytics to grow your business.
-            </p>
-            <Link href="/merchant/pos/bistro">
-              <Button size="lg" className="font-medium">
-                Explore BistroBeast POS
-              </Button>
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/#solutions" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">
+              Solutions
+            </Link>
+            <Link href="/#industries" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">
+              Industries
+            </Link>
+            <Link href="/#pos" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">
+              POS Systems
+            </Link>
+            <Link href="/#pricing" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">
+              Pricing
+            </Link>
+            <Link href="/blog" className="text-sm font-medium text-primary transition-colors">
+              Blog
+            </Link>
+          </nav>
+          <div className="flex items-center gap-4">
+            <Link href="/auth">
+              <Button variant="outline">Login</Button>
+            </Link>
+            <Link href="/auth">
+              <Button>Get Started</Button>
             </Link>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Hero section */}
+      <section className="bg-gradient-to-br from-primary/5 to-primary/10 py-16">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-6">
+              <Link href="/blog" className="text-primary hover:underline inline-flex items-center mb-2">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back to All Resources
+              </Link>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="rounded-full p-2 bg-primary/10 text-primary">
+                  <Utensils className="h-6 w-6" />
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold">Restaurant Resources</h1>
+              </div>
+            </div>
+            <p className="text-lg text-neutral-600 mb-8">
+              Payment technology insights and best practices tailored for food service businesses of all sizes.
+              Learn how to streamline operations, increase sales, and improve the guest experience.
+            </p>
+
+            {/* Search */}
+            <div className="relative max-w-xl">
+              <Input
+                type="text"
+                placeholder="Search for restaurant-specific articles..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+              {searchTerm && (
+                <button 
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Main content */}
+      <section className="py-12">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar / Filters - visible on larger screens or when toggled */}
+            <div className={`lg:block ${visibleFilters ? 'block' : 'hidden'}`}>
+              <div className="bg-white p-6 rounded-lg border sticky top-24">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold">Filter by Topic</h3>
+                  {selectedTags.length > 0 && (
+                    <button 
+                      className="text-sm text-primary"
+                      onClick={clearFilters}
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {allTags.map((tag) => (
+                    <div key={tag} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={tag}
+                        checked={selectedTags.includes(tag)}
+                        onChange={() => handleTagToggle(tag)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={tag} className="text-sm">{tag}</label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Blog content */}
+            <div className="lg:col-span-3">
+              {/* Mobile filter toggle */}
+              <div className="lg:hidden mb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setVisibleFilters(!visibleFilters)}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {visibleFilters ? 'Hide Filters' : 'Show Filters'}
+                </Button>
+              </div>
+
+              {/* Active filters */}
+              {selectedTags.length > 0 && (
+                <div className="mb-6 flex flex-wrap gap-2">
+                  {selectedTags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="flex items-center gap-1">
+                      {tag}
+                      <button onClick={() => handleTagToggle(tag)}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Results */}
+              {filteredPosts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-neutral-600 mb-4">No posts found matching your criteria</p>
+                  <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <h2 className="text-xl font-bold">
+                      {searchTerm || selectedTags.length > 0 
+                        ? `${filteredPosts.length} ${filteredPosts.length === 1 ? 'result' : 'results'} found` 
+                        : 'All Restaurant Articles'}
+                    </h2>
+                  </div>
+
+                  <div className="mb-12">
+                    <BlogPostGrid posts={filteredPosts} columns={2} />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Related Resources */}
+      <section className="bg-neutral-50 py-16">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl font-bold mb-8 text-center">Related Industry Solutions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow">
+                <h3 className="text-xl font-bold mb-3">BistroBeast POS</h3>
+                <p className="text-neutral-600 mb-4">
+                  Comprehensive point-of-sale system designed specifically for restaurants, cafes, and food service businesses.
+                </p>
+                <Link href="/merchant/pos/bistro" className="text-primary font-medium flex items-center hover:underline">
+                  Learn more <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </div>
+              
+              <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow">
+                <h3 className="text-xl font-bold mb-3">Payment Processing for Restaurants</h3>
+                <p className="text-neutral-600 mb-4">
+                  Specialized payment processing solutions with competitive rates for food service businesses of all sizes.
+                </p>
+                <Link href="/merchant/payment-gateways" className="text-primary font-medium flex items-center hover:underline">
+                  Learn more <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter signup */}
+      <section className="py-16 bg-primary/5">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-4">Stay Updated</h2>
+            <p className="text-neutral-600 mb-8">
+              Subscribe to our restaurant industry newsletter to receive the latest insights on payment processing 
+              technologies and trends specific to food service businesses.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <Input 
+                type="email" 
+                placeholder="Your email address" 
+                className="flex-grow"
+              />
+              <Button>Subscribe</Button>
+            </div>
+            <p className="text-xs text-neutral-500 mt-4">
+              By subscribing, you agree to receive marketing communications from Paysurity. 
+              You can unsubscribe at any time.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-neutral-900 text-neutral-300 py-12">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h3 className="text-white font-bold text-lg mb-4">Paysurity</h3>
+              <p className="text-sm mb-4">
+                Comprehensive payment processing and business management solutions for businesses of all sizes.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Solutions</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/#" className="hover:text-white transition-colors">Payment Processing</Link></li>
+                <li><Link href="/#" className="hover:text-white transition-colors">Merchant Services</Link></li>
+                <li><Link href="/#" className="hover:text-white transition-colors">POS Systems</Link></li>
+                <li><Link href="/#" className="hover:text-white transition-colors">Business Management</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Industries</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/blog/industry/restaurant" className="hover:text-white transition-colors">Restaurants</Link></li>
+                <li><Link href="/blog/industry/retail" className="hover:text-white transition-colors">Retail</Link></li>
+                <li><Link href="/blog/industry/legal" className="hover:text-white transition-colors">Legal</Link></li>
+                <li><Link href="/blog/industry/healthcare" className="hover:text-white transition-colors">Healthcare</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Company</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/#" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link href="/#" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href="/#" className="hover:text-white transition-colors">Careers</Link></li>
+                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-sm mb-4 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
+            <div className="flex gap-4">
+              <Link href="/#" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</Link>
+              <Link href="/#" className="text-neutral-400 hover:text-white transition-colors">Terms of Service</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

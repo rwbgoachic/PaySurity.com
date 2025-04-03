@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "wouter";
 import { 
   ArrowRight, 
@@ -6,6 +6,7 @@ import {
   CreditCard, 
   DollarSign, 
   Filter, 
+  Loader2,
   Search, 
   ShieldCheck, 
   Tag, 
@@ -16,189 +17,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import IndustryBlogSection from "@/components/industry-blog-section";
+import BlogPostGrid from "@/components/blog-post-grid";
+import { 
+  blogPosts, 
+  restaurantPosts, 
+  healthcarePosts, 
+  legalPosts, 
+  retailPosts 
+} from "@/data/blog-posts";
 
-// Sample data - in a real application, this would come from an API
-const blogPosts = [
-  {
-    title: "How Small Businesses Can Reduce Payment Processing Fees by 20%",
-    excerpt: "Discover strategies for reducing your payment processing costs without sacrificing service quality or security.",
-    date: "March 15, 2023",
-    readTime: "5 min read",
-    slug: "reduce-payment-processing-fees",
-    category: "Payment Processing",
-    tags: ["Small Business", "Cost Saving", "Credit Card Processing"]
-  },
-  {
-    title: "PCI-Compliant Payment Processing: A Complete Guide",
-    excerpt: "Understanding PCI DSS compliance is essential for any business accepting credit card payments.",
-    date: "April 2, 2023",
-    readTime: "7 min read",
-    slug: "pci-compliant-payment-processing",
-    category: "Security",
-    tags: ["PCI DSS", "Compliance", "Data Security"]
-  },
-  {
-    title: "Digital Wallets: The Future of Expense Tracking for Business",
-    excerpt: "Digital wallets are revolutionizing how businesses manage expenses and provide real-time insights.",
-    date: "April 28, 2023",
-    readTime: "6 min read",
-    slug: "digital-wallets-expense-tracking",
-    category: "Digital Wallets",
-    tags: ["Expense Management", "Mobile Payments", "Business Operations"]
-  },
-  {
-    title: "ACH vs Wire Transfers: Which is Right for Your Business?",
-    excerpt: "Comparing two popular methods of electronic funds transfer to help businesses make informed decisions.",
-    date: "May 12, 2023",
-    readTime: "4 min read",
-    slug: "ach-vs-wire-transfers",
-    category: "Payment Processing",
-    tags: ["ACH", "Wire Transfers", "B2B Payments"]
-  },
-  {
-    title: "Implementing Contactless Payments in Your Restaurant",
-    excerpt: "A step-by-step guide to offering contactless payment options in food service establishments.",
-    date: "June 3, 2023",
-    readTime: "8 min read",
-    slug: "contactless-payments-restaurants",
-    category: "Restaurants",
-    tags: ["Contactless", "NFC", "Restaurant Technology"]
-  },
-  {
-    title: "How Integrated POS Systems Transform Healthcare Payments",
-    excerpt: "Specialized POS solutions are changing how healthcare providers handle patient payments and insurance.",
-    date: "June 27, 2023",
-    readTime: "6 min read",
-    slug: "healthcare-pos-systems",
-    category: "Healthcare",
-    tags: ["Healthcare", "Patient Payments", "Insurance Processing"]
-  }
-];
-
-// Restaurant-specific posts
-const restaurantPosts = [
-  {
-    title: "Implementing Contactless Payments in Your Restaurant",
-    excerpt: "A step-by-step guide to offering contactless payment options in food service establishments.",
-    date: "June 3, 2023",
-    readTime: "8 min read",
-    slug: "contactless-payments-restaurants",
-    category: "Restaurants",
-    tags: ["Contactless", "NFC", "Restaurant Technology"]
-  },
-  {
-    title: "Optimizing Table Turnover with Integrated Payment Systems",
-    excerpt: "How modern payment technology can help restaurants serve more customers without sacrificing quality.",
-    date: "July 14, 2023",
-    readTime: "5 min read",
-    slug: "optimizing-table-turnover",
-    category: "Restaurants",
-    tags: ["Table Management", "Efficiency", "Customer Experience"]
-  },
-  {
-    title: "Managing Tips and Gratuities: Best Practices for Restaurants",
-    excerpt: "Legal and practical considerations for handling tips in the digital payment era.",
-    date: "August 8, 2023",
-    readTime: "7 min read",
-    slug: "tips-gratuities-restaurants",
-    category: "Restaurants",
-    tags: ["Tips", "Staff Management", "Compliance"]
-  }
-];
-
-// Healthcare-specific posts
-const healthcarePosts = [
-  {
-    title: "How Integrated POS Systems Transform Healthcare Payments",
-    excerpt: "Specialized POS solutions are changing how healthcare providers handle patient payments and insurance.",
-    date: "June 27, 2023",
-    readTime: "6 min read",
-    slug: "healthcare-pos-systems",
-    category: "Healthcare",
-    tags: ["Healthcare", "Patient Payments", "Insurance Processing"]
-  },
-  {
-    title: "HIPAA Compliance in Healthcare Payment Processing",
-    excerpt: "Ensuring your payment systems maintain patient privacy and meet regulatory requirements.",
-    date: "July 19, 2023",
-    readTime: "9 min read",
-    slug: "hipaa-payment-compliance",
-    category: "Healthcare",
-    tags: ["HIPAA", "Compliance", "Patient Privacy"]
-  },
-  {
-    title: "Streamlining Patient Billing and Payment Collections",
-    excerpt: "Modern approaches to reducing administrative overhead and improving patient financial experience.",
-    date: "August 22, 2023",
-    readTime: "6 min read",
-    slug: "streamlining-patient-billing",
-    category: "Healthcare",
-    tags: ["Medical Billing", "Patient Experience", "Revenue Cycle"]
-  }
-];
-
-// Legal-specific posts
-const legalPosts = [
-  {
-    title: "Trust Account Management for Law Firms",
-    excerpt: "Best practices for maintaining compliant client trust accounts and handling payments properly.",
-    date: "May 25, 2023",
-    readTime: "7 min read",
-    slug: "trust-account-management",
-    category: "Legal",
-    tags: ["Trust Accounts", "Compliance", "Law Firm Management"]
-  },
-  {
-    title: "Accepting Credit Cards: Ethical Considerations for Attorneys",
-    excerpt: "Navigating the ethical rules around credit card payments for legal services.",
-    date: "June 19, 2023",
-    readTime: "5 min read",
-    slug: "credit-cards-legal-ethics",
-    category: "Legal",
-    tags: ["Legal Ethics", "Credit Cards", "Bar Compliance"]
-  },
-  {
-    title: "Online Payment Portals for Legal Clients",
-    excerpt: "How client payment portals can improve cash flow and client satisfaction for law practices.",
-    date: "July 31, 2023",
-    readTime: "6 min read",
-    slug: "legal-payment-portals",
-    category: "Legal",
-    tags: ["Client Experience", "Online Payments", "Practice Management"]
-  }
-];
-
-// Retail-specific posts
-const retailPosts = [
-  {
-    title: "Omnichannel Payment Solutions for Modern Retail",
-    excerpt: "Integrating in-store, online, and mobile payment systems for a seamless customer experience.",
-    date: "May 18, 2023",
-    readTime: "6 min read",
-    slug: "omnichannel-retail-payments",
-    category: "Retail",
-    tags: ["Omnichannel", "Customer Experience", "Integration"]
-  },
-  {
-    title: "Implementing Contactless Payments in Retail Stores",
-    excerpt: "A comprehensive guide to rolling out contactless payment options in your retail business.",
-    date: "June 14, 2023",
-    readTime: "5 min read",
-    slug: "contactless-retail-payments",
-    category: "Retail",
-    tags: ["Contactless", "NFC", "Customer Convenience"]
-  },
-  {
-    title: "Retail Loyalty Programs: Integration with Payment Systems",
-    excerpt: "How to leverage your payment infrastructure to drive customer retention through loyalty programs.",
-    date: "July 24, 2023",
-    readTime: "7 min read",
-    slug: "retail-loyalty-programs",
-    category: "Retail",
-    tags: ["Loyalty", "Customer Retention", "Marketing"]
-  }
-];
+// Lazy load the IndustryBlogSection component
+const IndustryBlogSection = lazy(() => import("@/components/industry-blog-section"));
 
 export default function BlogPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -231,6 +60,43 @@ export default function BlogPage() {
     
     return matchesSearch && matchesCategory;
   });
+
+  const renderPostCard = (post: typeof blogPosts[0], index: number) => (
+    <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
+      <CardContent className="p-0">
+        <div className="h-3 bg-primary"></div>
+        <div className="p-6 flex flex-col h-full">
+          <div className="flex items-center gap-2 mb-3">
+            <Badge variant="outline" className="text-primary border-primary">
+              {post.category}
+            </Badge>
+          </div>
+          <h3 className="text-xl font-bold mb-3">{post.title}</h3>
+          <p className="text-neutral-600 mb-4 flex-grow">{post.excerpt}</p>
+          <div className="flex items-center text-sm text-neutral-500 mb-4">
+            <div className="flex items-center mr-4">
+              <Clock className="h-4 w-4 mr-1" />
+              <span>{post.readTime}</span>
+            </div>
+            <div>{post.date}</div>
+          </div>
+          {post.tags && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {post.tags.map((tag, tagIndex) => (
+                <div key={tagIndex} className="flex items-center text-xs text-neutral-500">
+                  <Tag className="h-3 w-3 mr-1" />
+                  <span>{tag}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <Link href={`/blog/${post.slug}`} className="text-primary font-medium flex items-center hover:underline">
+            Read article <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -379,43 +245,8 @@ export default function BlogPage() {
                     </h2>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-12">
-                    {filteredPosts.map((post, index) => (
-                      <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
-                        <CardContent className="p-0">
-                          <div className="h-3 bg-primary"></div>
-                          <div className="p-6 flex flex-col h-full">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Badge variant="outline" className="text-primary border-primary">
-                                {post.category}
-                              </Badge>
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">{post.title}</h3>
-                            <p className="text-neutral-600 mb-4 flex-grow">{post.excerpt}</p>
-                            <div className="flex items-center text-sm text-neutral-500 mb-4">
-                              <div className="flex items-center mr-4">
-                                <Clock className="h-4 w-4 mr-1" />
-                                <span>{post.readTime}</span>
-                              </div>
-                              <div>{post.date}</div>
-                            </div>
-                            {post.tags && (
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                {post.tags.map((tag, tagIndex) => (
-                                  <div key={tagIndex} className="flex items-center text-xs text-neutral-500">
-                                    <Tag className="h-3 w-3 mr-1" />
-                                    <span>{tag}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <Link href={`/blog/${post.slug}`} className="text-primary font-medium flex items-center hover:underline">
-                              Read article <ArrowRight className="ml-2 h-4 w-4" />
-                            </Link>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="mb-12">
+                    <BlogPostGrid posts={filteredPosts} columns={2} />
                   </div>
                 </>
               )}
@@ -488,11 +319,13 @@ export default function BlogPage() {
 
             <TabsContent value="restaurants">
               <div>
-                <IndustryBlogSection 
-                  industry="Restaurant"
-                  description="Payment technology insights and best practices tailored for food service businesses of all sizes."
-                  posts={restaurantPosts}
-                />
+                <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+                  <IndustryBlogSection 
+                    industry="Restaurant"
+                    description="Payment technology insights and best practices tailored for food service businesses of all sizes."
+                    posts={restaurantPosts}
+                  />
+                </Suspense>
                 <div className="text-center mt-6">
                   <Link href="/blog/industry/restaurant">
                     <Button variant="outline" size="lg">
@@ -505,11 +338,13 @@ export default function BlogPage() {
 
             <TabsContent value="healthcare">
               <div>
-                <IndustryBlogSection 
-                  industry="Healthcare"
-                  description="Specialized payment processing solutions for medical practices, clinics, and healthcare providers."
-                  posts={healthcarePosts}
-                />
+                <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+                  <IndustryBlogSection 
+                    industry="Healthcare"
+                    description="Specialized payment processing solutions for medical practices, clinics, and healthcare providers."
+                    posts={healthcarePosts}
+                  />
+                </Suspense>
                 <div className="text-center mt-6">
                   <Link href="/blog/industry/healthcare">
                     <Button variant="outline" size="lg">
@@ -522,11 +357,13 @@ export default function BlogPage() {
 
             <TabsContent value="legal">
               <div>
-                <IndustryBlogSection 
-                  industry="Legal"
-                  description="Compliant payment processing solutions designed for law firms and legal practices."
-                  posts={legalPosts}
-                />
+                <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+                  <IndustryBlogSection 
+                    industry="Legal"
+                    description="Compliant payment processing solutions designed for law firms and legal practices."
+                    posts={legalPosts}
+                  />
+                </Suspense>
                 <div className="text-center mt-6">
                   <Link href="/blog/industry/legal">
                     <Button variant="outline" size="lg">
@@ -539,11 +376,13 @@ export default function BlogPage() {
 
             <TabsContent value="retail">
               <div>
-                <IndustryBlogSection 
-                  industry="Retail"
-                  description="Innovative payment processing solutions for retail businesses of all sizes."
-                  posts={retailPosts}
-                />
+                <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+                  <IndustryBlogSection 
+                    industry="Retail"
+                    description="Innovative payment processing solutions for retail businesses of all sizes."
+                    posts={retailPosts}
+                  />
+                </Suspense>
                 <div className="text-center mt-6">
                   <Link href="/blog/industry/retail">
                     <Button variant="outline" size="lg">
