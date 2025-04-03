@@ -1496,6 +1496,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save the application
       const savedApplication = await storage.createMerchantApplication(application);
       
+      // Send real-time notification to the admin dashboard channel about new application
+      broadcastToChannel('admin-dashboard', {
+        type: 'new-merchant-application',
+        data: {
+          id: savedApplication.id,
+          businessName: savedApplication.businessInfo.businessName, 
+          industry: savedApplication.businessInfo.industry,
+          createdAt: savedApplication.createdAt
+        }
+      });
+      
       res.status(201).json({ applicationId: savedApplication.id });
     } catch (error) {
       next(error);
@@ -1528,8 +1539,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const status = req.query.status as string || "pending";
-      const applications = await storage.getMerchantApplicationsByStatus(status);
+      const { 
+        status = "pending", 
+        search = "",
+        sortBy = "createdAt",
+        sortDir = "desc",
+        page = "1",
+        limit = "10"
+      } = req.query as {
+        status?: string;
+        search?: string;
+        sortBy?: string;
+        sortDir?: string;
+        page?: string;
+        limit?: string;
+      };
+      
+      // Get applications with filters
+      const applications = await storage.getMerchantApplications({
+        status: status as "pending" | "reviewing" | "approved" | "rejected",
+        searchTerm: search,
+        sortField: sortBy,
+        sortDirection: sortDir as "asc" | "desc",
+        page: parseInt(page, 10) || 1,
+        perPage: parseInt(limit, 10) || 10
+      });
       
       res.json(applications);
     } catch (error) {
@@ -1561,6 +1595,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedApplication) {
         return res.status(404).json({ message: "Application not found" });
       }
+      
+      // Send real-time notification to the admin dashboard channel
+      broadcastToChannel('admin-dashboard', {
+        type: 'application-status-update',
+        data: {
+          id: updatedApplication.id,
+          status: updatedApplication.status,
+          businessName: updatedApplication.businessInfo.businessName,
+          updatedAt: updatedApplication.updatedAt
+        }
+      });
       
       res.json(updatedApplication);
     } catch (error) {

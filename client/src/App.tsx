@@ -26,6 +26,8 @@ import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
 import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
 import BistroBeastStaff from "./pages/merchant/pos/bistro/staff";
 import BistroBeastTransactions from "./pages/merchant/pos/bistro/transactions";
+import ApplicationsManagement from "./pages/merchant/applications-management";
+import ApplicationDetail from "./pages/merchant/application-detail";
 import BlogPage from "./pages/blog";
 import BlogPostPage from "./pages/blog/[slug]";
 import RestaurantBlogPage from "./pages/blog/industry/restaurant";
@@ -36,6 +38,7 @@ import PaymentIndustryNewsPage from "./pages/blog/payment-industry-news";
 import { AuthProvider } from "./hooks/use-auth";
 import { MetaTags, OrganizationSchema } from "./components/seo";
 import { setupCSRFInterceptor, getCSRFToken } from "./lib/csrf";
+import { WebSocketHandler } from "./components/merchant/notifications/websocket-handler";
 import { useEffect } from "react";
 
 function Router() {
@@ -64,6 +67,8 @@ function Router() {
       <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
+      <ProtectedRoute path="/merchant/applications-management" component={ApplicationsManagement} />
+      <ProtectedRoute path="/merchant/applications/:id" component={ApplicationDetail} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog/industry/restaurant" component={RestaurantBlogPage} />
       <Route path="/blog/industry/healthcare" component={HealthcareBlogPage} />
@@ -110,6 +115,7 @@ function App() {
       />
       <OrganizationSchema />
       <Router />
+      <WebSocketHandler />
       <Toaster />
     </AuthProvider>
   );

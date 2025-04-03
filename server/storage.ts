@@ -271,6 +271,19 @@ export interface IStorage {
   createMerchantApplication(application: MerchantApplication): Promise<MerchantApplication>;
   getMerchantApplication(id: string): Promise<MerchantApplication | undefined>;
   getMerchantApplicationsByStatus(status: string): Promise<MerchantApplication[]>;
+  getMerchantApplications(params: {
+    status?: "pending" | "reviewing" | "approved" | "rejected";
+    searchTerm?: string;
+    sortField?: string;
+    sortDirection?: "asc" | "desc";
+    page?: number;
+    perPage?: number;
+  }): Promise<{
+    applications: MerchantApplication[];
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+  }>;
   updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined>;
 }
 
@@ -2633,6 +2646,116 @@ export class DatabaseStorage implements IStorage {
     
     // Filter applications by status
     return this._merchantApplications.filter(app => app.status === status);
+  }
+  
+  async getMerchantApplications(params: {
+    status?: "pending" | "reviewing" | "approved" | "rejected";
+    searchTerm?: string;
+    sortField?: string;
+    sortDirection?: "asc" | "desc";
+    page?: number;
+    perPage?: number;
+  }): Promise<{
+    applications: MerchantApplication[];
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    // Check if we have applications in memory
+    if (!this._merchantApplications) {
+      return {
+        applications: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: 1
+      };
+    }
+    
+    const {
+      status,
+      searchTerm = "",
+      sortField = "createdAt",
+      sortDirection = "desc",
+      page = 1,
+      perPage = 10
+    } = params;
+    
+    // Filter applications
+    let filtered = [...this._merchantApplications];
+    
+    // Filter by status if provided
+    if (status) {
+      filtered = filtered.filter(app => app.status === status);
+    }
+    
+    // Filter by search term if provided
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(app => 
+        app.businessInfo.businessName.toLowerCase().includes(searchLower) ||
+        app.businessInfo.industry.toLowerCase().includes(searchLower) ||
+        app.businessInfo.website?.toLowerCase().includes(searchLower) ||
+        app.contactInfo.firstName.toLowerCase().includes(searchLower) ||
+        app.contactInfo.lastName.toLowerCase().includes(searchLower) ||
+        app.contactInfo.email.toLowerCase().includes(searchLower) ||
+        app.contactInfo.phoneNumber.includes(searchTerm)
+      );
+    }
+    
+    // Get total count before pagination
+    const totalCount = filtered.length;
+    
+    // Sort applications
+    filtered.sort((a, b) => {
+      let aValue: any = a;
+      let bValue: any = b;
+      
+      // Handle nested fields with dot notation
+      if (sortField.includes('.')) {
+        const parts = sortField.split('.');
+        aValue = parts.reduce((obj, key) => obj?.[key], a);
+        bValue = parts.reduce((obj, key) => obj?.[key], b);
+      } else {
+        aValue = a[sortField as keyof MerchantApplication];
+        bValue = b[sortField as keyof MerchantApplication];
+      }
+      
+      // Handle different types of values
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortDirection === 'asc' 
+          ? aValue.getTime() - bValue.getTime()
+          : bValue.getTime() - aValue.getTime();
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Default fallback
+      return 0;
+    });
+    
+    // Calculate pagination
+    const totalPages = Math.ceil(totalCount / perPage);
+    const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    
+    // Paginate applications
+    const paginated = filtered.slice(startIndex, endIndex);
+    
+    return {
+      applications: paginated,
+      totalCount,
+      totalPages,
+      currentPage
+    };
   }
   
   async updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined> {
