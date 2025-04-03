@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Check, CreditCard, DollarSign, LineChart, ShieldCheck, Users } from "lucide-react";
+import LandingBlogSection from "@/components/landing-blog-section";
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
@@ -22,6 +23,7 @@ export default function LandingPage() {
               <a href="#industries" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Industries</a>
               <a href="#pos" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">POS Systems</a>
               <a href="#pricing" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Pricing</a>
+              <a href="/blog" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Blog</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -645,6 +647,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Blog Section */}
+      <LandingBlogSection />
 
       {/* CTA Section */}
       <section className="py-20 bg-primary text-white">

@@ -26,6 +26,12 @@ import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
 import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
 import BistroBeastStaff from "./pages/merchant/pos/bistro/staff";
 import BistroBeastTransactions from "./pages/merchant/pos/bistro/transactions";
+import BlogPage from "./pages/blog";
+import BlogPostPage from "./pages/blog/[slug]";
+import RestaurantBlogPage from "./pages/blog/industry/restaurant";
+import HealthcareBlogPage from "./pages/blog/industry/healthcare";
+import LegalBlogPage from "./pages/blog/industry/legal";
+import RetailBlogPage from "./pages/blog/industry/retail";
 import { AuthProvider } from "./hooks/use-auth";
 
 function Router() {
@@ -54,6 +60,12 @@ function Router() {
       <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/industry/restaurant" component={RestaurantBlogPage} />
+      <Route path="/blog/industry/healthcare" component={HealthcareBlogPage} />
+      <Route path="/blog/industry/legal" component={LegalBlogPage} />
+      <Route path="/blog/industry/retail" component={RetailBlogPage} />
+      <Route path="/blog/:slug" component={BlogPostPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

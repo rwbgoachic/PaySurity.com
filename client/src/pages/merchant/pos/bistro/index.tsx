@@ -13,8 +13,10 @@ import {
   ShoppingCart,
   Utensils,
   AlertTriangle,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 
 export default function BistroBeastPOS() {
   const { user } = useAuth();
@@ -141,6 +143,12 @@ export default function BistroBeastPOS() {
               <Clock className="h-4 w-4 mr-2" />
               Clock In/Out
             </Button>
+            <Link href="/blog/industry/restaurant">
+              <Button variant="ghost" size="sm">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Restaurant Tips
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm">
               <Settings className="h-4 w-4 mr-2" />
               Settings
