@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
+import LandingPage from "@/pages/landing-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import EmployerDashboard from "./pages/employer/dashboard";
 import EmployerTransactions from "./pages/employer/transactions";
@@ -21,12 +22,16 @@ import MerchantVerification from "./pages/merchant/verification";
 import PaymentGateways from "./pages/merchant/payment-gateways/index";
 import NewPaymentGateway from "./pages/merchant/payment-gateways/new";
 import LoyaltyPrograms from "./pages/merchant/loyalty-programs/index";
+import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
+import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
+import BistroBeastStaff from "./pages/merchant/pos/bistro/staff";
 import { AuthProvider } from "./hooks/use-auth";
 
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={Dashboard} />
+      <Route path="/" component={LandingPage} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/employer/dashboard" component={EmployerDashboard} />
       <ProtectedRoute path="/employer/transactions" component={EmployerTransactions} />
       <ProtectedRoute path="/employer/users" component={EmployerUsers} />
@@ -44,6 +49,9 @@ function Router() {
       <ProtectedRoute path="/merchant/payment-gateways" component={PaymentGateways} />
       <ProtectedRoute path="/merchant/payment-gateways/new" component={NewPaymentGateway} />
       <ProtectedRoute path="/merchant/loyalty-programs" component={LoyaltyPrograms} />
+      <ProtectedRoute path="/merchant/pos/bistro" component={BistroBeastPOS} />
+      <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
+      <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
