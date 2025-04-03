@@ -934,9 +934,6 @@ export const insertMerchantReferralSchema = createInsertSchema(merchantReferrals
   notes: true,
 });
 
-// Enum for payout status
-export const payoutStatusEnum = pgEnum("payout_status", ["pending", "paid", "clawed_back", "canceled"]);
-
 // Affiliate payouts schema
 export const affiliatePayouts = pgTable("affiliate_payouts", {
   id: serial("id").primaryKey(),
@@ -1048,7 +1045,7 @@ export const insertPosLocationSchema = createInsertSchema(posLocations).pick({
 // Inventory Categories
 export const posCategories = pgTable("pos_categories", {
   id: serial("id").primaryKey(),
-  locationId: integer("location_id").notNull(), // References posLocations
+  locationId: integer("location_id").notNull().references(() => posLocations.id),
   name: text("name").notNull(),
   description: text("description"),
   isInventoryCategory: boolean("is_inventory_category").default(true),
@@ -1082,7 +1079,7 @@ export const posInventoryItems = pgTable("pos_inventory_items", {
   description: text("description"),
   sku: text("sku"),
   barcode: text("barcode"),
-  unit: text("unit", { enum: ["each", "lb", "kg", "oz", "g", "l", "ml", "gal", "qt", "pt", "fl_oz", "cup", "tbsp", "tsp", "piece", "box", "case", "pack"] }).notNull(),
+  unit: inventoryUnitEnum("unit").notNull(),
   quantity: numeric("quantity").notNull().default("0"),
   lowStockThreshold: numeric("low_stock_threshold"),
   reorderPoint: numeric("reorder_point"),
@@ -1171,8 +1168,8 @@ export const posMenuItems = pgTable("pos_menu_items", {
   sku: text("sku"),
   barcode: text("barcode"),
   imageUrl: text("image_url"),
-  itemType: text("item_type", { enum: ["appetizer", "main", "side", "dessert", "beverage", "special", "combo"] }).default("main"),
-  taxRateType: text("tax_rate_type", { enum: ["food", "alcohol", "merchandise", "service", "delivery", "takeout"] }).default("food"),
+  itemType: menuItemTypeEnum("item_type").default("main"),
+  taxRateType: taxRateTypeEnum("tax_rate_type").default("food"),
   isActive: boolean("is_active").default(true),
   isFeatured: boolean("is_featured").default(false),
   isDiscountable: boolean("is_discountable").default(true),
@@ -1389,14 +1386,14 @@ export const posOrders = pgTable("pos_orders", {
   tableId: integer("table_id"), // References posTables, null for takeout/delivery
   customerId: integer("customer_id"), // References users or customers
   staffId: integer("staff_id").notNull(), // References posStaff who took the order
-  status: text("status", { enum: ["draft", "placed", "preparing", "ready", "served", "completed", "cancelled", "refunded"] }).default("draft"),
+  status: orderStatusEnum("status").default("draft"),
   type: text("type").notNull(), // dine_in, takeout, delivery, online
   subtotal: numeric("subtotal").notNull().default("0"),
   taxAmount: numeric("tax_amount").notNull().default("0"),
   tipAmount: numeric("tip_amount").default("0"),
   discountAmount: numeric("discount_amount").default("0"),
   totalAmount: numeric("total_amount").notNull().default("0"),
-  paymentStatus: text("payment_status", { enum: ["pending", "authorized", "paid", "partially_paid", "refunded", "voided", "failed"] }).default("pending"),
+  paymentStatus: paymentStatusEnum("payment_status").default("pending"),
   notes: text("notes"),
   orderDate: timestamp("order_date").defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -1476,7 +1473,7 @@ export const posPayments = pgTable("pos_payments", {
   orderId: integer("order_id").notNull(), // References posOrders
   paymentMethod: text("payment_method").notNull(), // cash, credit_card, debit_card, gift_card, mobile_wallet
   amount: numeric("amount").notNull(),
-  status: text("status", { enum: ["pending", "authorized", "completed", "failed", "refunded", "voided"] }).default("pending"),
+  status: paymentStatusEnum("status").default("pending"),
   transactionId: text("transaction_id"), // External payment processor ID
   cardType: text("card_type"), // visa, mastercard, amex, etc.
   last4: text("last4"), // Last 4 digits of card
@@ -1705,3 +1702,8 @@ export type InsertPosReservation = z.infer<typeof insertPosReservationSchema>;
 
 export type PosDailyTotal = typeof posDailyTotals.$inferSelect;
 export type InsertPosDailyTotal = z.infer<typeof insertPosDailyTotalSchema>;
+
+// Table relationships are defined through foreign keys in the table definitions above
+// We've documented these relationships in /docs/database-relationships.md for clarity
+// The schema uses explicit foreign key constraints where possible, but some circular references
+// require careful handling at the application level.
