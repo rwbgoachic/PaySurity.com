@@ -1,9 +1,17 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getCSRFToken } from "./csrf";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      // Try to parse as JSON to get a better error message
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.error || errorData.message || `${res.status}: ${res.statusText}`);
+    } catch (e) {
+      // If parsing fails, use the original text
+      throw new Error(`${res.status}: ${text}`);
+    }
   }
 }
 
@@ -12,9 +20,22 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Default headers
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json"
+  };
+  
+  // Add CSRF token for non-GET requests
+  if (method !== 'GET') {
+    const csrfToken = await getCSRFToken();
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

@@ -1,11 +1,14 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import validator from "validator";
+import ExpressBrute from "express-brute";
+import { z } from "zod";
 
 declare global {
   namespace Express {
@@ -15,18 +18,61 @@ declare global {
 
 const scryptAsync = promisify(scrypt);
 
+// Enhanced password hashing with more security
 async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  // Use a longer salt for better security
+  const salt = randomBytes(32).toString("hex");
+  // Use higher cost parameters (128 instead of 64)
+  const buf = (await scryptAsync(password, salt, 128)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashed, salt] = stored.split(".");
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 128)) as Buffer;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    // If anything goes wrong, fail securely
+    console.error("Password comparison error:", error);
+    return false;
+  }
 }
+
+// Enhanced validation for user registration data
+const userRegistrationSchema = z.object({
+  username: z.string()
+    .min(3, "Username must be at least 3 characters")
+    .max(50, "Username must be at most 50 characters")
+    .refine(val => /^[a-zA-Z0-9_]+$/.test(val), {
+      message: "Username must contain only letters, numbers, and underscores"
+    }),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be at most 100 characters")
+    .refine(val => /[A-Z]/.test(val), {
+      message: "Password must contain at least one uppercase letter"
+    })
+    .refine(val => /[a-z]/.test(val), {
+      message: "Password must contain at least one lowercase letter"
+    })
+    .refine(val => /[0-9]/.test(val), {
+      message: "Password must contain at least one number"
+    })
+    .refine(val => /[^A-Za-z0-9]/.test(val), {
+      message: "Password must contain at least one special character"
+    }),
+  firstName: z.string().min(1, "First name is required").max(50),
+  lastName: z.string().min(1, "Last name is required").max(50),
+  email: z.string()
+    .email("Invalid email address")
+    .refine(val => validator.isEmail(val), {
+      message: "Invalid email format"
+    }),
+  role: z.enum(["employer", "employee"]),
+  department: z.string().optional(),
+});
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
@@ -70,16 +116,50 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).send("Username already exists");
-      }
+  // Create bruteforce prevention for user registration - limits registration attempts per IP
+  const registerBruteforce = new ExpressBrute(new ExpressBrute.MemoryStore(), {
+    freeRetries: 3,
+    minWait: 60 * 1000, // 1 minute
+    maxWait: 60 * 60 * 1000, // 1 hour
+  });
 
+  app.post("/api/register", registerBruteforce.prevent, async (req, res, next) => {
+    try {
+      // Validate input using Zod schema to prevent injection attacks
+      const result = userRegistrationSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: result.error.format() 
+        });
+      }
+      
+      const userData = result.data;
+      
+      // Check for existing user with same username (case insensitive)
+      const existingUsername = await storage.getUserByUsername(userData.username);
+      if (existingUsername) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+      
+      // Check for existing user with same email (case insensitive)
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email address already in use" });
+      }
+      
+      // Sanitize inputs to prevent XSS
+      const sanitizedData = {
+        ...userData,
+        firstName: validator.escape(userData.firstName),
+        lastName: validator.escape(userData.lastName),
+      };
+      
+      // Create user with sanitized data and hashed password
       const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
+        ...sanitizedData,
+        password: await hashPassword(userData.password),
       });
 
       // Create a default wallet for the user
@@ -98,17 +178,56 @@ export function setupAuth(app: Express) {
         });
       }
 
+      // Log successful registration
+      console.log(`User registered: ${user.username} (ID: ${user.id})`);
+
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        
+        // Don't send back password hash or sensitive data in response
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
+      console.error("Registration error:", error);
       next(error);
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+  // Create login bruteforce prevention
+  const loginBruteforce = new ExpressBrute(new ExpressBrute.MemoryStore(), {
+    freeRetries: 5,
+    minWait: 60 * 1000, // 1 minute
+    maxWait: 60 * 60 * 1000, // 1 hour
+  });
+
+  app.post("/api/login", loginBruteforce.prevent, (req, res, next) => {
+    // Sanitize login inputs
+    req.body.username = validator.escape(req.body.username);
+    // Don't sanitize password as it might contain special characters
+    
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
+      if (err) return next(err);
+      
+      if (!user) {
+        return res.status(401).json({ error: info?.message || "Invalid username or password" });
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        
+        // Don't send back password hash or sensitive data in response
+        const { password, ...userWithoutPassword } = user;
+        
+        // Set login timestamp
+        storage.updateLastLogin(user.id)
+          .catch(error => {
+            console.error("Failed to update last login timestamp:", error);
+          });
+        
+        res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {

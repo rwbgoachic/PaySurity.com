@@ -1,0 +1,57 @@
+ Affiliate Marketing
+Let’s add an affiliate system to engage and encourage affiliate marketers and keep them motivated:
+ Payout Structure
+1.	First Payout ($25):
+o	Trigger: Customer does not cancel within 7 days.
+o	Clawback: If customer cancels before Day 30 and transactions < 2,500,reclaim2,500,reclaim25.
+2.	Second Payout ($25):
+o	Trigger: Customer active for 30 days and processes ≥ $2,500.
+3.	Third Payout (25+25+3.75):
+o	Trigger: Customer active for 90 days and processes ≥ $7,500 total.
+o	Formula: $25 + (5% of PaySurity’s commission from Days 1–90).
+4.	Fourth Payout (25+25+9.38):
+o	Trigger: Customer processes ≥ $15,000 between Days 91–180.
+o	Formula: $25 + (6.25% of PaySurity’s commission from Days 91–180).
+5.	Recurring Payout (25+25+3.75/month):
+o	Trigger: Customer processes ≥ $5,000/month after Day 180.
+6.	Loyalty Bonus (25+25+5/month):
+o	Trigger: Customer active 365+ days and processes ≥ $5,000/month.
+7.	Volume Bonuses:
+o	High-Volume: +25/monthpercustomerprocessing∗∗≥25/monthpercustomerprocessing∗∗≥100,000/month**.
+8.	Bulk Referral: +300/monthfor∗∗≥10customers∗∗eachprocessing∗∗≥300/monthfor∗∗≥10customers∗∗eachprocessing∗∗≥3,000/month**.
+9.	________________________________________
+10.	Automation Requirements
+o	Email Alerts: Use Zapier to notify affiliates when:
+o	They earn their first payout.
+o	A payout milestone is reached (e.g., “Earn another $25 if [Customer] stays 90 days!”).
+11.	Transparency Dashboard:
+o	Affiliates see real-time stats:
+o	Pending earnings (e.g., “Pending $25”).
+o	Earned payouts (e.g., “Earned $28.75”).
+o	Recurring/loyalty earnings (e.g., “$30/month”).
+________________________________________
+12.	Legal & Safety
+o	Add clause: “PaySurity reserves the right to modify payout terms at any time.”
+o	Collect “Next-of-Kin” details during affiliate signup for payout continuity.
+________________________________________
+13.	Affiliate Page Copy (Simple & Attractive)
+o	Earn Big with PaySurity’s Affiliate Program!
+o	How It Works
+o	$25 Instant Bonus: Get25 when a paying customer stays 7+ days.
+o	Another $25 at 30 Days+: Earn another $25 at 30 +Days when they process $2,500+ in total payments.
+o	Another 28.75+ at 90 Days: Unlock 25 + 5% of our earnings, earning you $28.75+ at 90+ Days when they hit $7,500+ total.
+o	Another 34.38+ at 180 Days: Unlock 34.38+ at 180 Days: Earn $25 + 6.25% of our earnings from their next $15,000 in total monthly transactions.
+o	Monthly Recurring Cash:
+	$28.75/month after 180 days.
+o	$30/month after 1 year (plus bonuses for high-volume customers!).
+o	Extra Bonuses
+o	+25/month∗∗percustomerprocessing∗∗25/month∗∗percustomerprocessing∗∗100k+/month.
+o	+$300/month for referring 10+ active customers in a calendar Month.
+14.	Transparency & Control
+15.	Track earnings in real time with your Affiliate Dashboard.
+16.	Get email alerts the moment you earn a payout!
+________________________________________
+17.	Safety Checks
+18.	Profit Protection: All thresholds ensure PaySurity’s 1% commission covers payouts.
+19.	Example: A 5,000/month∗∗customerearnsPaySurity∗∗5,000/month∗∗customerearnsPaySurity∗∗50. Your payout is $28.75 (57.5% of our revenue). This is aggressive but viable if customer retention is high.
+20.	Recommendation: Monitor margins and adjust thresholds if needed.

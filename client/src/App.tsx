@@ -35,6 +35,8 @@ import RetailBlogPage from "./pages/blog/industry/retail";
 import PaymentIndustryNewsPage from "./pages/blog/payment-industry-news";
 import { AuthProvider } from "./hooks/use-auth";
 import { MetaTags, OrganizationSchema } from "./components/seo";
+import { setupCSRFInterceptor, getCSRFToken } from "./lib/csrf";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -76,6 +78,24 @@ function Router() {
 }
 
 function App() {
+  // Initialize CSRF protection and fetch token on app load
+  useEffect(() => {
+    // Setup fetch interceptor for CSRF token
+    setupCSRFInterceptor();
+    
+    // Pre-fetch CSRF token to have it ready for use
+    const prefetchCSRFToken = async () => {
+      try {
+        await getCSRFToken();
+        console.log("CSRF protection initialized");
+      } catch (error) {
+        console.error("Failed to initialize CSRF protection:", error);
+      }
+    };
+    
+    prefetchCSRFToken();
+  }, []);
+  
   return (
     <AuthProvider>
       {/* Default SEO tags that will be overridden by page-specific ones */}

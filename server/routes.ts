@@ -20,7 +20,11 @@ import {
   insertPromotionalCampaignSchema,
   insertAnalyticsReportSchema,
   insertBusinessFinancingSchema,
-  insertVirtualTerminalSchema
+  insertVirtualTerminalSchema,
+  // Affiliate system schemas
+  insertAffiliateProfileSchema,
+  insertMerchantReferralSchema,
+  insertAffiliatePayoutSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -31,9 +35,8 @@ const apiCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });    // 5 minute
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply compression middleware for better performance
   app.use(compression());
-
-  // Set up authentication routes
-  setupAuth(app);
+  
+  // Auth is now set up in server/index.ts before this point
   
   // Optimized NewsAPI route for payment industry news with improved caching
   app.get("/api/news/payment-industry", async (req, res, next) => {
@@ -855,6 +858,421 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const terminal = await storage.createVirtualTerminal(validatedData);
       res.status(201).json(terminal);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Affiliate System Routes
+  // Affiliate Profile routes
+  app.get("/api/affiliate/profile", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const profile = await storage.getAffiliateProfileByUserId(req.user?.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Affiliate profile not found" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/affiliate/profile", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Check if user already has an affiliate profile
+      const existingProfile = await storage.getAffiliateProfileByUserId(req.user?.id);
+      if (existingProfile) {
+        return res.status(409).json({ message: "Affiliate profile already exists" });
+      }
+      
+      // Generate a unique referral code if not provided
+      let referralCode = req.body.referralCode;
+      if (!referralCode) {
+        referralCode = `${req.user?.username || 'aff'}-${Math.random().toString(36).substring(2, 10)}`;
+      } else {
+        // Check if referral code is already taken
+        const existingCodeProfile = await storage.getAffiliateProfileByReferralCode(referralCode);
+        if (existingCodeProfile) {
+          return res.status(409).json({ message: "Referral code already in use" });
+        }
+      }
+      
+      const validatedData = insertAffiliateProfileSchema.parse({
+        ...req.body,
+        userId: req.user?.id,
+        username: req.user?.username,
+        email: req.user?.email,
+        referralCode,
+        commissionRate: req.body.commissionRate || "0.1", // Default 10%
+        isActive: true,
+        createdAt: new Date()
+      });
+      
+      const profile = await storage.createAffiliateProfile(validatedData);
+      res.status(201).json(profile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/affiliate/profile", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Get existing profile
+      const profile = await storage.getAffiliateProfileByUserId(req.user?.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Affiliate profile not found" });
+      }
+      
+      // Parse the update data, excluding fields that shouldn't be updated directly
+      const updateData: Record<string, any> = {
+        paymentMethod: req.body.paymentMethod,
+        paymentDetails: req.body.paymentDetails,
+        marketingMaterials: req.body.marketingMaterials,
+        bio: req.body.bio,
+        website: req.body.website,
+        socialMedia: req.body.socialMedia
+      };
+      
+      // Remove undefined properties
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      const updatedProfile = await storage.updateAffiliateProfile(profile.id, updateData);
+      res.json(updatedProfile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin routes for affiliate profiles
+  app.get("/api/admin/affiliate/profiles", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const profiles = await storage.getAllAffiliateProfiles();
+      res.json(profiles);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/admin/affiliate/profiles/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const profileId = parseInt(req.params.id);
+      const profile = await storage.getAffiliateProfile(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: "Affiliate profile not found" });
+      }
+      
+      // Admin can update these fields
+      const updateData: Record<string, any> = {
+        isActive: req.body.isActive,
+        commissionRate: req.body.commissionRate,
+        tier: req.body.tier,
+        notes: req.body.notes
+      };
+      
+      // Remove undefined properties
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      const updatedProfile = await storage.updateAffiliateProfile(profileId, updateData);
+      res.json(updatedProfile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Merchant Referral routes
+  app.get("/api/affiliate/referrals", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Get affiliate profile
+      const profile = await storage.getAffiliateProfileByUserId(req.user?.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Affiliate profile not found" });
+      }
+      
+      const referrals = await storage.getMerchantReferralsByAffiliateId(profile.id);
+      res.json(referrals);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Record a new referral - typically called when a merchant signs up with a referral code
+  app.post("/api/merchant/referrals", async (req, res, next) => {
+    try {
+      // This endpoint is public - it's called during the merchant signup process
+      const { referralCode, merchantId, merchantName, merchantEmail, merchantIndustry } = req.body;
+      
+      if (!referralCode || !merchantId || !merchantName) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Get affiliate profile by referral code
+      const profile = await storage.getAffiliateProfileByReferralCode(referralCode);
+      if (!profile) {
+        return res.status(404).json({ message: "Invalid referral code" });
+      }
+      
+      // Prepare data for merchant referral
+      // We need to cast the data as any to bypass strict TypeScript checking since our schema might not match exactly
+      const referralData: any = {
+        affiliateId: profile.id,
+        merchantId,
+        status: "pending",
+        // Add additional fields that might not be in the schema type
+        notes: `Referral created for merchant: ${merchantName}`
+      };
+      
+      // Create the referral
+      const referral = await storage.createMerchantReferral(referralData);
+      
+      res.status(201).json(referral);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin route to update referral status
+  app.patch("/api/admin/merchant/referrals/:id/status", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const referralId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!status || !["pending", "active", "churned", "suspended"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updatedReferral = await storage.updateMerchantReferralStatus(referralId, status);
+      res.json(updatedReferral);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin route to update transaction volumes for a referral
+  app.patch("/api/admin/merchant/referrals/:id/volume", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const referralId = parseInt(req.params.id);
+      const { period, volume } = req.body;
+      
+      if (!period || !volume) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      if (!["7_days", "30_days", "90_days", "180_days", "monthly"].includes(period)) {
+        return res.status(400).json({ message: "Invalid period" });
+      }
+      
+      const updatedReferral = await storage.updateMerchantReferralVolume(referralId, period, volume);
+      res.json(updatedReferral);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin route to track milestone achievement
+  app.patch("/api/admin/merchant/referrals/:id/milestone", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const referralId = parseInt(req.params.id);
+      const { milestoneName, reached } = req.body;
+      
+      if (!milestoneName || reached === undefined) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      if (!["seven_day", "thirty_day", "ninety_day", "one_eighty_day", "three_sixty_five_day"].includes(milestoneName)) {
+        return res.status(400).json({ message: "Invalid milestone name" });
+      }
+      
+      const updatedReferral = await storage.updateMerchantReferralMilestone(referralId, milestoneName, reached);
+      res.json(updatedReferral);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Affiliate Payout routes
+  app.get("/api/affiliate/payouts", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Get affiliate profile
+      const profile = await storage.getAffiliateProfileByUserId(req.user?.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Affiliate profile not found" });
+      }
+      
+      const payouts = await storage.getAffiliatePayoutsByAffiliateId(profile.id);
+      res.json(payouts);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin routes for payouts
+  app.get("/api/admin/affiliate/payouts", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const status = req.query.status as string | undefined;
+      
+      let payouts;
+      if (status && ["pending", "paid", "clawed_back", "canceled"].includes(status)) {
+        // Cast status to the appropriate type
+        const typedStatus = status as "pending" | "paid" | "clawed_back" | "canceled";
+        payouts = await storage.getAffiliatePayoutsByStatus(typedStatus);
+      } else {
+        // Get all payouts from all affiliates
+        const profiles = await storage.getAllAffiliateProfiles();
+        payouts = [];
+        
+        for (const profile of profiles) {
+          const profilePayouts = await storage.getAffiliatePayoutsByAffiliateId(profile.id);
+          payouts.push(...profilePayouts);
+        }
+      }
+      
+      res.json(payouts);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Create a new payout (admin only)
+  app.post("/api/admin/affiliate/payouts", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const { affiliateId, referralId, amount, description } = req.body;
+      
+      if (!affiliateId || !amount) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Validate the affiliate exists
+      const affiliate = await storage.getAffiliateProfile(affiliateId);
+      if (!affiliate) {
+        return res.status(404).json({ message: "Affiliate not found" });
+      }
+      
+      // Validate the referral if provided
+      if (referralId) {
+        const referral = await storage.getMerchantReferral(referralId);
+        if (!referral) {
+          return res.status(404).json({ message: "Referral not found" });
+        }
+        
+        // Ensure the referral belongs to this affiliate
+        if (referral.affiliateId !== affiliateId) {
+          return res.status(400).json({ message: "Referral does not belong to this affiliate" });
+        }
+      }
+      
+      // Use a generic description if affiliate username is not available
+      const payoutDescription = description || `Affiliate payout for ID: ${affiliateId}`;
+      
+      const validatedData = insertAffiliatePayoutSchema.parse({
+        affiliateId,
+        referralId: referralId || null,
+        amount,
+        description: payoutDescription,
+        status: "pending",
+        createdAt: new Date()
+      });
+      
+      const payout = await storage.createAffiliatePayout(validatedData);
+      res.status(201).json(payout);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Process a payout (admin only)
+  app.patch("/api/admin/affiliate/payouts/:id/process", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const payoutId = parseInt(req.params.id);
+      const { transactionId } = req.body;
+      
+      if (!transactionId) {
+        return res.status(400).json({ message: "Transaction ID is required" });
+      }
+      
+      const payout = await storage.markAffiliatePayoutAsPaid(payoutId, transactionId);
+      res.json(payout);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Cancel a payout (admin only)
+  app.patch("/api/admin/affiliate/payouts/:id/cancel", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const payoutId = parseInt(req.params.id);
+      
+      const payout = await storage.updateAffiliatePayoutStatus(payoutId, "canceled");
+      res.json(payout);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Claw back a payout (admin only)
+  app.patch("/api/admin/affiliate/payouts/:id/clawback", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (req.user?.role !== "admin") return res.status(403).json({ message: "Access denied" });
+      
+      const payoutId = parseInt(req.params.id);
+      const { notes } = req.body;
+      
+      const payout = await storage.clawbackAffiliatePayout(payoutId, notes);
+      res.json(payout);
     } catch (error) {
       next(error);
     }

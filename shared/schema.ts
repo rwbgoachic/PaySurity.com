@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User roles enum
-export const userRoleEnum = pgEnum("user_role", ["employee", "employer", "parent", "child", "admin"]);
+export const userRoleEnum = pgEnum("user_role", ["employee", "employer", "parent", "child", "admin", "affiliate"]);
 
 // User schema
 export const users = pgTable("users", {
@@ -12,8 +12,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
-  email: text("email").notNull(),
-  role: text("role", { enum: ["employee", "employer", "parent", "child", "admin"] }).notNull().default("employee"),
+  email: text("email").notNull().unique(),
+  role: text("role", { enum: ["employee", "employer", "parent", "child", "admin", "affiliate"] }).notNull().default("employee"),
   department: text("department"),
   organizationId: integer("organization_id"),
   dateOfBirth: date("date_of_birth"),
@@ -22,6 +22,14 @@ export const users = pgTable("users", {
   parentId: integer("parent_id"), // For child accounts to link to parent
   dependents: integer("dependents"), // Number of dependents for tax calculations
   createdAt: timestamp("created_at").defaultNow(),
+  lastLoginAt: timestamp("last_login_at"),
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  accountLocked: boolean("account_locked").default(false),
+  accountLockedUntil: timestamp("account_locked_until"),
+  passwordLastChanged: timestamp("password_last_changed"),
+  securityQuestions: jsonb("security_questions"), // For account recovery
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  twoFactorSecret: text("two_factor_secret"), // For storing 2FA secret
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -851,3 +859,111 @@ export type BusinessFinancing = typeof businessFinancing.$inferSelect;
 export type InsertBusinessFinancing = z.infer<typeof insertBusinessFinancingSchema>;
 export type VirtualTerminal = typeof virtualTerminals.$inferSelect;
 export type InsertVirtualTerminal = z.infer<typeof insertVirtualTerminalSchema>;
+
+// Affiliate System
+export const payoutStatusEnum = pgEnum("payout_status", ["pending", "paid", "clawed_back", "canceled"]);
+export const referralStatusEnum = pgEnum("referral_status", ["pending", "active", "churned", "suspended"]);
+
+// Affiliate profile schema
+export const affiliateProfiles = pgTable("affiliate_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(), // Link to the user table
+  companyName: text("company_name"),
+  websiteUrl: text("website_url"),
+  taxId: text("tax_id"), // For tax reporting purposes
+  paymentMethod: text("payment_method").notNull().default("bank_transfer"), // bank_transfer, check, paypal, etc.
+  bankAccountId: integer("bank_account_id"), // Link to bank account for payments
+  nextOfKinName: text("next_of_kin_name"), // For payment continuity
+  nextOfKinContact: text("next_of_kin_contact"),
+  totalEarned: numeric("total_earned").notNull().default("0"),
+  pendingPayouts: numeric("pending_payouts").notNull().default("0"),
+  lifetimeReferrals: integer("lifetime_referrals").notNull().default(0),
+  activeReferrals: integer("active_referrals").notNull().default(0),
+  referralCode: text("referral_code").notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAffiliateProfileSchema = createInsertSchema(affiliateProfiles).pick({
+  userId: true,
+  companyName: true,
+  websiteUrl: true,
+  taxId: true,
+  paymentMethod: true,
+  bankAccountId: true,
+  nextOfKinName: true,
+  nextOfKinContact: true,
+  referralCode: true,
+  isActive: true,
+});
+
+// Merchant referrals schema
+export const merchantReferrals = pgTable("merchant_referrals", {
+  id: serial("id").primaryKey(),
+  affiliateId: integer("affiliate_id").notNull(), // Link to affiliate profile
+  merchantId: integer("merchant_id").notNull(), // Link to merchant profile
+  referralCode: text("referral_code").notNull(), // Code used for tracking
+  status: text("status", { enum: ["pending", "active", "churned", "suspended"] }).notNull().default("pending"),
+  sevenDayMilestoneReached: boolean("seven_day_milestone_reached").default(false),
+  thirtyDayMilestoneReached: boolean("thirty_day_milestone_reached").default(false),
+  ninetyDayMilestoneReached: boolean("ninety_day_milestone_reached").default(false),
+  oneEightyDayMilestoneReached: boolean("one_eighty_day_milestone_reached").default(false),
+  threeSixtyFiveDayMilestoneReached: boolean("three_sixty_five_day_milestone_reached").default(false),
+  transactionVolume7Days: numeric("transaction_volume_7_days").default("0"),
+  transactionVolume30Days: numeric("transaction_volume_30_days").default("0"),
+  transactionVolume90Days: numeric("transaction_volume_90_days").default("0"),
+  transactionVolume180Days: numeric("transaction_volume_180_days").default("0"),
+  transactionVolumeMonthly: numeric("transaction_volume_monthly").default("0"),
+  commissionEarned: numeric("commission_earned").default("0"),
+  dateReferred: timestamp("date_referred").defaultNow(),
+  activationDate: timestamp("activation_date"), // When merchant started processing
+  lastTransactionDate: timestamp("last_transaction_date"),
+  churnDate: timestamp("churn_date"), // If the merchant churned
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantReferralSchema = createInsertSchema(merchantReferrals).pick({
+  affiliateId: true,
+  merchantId: true,
+  referralCode: true,
+  status: true,
+  notes: true,
+});
+
+// Affiliate payouts schema
+export const affiliatePayouts = pgTable("affiliate_payouts", {
+  id: serial("id").primaryKey(),
+  affiliateId: integer("affiliate_id").notNull(), 
+  referralId: integer("referral_id").notNull(), // Link to merchant referral
+  milestoneName: text("milestone_name").notNull(), // 7_day, 30_day, 90_day, 180_day, recurring, loyalty, high_volume, bulk
+  amount: numeric("amount").notNull(),
+  status: text("status", { enum: ["pending", "paid", "clawed_back", "canceled"] }).notNull().default("pending"),
+  scheduledDate: date("scheduled_date"),
+  processedDate: date("processed_date"),
+  transactionId: text("transaction_id"), // Reference to payment transaction
+  paymentMethod: text("payment_method"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAffiliatePayoutSchema = createInsertSchema(affiliatePayouts).pick({
+  affiliateId: true,
+  referralId: true,
+  milestoneName: true,
+  amount: true,
+  status: true,
+  scheduledDate: true,
+  notes: true,
+});
+
+// Type definitions for affiliate system
+export type AffiliateProfile = typeof affiliateProfiles.$inferSelect;
+export type InsertAffiliateProfile = z.infer<typeof insertAffiliateProfileSchema>;
+export type MerchantReferral = typeof merchantReferrals.$inferSelect;
+export type InsertMerchantReferral = z.infer<typeof insertMerchantReferralSchema>;
+export type AffiliatePayout = typeof affiliatePayouts.$inferSelect;
+export type InsertAffiliatePayout = z.infer<typeof insertAffiliatePayoutSchema>;
