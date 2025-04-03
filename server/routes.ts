@@ -1,8 +1,23 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { insertFundRequestSchema, insertTransactionSchema, insertBankAccountSchema, insertWalletSchema } from "@shared/schema";
+import { 
+  insertFundRequestSchema, 
+  insertTransactionSchema, 
+  insertBankAccountSchema, 
+  insertWalletSchema,
+  insertMerchantProfileSchema,
+  insertPaymentGatewaySchema,
+  insertPointOfSaleSystemSchema,
+  insertLoyaltyProgramSchema,
+  insertCustomerLoyaltyAccountSchema,
+  insertPromotionalCampaignSchema,
+  insertAnalyticsReportSchema,
+  insertBusinessFinancingSchema,
+  insertVirtualTerminalSchema
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -341,8 +356,474 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create HTTP server
+  // Merchant Profile routes
+  app.get("/api/merchant-profiles", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Admin users can see all merchant profiles
+      if (req.user?.role === "admin") {
+        const profiles = await storage.getMerchantProfilesByStatus("all");
+        return res.json(profiles);
+      }
+      
+      // Regular users can only see their own merchant profile
+      const profile = await storage.getMerchantProfileByUserId(req.user?.id);
+      res.json(profile ? [profile] : []);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/merchant-profiles/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const profileId = parseInt(req.params.id);
+      const profile = await storage.getMerchantProfile(profileId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      // Validate the data
+      const validatedData = insertMerchantProfileSchema.parse({
+        ...req.body,
+        userId: req.user?.id, // Ensure the profile is created for the authenticated user
+        status: "pending", // New merchant profiles start with pending status
+        verificationStatus: "pending"
+      });
+      
+      // Check if user already has a merchant profile
+      const existingProfile = await storage.getMerchantProfileByUserId(req.user?.id);
+      if (existingProfile) {
+        return res.status(409).json({ message: "User already has a merchant profile" });
+      }
+      
+      const profile = await storage.createMerchantProfile(validatedData);
+      res.status(201).json(profile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/merchant-profiles/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const profileId = parseInt(req.params.id);
+      const profile = await storage.getMerchantProfile(profileId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow updates by the profile owner
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Admins can update status and verification status
+      if (req.user?.role === "admin" && req.body.status) {
+        const updatedProfile = await storage.updateMerchantStatus(profileId, req.body.status);
+        return res.json(updatedProfile);
+      }
+      
+      // Regular users can update basic profile information but not status
+      const { status, verificationStatus, ...updateData } = req.body;
+      const updatedProfile = await storage.updateMerchantProfile(profileId, updateData);
+      res.json(updatedProfile);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Payment Gateway routes
+  app.get("/api/merchant-profiles/:merchantId/payment-gateways", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const gateways = await storage.getPaymentGatewaysByMerchantId(merchantId);
+      res.json(gateways);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles/:merchantId/payment-gateways", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertPaymentGatewaySchema.parse({
+        ...req.body,
+        merchantId
+      });
+      
+      const gateway = await storage.createPaymentGateway(validatedData);
+      res.status(201).json(gateway);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Loyalty Program routes
+  app.get("/api/merchant-profiles/:merchantId/loyalty-programs", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Allow public access to active loyalty programs
+      if (req.query.active === "true") {
+        const activePrograms = await storage.getLoyaltyProgramsByMerchantId(merchantId);
+        return res.json(activePrograms.filter(program => program.isActive));
+      }
+      
+      // Only allow full access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const programs = await storage.getLoyaltyProgramsByMerchantId(merchantId);
+      res.json(programs);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles/:merchantId/loyalty-programs", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertLoyaltyProgramSchema.parse({
+        ...req.body,
+        merchantId
+      });
+      
+      const program = await storage.createLoyaltyProgram(validatedData);
+      res.status(201).json(program);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Promotional Campaign routes
+  app.get("/api/merchant-profiles/:merchantId/promotional-campaigns", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Allow public access to active campaigns
+      if (req.query.active === "true") {
+        const activeCampaigns = await storage.getPromotionalCampaignsByMerchantId(merchantId);
+        return res.json(activeCampaigns.filter(campaign => campaign.isActive));
+      }
+      
+      // Only allow full access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const campaigns = await storage.getPromotionalCampaignsByMerchantId(merchantId);
+      res.json(campaigns);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles/:merchantId/promotional-campaigns", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertPromotionalCampaignSchema.parse({
+        ...req.body,
+        merchantId,
+        currentRedemptions: 0
+      });
+      
+      const campaign = await storage.createPromotionalCampaign(validatedData);
+      res.status(201).json(campaign);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Analytics Report routes
+  app.get("/api/merchant-profiles/:merchantId/analytics-reports", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const reports = await storage.getAnalyticsReportsByMerchantId(merchantId);
+      res.json(reports);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles/:merchantId/analytics-reports", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertAnalyticsReportSchema.parse({
+        ...req.body,
+        merchantId,
+        createdById: req.user?.id
+      });
+      
+      const report = await storage.createAnalyticsReport(validatedData);
+      res.status(201).json(report);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Business Financing routes
+  app.get("/api/merchant-profiles/:merchantId/financing", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const financingOptions = await storage.getBusinessFinancingsByMerchantId(merchantId);
+      res.json(financingOptions);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles/:merchantId/financing", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertBusinessFinancingSchema.parse({
+        ...req.body,
+        merchantId,
+        status: "applied",
+        applicationDate: new Date(),
+        totalRepaid: "0"
+      });
+      
+      const financing = await storage.createBusinessFinancing(validatedData);
+      res.status(201).json(financing);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Virtual Terminal routes
+  app.get("/api/merchant-profiles/:merchantId/virtual-terminals", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const terminals = await storage.getVirtualTerminalsByMerchantId(merchantId);
+      res.json(terminals);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/merchant-profiles/:merchantId/virtual-terminals", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const merchantId = parseInt(req.params.merchantId);
+      const profile = await storage.getMerchantProfile(merchantId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Merchant profile not found" });
+      }
+      
+      // Only allow access to profile owner or admins
+      if (profile.userId !== req.user?.id && req.user?.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const validatedData = insertVirtualTerminalSchema.parse({
+        ...req.body,
+        merchantId
+      });
+      
+      const terminal = await storage.createVirtualTerminal(validatedData);
+      res.status(201).json(terminal);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Set up WebSocket server for real-time notifications
   const httpServer = createServer(app);
+  
+  // Add WebSocket server for real-time updates
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws'
+  });
+  
+  // Extend WebSocket to include user data and channels
+  interface ExtendedWebSocket extends WebSocket {
+    userId?: number;
+    channels?: string[];
+  }
+  
+  wss.on('connection', (ws: ExtendedWebSocket) => {
+    // Handle new connections
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Handle different message types
+        if (data.type === 'subscribe') {
+          // Attach user information to the connection for authorization
+          ws.userId = data.userId;
+          ws.channels = data.channels || [];
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+  });
+  
+  // Utility function to broadcast messages to subscribed clients
+  const broadcastToChannel = (channel: string, data: any) => {
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (client.readyState === WebSocket.OPEN && extClient.channels && extClient.channels.includes(channel)) {
+        client.send(JSON.stringify(data));
+      }
+    });
+  };
   
   return httpServer;
 }

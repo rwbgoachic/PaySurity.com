@@ -2,6 +2,12 @@ import {
   users, wallets, transactions, bankAccounts, fundRequests, 
   payrollEntries, timeEntries, accountRequests, spendingControls, 
   educationalContent, savingsGoals, accountingIntegrations,
+  // New merchant and value-added service entities
+  merchantProfiles, paymentGateways, pointOfSaleSystems, loyaltyPrograms, 
+  customerLoyaltyAccounts, promotionalCampaigns, analyticsReports,
+  businessFinancing, virtualTerminals,
+  
+  // Core types
   type User, type InsertUser, 
   type Wallet, type InsertWallet, 
   type Transaction, type InsertTransaction, 
@@ -13,7 +19,18 @@ import {
   type SpendingControl, type InsertSpendingControl,
   type EducationalContent, type InsertEducationalContent,
   type SavingsGoal, type InsertSavingsGoal,
-  type AccountingIntegration, type InsertAccountingIntegration
+  type AccountingIntegration, type InsertAccountingIntegration,
+  
+  // New merchant and value-added service types
+  type MerchantProfile, type InsertMerchantProfile,
+  type PaymentGateway, type InsertPaymentGateway,
+  type PointOfSaleSystem, type InsertPointOfSaleSystem,
+  type LoyaltyProgram, type InsertLoyaltyProgram,
+  type CustomerLoyaltyAccount, type InsertCustomerLoyaltyAccount,
+  type PromotionalCampaign, type InsertPromotionalCampaign,
+  type AnalyticsReport, type InsertAnalyticsReport,
+  type BusinessFinancing, type InsertBusinessFinancing,
+  type VirtualTerminal, type InsertVirtualTerminal
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
@@ -127,6 +144,82 @@ export interface IStorage {
   createAccountingIntegration(accountingIntegration: InsertAccountingIntegration): Promise<AccountingIntegration>;
   updateAccountingIntegration(id: number, data: Partial<InsertAccountingIntegration>): Promise<AccountingIntegration>;
   deleteAccountingIntegration(id: number): Promise<void>;
+  
+  // Merchant Profile operations
+  getMerchantProfile(id: number): Promise<MerchantProfile | undefined>;
+  getMerchantProfileByUserId(userId: number): Promise<MerchantProfile | undefined>;
+  getMerchantProfilesByStatus(status: string): Promise<MerchantProfile[]>;
+  createMerchantProfile(merchantProfile: InsertMerchantProfile): Promise<MerchantProfile>;
+  updateMerchantProfile(id: number, data: Partial<InsertMerchantProfile>): Promise<MerchantProfile>;
+  updateMerchantStatus(id: number, status: string): Promise<MerchantProfile>;
+  updateVerificationStatus(id: number, verificationStatus: string, verificationDocuments?: any): Promise<MerchantProfile>;
+  
+  // Payment Gateway operations
+  getPaymentGateway(id: number): Promise<PaymentGateway | undefined>;
+  getPaymentGatewaysByMerchantId(merchantId: number): Promise<PaymentGateway[]>;
+  createPaymentGateway(paymentGateway: InsertPaymentGateway): Promise<PaymentGateway>;
+  updatePaymentGateway(id: number, data: Partial<InsertPaymentGateway>): Promise<PaymentGateway>;
+  deletePaymentGateway(id: number): Promise<void>;
+  
+  // Point of Sale operations
+  getPointOfSaleSystem(id: number): Promise<PointOfSaleSystem | undefined>;
+  getPointOfSaleSystemsByMerchantId(merchantId: number): Promise<PointOfSaleSystem[]>;
+  createPointOfSaleSystem(posSystem: InsertPointOfSaleSystem): Promise<PointOfSaleSystem>;
+  updatePointOfSaleSystem(id: number, data: Partial<InsertPointOfSaleSystem>): Promise<PointOfSaleSystem>;
+  updatePointOfSaleLastCheckIn(id: number): Promise<PointOfSaleSystem>;
+  deletePointOfSaleSystem(id: number): Promise<void>;
+  
+  // Loyalty Program operations
+  getLoyaltyProgram(id: number): Promise<LoyaltyProgram | undefined>;
+  getLoyaltyProgramsByMerchantId(merchantId: number): Promise<LoyaltyProgram[]>;
+  getActiveLoyaltyPrograms(): Promise<LoyaltyProgram[]>;
+  createLoyaltyProgram(loyaltyProgram: InsertLoyaltyProgram): Promise<LoyaltyProgram>;
+  updateLoyaltyProgram(id: number, data: Partial<InsertLoyaltyProgram>): Promise<LoyaltyProgram>;
+  deactivateLoyaltyProgram(id: number): Promise<LoyaltyProgram>;
+  
+  // Customer Loyalty Account operations
+  getCustomerLoyaltyAccount(id: number): Promise<CustomerLoyaltyAccount | undefined>;
+  getCustomerLoyaltyAccountsByUserId(userId: number): Promise<CustomerLoyaltyAccount[]>;
+  getCustomerLoyaltyAccountsByProgramId(programId: number): Promise<CustomerLoyaltyAccount[]>;
+  createCustomerLoyaltyAccount(account: InsertCustomerLoyaltyAccount): Promise<CustomerLoyaltyAccount>;
+  updateLoyaltyPoints(id: number, pointsToAdd: number): Promise<CustomerLoyaltyAccount>;
+  updateLoyaltyVisits(id: number, visitsToAdd: number): Promise<CustomerLoyaltyAccount>;
+  updateLoyaltyTier(id: number, tier: string, expirationDate?: Date): Promise<CustomerLoyaltyAccount>;
+  deactivateLoyaltyAccount(id: number): Promise<CustomerLoyaltyAccount>;
+  
+  // Promotional Campaign operations
+  getPromotionalCampaign(id: number): Promise<PromotionalCampaign | undefined>;
+  getPromotionalCampaignsByMerchantId(merchantId: number): Promise<PromotionalCampaign[]>;
+  getActivePromotionalCampaigns(): Promise<PromotionalCampaign[]>;
+  getLocationBasedCampaigns(latitude: number, longitude: number, radius: number): Promise<PromotionalCampaign[]>;
+  createPromotionalCampaign(campaign: InsertPromotionalCampaign): Promise<PromotionalCampaign>;
+  updatePromotionalCampaign(id: number, data: Partial<InsertPromotionalCampaign>): Promise<PromotionalCampaign>;
+  incrementCampaignRedemptions(id: number): Promise<PromotionalCampaign>;
+  deactivatePromotionalCampaign(id: number): Promise<PromotionalCampaign>;
+  
+  // Analytics Reports operations
+  getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined>;
+  getAnalyticsReportsByMerchantId(merchantId: number): Promise<AnalyticsReport[]>;
+  createAnalyticsReport(report: InsertAnalyticsReport): Promise<AnalyticsReport>;
+  updateAnalyticsReport(id: number, data: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport>;
+  generateAnalyticsReport(id: number, reportData: any): Promise<AnalyticsReport>;
+  deleteAnalyticsReport(id: number): Promise<void>;
+  
+  // Business Financing operations
+  getBusinessFinancing(id: number): Promise<BusinessFinancing | undefined>;
+  getBusinessFinancingsByMerchantId(merchantId: number): Promise<BusinessFinancing[]>;
+  getBusinessFinancingsByStatus(status: string): Promise<BusinessFinancing[]>;
+  createBusinessFinancing(financing: InsertBusinessFinancing): Promise<BusinessFinancing>;
+  updateBusinessFinancingStatus(id: number, status: string): Promise<BusinessFinancing>;
+  updateBusinessFinancingRepayment(id: number, amountPaid: string): Promise<BusinessFinancing>;
+  
+  // Virtual Terminal operations
+  getVirtualTerminal(id: number): Promise<VirtualTerminal | undefined>;
+  getVirtualTerminalsByMerchantId(merchantId: number): Promise<VirtualTerminal[]>;
+  createVirtualTerminal(terminal: InsertVirtualTerminal): Promise<VirtualTerminal>;
+  updateVirtualTerminal(id: number, data: Partial<InsertVirtualTerminal>): Promise<VirtualTerminal>;
+  recordVirtualTerminalAccess(id: number, userId: number, ipAddress: string): Promise<VirtualTerminal>;
+  deactivateVirtualTerminal(id: number): Promise<VirtualTerminal>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1230,6 +1323,618 @@ export class DatabaseStorage implements IStorage {
     if (!deletedIntegration) {
       throw new Error(`Accounting integration with id ${id} not found`);
     }
+  }
+
+  // Merchant Profile operations
+  async getMerchantProfile(id: number): Promise<MerchantProfile | undefined> {
+    const [merchantProfile] = await db.select().from(merchantProfiles).where(eq(merchantProfiles.id, id));
+    return merchantProfile;
+  }
+
+  async getMerchantProfileByUserId(userId: number): Promise<MerchantProfile | undefined> {
+    const [merchantProfile] = await db.select().from(merchantProfiles).where(eq(merchantProfiles.userId, userId));
+    return merchantProfile;
+  }
+
+  async getMerchantProfilesByStatus(status: string): Promise<MerchantProfile[]> {
+    return await db.select().from(merchantProfiles).where(eq(merchantProfiles.status as any, status));
+  }
+
+  async createMerchantProfile(merchantProfile: InsertMerchantProfile): Promise<MerchantProfile> {
+    const [newMerchantProfile] = await db.insert(merchantProfiles).values(merchantProfile).returning();
+    return newMerchantProfile;
+  }
+
+  async updateMerchantProfile(id: number, data: Partial<InsertMerchantProfile>): Promise<MerchantProfile> {
+    const [updatedMerchantProfile] = await db
+      .update(merchantProfiles)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(merchantProfiles.id, id))
+      .returning();
+
+    if (!updatedMerchantProfile) {
+      throw new Error(`Merchant profile with id ${id} not found`);
+    }
+
+    return updatedMerchantProfile;
+  }
+
+  async updateMerchantStatus(id: number, status: string): Promise<MerchantProfile> {
+    const [updatedMerchantProfile] = await db
+      .update(merchantProfiles)
+      .set({
+        status: status as any,
+        updatedAt: new Date()
+      })
+      .where(eq(merchantProfiles.id, id))
+      .returning();
+
+    if (!updatedMerchantProfile) {
+      throw new Error(`Merchant profile with id ${id} not found`);
+    }
+
+    return updatedMerchantProfile;
+  }
+
+  async updateVerificationStatus(id: number, verificationStatus: string, verificationDocuments?: any): Promise<MerchantProfile> {
+    const updateData: any = {
+      verificationStatus,
+      updatedAt: new Date()
+    };
+
+    if (verificationDocuments) {
+      updateData.verificationDocuments = verificationDocuments;
+    }
+
+    const [updatedMerchantProfile] = await db
+      .update(merchantProfiles)
+      .set(updateData)
+      .where(eq(merchantProfiles.id, id))
+      .returning();
+
+    if (!updatedMerchantProfile) {
+      throw new Error(`Merchant profile with id ${id} not found`);
+    }
+
+    return updatedMerchantProfile;
+  }
+
+  // Payment Gateway operations
+  async getPaymentGateway(id: number): Promise<PaymentGateway | undefined> {
+    const [paymentGateway] = await db.select().from(paymentGateways).where(eq(paymentGateways.id, id));
+    return paymentGateway;
+  }
+
+  async getPaymentGatewaysByMerchantId(merchantId: number): Promise<PaymentGateway[]> {
+    return await db.select().from(paymentGateways).where(eq(paymentGateways.merchantId, merchantId));
+  }
+
+  async createPaymentGateway(paymentGateway: InsertPaymentGateway): Promise<PaymentGateway> {
+    const [newPaymentGateway] = await db.insert(paymentGateways).values(paymentGateway).returning();
+    return newPaymentGateway;
+  }
+
+  async updatePaymentGateway(id: number, data: Partial<InsertPaymentGateway>): Promise<PaymentGateway> {
+    const [updatedPaymentGateway] = await db
+      .update(paymentGateways)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(paymentGateways.id, id))
+      .returning();
+
+    if (!updatedPaymentGateway) {
+      throw new Error(`Payment gateway with id ${id} not found`);
+    }
+
+    return updatedPaymentGateway;
+  }
+
+  async deletePaymentGateway(id: number): Promise<void> {
+    const [deletedPaymentGateway] = await db
+      .delete(paymentGateways)
+      .where(eq(paymentGateways.id, id))
+      .returning();
+
+    if (!deletedPaymentGateway) {
+      throw new Error(`Payment gateway with id ${id} not found`);
+    }
+  }
+
+  // Point of Sale operations
+  async getPointOfSaleSystem(id: number): Promise<PointOfSaleSystem | undefined> {
+    const [pointOfSaleSystem] = await db.select().from(pointOfSaleSystems).where(eq(pointOfSaleSystems.id, id));
+    return pointOfSaleSystem;
+  }
+
+  async getPointOfSaleSystemsByMerchantId(merchantId: number): Promise<PointOfSaleSystem[]> {
+    return await db.select().from(pointOfSaleSystems).where(eq(pointOfSaleSystems.merchantId, merchantId));
+  }
+
+  async createPointOfSaleSystem(posSystem: InsertPointOfSaleSystem): Promise<PointOfSaleSystem> {
+    const [newPointOfSaleSystem] = await db.insert(pointOfSaleSystems).values(posSystem).returning();
+    return newPointOfSaleSystem;
+  }
+
+  async updatePointOfSaleSystem(id: number, data: Partial<InsertPointOfSaleSystem>): Promise<PointOfSaleSystem> {
+    const [updatedPointOfSaleSystem] = await db
+      .update(pointOfSaleSystems)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(pointOfSaleSystems.id, id))
+      .returning();
+
+    if (!updatedPointOfSaleSystem) {
+      throw new Error(`Point of sale system with id ${id} not found`);
+    }
+
+    return updatedPointOfSaleSystem;
+  }
+
+  async updatePointOfSaleLastCheckIn(id: number): Promise<PointOfSaleSystem> {
+    const [updatedPointOfSaleSystem] = await db
+      .update(pointOfSaleSystems)
+      .set({
+        lastCheckIn: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(pointOfSaleSystems.id, id))
+      .returning();
+
+    if (!updatedPointOfSaleSystem) {
+      throw new Error(`Point of sale system with id ${id} not found`);
+    }
+
+    return updatedPointOfSaleSystem;
+  }
+
+  async deletePointOfSaleSystem(id: number): Promise<void> {
+    const [deletedPointOfSaleSystem] = await db
+      .delete(pointOfSaleSystems)
+      .where(eq(pointOfSaleSystems.id, id))
+      .returning();
+
+    if (!deletedPointOfSaleSystem) {
+      throw new Error(`Point of sale system with id ${id} not found`);
+    }
+  }
+
+  // Loyalty Program operations
+  async getLoyaltyProgram(id: number): Promise<LoyaltyProgram | undefined> {
+    const [loyaltyProgram] = await db.select().from(loyaltyPrograms).where(eq(loyaltyPrograms.id, id));
+    return loyaltyProgram;
+  }
+
+  async getLoyaltyProgramsByMerchantId(merchantId: number): Promise<LoyaltyProgram[]> {
+    return await db.select().from(loyaltyPrograms).where(eq(loyaltyPrograms.merchantId, merchantId));
+  }
+
+  async getActiveLoyaltyPrograms(): Promise<LoyaltyProgram[]> {
+    return await db.select().from(loyaltyPrograms).where(eq(loyaltyPrograms.isActive, true));
+  }
+
+  async createLoyaltyProgram(loyaltyProgram: InsertLoyaltyProgram): Promise<LoyaltyProgram> {
+    const [newLoyaltyProgram] = await db.insert(loyaltyPrograms).values(loyaltyProgram).returning();
+    return newLoyaltyProgram;
+  }
+
+  async updateLoyaltyProgram(id: number, data: Partial<InsertLoyaltyProgram>): Promise<LoyaltyProgram> {
+    const [updatedLoyaltyProgram] = await db
+      .update(loyaltyPrograms)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(loyaltyPrograms.id, id))
+      .returning();
+
+    if (!updatedLoyaltyProgram) {
+      throw new Error(`Loyalty program with id ${id} not found`);
+    }
+
+    return updatedLoyaltyProgram;
+  }
+
+  async deactivateLoyaltyProgram(id: number): Promise<LoyaltyProgram> {
+    const [updatedLoyaltyProgram] = await db
+      .update(loyaltyPrograms)
+      .set({
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(loyaltyPrograms.id, id))
+      .returning();
+
+    if (!updatedLoyaltyProgram) {
+      throw new Error(`Loyalty program with id ${id} not found`);
+    }
+
+    return updatedLoyaltyProgram;
+  }
+
+  // Customer Loyalty Account operations
+  async getCustomerLoyaltyAccount(id: number): Promise<CustomerLoyaltyAccount | undefined> {
+    const [loyaltyAccount] = await db.select().from(customerLoyaltyAccounts).where(eq(customerLoyaltyAccounts.id, id));
+    return loyaltyAccount;
+  }
+
+  async getCustomerLoyaltyAccountsByUserId(userId: number): Promise<CustomerLoyaltyAccount[]> {
+    return await db.select().from(customerLoyaltyAccounts).where(eq(customerLoyaltyAccounts.userId, userId));
+  }
+
+  async getCustomerLoyaltyAccountsByProgramId(programId: number): Promise<CustomerLoyaltyAccount[]> {
+    return await db.select().from(customerLoyaltyAccounts).where(eq(customerLoyaltyAccounts.programId, programId));
+  }
+
+  async createCustomerLoyaltyAccount(account: InsertCustomerLoyaltyAccount): Promise<CustomerLoyaltyAccount> {
+    const [newLoyaltyAccount] = await db.insert(customerLoyaltyAccounts).values(account).returning();
+    return newLoyaltyAccount;
+  }
+
+  async updateLoyaltyPoints(id: number, pointsToAdd: number): Promise<CustomerLoyaltyAccount> {
+    const account = await this.getCustomerLoyaltyAccount(id);
+    if (!account) {
+      throw new Error(`Customer loyalty account with id ${id} not found`);
+    }
+
+    const newPointsBalance = account.pointsBalance + pointsToAdd;
+    const newLifetimePoints = account.lifetimePoints + (pointsToAdd > 0 ? pointsToAdd : 0);
+
+    const [updatedAccount] = await db
+      .update(customerLoyaltyAccounts)
+      .set({
+        pointsBalance: newPointsBalance,
+        lifetimePoints: newLifetimePoints,
+        lastActivityDate: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(customerLoyaltyAccounts.id, id))
+      .returning();
+
+    return updatedAccount;
+  }
+
+  async updateLoyaltyVisits(id: number, visitsToAdd: number): Promise<CustomerLoyaltyAccount> {
+    const account = await this.getCustomerLoyaltyAccount(id);
+    if (!account) {
+      throw new Error(`Customer loyalty account with id ${id} not found`);
+    }
+
+    const newVisitsCount = account.visitsCount + visitsToAdd;
+
+    const [updatedAccount] = await db
+      .update(customerLoyaltyAccounts)
+      .set({
+        visitsCount: newVisitsCount,
+        lastActivityDate: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(customerLoyaltyAccounts.id, id))
+      .returning();
+
+    return updatedAccount;
+  }
+
+  async updateLoyaltyTier(id: number, tier: string, expirationDate?: Date): Promise<CustomerLoyaltyAccount> {
+    const [updatedAccount] = await db
+      .update(customerLoyaltyAccounts)
+      .set({
+        currentTier: tier,
+        tierExpirationDate: expirationDate,
+        updatedAt: new Date()
+      })
+      .where(eq(customerLoyaltyAccounts.id, id))
+      .returning();
+
+    if (!updatedAccount) {
+      throw new Error(`Customer loyalty account with id ${id} not found`);
+    }
+
+    return updatedAccount;
+  }
+
+  async deactivateLoyaltyAccount(id: number): Promise<CustomerLoyaltyAccount> {
+    const [updatedAccount] = await db
+      .update(customerLoyaltyAccounts)
+      .set({
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(customerLoyaltyAccounts.id, id))
+      .returning();
+
+    if (!updatedAccount) {
+      throw new Error(`Customer loyalty account with id ${id} not found`);
+    }
+
+    return updatedAccount;
+  }
+
+  // Promotional Campaign operations
+  async getPromotionalCampaign(id: number): Promise<PromotionalCampaign | undefined> {
+    const [campaign] = await db.select().from(promotionalCampaigns).where(eq(promotionalCampaigns.id, id));
+    return campaign;
+  }
+
+  async getPromotionalCampaignsByMerchantId(merchantId: number): Promise<PromotionalCampaign[]> {
+    return await db.select().from(promotionalCampaigns).where(eq(promotionalCampaigns.merchantId, merchantId));
+  }
+
+  async getActivePromotionalCampaigns(): Promise<PromotionalCampaign[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(promotionalCampaigns)
+      .where(eq(promotionalCampaigns.isActive, true));
+  }
+
+  async getLocationBasedCampaigns(latitude: number, longitude: number, radius: number): Promise<PromotionalCampaign[]> {
+    // This would normally use a spatial query, but for simplicity we'll just return active campaigns marked as location-based
+    // In a real implementation, you would use a GIS extension or calculate distances between points
+    const campaigns = await db
+      .select()
+      .from(promotionalCampaigns)
+      .where(eq(promotionalCampaigns.isActive, true));
+    
+    // Filter campaigns by type after the database query to avoid TypeScript errors
+    return campaigns.filter(campaign => campaign.campaignType === "location_based");
+  }
+
+  async createPromotionalCampaign(campaign: InsertPromotionalCampaign): Promise<PromotionalCampaign> {
+    const [newCampaign] = await db.insert(promotionalCampaigns).values(campaign).returning();
+    return newCampaign;
+  }
+
+  async updatePromotionalCampaign(id: number, data: Partial<InsertPromotionalCampaign>): Promise<PromotionalCampaign> {
+    const [updatedCampaign] = await db
+      .update(promotionalCampaigns)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(promotionalCampaigns.id, id))
+      .returning();
+
+    if (!updatedCampaign) {
+      throw new Error(`Promotional campaign with id ${id} not found`);
+    }
+
+    return updatedCampaign;
+  }
+
+  async incrementCampaignRedemptions(id: number): Promise<PromotionalCampaign> {
+    const campaign = await this.getPromotionalCampaign(id);
+    if (!campaign) {
+      throw new Error(`Promotional campaign with id ${id} not found`);
+    }
+
+    const newCount = campaign.currentRedemptions + 1;
+    
+    // If campaign has a max redemption limit and we've reached it, deactivate the campaign
+    const shouldDeactivate = campaign.maxRedemptions !== null && campaign.maxRedemptions !== undefined && newCount >= campaign.maxRedemptions;
+
+    const [updatedCampaign] = await db
+      .update(promotionalCampaigns)
+      .set({
+        currentRedemptions: newCount,
+        isActive: shouldDeactivate ? false : campaign.isActive,
+        updatedAt: new Date()
+      })
+      .where(eq(promotionalCampaigns.id, id))
+      .returning();
+
+    return updatedCampaign;
+  }
+
+  async deactivatePromotionalCampaign(id: number): Promise<PromotionalCampaign> {
+    const [updatedCampaign] = await db
+      .update(promotionalCampaigns)
+      .set({
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(promotionalCampaigns.id, id))
+      .returning();
+
+    if (!updatedCampaign) {
+      throw new Error(`Promotional campaign with id ${id} not found`);
+    }
+
+    return updatedCampaign;
+  }
+
+  // Analytics Reports operations
+  async getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined> {
+    const [report] = await db.select().from(analyticsReports).where(eq(analyticsReports.id, id));
+    return report;
+  }
+
+  async getAnalyticsReportsByMerchantId(merchantId: number): Promise<AnalyticsReport[]> {
+    return await db.select().from(analyticsReports).where(eq(analyticsReports.merchantId, merchantId));
+  }
+
+  async createAnalyticsReport(report: InsertAnalyticsReport): Promise<AnalyticsReport> {
+    const [newReport] = await db.insert(analyticsReports).values(report).returning();
+    return newReport;
+  }
+
+  async updateAnalyticsReport(id: number, data: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport> {
+    const [updatedReport] = await db
+      .update(analyticsReports)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(analyticsReports.id, id))
+      .returning();
+
+    if (!updatedReport) {
+      throw new Error(`Analytics report with id ${id} not found`);
+    }
+
+    return updatedReport;
+  }
+
+  async generateAnalyticsReport(id: number, reportData: any): Promise<AnalyticsReport> {
+    const [updatedReport] = await db
+      .update(analyticsReports)
+      .set({
+        reportData,
+        lastGenerated: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(analyticsReports.id, id))
+      .returning();
+
+    if (!updatedReport) {
+      throw new Error(`Analytics report with id ${id} not found`);
+    }
+
+    return updatedReport;
+  }
+
+  async deleteAnalyticsReport(id: number): Promise<void> {
+    const [deletedReport] = await db
+      .delete(analyticsReports)
+      .where(eq(analyticsReports.id, id))
+      .returning();
+
+    if (!deletedReport) {
+      throw new Error(`Analytics report with id ${id} not found`);
+    }
+  }
+
+  // Business Financing operations
+  async getBusinessFinancing(id: number): Promise<BusinessFinancing | undefined> {
+    const [financing] = await db.select().from(businessFinancing).where(eq(businessFinancing.id, id));
+    return financing;
+  }
+
+  async getBusinessFinancingsByMerchantId(merchantId: number): Promise<BusinessFinancing[]> {
+    return await db.select().from(businessFinancing).where(eq(businessFinancing.merchantId, merchantId));
+  }
+
+  async getBusinessFinancingsByStatus(status: string): Promise<BusinessFinancing[]> {
+    return await db.select().from(businessFinancing).where(eq(businessFinancing.status as any, status));
+  }
+
+  async createBusinessFinancing(financing: InsertBusinessFinancing): Promise<BusinessFinancing> {
+    const [newFinancing] = await db.insert(businessFinancing).values(financing).returning();
+    return newFinancing;
+  }
+
+  async updateBusinessFinancingStatus(id: number, status: string): Promise<BusinessFinancing> {
+    const [updatedFinancing] = await db
+      .update(businessFinancing)
+      .set({
+        status: status as any,
+        updatedAt: new Date()
+      })
+      .where(eq(businessFinancing.id, id))
+      .returning();
+
+    if (!updatedFinancing) {
+      throw new Error(`Business financing with id ${id} not found`);
+    }
+
+    return updatedFinancing;
+  }
+
+  async updateBusinessFinancingRepayment(id: number, amountPaid: string): Promise<BusinessFinancing> {
+    const financing = await this.getBusinessFinancing(id);
+    if (!financing) {
+      throw new Error(`Business financing with id ${id} not found`);
+    }
+
+    // Convert to numbers for calculation
+    const currentRepaid = parseFloat(financing.totalRepaid?.toString() || "0");
+    const paymentAmount = parseFloat(amountPaid);
+    const newTotalRepaid = (currentRepaid + paymentAmount).toString();
+
+    const [updatedFinancing] = await db
+      .update(businessFinancing)
+      .set({
+        totalRepaid: newTotalRepaid,
+        updatedAt: new Date()
+      })
+      .where(eq(businessFinancing.id, id))
+      .returning();
+
+    return updatedFinancing;
+  }
+
+  // Virtual Terminal operations
+  async getVirtualTerminal(id: number): Promise<VirtualTerminal | undefined> {
+    const [terminal] = await db.select().from(virtualTerminals).where(eq(virtualTerminals.id, id));
+    return terminal;
+  }
+
+  async getVirtualTerminalsByMerchantId(merchantId: number): Promise<VirtualTerminal[]> {
+    return await db.select().from(virtualTerminals).where(eq(virtualTerminals.merchantId, merchantId));
+  }
+
+  async createVirtualTerminal(terminal: InsertVirtualTerminal): Promise<VirtualTerminal> {
+    const [newTerminal] = await db.insert(virtualTerminals).values(terminal).returning();
+    return newTerminal;
+  }
+
+  async updateVirtualTerminal(id: number, data: Partial<InsertVirtualTerminal>): Promise<VirtualTerminal> {
+    const [updatedTerminal] = await db
+      .update(virtualTerminals)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(virtualTerminals.id, id))
+      .returning();
+
+    if (!updatedTerminal) {
+      throw new Error(`Virtual terminal with id ${id} not found`);
+    }
+
+    return updatedTerminal;
+  }
+
+  async recordVirtualTerminalAccess(id: number, userId: number, ipAddress: string): Promise<VirtualTerminal> {
+    const [updatedTerminal] = await db
+      .update(virtualTerminals)
+      .set({
+        lastAccessedAt: new Date(),
+        lastAccessedByUserId: userId,
+        lastAccessedIp: ipAddress,
+        updatedAt: new Date()
+      })
+      .where(eq(virtualTerminals.id, id))
+      .returning();
+
+    if (!updatedTerminal) {
+      throw new Error(`Virtual terminal with id ${id} not found`);
+    }
+
+    return updatedTerminal;
+  }
+
+  async deactivateVirtualTerminal(id: number): Promise<VirtualTerminal> {
+    const [updatedTerminal] = await db
+      .update(virtualTerminals)
+      .set({
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(virtualTerminals.id, id))
+      .returning();
+
+    if (!updatedTerminal) {
+      throw new Error(`Virtual terminal with id ${id} not found`);
+    }
+
+    return updatedTerminal;
   }
 }
 
