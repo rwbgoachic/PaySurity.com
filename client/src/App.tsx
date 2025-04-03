@@ -25,6 +25,7 @@ import LoyaltyPrograms from "./pages/merchant/loyalty-programs/index";
 import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
 import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
 import BistroBeastStaff from "./pages/merchant/pos/bistro/staff";
+import BistroBeastTransactions from "./pages/merchant/pos/bistro/transactions";
 import { AuthProvider } from "./hooks/use-auth";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
       <ProtectedRoute path="/merchant/pos/bistro" component={BistroBeastPOS} />
       <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
+      <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
