@@ -255,6 +255,8 @@ export interface IStorage {
   getAffiliatePayoutsByAffiliateId(affiliateId: number): Promise<AffiliatePayout[]>;
   getAffiliatePayoutsByStatus(status: string): Promise<AffiliatePayout[]>;
   getAffiliatePayoutsByReferralId(referralId: number): Promise<AffiliatePayout[]>;
+  getAffiliateStats(affiliateId: number, range: string): Promise<any>;
+  getAffiliateMarketingMaterials(): Promise<any>;
   createAffiliatePayout(payout: InsertAffiliatePayout): Promise<AffiliatePayout>;
   updateAffiliatePayoutStatus(id: number, status: string): Promise<AffiliatePayout>;
   markAffiliatePayoutAsPaid(id: number, transactionId: string): Promise<AffiliatePayout>;
@@ -2300,6 +2302,152 @@ export class DatabaseStorage implements IStorage {
 
   async getAffiliatePayoutsByReferralId(referralId: number): Promise<AffiliatePayout[]> {
     return await db.select().from(affiliatePayouts).where(eq(affiliatePayouts.referralId, referralId));
+  }
+  
+  async getAffiliateStats(affiliateId: number, range: string): Promise<any> {
+    // Calculate date cutoffs based on the range
+    const now = new Date();
+    let cutoffDate = new Date();
+    
+    switch(range) {
+      case 'week':
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        cutoffDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarter':
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'year':
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        cutoffDate.setMonth(now.getMonth() - 1); // Default to month
+    }
+    
+    // Get referrals within the date range
+    const referrals = await db.select()
+      .from(merchantReferrals)
+      .where(and(
+        eq(merchantReferrals.affiliateId, affiliateId),
+        gte(merchantReferrals.createdAt, cutoffDate)
+      ));
+    
+    // Get payouts within the date range
+    const payouts = await db.select()
+      .from(affiliatePayouts)
+      .where(and(
+        eq(affiliatePayouts.affiliateId, affiliateId),
+        gte(affiliatePayouts.createdAt, cutoffDate)
+      ));
+    
+    // Calculate totals
+    const totalReferrals = referrals.length;
+    const activeReferrals = referrals.filter(r => r.status === 'active').length;
+    const pendingReferrals = referrals.filter(r => r.status === 'pending').length;
+    
+    // Calculate revenue and commission
+    const totalRevenue = referrals
+      .filter(r => r.status === 'active')
+      .reduce((sum, r) => {
+        // Type-safe check for merchant value in merchant referral
+        const merchantValue = typeof r.merchantRevenue === 'string' ? 
+          parseFloat(r.merchantRevenue) : 
+          (r as any).merchantValue ? parseFloat((r as any).merchantValue) : 0;
+        return sum + merchantValue;
+      }, 0);
+      
+    const totalCommission = payouts
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    
+    // Calculate conversion rates
+    const conversionRate = totalReferrals > 0 
+      ? (activeReferrals / totalReferrals * 100).toFixed(2) 
+      : "0.00";
+    
+    // Monthly breakdown
+    const monthlyData = await Promise.all(
+      Array.from({ length: 6 }, async (_, i) => {
+        const monthDate = new Date();
+        monthDate.setMonth(now.getMonth() - i);
+        
+        const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+        const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+        
+        const monthReferrals = await db.select()
+          .from(merchantReferrals)
+          .where(and(
+            eq(merchantReferrals.affiliateId, affiliateId),
+            gte(merchantReferrals.createdAt, monthStart),
+            lte(merchantReferrals.createdAt, monthEnd)
+          ));
+        
+        const monthPayouts = await db.select()
+          .from(affiliatePayouts)
+          .where(and(
+            eq(affiliatePayouts.affiliateId, affiliateId),
+            gte(affiliatePayouts.createdAt, monthStart),
+            lte(affiliatePayouts.createdAt, monthEnd)
+          ));
+        
+        return {
+          month: monthDate.toLocaleString('default', { month: 'short' }),
+          referrals: monthReferrals.length,
+          revenue: monthReferrals
+            .filter(r => r.status === 'active')
+            .reduce((sum, r) => {
+              // Type-safe check for merchant value in merchant referral
+              const merchantValue = typeof r.merchantRevenue === 'string' ? 
+                parseFloat(r.merchantRevenue) : 
+                (r as any).merchantValue ? parseFloat((r as any).merchantValue) : 0;
+              return sum + merchantValue;
+            }, 0),
+          commission: monthPayouts
+            .filter(p => p.status === 'paid')
+            .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+        };
+      })
+    );
+    
+    return {
+      totalReferrals,
+      activeReferrals,
+      pendingReferrals,
+      totalRevenue,
+      totalCommission,
+      conversionRate,
+      monthlyData: monthlyData.reverse() // Most recent month first
+    };
+  }
+  
+  async getAffiliateMarketingMaterials(): Promise<any> {
+    // This would typically fetch from a database table, but for this example we'll return predefined materials
+    const materials = {
+      banners: [
+        { id: 1, name: "Banner 1", type: "image", size: "300x250", url: "/affiliate/banners/banner1.png" },
+        { id: 2, name: "Banner 2", type: "image", size: "728x90", url: "/affiliate/banners/banner2.png" },
+        { id: 3, name: "Banner 3", type: "image", size: "300x250", url: "/affiliate/banners/banner3.png" },
+        { id: 4, name: "Banner 4", type: "image", size: "728x90", url: "/affiliate/banners/banner4.png" }
+      ],
+      emailTemplates: [
+        { id: 1, name: "Introduction Email", type: "email", content: "Email template content..." },
+        { id: 2, name: "Follow-up Email", type: "email", content: "Email template content..." },
+        { id: 3, name: "Case Study Email", type: "email", content: "Email template content..." },
+        { id: 4, name: "Testimonial Email", type: "email", content: "Email template content..." }
+      ],
+      socialMedia: [
+        { id: 1, name: "Facebook Post", type: "social", platform: "facebook", content: "Social media content..." },
+        { id: 2, name: "Twitter Post", type: "social", platform: "twitter", content: "Social media content..." },
+        { id: 3, name: "LinkedIn Post", type: "social", platform: "linkedin", content: "Social media content..." },
+        { id: 4, name: "Instagram Post", type: "social", platform: "instagram", content: "Social media content..." },
+        { id: 5, name: "Product Feature", type: "social", platform: "all", content: "Social media content..." },
+        { id: 6, name: "Customer Testimonial", type: "social", platform: "all", content: "Social media content..." }
+      ]
+    };
+    
+    return materials;
   }
 
   async createAffiliatePayout(payout: InsertAffiliatePayout): Promise<AffiliatePayout> {

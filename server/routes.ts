@@ -1146,6 +1146,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(error);
     }
   });
+  
+  // New route for affiliate dashboard statistics
+  app.get("/api/affiliate/stats", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const { range = "month" } = req.query;
+      
+      // Get affiliate profile
+      const profile = await storage.getAffiliateProfileByUserId(req.user?.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Affiliate profile not found" });
+      }
+      
+      // Get stats based on date range
+      const stats = await storage.getAffiliateStats(profile.id, range as string);
+      res.json(stats);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Route for getting marketing materials
+  app.get("/api/affiliate/marketing-materials", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const materials = await storage.getAffiliateMarketingMaterials();
+      res.json(materials);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // Admin routes for payouts
   app.get("/api/admin/affiliate/payouts", async (req, res, next) => {
