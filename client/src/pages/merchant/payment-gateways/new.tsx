@@ -54,9 +54,14 @@ const gatewaySchema = z.object({
   apiSecret: z.string().optional(),
   merchantId: z.string().optional(),
   publicKey: z.string().optional(),
+  accountId: z.string().optional(),
+  terminalId: z.string().optional(),
   customEndpoint: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   isDefault: z.boolean().default(false),
   testMode: z.boolean().default(true),
+  amlKycCompliant: z.boolean().default(false),
+  nachaPolicyAccepted: z.boolean().default(false),
+  cardNetworkCompliance: z.boolean().default(false),
 });
 
 type GatewayFormValues = z.infer<typeof gatewaySchema>;
@@ -91,6 +96,21 @@ export default function NewPaymentGateway() {
   
   // Payment gateway provider info
   const gatewayProviders = [
+    { 
+      id: "helcim", 
+      name: "Helcim",
+      logo: "", // In a real app, use a local Helcim logo
+      description: "Paysurity's recommended payment processor with transparent Interchange Plus pricing and advanced features.",
+      fields: ["apiKey", "accountId", "terminalId"],
+      testPrefix: "test_",
+      livePrefix: "live_",
+      additionalFields: {
+        amlKycCompliant: true,
+        nachaPolicyAccepted: true,
+        cardNetworkCompliance: true
+      },
+      preferred: true
+    },
     { 
       id: "stripe", 
       name: "Stripe",
@@ -141,9 +161,14 @@ export default function NewPaymentGateway() {
       apiSecret: "",
       merchantId: "",
       publicKey: "",
+      accountId: "",
+      terminalId: "",
       customEndpoint: "",
       isDefault: false,
       testMode: true,
+      amlKycCompliant: false,
+      nachaPolicyAccepted: false,
+      cardNetworkCompliance: false,
     },
   });
   
@@ -154,6 +179,19 @@ export default function NewPaymentGateway() {
       if (provider) {
         form.setValue("name", provider.name);
         form.setValue("type", provider.id);
+        
+        // Set compliance defaults for Helcim
+        if (provider.id === "helcim" && provider.additionalFields) {
+          if (provider.additionalFields.amlKycCompliant) {
+            form.setValue("amlKycCompliant", false);
+          }
+          if (provider.additionalFields.nachaPolicyAccepted) {
+            form.setValue("nachaPolicyAccepted", false);
+          }
+          if (provider.additionalFields.cardNetworkCompliance) {
+            form.setValue("cardNetworkCompliance", false);
+          }
+        }
       }
     }
   }, [selectedGateway, form]);
@@ -191,6 +229,18 @@ export default function NewPaymentGateway() {
   
   // Form submission handler
   const onSubmit = (data: GatewayFormValues) => {
+    // Extra validation for Helcim to ensure compliance checkboxes are checked
+    if (data.type === "helcim") {
+      if (!data.amlKycCompliant || !data.nachaPolicyAccepted || !data.cardNetworkCompliance) {
+        toast({
+          title: "Compliance Acknowledgement Required",
+          description: "You must acknowledge all compliance requirements to use Helcim as your payment processor.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     createGatewayMutation.mutate(data);
   };
   
@@ -348,17 +398,24 @@ export default function NewPaymentGateway() {
                   {gatewayProviders.map((provider) => (
                     <div 
                       key={provider.id}
-                      className="flex items-start space-x-4 rounded-md border p-4 cursor-pointer hover:border-primary transition-colors"
+                      className={`flex items-start space-x-4 rounded-md border p-4 cursor-pointer hover:border-primary transition-colors ${provider.preferred ? 'border-primary bg-primary/5' : ''}`}
                       onClick={() => handleGatewaySelect(provider.id)}
                     >
                       <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none">{provider.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium leading-none">{provider.name}</p>
+                          {provider.preferred && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                              Recommended
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {provider.description}
                         </p>
                       </div>
                       <Button 
-                        variant="ghost" 
+                        variant={provider.preferred ? "default" : "ghost"}
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -494,6 +551,52 @@ export default function NewPaymentGateway() {
                                   ? `Test API key (${gatewayProviders.find(p => p.id === selectedGateway)?.testPrefix}...)`
                                   : `Live API key (${gatewayProviders.find(p => p.id === selectedGateway)?.livePrefix}...)`
                                 }
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                      
+                      {/* Helcim-specific Account ID field */}
+                      {gatewayProviders.find(p => p.id === selectedGateway)?.fields.includes("accountId") && (
+                        <FormField
+                          control={form.control}
+                          name="accountId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Helcim Account ID</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter your Helcim account ID" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                The unique account identifier provided by Helcim
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                      
+                      {/* Helcim-specific Terminal ID field */}
+                      {gatewayProviders.find(p => p.id === selectedGateway)?.fields.includes("terminalId") && (
+                        <FormField
+                          control={form.control}
+                          name="terminalId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Terminal ID</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter your terminal ID (optional)" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Required for in-person transactions. Leave blank if only processing online payments.
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -650,6 +753,93 @@ export default function NewPaymentGateway() {
                           </FormItem>
                         )}
                       />
+                      
+                      {/* Compliance Section - Only shown for Helcim integration */}
+                      {selectedGateway === "helcim" && (
+                        <div className="space-y-4 mt-4">
+                          <h3 className="text-sm font-medium">Compliance Acknowledgements</h3>
+                          <div className="rounded-md border p-4 bg-blue-50">
+                            <p className="text-sm text-blue-900 mb-4">
+                              As a Paysurity merchant partnering with Helcim, please acknowledge the following compliance requirements:
+                            </p>
+                            
+                            {/* AML/KYC Compliance */}
+                            <FormField
+                              control={form.control}
+                              name="amlKycCompliant"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-3">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      required
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel className="text-blue-950">
+                                      AML/KYC Compliance
+                                    </FormLabel>
+                                    <FormDescription className="text-blue-800">
+                                      I confirm that my business has implemented Anti-Money Laundering (AML) and Know Your Customer (KYC) procedures as required by financial regulations.
+                                    </FormDescription>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            {/* Nacha Policy */}
+                            <FormField
+                              control={form.control}
+                              name="nachaPolicyAccepted"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-3">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      required
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel className="text-blue-950">
+                                      Nacha Rules Acknowledgement
+                                    </FormLabel>
+                                    <FormDescription className="text-blue-800">
+                                      I agree to comply with Nacha Operating Rules for ACH transactions and understand the requirements for proper authorization and processing.
+                                    </FormDescription>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            {/* Card Network Compliance */}
+                            <FormField
+                              control={form.control}
+                              name="cardNetworkCompliance"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      required
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel className="text-blue-950">
+                                      Card Network Compliance
+                                    </FormLabel>
+                                    <FormDescription className="text-blue-800">
+                                      I confirm that my business follows card network (Visa, Mastercard, etc.) guidelines and PCI DSS requirements for handling cardholder data.
+                                    </FormDescription>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Additional Settings Section */}
                       <div className="space-y-4">

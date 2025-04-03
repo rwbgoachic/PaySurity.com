@@ -55,6 +55,14 @@ export default function PaymentGateways() {
   // Payment gateway provider info
   const gatewayProviders = [
     { 
+      id: "helcim", 
+      name: "Helcim", 
+      description: "Paysurity's preferred payment processor with transparent pricing and advanced features.",
+      processingFee: "Interchange + 0.30%",
+      features: ["Competitive Interchange Plus", "In-Person & Online", "Virtual Terminal", "PCI Compliant"],
+      preferred: true
+    },
+    { 
       id: "stripe", 
       name: "Stripe", 
       description: "Comprehensive payment solution with support for cards, wallets, and international payments.",
