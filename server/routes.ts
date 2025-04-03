@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import compression from "compression";
+import { generateSitemap } from "./sitemap";
 import { 
   insertFundRequestSchema, 
   insertTransactionSchema, 
@@ -21,8 +23,20 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply compression middleware for better performance
+  app.use(compression());
+
   // Set up authentication routes
   setupAuth(app);
+  
+  // SEO Routes
+  app.get("/sitemap.xml", generateSitemap);
+  
+  // Serve robots.txt
+  app.get("/robots.txt", (req, res) => {
+    res.type("text/plain");
+    res.sendFile("public/robots.txt", { root: './client' });
+  });
 
   // Wallet routes
   app.get("/api/wallets", async (req, res, next) => {

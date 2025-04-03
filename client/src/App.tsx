@@ -34,6 +34,7 @@ import LegalBlogPage from "./pages/blog/industry/legal";
 import RetailBlogPage from "./pages/blog/industry/retail";
 import PaymentIndustryNewsPage from "./pages/blog/payment-industry-news";
 import { AuthProvider } from "./hooks/use-auth";
+import { MetaTags, OrganizationSchema } from "./components/seo";
 
 function Router() {
   return (
@@ -77,6 +78,16 @@ function Router() {
 function App() {
   return (
     <AuthProvider>
+      {/* Default SEO tags that will be overridden by page-specific ones */}
+      <MetaTags 
+        title="Paysurity | Comprehensive Digital Payment Solutions"
+        description="Paysurity offers a comprehensive digital payment ecosystem with merchant services, POS solutions, and specialized payment processing for businesses of all sizes."
+        keywords="payment processing, merchant services, POS systems, digital wallet, payment gateway, BistroBeast, restaurant POS, retail payment solutions, legal payment solutions, healthcare payment solutions"
+        ogType="website"
+        ogImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=1470&auto=format&fit=crop"
+        twitterCard="summary_large_image"
+      />
+      <OrganizationSchema />
       <Router />
       <Toaster />
     </AuthProvider>

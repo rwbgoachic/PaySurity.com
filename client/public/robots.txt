@@ -1,0 +1,15 @@
+# Robots.txt file for Paysurity.com
+User-agent: *
+Allow: /
+Allow: /blog
+Allow: /blog/payment-industry-news
+Allow: /blog/industry/
+Allow: /sitemap.xml
+
+# Private areas - no need to index
+Disallow: /auth
+Disallow: /merchant/dashboard
+Disallow: /merchant/pos/
+
+# Sitemap location
+Sitemap: https://paysurity.com/sitemap.xml
