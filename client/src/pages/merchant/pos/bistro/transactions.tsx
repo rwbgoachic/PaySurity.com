@@ -257,21 +257,41 @@ export default function BistroBeastTransactions() {
   // Delete transaction mutation
   const deleteTransactionMutation = useMutation({
     mutationFn: async (id: string) => {
-      // In a real scenario, this would call the API
+      // In a real scenario, this would call the API to delete the transaction
+      // and adjust daily totals without reversing payments for digital transactions
       // await apiRequest("DELETE", `/api/merchant/pos/bistro/transactions/${id}`);
-      // For demonstration, we're just returning the ID
-      return id;
+      
+      // For demonstration, we need to find the transaction to determine its payment method
+      const transaction = MOCK_TRANSACTIONS.find(t => t.id === id);
+      
+      if (!transaction) {
+        throw new Error("Transaction not found");
+      }
+      
+      // Return transaction info for the success handler
+      return {
+        id,
+        paymentMethod: transaction.paymentMethod,
+        amount: transaction.amount,
+        tax: transaction.tax || 0
+      };
     },
-    onSuccess: (id) => {
+    onSuccess: (result) => {
       // In a real app, invalidate the transaction list query to refresh the data
       queryClient.setQueryData(
         ["/api/merchant/pos/bistro/transactions"],
         (old: Transaction[] | undefined) =>
-          (old || []).filter((t) => t.id !== id)
+          (old || []).filter((t) => t.id !== result.id)
       );
+
+      // Determine the message based on payment method
+      const message = result.paymentMethod === "cash" 
+        ? "Transaction deleted. Daily totals adjusted."
+        : "Transaction record deleted. Payment not reversed. Daily totals adjusted.";
+
       toast({
         title: "Transaction deleted",
-        description: `Transaction ${id} has been permanently deleted.`,
+        description: message,
       });
     },
     onError: (error: Error) => {
@@ -284,7 +304,9 @@ export default function BistroBeastTransactions() {
   });
 
   const handleDelete = (id: string) => {
-    deleteTransactionMutation.mutate(id);
+    if (window.confirm("Are you sure you want to delete this transaction? This action cannot be undone and no deletion logs will be maintained.")) {
+      deleteTransactionMutation.mutate(id);
+    }
   };
 
   // Filter functions
