@@ -82,6 +82,7 @@ function App() {
       <MetaTags 
         title="Paysurity | Comprehensive Digital Payment Solutions"
         description="Paysurity offers a comprehensive digital payment ecosystem with merchant services, POS solutions, and specialized payment processing for businesses of all sizes."
+        canonicalUrl="/"
         keywords="payment processing, merchant services, POS systems, digital wallet, payment gateway, BistroBeast, restaurant POS, retail payment solutions, legal payment solutions, healthcare payment solutions"
         ogType="website"
         ogImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=1470&auto=format&fit=crop"

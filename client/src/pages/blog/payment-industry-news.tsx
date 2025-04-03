@@ -6,8 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { fetchPaymentNews, type NewsItem, type NewsCategory } from "@/lib/newsapi";
-import { MetaTags } from "@/components/seo/meta-tags";
-import { BreadcrumbSchema, OrganizationSchema } from "@/components/seo/json-ld";
+import { OrganizationSchema } from "@/components/seo/json-ld";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 export default function PaymentIndustryNewsPage() {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
@@ -131,24 +131,22 @@ export default function PaymentIndustryNewsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* SEO */}
-      <MetaTags 
-        title="Payment Industry News | Paysurity"
-        description="Stay informed with the latest developments, innovations, and regulatory changes in the payment processing industry from Paysurity."
-        canonicalUrl="/blog/payment-industry-news"
-        keywords="payment industry news, payment processing, payment innovations, payment regulations, payment security, market trends, Paysurity"
-        ogType="website"
-        ogImage="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80"
-        twitterCard="summary_large_image"
-      />
-      <OrganizationSchema />
-      <BreadcrumbSchema
-        items={[
+      {/* SEO with enhanced metadata */}
+      {usePageMeta({
+        title: "Payment Industry News | Paysurity",
+        description: "Stay informed with the latest developments, innovations, and regulatory changes in the payment processing industry from Paysurity.",
+        path: "/blog/payment-industry-news",
+        keywords: "payment industry news, payment processing, payment innovations, payment regulations, payment security, market trends, Paysurity",
+        ogImage: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+        ogType: "website",
+        twitterCard: "summary_large_image",
+        breadcrumbs: [
           { name: "Home", url: "/" },
           { name: "Blog", url: "/blog" },
           { name: "Payment Industry News", url: "/blog/payment-industry-news" },
-        ]}
-      />
+        ]
+      })}
+      <OrganizationSchema />
       
       {/* Header */}
       <header className="border-b bg-white sticky top-0 z-10">

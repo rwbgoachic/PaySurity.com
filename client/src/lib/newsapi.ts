@@ -110,30 +110,9 @@ function formatDate(isoDate: string): string {
  * Fetch payment industry news from NewsAPI.org
  */
 export async function fetchPaymentNews(): Promise<NewsItem[]> {
-  try {
-    // Check if NEWS_API_KEY is available
-    const apiKey = import.meta.env.NEWS_API_KEY;
-    
-    if (!apiKey) {
-      console.warn("Missing NewsAPI key. Function will return an empty response.");
-      return [];
-    }
-    
-    // Create a keyword query string for payment-related news
-    const keywordsQuery = PAYMENT_KEYWORDS.slice(0, 5).join(' OR ');
-    
-    // NewsAPI endpoint with parameters
-    const endpoint = 'https://newsapi.org/v2/everything';
-    const params = new URLSearchParams({
-      q: keywordsQuery,
-      language: 'en',
-      sortBy: 'publishedAt',
-      pageSize: '15', // More than we need, in case some don't have descriptions
-      domains: 'pymnts.com,techcrunch.com,finextra.com,paymentssource.com,bankingdive.com,forbes.com,cnbc.com,businesswire.com,reuters.com,wsj.com,ft.com,bloomberg.com',
-      apiKey
-    });
-    
-    const response = await fetch(`${endpoint}?${params}`);
+  try {    
+    // Use our own server endpoint which handles the API key securely
+    const response = await fetch('/api/news/payment-industry');
     
     if (!response.ok) {
       throw new Error(`NewsAPI error: ${response.status} ${response.statusText}`);

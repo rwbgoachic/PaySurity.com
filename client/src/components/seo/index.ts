@@ -1,2 +1,2 @@
-export * from './meta-tags';
-export * from './json-ld';
+export * from "./meta-tags";
+export * from "./json-ld";

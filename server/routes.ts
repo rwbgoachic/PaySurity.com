@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import compression from "compression";
 import { generateSitemap } from "./sitemap";
+import fetch from "node-fetch";
 import { 
   insertFundRequestSchema, 
   insertTransactionSchema, 
@@ -29,6 +30,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
   
+  // NewsAPI route for payment industry news
+  app.get("/api/news/payment-industry", async (req, res, next) => {
+    try {
+      // Check if the NewsAPI key is available
+      if (!process.env.NEWS_API_KEY) {
+        return res.status(503).json({
+          error: "NewsAPI is not configured. Please set the NEWS_API_KEY environment variable."
+        });
+      }
+
+      // Categories for payment industry news
+      const paymentKeywords = [
+        'payment processing',
+        'digital payments',
+        'fintech',
+        'payment industry',
+        'credit card processing'
+      ].slice(0, 5).join(' OR ');
+      
+      // NewsAPI endpoint with parameters
+      const endpoint = 'https://newsapi.org/v2/everything';
+      const params = new URLSearchParams({
+        q: paymentKeywords,
+        language: 'en',
+        sortBy: 'publishedAt',
+        pageSize: '15', // More than we need, in case some don't have descriptions
+        domains: 'pymnts.com,techcrunch.com,finextra.com,paymentssource.com,bankingdive.com,forbes.com,cnbc.com,businesswire.com,reuters.com,wsj.com,ft.com,bloomberg.com',
+        apiKey: process.env.NEWS_API_KEY
+      });
+      
+      const response = await fetch(`${endpoint}?${params}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('NewsAPI error:', response.status, errorText);
+        return res.status(response.status).json({
+          error: `NewsAPI error: ${response.status}`,
+          details: errorText
+        });
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Error fetching news:', error);
+      next(error);
+    }
+  });
+
   // SEO Routes
   app.get("/sitemap.xml", generateSitemap);
   

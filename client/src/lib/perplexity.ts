@@ -1,65 +1,147 @@
 /**
- * Utility function to call the Perplexity API
- * 
- * This file is responsible for handling interaction with the Perplexity API
- * and should be updated when the PERPLEXITY_API_KEY is provided
+ * Perplexity API service for getting AI-powered responses
  */
 
-const MODEL = "llama-3.1-sonar-small-128k-online";
+export interface PerplexityMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface PerplexityRequestOptions {
+  model?: string;
+  messages: PerplexityMessage[];
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  search_domain_filter?: string[];
+  return_images?: boolean;
+  return_related_questions?: boolean;
+  search_recency_filter?: 'day' | 'week' | 'month' | 'year' | 'none';
+  stream?: boolean;
+  presence_penalty?: number;
+  frequency_penalty?: number;
+}
+
+export interface PerplexityCitation {
+  url: string;
+  text?: string;
+}
+
+export interface PerplexityResponse {
+  id: string;
+  model: string;
+  object: string;
+  created: number;
+  citations: PerplexityCitation[];
+  choices: {
+    index: number;
+    finish_reason: string;
+    message: {
+      role: string;
+      content: string;
+    };
+    delta?: {
+      role: string;
+      content: string;
+    };
+  }[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
 
 /**
- * Ask a question to the Perplexity API
- * @param prompt The prompt to send to Perplexity
- * @returns Promise<string> The response text
+ * Fetch AI-powered response from Perplexity API
  */
-export async function askPerplexity(prompt: string): Promise<string> {
-  // Normally, we'd call the Perplexity API directly, but we'll implement
-  // a placeholder function until the API key is provided
+export async function fetchAIResponse(options: PerplexityRequestOptions): Promise<PerplexityResponse> {
+  // For server-side use
+  const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
   
-  // Check if PERPLEXITY_API_KEY is available as an environment variable
-  const apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY;
-  
-  if (!apiKey) {
-    console.warn("Missing Perplexity API key. Function will return a placeholder response.");
-    // Return a placeholder indicating the API key is missing
-    return "No Perplexity API key available. Please configure the PERPLEXITY_API_KEY environment variable.";
+  if (!perplexityApiKey) {
+    throw new Error('PERPLEXITY_API_KEY is not defined in the environment variables');
   }
+  
+  // Set defaults if not provided
+  const defaultOptions: Partial<PerplexityRequestOptions> = {
+    model: 'llama-3.1-sonar-small-128k-online',
+    temperature: 0.2,
+    top_p: 0.9,
+    return_images: false,
+    return_related_questions: false,
+    search_recency_filter: 'month',
+    stream: false,
+    presence_penalty: 0,
+    frequency_penalty: 1
+  };
+  
+  const requestOptions: PerplexityRequestOptions = {
+    ...defaultOptions,
+    ...options
+  };
   
   try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
+    const response = await fetch(PERPLEXITY_API_URL, {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
+        'Authorization': `Bearer ${perplexityApiKey}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          {
-            role: "system",
-            content: "Be precise and concise. Respond with properly formatted JSON when requested."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        top_p: 0.9,
-        max_tokens: 1000,
-        stream: false
-      })
+      body: JSON.stringify(requestOptions),
     });
-
+    
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Perplexity API error: ${error}`);
+      const errorText = await response.text();
+      throw new Error(`Perplexity API error: ${response.status} ${errorText}`);
     }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
+    
+    return await response.json();
   } catch (error) {
-    console.error("Error calling Perplexity API:", error);
+    console.error('Error fetching AI response:', error);
     throw error;
   }
+}
+
+/**
+ * Helper function to create a complete conversation with proper message order
+ */
+export function createPerplexityConversation(
+  userQuery: string, 
+  systemPrompt: string = 'Be precise and concise.',
+  previousMessages: PerplexityMessage[] = []
+): PerplexityMessage[] {
+  // Start with system message
+  const conversation: PerplexityMessage[] = [
+    { role: 'system', content: systemPrompt }
+  ];
+  
+  // Add previous messages, ensuring alternating user/assistant pattern
+  // and there are no consecutive user messages
+  if (previousMessages.length > 0) {
+    let lastRole: string | null = 'system';
+    previousMessages.forEach(msg => {
+      if (!(lastRole === 'user' && msg.role === 'user')) {
+        conversation.push(msg);
+        lastRole = msg.role;
+      }
+    });
+    
+    // If the last message was from the assistant, we can add the user query
+    if (lastRole === 'assistant') {
+      conversation.push({ role: 'user', content: userQuery });
+    } 
+    // If the last message was from the user, we can't add another user message
+    // so we replace it with the current query
+    else if (lastRole === 'user') {
+      conversation[conversation.length - 1] = { role: 'user', content: userQuery };
+    }
+  } else {
+    // If no previous messages, just add the user query
+    conversation.push({ role: 'user', content: userQuery });
+  }
+  
+  return conversation;
 }
