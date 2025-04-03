@@ -32,6 +32,7 @@ import RestaurantBlogPage from "./pages/blog/industry/restaurant";
 import HealthcareBlogPage from "./pages/blog/industry/healthcare";
 import LegalBlogPage from "./pages/blog/industry/legal";
 import RetailBlogPage from "./pages/blog/industry/retail";
+import PaymentIndustryNewsPage from "./pages/blog/payment-industry-news";
 import { AuthProvider } from "./hooks/use-auth";
 
 function Router() {
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/blog/industry/healthcare" component={HealthcareBlogPage} />
       <Route path="/blog/industry/legal" component={LegalBlogPage} />
       <Route path="/blog/industry/retail" component={RetailBlogPage} />
+      <Route path="/blog/payment-industry-news" component={PaymentIndustryNewsPage} />
       <Route path="/blog/:slug" component={BlogPostPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

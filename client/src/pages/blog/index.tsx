@@ -7,6 +7,7 @@ import {
   DollarSign, 
   Filter, 
   Loader2,
+  Newspaper,
   Search, 
   ShieldCheck, 
   Tag, 
@@ -275,7 +276,7 @@ export default function BlogPage() {
             </TabsList>
 
             <TabsContent value="all">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
                 <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow">
                   <div className="rounded-full p-2 bg-primary/10 text-primary inline-block mb-4">
                     <DollarSign className="h-6 w-6" />
@@ -312,6 +313,20 @@ export default function BlogPage() {
                   </p>
                   <Link href="/blog?category=Security" className="text-primary font-medium flex items-center hover:underline">
                     View resources <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </div>
+                
+                <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 bg-primary/20 text-white text-xs px-2 py-1">New</div>
+                  <div className="rounded-full p-2 bg-primary/10 text-primary inline-block mb-4">
+                    <Newspaper className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Industry News</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Stay updated with the latest payment industry news, trends, and regulatory changes from trusted sources.
+                  </p>
+                  <Link href="/blog/payment-industry-news" className="text-primary font-medium flex items-center hover:underline">
+                    View news <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </div>
               </div>
@@ -440,8 +455,10 @@ export default function BlogPage() {
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Industries</h4>
+              <h4 className="text-white font-bold mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
+                <li><Link href="/blog" className="hover:text-white transition-colors">Blog Home</Link></li>
+                <li><Link href="/blog/payment-industry-news" className="hover:text-white transition-colors">Industry News</Link></li>
                 <li><Link href="/blog/industry/restaurant" className="hover:text-white transition-colors">Restaurants</Link></li>
                 <li><Link href="/blog/industry/retail" className="hover:text-white transition-colors">Retail</Link></li>
                 <li><Link href="/blog/industry/legal" className="hover:text-white transition-colors">Legal</Link></li>
