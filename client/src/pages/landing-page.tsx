@@ -142,7 +142,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-neutral-900 mb-4">
-                  Choose <span className="text-primary">PaySurity's Payment Solutions</span> to make your CFO smile
+                  Choose <span className="text-primary">PaySurity's Solutions</span> to boost Shareholder Confidence
                 </h1>
                 <div className="bg-white p-4 rounded-lg shadow-md mb-6">
                   {/* CFO smiling at downward trending expense graph image */}
