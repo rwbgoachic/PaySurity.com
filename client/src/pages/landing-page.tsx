@@ -151,7 +151,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-lg text-neutral-600 mb-8">
-                  Paysurity delivers transparent pricing, industry-specific solutions, and advanced POS systems for businesses of all sizes.
+                  Paysurity delivers transparent pricing, industry-focussed solutions, and advanced POS systems for businesses of all sizes, that make your life easy and save you $.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
@@ -930,7 +930,7 @@ export default function LandingPage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Industry-Specific Solutions</h2>
             <p className="text-neutral-600">
-              Your Business grooves to its own beat. Our Payament Solutions sync up with your unique payment flow.
+              Your Business grooves to its own beat. Our Payment Solutions sync up with your unique payment flow.
             </p>
           </div>
 
