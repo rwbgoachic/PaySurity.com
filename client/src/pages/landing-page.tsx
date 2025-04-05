@@ -191,7 +191,7 @@ export default function LandingPage() {
               <div className="rounded-lg bg-white p-8 shadow-xl border">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold">Why Merchants Choose Us</h2>
-                  <p className="text-neutral-600">Businesses that use PaySurity $ave an average of over 20% on Processing Fees</p>
+                  <p className="text-neutral-600">PaySurity's end to end solutions approach enables Businesses to save an average of over 20%, just on Processing Fees</p>
                 </div>
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
