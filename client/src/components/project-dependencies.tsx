@@ -252,7 +252,7 @@ export const ProjectDependencies: React.FC = () => {
             className={`py-2 px-4 font-medium ${activeTab === 'solutions' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
             onClick={() => setActiveTab('solutions')}
           >
-            Solution Offerings
+            Boost ROI
           </button>
           <button 
             className={`py-2 px-4 font-medium ${activeTab === 'risks' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
@@ -369,7 +369,8 @@ export const ProjectDependencies: React.FC = () => {
       
       {activeTab === 'solutions' && (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Solution Offerings</h2>
+          <h2 className="text-xl font-semibold mb-4">Boost ROI & Delight Shareholders</h2>
+          <p className="mb-6 text-gray-600">PaySurity's Payment and ancillary Solutions groove to Your Business-needs with fraud shields, Payroll, Analytics & much more....... PaySurity. Built for SMB growth</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {solutionOfferings.map((solution, index) => (
               <div key={index} className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
