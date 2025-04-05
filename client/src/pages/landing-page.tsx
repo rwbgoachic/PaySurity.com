@@ -292,7 +292,7 @@ export default function LandingPage() {
                   <p className="text-sm text-neutral-500">CFO, Restaurant Chain</p>
                 </div>
               </div>
-              <p className="italic text-neutral-600">"Paysurity's BistroBeast POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."</p>
+              <p className="italic text-neutral-600">"Paysurity's BistroBeast™ POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."</p>
               <div className="mt-4 flex">
                 <Star className="h-4 w-4 text-amber-400" />
                 <Star className="h-4 w-4 text-amber-400" />
@@ -386,7 +386,7 @@ export default function LandingPage() {
                 <div className="h-3 bg-primary"></div>
                 <div className="p-6">
                   <Users className="h-10 w-10 text-primary mb-4" />
-                  <h3 className="text-xl font-bold mb-2">Merchant Services</h3>
+                  <h3 className="text-xl font-bold mb-2">PaySurity Merchant Services<sup className="text-xs">TM</sup></h3>
                   <p className="text-neutral-600 mb-4">
                     Comprehensive merchant account services with quick approvals and dedicated support for high-volume businesses.
                   </p>
@@ -521,7 +521,7 @@ export default function LandingPage() {
                 <div className="h-3 bg-primary"></div>
                 <div className="p-6">
                   <GalleryVerticalEnd className="h-10 w-10 text-primary mb-4" />
-                  <h3 className="text-xl font-bold mb-2">BistroBeast: Restaurant Management System</h3>
+                  <h3 className="text-xl font-bold mb-2">BistroBeast<sup className="text-xs">TM</sup>: Restaurant Management System</h3>
                   <p className="text-neutral-600 mb-4">
                     Complete restaurant management solution with POS, staff scheduling, inventory, and delivery management.
                   </p>
@@ -976,7 +976,7 @@ export default function LandingPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for restaurant POS image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">BistroBeast Management System</p>
+                    <p className="text-neutral-400">BistroBeast™ Management System</p>
                   </div>
                 </div>
               </div>
@@ -985,7 +985,7 @@ export default function LandingPage() {
             <TabsContent value="retail">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">RetailReady<sup className="text-xs">TM</sup>: Complete Store Management <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">E-Commerce Ready</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-4">PaySurity ECom Ready<sup className="text-xs">TM</sup>: Complete Store Management <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">E-Commerce Ready</Badge></h3>
                   <p className="text-neutral-600 mb-4">
                     An all-in-one retail management solution for both brick-and-mortar and online stores.
                   </p>
@@ -1065,7 +1065,7 @@ export default function LandingPage() {
             <TabsContent value="healthcare">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">MedPay<sup className="text-xs">TM</sup>: Healthcare Payment Solutions <Badge variant="outline" className="ml-2 bg-teal-50 text-teal-700 border-teal-200">HIPAA Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-4">PaySurityMedPay<sup className="text-xs">TM</sup>: Healthcare Payment Solutions <Badge variant="outline" className="ml-2 bg-teal-50 text-teal-700 border-teal-200">HIPAA Compliant</Badge></h3>
                   <p className="text-neutral-600 mb-4">
                     HIPAA-compliant payment processing and practice management for healthcare providers.
                   </p>
@@ -1096,7 +1096,7 @@ export default function LandingPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for healthcare management image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">MedPay Interface</p>
+                    <p className="text-neutral-400">PaySurityMedPay Interface</p>
                   </div>
                 </div>
               </div>
@@ -1492,7 +1492,7 @@ export default function LandingPage() {
               <h4 className="text-white font-bold mb-4">Solutions</h4>
               <ul className="space-y-2 text-sm">
                 <li><a href="#" className="hover:text-white transition-colors">Payment Processing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Merchant Services</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
                 <li><a href="#" className="hover:text-white transition-colors">POS Systems</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Business Management</a></li>
               </ul>
