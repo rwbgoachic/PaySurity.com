@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Check, CreditCard, DollarSign, LineChart, ShieldCheck, Users, 
+import { ArrowRight, Building2, Check, CreditCard, DollarSign, LineChart, ReceiptText, ShieldCheck, Users, Users2, 
          LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu } from "lucide-react";
 import LandingBlogSection from "@/components/landing-blog-section";
 import { Badge } from "@/components/ui/badge";
@@ -345,9 +345,9 @@ export default function LandingPage() {
       <section id="solutions" className="py-20 bg-white">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold mb-4">Comprehensive Payment Solutions</h2>
+            <h2 className="text-3xl font-bold mb-4">Comprehensive Payment, PayRoll, Expense Management and Digital Payment Solutions for Merchants</h2>
             <p className="text-neutral-600">
-              Beyond processing payments, Paysurity offers a suite of tools designed to support your business growth and operational efficiency.
+              Beyond processing payments, Paysurity offers a complete suite of tools designed to support your business growth, operational efficiency, and financial management.
             </p>
           </div>
 
@@ -432,6 +432,87 @@ export default function LandingPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <ReceiptText className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PayRoll Solutions</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Comprehensive payroll management with automated tax calculations, direct deposits, and compliance monitoring.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Automated tax calculations & filings</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Employee self-service portal</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Time & attendance integration</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Building2 className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Organizational Expense Management</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Complete expense tracking and management through Digital Wallets for businesses of all sizes.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Expense categorization & reporting</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Department & project allocation</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Receipt capture & management</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Users2 className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Family Expense Management</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Simplified family finances with parent-child Digital Wallets for budgeting, saving, and expense tracking.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Parent-controlled child accounts</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Spending limits & notifications</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Financial education tools</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -457,7 +538,7 @@ export default function LandingPage() {
             <TabsContent value="restaurant">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">BistroBeast: Restaurant POS</h3>
+                  <h3 className="text-2xl font-bold mb-4">BistroBeast: Restaurant Management System</h3>
                   <p className="text-neutral-600 mb-4">
                     A comprehensive restaurant management system designed specifically for food service establishments of all sizes.
                   </p>
@@ -488,7 +569,7 @@ export default function LandingPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for restaurant POS image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">BistroBeast POS Interface</p>
+                    <p className="text-neutral-400">BistroBeast Management System</p>
                   </div>
                 </div>
               </div>
