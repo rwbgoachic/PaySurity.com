@@ -238,7 +238,7 @@ export default function OnboardingWizard() {
             </div>
             <CardTitle className="text-center text-3xl">Application Submitted!</CardTitle>
             <CardDescription className="text-center text-gray-100 text-lg">
-              Thank you for applying to become a Paysurity merchant.
+              Thank you for applying to become a PaySurity merchant.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-6 text-center">
@@ -949,7 +949,7 @@ export default function OnboardingWizard() {
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
           <CardTitle className="text-2xl text-center">Merchant Application</CardTitle>
           <CardDescription className="text-center text-gray-100">
-            Join Paysurity's network of merchants and start accepting payments today.
+            Join PaySurity's network of merchants and start accepting payments today.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-8">

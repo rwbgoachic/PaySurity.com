@@ -10,6 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { ScheduleDemoForm } from "@/components/schedule-demo-form";
 import { Activity, ArrowRight, BarChart3, BrainCircuit, Building2, Check, Code, CreditCard, DollarSign, 
          FileSearch, GalleryVerticalEnd, Gift, Globe, Heart, LineChart, PackageCheck, Percent, 
          ReceiptText, Scale, ShieldCheck, ShoppingCart, Smartphone, Users, Users2, 
@@ -22,12 +23,12 @@ import { OrganizationSchema, WebsiteSchema } from "@/components/seo/json-ld";
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
-  const [email, setEmail] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // SEO Optimizations - using a more performant approach
   useEffect(() => {
-    document.title = "Paysurity - Secure Payment Solutions";
+    document.title = "PaySurity - Secure Payment Solutions";
   }, []);
 
   return (
@@ -35,7 +36,7 @@ export default function LandingPage() {
       {/* Optimized SEO Schema approach */}
       <OrganizationSchema />
       <WebsiteSchema
-        name="Paysurity - Payment Solutions"
+        name="PaySurity - Payment Solutions"
         url={window.location.origin}
         description="Secure payment processing with digital wallets and POS solutions"
       />
@@ -44,7 +45,10 @@ export default function LandingPage() {
       <header className="border-b bg-white sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto py-4 px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <h1 className="text-2xl font-bold text-primary">Paysurity</h1>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold text-primary">PaySurity</h1>
+              <span className="text-xs text-neutral-600">Payments & Beyond</span>
+            </div>
             <div className="flex items-center">
               <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200 hidden sm:flex">
                 <LockKeyhole className="h-3 w-3 mr-1" /> PCI Compliant
@@ -157,23 +161,13 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-lg text-neutral-600 mb-8">
-                  Paysurity delivers transparent pricing, industry-focussed solutions, and advanced POS systems for businesses of all sizes, that make your life easy and save you $.
+                  PaySurity delivers transparent pricing, industry-focussed solutions, and advanced POS systems for businesses of all sizes, that make your life easy and save you $.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <Input 
-                      type="email" 
-                      placeholder="Enter your email" 
-                      className="w-full"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
+                <div className="flex justify-center">
                   <Button 
                     size="lg" 
-                    onClick={() => {
-                      if (email) navigate("/auth?tab=register");
-                    }}
+                    className="w-full sm:w-auto"
+                    onClick={() => setDemoModalOpen(true)}
                   >
                     Schedule a Demo <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -298,7 +292,7 @@ export default function LandingPage() {
                   <p className="text-sm text-neutral-500">CFO, FreshChoice Restaurants</p>
                 </div>
               </div>
-              <p className="italic text-neutral-600">"Paysurity's BistroBeast™ POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."</p>
+              <p className="italic text-neutral-600">"PaySurity's BistroBeast™ POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."</p>
               <div className="mt-4 flex">
                 <Star className="h-4 w-4 text-amber-400" />
                 <Star className="h-4 w-4 text-amber-400" />
@@ -355,7 +349,7 @@ export default function LandingPage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Comprehensive Payment, PayRoll, Expense Management and Digital Payment Solutions for Merchants</h2>
             <p className="text-neutral-600 mb-4">
-              Beyond processing payments, Paysurity offers a complete suite of tools designed to support your business growth, operational efficiency, and financial management.
+              Beyond processing payments, PaySurity offers a complete suite of tools designed to support your business growth, operational efficiency, and financial management.
             </p>
             <Button variant="outline" onClick={() => navigate("/industry-solutions")}>
               Learn More <ArrowRight className="ml-2 h-4 w-4" />
@@ -1217,7 +1211,7 @@ export default function LandingPage() {
           <div className="bg-neutral-50 rounded-lg p-8 border">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold mb-2">Coming Soon: PaySurity POS Hardware<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-200">Enterprise Grade</Badge></h3>
-              <p className="text-neutral-600">Premium Paysurity-branded hardware with seamless software integration</p>
+              <p className="text-neutral-600">Premium PaySurity-branded hardware with seamless software integration</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1504,13 +1498,13 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Payment Processing?</h2>
             <p className="text-primary-50 mb-8 text-lg">
-              Join thousands of merchants who trust Paysurity for their payment processing needs and save on fees.
+              Join thousands of merchants who trust PaySurity for their payment processing needs and save on fees.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
                 variant="secondary"
-                onClick={() => navigate("/auth?tab=register")}
+                onClick={() => setDemoModalOpen(true)}
               >
                 Schedule a Demo
               </Button>
@@ -1528,11 +1522,14 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
+      {/* Schedule a Demo Modal */}
+      <ScheduleDemoForm open={demoModalOpen} onOpenChange={setDemoModalOpen} />
+
       <footer className="bg-neutral-900 text-neutral-300 py-12">
         <div className="container mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">Paysurity</h3>
+              <h3 className="text-white font-bold text-lg mb-4">PaySurity</h3>
               <p className="text-sm mb-4">
                 Comprehensive payment processing and business management solutions for businesses of all sizes.
               </p>
@@ -1572,7 +1569,7 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
             <div>
-              <p className="text-sm mb-2 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
+              <p className="text-sm mb-2 md:mb-0">© 2023 PaySurity. All rights reserved.</p>
               <p className="text-xs text-neutral-500 mb-4 md:mb-0">*Free family plans available with qualifying business accounts. Some limitations apply.</p>
             </div>
             <div className="flex gap-4">

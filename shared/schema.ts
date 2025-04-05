@@ -2101,6 +2101,39 @@ export const insertClickEventSchema = createInsertSchema(clickEvents).omit({
 export type ClickEvent = typeof clickEvents.$inferSelect;
 export type InsertClickEvent = z.infer<typeof insertClickEventSchema>;
 
+// Demo requests for appointment scheduling
+export const demoRequests = pgTable("demo_requests", {
+  id: serial("id").primaryKey(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  companyName: text("company_name").notNull(),
+  industry: text("industry").notNull(),
+  message: text("message"),
+  appointmentDate: date("appointment_date").notNull(),
+  appointmentTime: text("appointment_time").notNull(),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  processedAt: timestamp("processed_at"),
+  processedBy: integer("processed_by").references(() => users.id),
+  hubspotContactId: text("hubspot_contact_id")
+});
+
+export const insertDemoRequestSchema = createInsertSchema(demoRequests).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+  processedAt: true,
+  processedBy: true,
+  hubspotContactId: true
+});
+
+export type DemoRequest = typeof demoRequests.$inferSelect;
+export type InsertDemoRequest = z.infer<typeof insertDemoRequestSchema>;
+
 // Table relationships are defined through foreign keys in the table definitions above
 // We've documented these relationships in /docs/database-relationships.md for clarity
 // The schema uses explicit foreign key constraints where possible, but some circular references

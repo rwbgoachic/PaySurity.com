@@ -13,6 +13,8 @@ import {
   employeeTaxProfiles, taxCalculations,
   // POS Tenant entities
   posTenants,
+  // Appointment scheduling
+  demoRequests,
   // Analytics tracking
   clickEvents,
   // HubSpot integration entities
@@ -62,6 +64,9 @@ import {
   
   // Analytics tracking types
   type ClickEvent, type InsertClickEvent,
+  
+  // Demo request types
+  type DemoRequest, type InsertDemoRequest,
   
   // HubSpot integration types
   type HubspotToken, type InsertHubspotToken
@@ -343,6 +348,15 @@ export interface IStorage {
   getClickEventsByPagePath(pagePath: string): Promise<ClickEvent[]>;
   createClickEvent(event: InsertClickEvent): Promise<ClickEvent>;
   getClickMetricsByPage(): Promise<any>;
+  
+  // Demo request operations
+  createDemoRequest(request: InsertDemoRequest): Promise<DemoRequest>;
+  getDemoRequest(id: number): Promise<DemoRequest | undefined>;
+  getDemoRequestsByStatus(status: string): Promise<DemoRequest[]>;
+  getDemoRequestsByEmail(email: string): Promise<DemoRequest[]>;
+  getDemoRequestsByDateRange(startDate: Date, endDate: Date): Promise<DemoRequest[]>;
+  updateDemoRequestStatus(id: number, status: string): Promise<DemoRequest>;
+  processDemoRequest(id: number, processedBy: number): Promise<DemoRequest>;
   
   // Tax Calculation System operations
   // Federal Tax Brackets

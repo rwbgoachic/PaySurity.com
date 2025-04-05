@@ -51,7 +51,7 @@ export default function LegalBlogPage() {
       <header className="border-b bg-white sticky top-0 z-10">
         <div className="container mx-auto py-4 px-4 md:px-6 flex items-center justify-between">
           <Link href="/">
-            <h1 className="text-2xl font-bold text-primary cursor-pointer">Paysurity</h1>
+            <h1 className="text-2xl font-bold text-primary cursor-pointer">PaySurity</h1>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/#solutions" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">
@@ -282,7 +282,7 @@ export default function LegalBlogPage() {
               <Button>Subscribe</Button>
             </div>
             <p className="text-xs text-neutral-500 mt-4">
-              By subscribing, you agree to receive marketing communications from Paysurity. 
+              By subscribing, you agree to receive marketing communications from PaySurity. 
               You can unsubscribe at any time.
             </p>
           </div>
@@ -294,7 +294,7 @@ export default function LegalBlogPage() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">Paysurity</h3>
+              <h3 className="text-white font-bold text-lg mb-4">PaySurity</h3>
               <p className="text-sm mb-4">
                 Comprehensive payment processing and business management solutions for businesses of all sizes.
               </p>
@@ -333,7 +333,7 @@ export default function LegalBlogPage() {
             </div>
           </div>
           <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm mb-4 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
+            <p className="text-sm mb-4 md:mb-0">© 2023 PaySurity. All rights reserved.</p>
             <div className="flex gap-4">
               <Link href="/#" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</Link>
               <Link href="/#" className="text-neutral-400 hover:text-white transition-colors">Terms of Service</Link>

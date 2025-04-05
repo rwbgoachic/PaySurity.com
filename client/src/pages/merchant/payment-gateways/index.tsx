@@ -57,7 +57,7 @@ export default function PaymentGateways() {
     { 
       id: "helcim", 
       name: "Helcim", 
-      description: "Paysurity's preferred payment processor with transparent pricing and advanced features.",
+      description: "PaySurity's preferred payment processor with transparent pricing and advanced features.",
       processingFee: "Interchange + 0.30%",
       features: ["Competitive Interchange Plus", "In-Person & Online", "Virtual Terminal", "PCI Compliant"],
       preferred: true
