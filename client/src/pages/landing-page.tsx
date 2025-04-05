@@ -972,7 +972,8 @@ export default function LandingPage() {
             <TabsContent value="restaurant">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">BistroBeast<sup className="text-xs">TM</sup>: Restaurant Management System <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">PCI Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">BistroBeast<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">PCI Compliant</Badge></h3>
+                  <h4 className="text-lg text-neutral-700 mb-3">Restaurant Management System</h4>
                   <p className="text-neutral-600 mb-4">
                     A comprehensive restaurant management system designed specifically for food service establishments of all sizes.
                   </p>
@@ -1012,7 +1013,8 @@ export default function LandingPage() {
             <TabsContent value="retail">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">PaySurity ECom Ready<sup className="text-xs">TM</sup>: Complete Store Management <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">E-Commerce Ready</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">PaySurity ECom Ready<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">E-Commerce Ready</Badge></h3>
+                  <h4 className="text-lg text-neutral-700 mb-3">Complete Store Management</h4>
                   <p className="text-neutral-600 mb-4">
                     An all-in-one retail management solution for both brick-and-mortar and online stores.
                   </p>
@@ -1052,7 +1054,8 @@ export default function LandingPage() {
             <TabsContent value="legal">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">PaySurity LegalEdge<sup className="text-xs">TM</sup>: Law Practice Management <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-700 border-purple-200">ABA Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">PaySurity LegalEdge<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-700 border-purple-200">ABA Compliant</Badge></h3>
+                  <h4 className="text-lg text-neutral-700 mb-3">Law Practice Management</h4>
                   <p className="text-neutral-600 mb-4">
                     A specialized payment and practice management solution for legal professionals.
                   </p>
@@ -1092,7 +1095,8 @@ export default function LandingPage() {
             <TabsContent value="healthcare">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">PaySurityMedPay<sup className="text-xs">TM</sup>: Healthcare Payment Solutions <Badge variant="outline" className="ml-2 bg-teal-50 text-teal-700 border-teal-200">HIPAA Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">PaySurityMedPay<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-teal-50 text-teal-700 border-teal-200">HIPAA Compliant</Badge></h3>
+                  <h4 className="text-lg text-neutral-700 mb-3">Healthcare Payment Solutions</h4>
                   <p className="text-neutral-600 mb-4">
                     HIPAA-compliant payment processing and practice management for healthcare providers.
                   </p>
