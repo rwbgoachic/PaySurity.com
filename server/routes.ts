@@ -7,6 +7,7 @@ import compression from "compression";
 import { generateSitemap } from "./sitemap";
 import fetch from "node-fetch";
 import NodeCache from "node-cache";
+import { hubspotService } from "./services/hubspot";
 import { 
   insertFundRequestSchema, 
   insertTransactionSchema, 
@@ -2141,6 +2142,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Set up WebSocket server for real-time notifications
+  // HubSpot Integration Routes
+  app.get("/api/hubspot/auth-url", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (!["admin", "employer"].includes(req.user?.role)) return res.status(403).json({ message: "Unauthorized" });
+      
+      const userId = req.user.id;
+      const authUrl = await hubspotService.getAuthUrl(userId);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Error generating HubSpot auth URL:", error);
+      next(error);
+    }
+  });
+
+  app.get("/api/hubspot/callback", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      
+      const { code } = req.query;
+      const userId = req.user.id;
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ message: "Invalid authorization code" });
+      }
+      
+      const token = await hubspotService.exchangeCodeForToken(code, userId);
+      
+      // Redirect to the HubSpot settings page
+      res.redirect("/admin/hubspot-settings?connected=true");
+    } catch (error) {
+      console.error("Error processing HubSpot callback:", error);
+      res.redirect("/admin/hubspot-settings?error=true");
+    }
+  });
+
+  app.post("/api/hubspot/sync/merchant", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (!["admin", "employer"].includes(req.user?.role)) return res.status(403).json({ message: "Unauthorized" });
+      
+      const { merchantId } = z.object({ merchantId: z.number() }).parse(req.body);
+      
+      // Get the merchant user
+      const merchant = await storage.getUser(merchantId);
+      if (!merchant) {
+        return res.status(404).json({ message: "Merchant not found" });
+      }
+      
+      // Sync the merchant to HubSpot
+      await hubspotService.syncMerchantToHubSpot(req.user.id, merchant);
+      
+      res.json({ success: true, message: "Merchant synced to HubSpot successfully" });
+    } catch (error) {
+      console.error("Error syncing merchant to HubSpot:", error);
+      next(error);
+    }
+  });
+
+  app.post("/api/hubspot/sync/application", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+      if (!["admin", "employer"].includes(req.user?.role)) return res.status(403).json({ message: "Unauthorized" });
+      
+      const { applicationId } = z.object({ applicationId: z.number() }).parse(req.body);
+      
+      // Get the merchant application
+      const application = await storage.getMerchantApplication(applicationId.toString());
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // Sync the application to HubSpot
+      await hubspotService.syncApplicationToHubSpot(req.user.id, application);
+      
+      res.json({ success: true, message: "Application synced to HubSpot successfully" });
+    } catch (error) {
+      console.error("Error syncing application to HubSpot:", error);
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Add WebSocket server for real-time updates

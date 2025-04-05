@@ -13,6 +13,8 @@ import {
   employeeTaxProfiles, taxCalculations,
   // POS Tenant entities
   posTenants,
+  // HubSpot integration entities
+  hubspotTokens,
   
   // Core types
   type User, type InsertUser, 
@@ -58,11 +60,14 @@ import {
   // Merchant Application types
   type MerchantApplication, type MerchantApplicationPersonalInfo,
   type MerchantApplicationBusinessInfo, type MerchantApplicationAddressInfo,
-  type MerchantApplicationPaymentProcessing
+  type MerchantApplicationPaymentProcessing,
+  
+  // HubSpot integration types
+  type HubspotToken, type InsertHubspotToken
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte, or, desc, asc, isNull, ne, gt, count, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { Pool } from "@neondatabase/serverless";
 
@@ -80,6 +85,10 @@ export interface IStorage {
   getEmployeesByEmployerId(employerId: number): Promise<User[]>;
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User>;
   updateLastLogin(id: number): Promise<User>;
+  
+  // HubSpot operations
+  getHubSpotToken(userId: number): Promise<any | undefined>;
+  saveHubSpotToken(userId: number, token: any): Promise<any>;
   
   // POS Tenant operations
   getPosTenant(id: number): Promise<PosTenant | undefined>;
@@ -423,6 +432,81 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedUser;
+  }
+  
+  // HubSpot operations
+  async getHubSpotToken(userId: number): Promise<any | undefined> {
+    try {
+      const [token] = await db
+        .select()
+        .from(hubspotTokens)
+        .where(eq(hubspotTokens.userId, userId));
+      
+      if (token) {
+        return {
+          access_token: token.accessToken,
+          refresh_token: token.refreshToken,
+          expires_at: new Date(token.expiresAt).getTime(),
+          tokenData: token.tokenData,
+        };
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.error("Error getting HubSpot token:", error);
+      return undefined;
+    }
+  }
+  
+  async saveHubSpotToken(userId: number, token: any): Promise<any> {
+    try {
+      // Check if token already exists for this user
+      const existingToken = await this.getHubSpotToken(userId);
+      
+      if (existingToken) {
+        // Update existing token
+        const [updatedToken] = await db
+          .update(hubspotTokens)
+          .set({
+            accessToken: token.access_token,
+            refreshToken: token.refresh_token,
+            expiresAt: new Date(token.expires_at),
+            tokenData: token.tokenData || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(hubspotTokens.userId, userId))
+          .returning();
+        
+        return {
+          access_token: updatedToken.accessToken,
+          refresh_token: updatedToken.refreshToken,
+          expires_at: new Date(updatedToken.expiresAt).getTime(),
+          tokenData: updatedToken.tokenData,
+        };
+      } else {
+        // Create new token
+        const [newToken] = await db
+          .insert(hubspotTokens)
+          .values({
+            userId,
+            accessToken: token.access_token,
+            refreshToken: token.refresh_token,
+            expiresAt: new Date(token.expires_at),
+            tokenData: token.tokenData || null,
+          })
+          .returning();
+        
+        return {
+          access_token: newToken.accessToken,
+          refresh_token: newToken.refreshToken,
+          expires_at: new Date(newToken.expiresAt).getTime(),
+          tokenData: newToken.tokenData,
+        };
+      }
+    } catch (error) {
+      console.error("Error saving HubSpot token:", error);
+      throw new Error("Failed to save HubSpot token");
+    }
   }
   
   async getUsersByRole(role: string): Promise<User[]> {
@@ -2461,8 +2545,8 @@ export class DatabaseStorage implements IStorage {
       .filter(r => r.status === 'active')
       .reduce((sum, r) => {
         // Type-safe check for merchant value in merchant referral
-        const merchantValue = typeof r.merchantRevenue === 'string' ? 
-          parseFloat(r.merchantRevenue) : 
+        const merchantValue = (r as any).merchantRevenue ? 
+          parseFloat((r as any).merchantRevenue) : 
           (r as any).merchantValue ? parseFloat((r as any).merchantValue) : 0;
         return sum + merchantValue;
       }, 0);
@@ -2508,8 +2592,8 @@ export class DatabaseStorage implements IStorage {
             .filter(r => r.status === 'active')
             .reduce((sum, r) => {
               // Type-safe check for merchant value in merchant referral
-              const merchantValue = typeof r.merchantRevenue === 'string' ? 
-                parseFloat(r.merchantRevenue) : 
+              const merchantValue = (r as any).merchantRevenue ? 
+                parseFloat((r as any).merchantRevenue) : 
                 (r as any).merchantValue ? parseFloat((r as any).merchantValue) : 0;
               return sum + merchantValue;
             }, 0),
