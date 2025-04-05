@@ -36,6 +36,8 @@ import {
   insertTaxCalculationSchema,
   // Analytics tracking
   insertClickEventSchema,
+  // Demo request types
+  insertDemoRequestSchema, InsertDemoRequest,
   // Merchant application types
   MerchantApplication, InsertMerchantApplication,
   // POS Tenant types
@@ -2383,6 +2385,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching analytics events:', error);
       res.status(500).json({ message: "Error fetching analytics events" });
+    }
+  });
+  
+  // Demo request endpoint
+  app.post("/api/schedule-demo", async (req, res, next) => {
+    try {
+      // Validate the request body
+      const validatedData = insertDemoRequestSchema.parse(req.body);
+      
+      // Create the demo request
+      const demoRequest = await storage.createDemoRequest(validatedData);
+      
+      // Check if HubSpot API keys are available (HUBSPOT_API_KEY, HUBSPOT_CLIENT_ID, HUBSPOT_CLIENT_SECRET)
+      if (process.env.HUBSPOT_API_KEY && process.env.HUBSPOT_CLIENT_ID && process.env.HUBSPOT_CLIENT_SECRET) {
+        try {
+          // Get admin user for HubSpot sync (we need a userId for the HubSpot service)
+          const adminUsers = await storage.getUsersByRole('admin');
+          if (adminUsers.length > 0) {
+            const adminUserId = adminUsers[0].id;
+            
+            // Create or update contact in HubSpot
+            const hubspotContact = await hubspotService.createOrUpdateContact(adminUserId, {
+              email: demoRequest.email,
+              firstName: demoRequest.firstName,
+              lastName: demoRequest.lastName,
+              phone: demoRequest.phone,
+              company: demoRequest.companyName,
+              industry: demoRequest.industry,
+              lifecycleStage: "lead",
+              leadSource: "Website Demo Request",
+              message: demoRequest.message || "",
+              requestType: "Demo",
+              appointmentDate: demoRequest.appointmentDate,
+              appointmentTime: demoRequest.appointmentTime
+            });
+            
+            // Update the demo request with the HubSpot contact ID
+            if (hubspotContact && hubspotContact.id) {
+              await storage.updateDemoRequestStatus(demoRequest.id, "synced");
+            }
+          }
+        } catch (hubspotError) {
+          console.error("Failed to sync demo request to HubSpot:", hubspotError);
+          // Continue without failing the entire request
+        }
+      }
+      
+      res.status(201).json({ success: true, demoRequestId: demoRequest.id });
+    } catch (error) {
+      console.error('Error scheduling demo:', error);
+      next(error);
+    }
+  });
+  
+  // Admin route to get demo requests
+  app.get("/api/demo-requests", async (req, res, next) => {
+    try {
+      // Check if user is admin or has access
+      if (!req.isAuthenticated() || !['admin', 'executive', 'marketing'].includes(req.user?.role || '')) {
+        return res.status(403).json({ message: "Unauthorized. Only admins and marketing team can access demo requests." });
+      }
+      
+      // Get requests by status if provided, otherwise get all
+      const { status } = req.query;
+      
+      let demoRequests;
+      if (status) {
+        demoRequests = await storage.getDemoRequestsByStatus(status as string);
+      } else {
+        // Get all requests by date range (default to last 30 days if not specified)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        
+        demoRequests = await storage.getDemoRequestsByDateRange(startDate, endDate);
+      }
+      
+      res.json(demoRequests);
+    } catch (error) {
+      console.error('Error fetching demo requests:', error);
+      next(error);
     }
   });
   

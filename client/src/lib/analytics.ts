@@ -140,13 +140,19 @@ export function TrackedAccordion(props: React.ComponentProps<typeof Accordion>) 
   return React.createElement(Accordion, { ...props, onValueChange: handleValueChange });
 }
 
-// Tracked accordion trigger component
-export function TrackedAccordionTrigger(props: React.ComponentProps<typeof AccordionTrigger>) {
+// Tracked accordion trigger component with category and name tracking
+export function TrackedAccordionTrigger(props: React.ComponentProps<typeof AccordionTrigger> & { 
+  eventCategory?: string;
+  eventName?: string;
+}) {
+  const { eventCategory, eventName, ...rest } = props;
+  
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     trackClick(
       'accordion-trigger', 
       props.id as string | undefined, 
-      (e.currentTarget as HTMLElement).innerText || ''
+      (e.currentTarget as HTMLElement).innerText || '',
+      { category: eventCategory, name: eventName }
     );
     
     if (props.onClick) {
@@ -154,7 +160,7 @@ export function TrackedAccordionTrigger(props: React.ComponentProps<typeof Accor
     }
   };
   
-  return React.createElement(AccordionTrigger, { ...props, onClick: handleClick });
+  return React.createElement(AccordionTrigger, { ...rest, onClick: handleClick });
 }
 
 // Tracked link component

@@ -3085,10 +3085,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getDemoRequestsByDateRange(startDate: Date, endDate: Date): Promise<DemoRequest[]> {
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
     return await db.select().from(demoRequests).where(
       and(
-        gte(demoRequests.appointmentDate, startDate),
-        lte(demoRequests.appointmentDate, endDate)
+        gte(demoRequests.appointmentDate, startDateStr),
+        lte(demoRequests.appointmentDate, endDateStr)
       )
     );
   }
