@@ -930,7 +930,7 @@ export default function LandingPage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Industry-Specific Solutions</h2>
             <p className="text-neutral-600">
-              We understand that different industries have unique payment processing needs. Our specialized solutions address your specific challenges.
+              Your Business grooves to its own beat. Our Payament Solutions sync up with your unique payment flow.
             </p>
           </div>
 
