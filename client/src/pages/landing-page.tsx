@@ -16,6 +16,7 @@ import {
   Store,
   DollarSign,
   Users,
+  Play,
   ShoppingBag,
   Headphones,
   HeartHandshake 
@@ -52,14 +53,14 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="bg-slate-800 p-6 rounded-lg shadow-xl">
-              {/* Happy CFO Illustration */}
-              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-4 rounded-lg mb-6">
-                <div className="flex items-center justify-center">
-                  <div className="text-center">
-                    <DollarSign className="h-16 w-16 text-white mb-2 mx-auto" />
-                    <h3 className="text-xl font-bold text-white">Happy CFO</h3>
-                    <p className="text-white text-sm">Reduced costs, increased revenue</p>
+              {/* Happy CFO Video Placeholder */}
+              <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mb-6 overflow-hidden aspect-video">
+                <div className="absolute inset-0 flex items-center justify-center flex-col text-white">
+                  <div className="bg-black/30 p-8 rounded-full mb-4 cursor-pointer hover:bg-black/40 transition-colors">
+                    <Play className="h-12 w-12 text-white" />
                   </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Happy CFO</h3>
+                  <p className="text-white">See how businesses reduce costs and increase revenue</p>
                 </div>
               </div>
               
@@ -552,10 +553,10 @@ export default function LandingPage() {
               <CardContent className="p-6">
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
-                    <span className="text-blue-700 font-bold text-xl">JR</span>
+                    <span className="text-blue-700 font-bold text-xl">SM</span>
                   </div>
                   <div>
-                    <h4 className="font-bold">John Ramirez</h4>
+                    <h4 className="font-bold">Sean Murphy</h4>
                     <p className="text-sm text-slate-500">Restaurant Owner</p>
                   </div>
                 </div>
@@ -576,10 +577,10 @@ export default function LandingPage() {
               <CardContent className="p-6">
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-4">
-                    <span className="text-purple-700 font-bold text-xl">SR</span>
+                    <span className="text-purple-700 font-bold text-xl">EO</span>
                   </div>
                   <div>
-                    <h4 className="font-bold">Sarah Rodriguez</h4>
+                    <h4 className="font-bold">Erin O'Connor</h4>
                     <p className="text-sm text-slate-500">Healthcare Administrator</p>
                   </div>
                 </div>
@@ -600,10 +601,10 @@ export default function LandingPage() {
               <CardContent className="p-6">
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
-                    <span className="text-green-700 font-bold text-xl">MJ</span>
+                    <span className="text-green-700 font-bold text-xl">DR</span>
                   </div>
                   <div>
-                    <h4 className="font-bold">Michael Johnson</h4>
+                    <h4 className="font-bold">David Rosenberg</h4>
                     <p className="text-sm text-slate-500">Attorney</p>
                   </div>
                 </div>
