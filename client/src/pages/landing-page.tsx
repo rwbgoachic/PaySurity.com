@@ -167,7 +167,7 @@ export default function LandingPage() {
                       if (email) navigate("/auth");
                     }}
                   >
-                    Schedule Demo <ArrowRight className="ml-2 h-4 w-4" />
+                    Schedule a Demo <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
 

@@ -161,7 +161,7 @@ export default function RetailBlogPage() {
                   <h4 className="font-bold mb-2">Schedule a Demo</h4>
                   <p className="text-sm mb-4">See how our retail payment solutions can transform your checkout experience.</p>
                   <Link href="/contact">
-                    <Button size="sm" className="w-full">Schedule Demo</Button>
+                    <Button size="sm" className="w-full">Schedule a Demo</Button>
                   </Link>
                 </div>
               </div>
