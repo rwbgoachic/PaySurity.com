@@ -5,7 +5,7 @@ import {
   // New merchant and value-added service entities
   merchantProfiles, paymentGateways, pointOfSaleSystems, loyaltyPrograms, 
   customerLoyaltyAccounts, promotionalCampaigns, analyticsReports,
-  businessFinancing, virtualTerminals,
+  businessFinancing, virtualTerminals, merchantApplications,
   // Affiliate system entities
   affiliateProfiles, merchantReferrals, affiliatePayouts,
   // Tax calculation system entities
@@ -40,6 +40,7 @@ import {
   type AnalyticsReport, type InsertAnalyticsReport,
   type BusinessFinancing, type InsertBusinessFinancing,
   type VirtualTerminal, type InsertVirtualTerminal,
+  type MerchantApplication, type InsertMerchantApplication,
   
   // Affiliate system types
   type AffiliateProfile, type InsertAffiliateProfile,
@@ -56,11 +57,6 @@ import {
   
   // POS Tenant types
   type PosTenant, type InsertPosTenant,
-  
-  // Merchant Application types
-  type MerchantApplication, type MerchantApplicationPersonalInfo,
-  type MerchantApplicationBusinessInfo, type MerchantApplicationAddressInfo,
-  type MerchantApplicationPaymentProcessing,
   
   // HubSpot integration types
   type HubspotToken, type InsertHubspotToken
@@ -315,7 +311,7 @@ export interface IStorage {
   clawbackAffiliatePayout(id: number, notes?: string): Promise<AffiliatePayout>;
   
   // Merchant Application operations
-  createMerchantApplication(application: MerchantApplication): Promise<MerchantApplication>;
+  createMerchantApplication(application: InsertMerchantApplication): Promise<MerchantApplication>;
   getMerchantApplication(id: string): Promise<MerchantApplication | undefined>;
   getMerchantApplicationsByStatus(status: string): Promise<MerchantApplication[]>;
   getMerchantApplications(params: {
@@ -2779,41 +2775,38 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Merchant Application operations
-  async createMerchantApplication(application: MerchantApplication): Promise<MerchantApplication> {
-    // Since we're using MemStorage for prototyping, we'll store applications in memory
-    if (!this._merchantApplications) {
-      this._merchantApplications = [];
-    }
+  async createMerchantApplication(application: InsertMerchantApplication): Promise<MerchantApplication> {
+    // Generate a UUID for applicationId if not provided
+    const applicationData: InsertMerchantApplication = {
+      ...application,
+      applicationId: application.applicationId || crypto.randomUUID(),
+    };
+
+    const [newApplication] = await db.insert(merchantApplications)
+      .values(applicationData)
+      .returning();
     
-    // Add to in-memory array (in a real DB implementation, we would use db.insert)
-    this._merchantApplications.push(application);
+    return newApplication;
+  }
+  
+  async getMerchantApplication(id: string): Promise<MerchantApplication | undefined> {
+    const [application] = await db.select()
+      .from(merchantApplications)
+      .where(eq(merchantApplications.applicationId, id));
     
     return application;
   }
   
-  async getMerchantApplication(id: string): Promise<MerchantApplication | undefined> {
-    // Check if we have applications in memory
-    if (!this._merchantApplications) {
-      return undefined;
-    }
-    
-    // Find the application by ID
-    return this._merchantApplications.find(app => app.id === id);
-  }
-  
   async getMerchantApplicationsByStatus(status: string): Promise<MerchantApplication[]> {
-    // Check if we have applications in memory
-    if (!this._merchantApplications) {
-      return [];
-    }
-    
     // If status is "all", return all applications
     if (status === "all") {
-      return this._merchantApplications;
+      return await db.select().from(merchantApplications);
     }
     
     // Filter applications by status
-    return this._merchantApplications.filter(app => app.status === status);
+    return await db.select()
+      .from(merchantApplications)
+      .where(eq(merchantApplications.status, status as "pending" | "reviewing" | "approved" | "rejected"));
   }
   
   async getMerchantApplications(params: {
@@ -2829,16 +2822,6 @@ export class DatabaseStorage implements IStorage {
     totalPages: number;
     currentPage: number;
   }> {
-    // Check if we have applications in memory
-    if (!this._merchantApplications) {
-      return {
-        applications: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: 1
-      };
-    }
-    
     const {
       status,
       searchTerm = "",
@@ -2848,78 +2831,126 @@ export class DatabaseStorage implements IStorage {
       perPage = 10
     } = params;
     
-    // Filter applications
-    let filtered = [...this._merchantApplications];
+    // Create base query with filters
+    let baseQuery = db.select().from(merchantApplications);
     
-    // Filter by status if provided
+    // Apply status filter if provided
     if (status) {
-      filtered = filtered.filter(app => app.status === status);
+      baseQuery = baseQuery.where(eq(merchantApplications.status, status));
     }
     
-    // Filter by search term if provided
+    // Apply search filter if provided
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(app => 
-        app.businessInfo.businessName.toLowerCase().includes(searchLower) ||
-        app.businessInfo.industry.toLowerCase().includes(searchLower) ||
-        app.businessInfo.website?.toLowerCase().includes(searchLower) ||
-        app.contactInfo.firstName.toLowerCase().includes(searchLower) ||
-        app.contactInfo.lastName.toLowerCase().includes(searchLower) ||
-        app.contactInfo.email.toLowerCase().includes(searchLower) ||
-        app.contactInfo.phoneNumber.includes(searchTerm)
+      const searchLower = `%${searchTerm.toLowerCase()}%`;
+      
+      baseQuery = baseQuery.where(
+        or(
+          sql`LOWER(${merchantApplications.businessName}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.industry}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.firstName}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.lastName}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.email}) LIKE ${searchLower}`,
+          sql`${merchantApplications.phone} LIKE ${searchLower}`
+        )
       );
     }
     
-    // Get total count before pagination
-    const totalCount = filtered.length;
+    // Get the total count with the same filters
+    const countResult = await db
+      .select({ value: count() })
+      .from(merchantApplications)
+      .where(status ? eq(merchantApplications.status, status) : sql`TRUE`)
+      .$if(!!searchTerm, query => {
+        const searchLower = `%${searchTerm.toLowerCase()}%`;
+        return query.where(
+          or(
+            sql`LOWER(${merchantApplications.businessName}) LIKE ${searchLower}`,
+            sql`LOWER(${merchantApplications.industry}) LIKE ${searchLower}`,
+            sql`LOWER(${merchantApplications.firstName}) LIKE ${searchLower}`,
+            sql`LOWER(${merchantApplications.lastName}) LIKE ${searchLower}`,
+            sql`LOWER(${merchantApplications.email}) LIKE ${searchLower}`,
+            sql`${merchantApplications.phone} LIKE ${searchLower}`
+          )
+        );
+      });
     
-    // Sort applications
-    filtered.sort((a, b) => {
-      let aValue: any = a;
-      let bValue: any = b;
+    const totalCount = Number(countResult[0]?.value || 0);
+    
+    // Create a new query for sorted and paginated results
+    let sortedQuery = db.select().from(merchantApplications);
+    
+    // Apply the same filters again
+    if (status) {
+      sortedQuery = sortedQuery.where(eq(merchantApplications.status, status));
+    }
+    
+    if (searchTerm) {
+      const searchLower = `%${searchTerm.toLowerCase()}%`;
       
-      // Handle nested fields with dot notation
-      if (sortField.includes('.')) {
-        const parts = sortField.split('.');
-        aValue = parts.reduce((obj, key) => obj?.[key], a);
-        bValue = parts.reduce((obj, key) => obj?.[key], b);
-      } else {
-        aValue = a[sortField as keyof MerchantApplication];
-        bValue = b[sortField as keyof MerchantApplication];
+      sortedQuery = sortedQuery.where(
+        or(
+          sql`LOWER(${merchantApplications.businessName}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.industry}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.firstName}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.lastName}) LIKE ${searchLower}`,
+          sql`LOWER(${merchantApplications.email}) LIKE ${searchLower}`,
+          sql`${merchantApplications.phone} LIKE ${searchLower}`
+        )
+      );
+    }
+    
+    // Apply sorting
+    if (sortDirection === 'asc') {
+      // Handle different sort fields
+      switch (sortField) {
+        case 'businessName':
+          sortedQuery = sortedQuery.orderBy(asc(merchantApplications.businessName));
+          break;
+        case 'createdAt':
+          sortedQuery = sortedQuery.orderBy(asc(merchantApplications.createdAt));
+          break;
+        case 'updatedAt':
+          sortedQuery = sortedQuery.orderBy(asc(merchantApplications.updatedAt));
+          break;
+        case 'status':
+          sortedQuery = sortedQuery.orderBy(asc(merchantApplications.status));
+          break;
+        default:
+          sortedQuery = sortedQuery.orderBy(asc(merchantApplications.createdAt));
       }
-      
-      // Handle different types of values
-      if (aValue instanceof Date && bValue instanceof Date) {
-        return sortDirection === 'asc' 
-          ? aValue.getTime() - bValue.getTime()
-          : bValue.getTime() - aValue.getTime();
+    } else {
+      // desc sorting
+      switch (sortField) {
+        case 'businessName':
+          sortedQuery = sortedQuery.orderBy(desc(merchantApplications.businessName));
+          break;
+        case 'createdAt':
+          sortedQuery = sortedQuery.orderBy(desc(merchantApplications.createdAt));
+          break;
+        case 'updatedAt':
+          sortedQuery = sortedQuery.orderBy(desc(merchantApplications.updatedAt));
+          break;
+        case 'status':
+          sortedQuery = sortedQuery.orderBy(desc(merchantApplications.status));
+          break;
+        default:
+          sortedQuery = sortedQuery.orderBy(desc(merchantApplications.createdAt));
       }
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-      
-      // Default fallback
-      return 0;
-    });
+    }
     
     // Calculate pagination
     const totalPages = Math.ceil(totalCount / perPage);
     const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
-    const startIndex = (currentPage - 1) * perPage;
-    const endIndex = startIndex + perPage;
+    const offset = (currentPage - 1) * perPage;
     
-    // Paginate applications
-    const paginated = filtered.slice(startIndex, endIndex);
+    // Apply pagination
+    sortedQuery = sortedQuery.limit(perPage).offset(offset);
+    
+    // Execute the query
+    const applications = await sortedQuery;
     
     return {
-      applications: paginated,
+      applications,
       totalCount,
       totalPages,
       currentPage
@@ -2927,30 +2958,23 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined> {
-    // Check if we have applications in memory
-    if (!this._merchantApplications) {
-      return undefined;
-    }
+    const application = await this.getMerchantApplication(id);
     
-    // Find the application index
-    const appIndex = this._merchantApplications.findIndex(app => app.id === id);
-    
-    if (appIndex === -1) {
+    if (!application) {
       return undefined;
     }
     
     // Update the application status
-    const updatedApp = {
-      ...this._merchantApplications[appIndex],
-      status: status as "pending" | "reviewing" | "approved" | "rejected",
-      notes: notes || this._merchantApplications[appIndex].notes,
-      updatedAt: new Date()
-    };
+    const [updatedApplication] = await db.update(merchantApplications)
+      .set({
+        status: status as "pending" | "reviewing" | "approved" | "rejected",
+        notes: notes || application.notes,
+        updatedAt: new Date()
+      })
+      .where(eq(merchantApplications.applicationId, id))
+      .returning();
     
-    // Update the application in memory
-    this._merchantApplications[appIndex] = updatedApp;
-    
-    return updatedApp;
+    return updatedApplication;
   }
 
   // Tax Calculation System Implementation

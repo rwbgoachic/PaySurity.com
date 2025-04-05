@@ -35,7 +35,7 @@ import {
   insertEmployeeTaxProfileSchema,
   insertTaxCalculationSchema,
   // Merchant application types
-  MerchantApplication,
+  MerchantApplication, InsertMerchantApplication,
   // POS Tenant types
   PosTenant, InsertPosTenant
 } from "@shared/schema";
@@ -1490,18 +1490,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
       
       // Generate a unique ID for the application
-      const applicationId = `APP-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      const applicationId = crypto.randomUUID();
+      
+      // Extract data from the request
+      const { personalInfo, businessInfo, addressInfo, paymentProcessing } = req.body;
       
       // Create the application with required fields
-      const application: MerchantApplication = {
-        id: applicationId,
+      const application: InsertMerchantApplication = {
+        applicationId,
         status: "pending",
-        personalInfo: req.body.personalInfo,
-        businessInfo: req.body.businessInfo,
-        addressInfo: req.body.addressInfo,
-        paymentProcessing: req.body.paymentProcessing,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        
+        // Personal Info
+        firstName: personalInfo.firstName,
+        lastName: personalInfo.lastName,
+        email: personalInfo.email,
+        phone: personalInfo.phone,
+        
+        // Business Info
+        businessName: businessInfo.businessName,
+        businessType: businessInfo.businessType,
+        industry: businessInfo.industry,
+        yearsInBusiness: businessInfo.yearsInBusiness,
+        estimatedMonthlyVolume: businessInfo.estimatedMonthlyVolume,
+        businessDescription: businessInfo.businessDescription,
+        employeeCount: businessInfo.employeeCount,
+        
+        // Address Info
+        address1: addressInfo.address1,
+        address2: addressInfo.address2,
+        city: addressInfo.city,
+        state: addressInfo.state,
+        zipCode: addressInfo.zipCode,
+        country: addressInfo.country || "USA",
+        
+        // Payment Processing Preferences
+        acceptsCardPresent: paymentProcessing.acceptsCardPresent,
+        acceptsOnlinePayments: paymentProcessing.acceptsOnlinePayments,
+        acceptsACH: paymentProcessing.acceptsACH,
+        acceptsRecurringPayments: paymentProcessing.acceptsRecurringPayments,
+        needsPOS: paymentProcessing.needsPOS,
+        needsPaymentGateway: paymentProcessing.needsPaymentGateway,
+        currentProcessor: paymentProcessing.currentProcessor,
       };
       
       // Save the application
@@ -1512,8 +1541,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'new-merchant-application',
         data: {
           id: savedApplication.id,
-          businessName: savedApplication.businessInfo.businessName, 
-          industry: savedApplication.businessInfo.industry,
+          businessName: savedApplication.businessName, 
+          industry: savedApplication.industry,
           createdAt: savedApplication.createdAt
         }
       });
@@ -1613,7 +1642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: {
           id: updatedApplication.id,
           status: updatedApplication.status,
-          businessName: updatedApplication.businessInfo.businessName,
+          businessName: updatedApplication.businessName,
           updatedAt: updatedApplication.updatedAt
         }
       });

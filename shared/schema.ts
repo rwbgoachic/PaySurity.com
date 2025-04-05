@@ -1771,7 +1771,65 @@ export type InsertPosReservation = z.infer<typeof insertPosReservationSchema>;
 export type PosDailyTotal = typeof posDailyTotals.$inferSelect;
 export type InsertPosDailyTotal = z.infer<typeof insertPosDailyTotalSchema>;
 
-// Merchant Application types
+// Merchant Application Schema
+export const merchantApplicationStatusEnum = pgEnum("merchant_application_status", ["pending", "reviewing", "approved", "rejected"]);
+
+export const merchantApplications = pgTable("merchant_applications", {
+  id: serial("id").primaryKey(),
+  applicationId: text("application_id").notNull().unique(), // UUID for front-end use
+  status: merchantApplicationStatusEnum("status").notNull().default("pending"),
+  
+  // Personal Info
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  
+  // Business Info
+  businessName: text("business_name").notNull(),
+  businessType: text("business_type").notNull(),
+  industry: text("industry").notNull(),
+  yearsInBusiness: text("years_in_business").notNull(),
+  estimatedMonthlyVolume: text("estimated_monthly_volume").notNull(),
+  businessDescription: text("business_description"),
+  employeeCount: text("employee_count").notNull(),
+  
+  // Address Info
+  address1: text("address1").notNull(),
+  address2: text("address2"),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zipCode: text("zip_code").notNull(),
+  country: text("country").notNull().default("USA"),
+  
+  // Payment Processing Preferences
+  acceptsCardPresent: boolean("accepts_card_present").default(false),
+  acceptsOnlinePayments: boolean("accepts_online_payments").default(false),
+  acceptsACH: boolean("accepts_ach").default(false),
+  acceptsRecurringPayments: boolean("accepts_recurring_payments").default(false),
+  needsPOS: boolean("needs_pos").default(false),
+  needsPaymentGateway: boolean("needs_payment_gateway").default(false),
+  currentProcessor: text("current_processor"),
+  
+  // Additional fields
+  notes: text("notes"),
+  referralCode: text("referral_code"), // Track affiliate referrals
+  assignedToUserId: integer("assigned_to_user_id"), // Admin assigned to review
+  hubspotContactId: text("hubspot_contact_id"), // For HubSpot integration
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantApplicationSchema = createInsertSchema(merchantApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type MerchantApplication = typeof merchantApplications.$inferSelect;
+export type InsertMerchantApplication = z.infer<typeof insertMerchantApplicationSchema>;
+
+// Keep the interface definitions for backward compatibility
 export interface MerchantApplicationPersonalInfo {
   firstName: string;
   lastName: string;
@@ -1806,18 +1864,6 @@ export interface MerchantApplicationPaymentProcessing {
   needsPOS?: boolean;
   needsPaymentGateway?: boolean;
   currentProcessor?: string;
-}
-
-export interface MerchantApplication {
-  id: string;
-  status: "pending" | "reviewing" | "approved" | "rejected";
-  personalInfo: MerchantApplicationPersonalInfo;
-  businessInfo: MerchantApplicationBusinessInfo;
-  addressInfo: MerchantApplicationAddressInfo;
-  paymentProcessing: MerchantApplicationPaymentProcessing;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 // Tax System - For advanced payroll tax calculations
