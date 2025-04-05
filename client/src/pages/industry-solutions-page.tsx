@@ -438,7 +438,60 @@ export default function IndustrySolutionsPage() {
         </div>
       </section>
       
-      {/* Footer would be inserted here */}
+      {/* Footer */}
+      <footer className="bg-neutral-900 text-neutral-300 py-12">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h3 className="text-white font-bold text-lg mb-4">Paysurity</h3>
+              <p className="text-sm mb-4">
+                Comprehensive payment processing and business management solutions for businesses of all sizes.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Solutions</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Industries</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Restaurants</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Retail</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Legal</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Healthcare</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-4">Company</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="/" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="/" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="/blog" className="hover:text-white transition-colors">Blog</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div>
+              <p className="text-sm mb-2 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
+            </div>
+            <div className="flex gap-4">
+              <a href="#" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="text-neutral-400 hover:text-white transition-colors">Terms of Service</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

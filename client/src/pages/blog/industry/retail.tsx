@@ -334,10 +334,15 @@ export default function RetailBlogPage() {
             <div>
               <h4 className="text-white font-bold mb-4">Solutions</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/#" className="hover:text-white transition-colors">Payment Processing</Link></li>
-                <li><Link href="/#" className="hover:text-white transition-colors">Merchant Services</Link></li>
-                <li><Link href="/#" className="hover:text-white transition-colors">POS Systems</Link></li>
-                <li><Link href="/#" className="hover:text-white transition-colors">Business Management</Link></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></a></li>
               </ul>
             </div>
             <div>
