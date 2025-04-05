@@ -1025,7 +1025,7 @@ export default function LandingPage() {
             <TabsContent value="legal">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">LegalEdge: Law Practice Management</h3>
+                  <h3 className="text-2xl font-bold mb-4">PaySurity LegalEdge: Law Practice Management</h3>
                   <p className="text-neutral-600 mb-4">
                     A specialized payment and practice management solution for legal professionals.
                   </p>
@@ -1056,7 +1056,7 @@ export default function LandingPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for legal practice management image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">LegalEdge Interface</p>
+                    <p className="text-neutral-400">PaySurity LegalEdge Interface</p>
                   </div>
                 </div>
               </div>
