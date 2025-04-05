@@ -54,11 +54,11 @@ export default function LandingPage() {
               </Badge>
             </div>
             <nav className="hidden lg:flex items-center gap-6">
-              <a href="#solutions" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Solutions</a>
-              <a href="#industries" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Industries</a>
-              <a href="#pos" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">POS Systems</a>
-              <a href="#digital-wallet" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Digital Wallet</a>
-              <a href="#pricing" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Pricing</a>
+              <a href="/industry-solutions" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Solutions</a>
+              <a href="/industry-solutions" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Industries</a>
+              <a href="/pos-systems" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">POS Systems</a>
+              <a href="/digital-wallet" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Digital Wallet</a>
+              <a href="/pricing" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Pricing</a>
               <a href="/blog" className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors">Blog</a>
             </nav>
           </div>
@@ -83,35 +83,35 @@ export default function LandingPage() {
           <div className="lg:hidden py-4 px-4 border-t bg-white absolute w-full z-50">
             <nav className="flex flex-col space-y-4">
               <a 
-                href="#solutions" 
+                href="/industry-solutions" 
                 className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Solutions
               </a>
               <a 
-                href="#industries" 
+                href="/industry-solutions" 
                 className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Industries
               </a>
               <a 
-                href="#pos" 
+                href="/pos-systems" 
                 className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 POS Systems
               </a>
               <a 
-                href="#digital-wallet" 
+                href="/digital-wallet" 
                 className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Digital Wallet
               </a>
               <a 
-                href="#pricing" 
+                href="/pricing" 
                 className="text-sm font-medium text-neutral-600 hover:text-primary transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -354,9 +354,12 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Comprehensive Payment, PayRoll, Expense Management and Digital Payment Solutions for Merchants</h2>
-            <p className="text-neutral-600">
+            <p className="text-neutral-600 mb-4">
               Beyond processing payments, Paysurity offers a complete suite of tools designed to support your business growth, operational efficiency, and financial management.
             </p>
+            <Button variant="outline" onClick={() => navigate("/industry-solutions")}>
+              Learn More <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1147,9 +1150,12 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Powerful POS Systems</h2>
-            <p className="text-neutral-600">
+            <p className="text-neutral-600 mb-4">
               Our industry-leading point-of-sale systems combine payment processing with comprehensive business management tools.
             </p>
+            <Button variant="outline" onClick={() => navigate("/pos-systems")}>
+              Learn More <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
@@ -1196,7 +1202,7 @@ export default function LandingPage() {
                   </div>
                 </li>
               </ul>
-              <Button className="mt-6">
+              <Button className="mt-6" onClick={() => navigate("/pos-systems")}>
                 Explore POS Features
               </Button>
             </div>
@@ -1246,9 +1252,12 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Transparent, Competitive Pricing</h2>
-            <p className="text-neutral-600">
+            <p className="text-neutral-600 mb-4">
               Save 20% or more on your payment processing fees. No hidden charges, no surprises.
             </p>
+            <Button variant="outline" onClick={() => navigate("/pricing")}>
+              Learn More <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -1279,7 +1288,7 @@ export default function LandingPage() {
                       <span className="text-sm">Standard support</span>
                     </li>
                   </ul>
-                  <Button variant="outline" className="w-full">Get Started</Button>
+                  <Button variant="outline" className="w-full" onClick={() => navigate("/pricing")}>Get Started</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1318,7 +1327,7 @@ export default function LandingPage() {
                       <span className="text-sm">Customizable POS options</span>
                     </li>
                   </ul>
-                  <Button className="w-full">Get Started</Button>
+                  <Button className="w-full" onClick={() => navigate("/pricing")}>Get Started</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1354,7 +1363,7 @@ export default function LandingPage() {
                       <span className="text-sm">API access & custom integrations</span>
                     </li>
                   </ul>
-                  <Button variant="outline" className="w-full">Contact Sales</Button>
+                  <Button variant="outline" className="w-full" onClick={() => navigate("/pricing")}>Contact Sales</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1370,9 +1379,12 @@ export default function LandingPage() {
               Available on Web & Mobile App
             </Badge>
             <h2 className="text-3xl font-bold mb-4">Secure Digital Wallet Solutions for Organizational Expense Management, with Free Family Plans*</h2>
-            <p className="text-neutral-600">
+            <p className="text-neutral-600 mb-4">
               Our digital wallet technology offers secure, convenient, and flexible payment management for both businesses and consumers.
             </p>
+            <Button variant="outline" onClick={() => navigate("/digital-wallet")}>
+              Learn More <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -1432,7 +1444,7 @@ export default function LandingPage() {
                   </div>
                   
                   <div className="mt-8">
-                    <Button className="mr-4">Learn More</Button>
+                    <Button className="mr-4" onClick={() => navigate("/digital-wallet")}>Learn More</Button>
                     <Button variant="outline">Download App</Button>
                   </div>
                 </div>
@@ -1528,28 +1540,28 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-bold mb-4">Solutions</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Payment Processing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
-                <li><a href="#" className="hover:text-white transition-colors">POS Systems</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Business Management</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Payment Processing</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">POS Systems</a></li>
+                <li><a href="/digital-wallet" className="hover:text-white transition-colors">Digital Wallet</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-bold mb-4">Industries</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Restaurants</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Retail</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Legal</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Healthcare</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Restaurants</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Retail</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Legal</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Healthcare</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-bold mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="/" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="/" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="/blog" className="hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
           </div>

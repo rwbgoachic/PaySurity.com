@@ -5,6 +5,10 @@ import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import LandingPage from "@/pages/landing-page";
 import ProjectDependenciesPage from "@/pages/project-dependencies-page";
+import PricingPage from "@/pages/pricing-page";
+import IndustrySolutionsPage from "@/pages/industry-solutions-page";
+import DigitalWalletPage from "@/pages/digital-wallet-page";
+import PosSystemsPage from "@/pages/pos-systems-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import EmployerDashboard from "./pages/employer/dashboard";
 import EmployerTransactions from "./pages/employer/transactions";
@@ -80,6 +84,10 @@ function Router() {
       <Route path="/blog/industry/retail" component={RetailBlogPage} />
       <Route path="/blog/payment-industry-news" component={PaymentIndustryNewsPage} />
       <Route path="/blog/:slug" component={BlogPostPage} />
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/industry-solutions" component={IndustrySolutionsPage} />
+      <Route path="/digital-wallet" component={DigitalWalletPage} />
+      <Route path="/pos-systems" component={PosSystemsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
