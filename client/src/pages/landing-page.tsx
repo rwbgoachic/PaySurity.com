@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Activity, ArrowRight, BarChart3, BrainCircuit, Building2, Check, Code, CreditCard, DollarSign, 
          FileSearch, GalleryVerticalEnd, Gift, Globe, Heart, LineChart, PackageCheck, Percent, 
          ReceiptText, Scale, ShieldCheck, ShoppingCart, Smartphone, Users, Users2, 
-         LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu } from "lucide-react";
+         LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu, ChevronDown } from "lucide-react";
 import LandingBlogSection from "@/components/landing-blog-section";
 import { Badge } from "@/components/ui/badge";
 import { OrganizationSchema, WebsiteSchema } from "@/components/seo/json-ld";
