@@ -169,7 +169,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Add to Cart</Button>
                       <Button variant="outline">
-                        <Link href="/pos-systems-page">Learn More</Link>
+                        <Link href="/pos-systems">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -201,7 +201,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Add to Cart</Button>
                       <Button variant="outline">
-                        <Link href="/industry-solutions-page">Learn More</Link>
+                        <Link href="/industry-solutions">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -233,7 +233,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Add to Cart</Button>
                       <Button variant="outline">
-                        <Link href="/industry-solutions-page">Learn More</Link>
+                        <Link href="/industry-solutions">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -265,7 +265,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Add to Cart</Button>
                       <Button variant="outline">
-                        <Link href="/industry-solutions-page">Learn More</Link>
+                        <Link href="/industry-solutions">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -297,7 +297,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Request Quote</Button>
                       <Button variant="outline">
-                        <Link href="/pos-systems-page">Learn More</Link>
+                        <Link href="/pos-systems">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -329,7 +329,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Add to Cart</Button>
                       <Button variant="outline">
-                        <Link href="/industry-solutions-page">Learn More</Link>
+                        <Link href="/industry-solutions">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -393,7 +393,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-2">
                       <Button>Add to Cart</Button>
                       <Button variant="outline">
-                        <Link href="/industry-solutions-page">Learn More</Link>
+                        <Link href="/industry-solutions">Learn More</Link>
                       </Button>
                     </div>
                   </div>
@@ -425,7 +425,7 @@ export default function LandingPage() {
                   Seamless in-store and online payment solutions with inventory management.
                 </p>
                 <Button variant="outline" className="w-full">
-                  <Link href="/industry-solutions-page">Learn More</Link>
+                  <Link href="/industry-solutions">Learn More</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -440,7 +440,7 @@ export default function LandingPage() {
                   HIPAA-compliant payment processing with patient billing capabilities.
                 </p>
                 <Button variant="outline" className="w-full">
-                  <Link href="/industry-solutions-page">Learn More</Link>
+                  <Link href="/industry-solutions">Learn More</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -455,7 +455,7 @@ export default function LandingPage() {
                   Trust account compliant payment solutions for law firms and practices.
                 </p>
                 <Button variant="outline" className="w-full">
-                  <Link href="/industry-solutions-page">Learn More</Link>
+                  <Link href="/industry-solutions">Learn More</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -470,7 +470,7 @@ export default function LandingPage() {
                   Table service, delivery, and takeout payment solutions with tip management.
                 </p>
                 <Button variant="outline" className="w-full">
-                  <Link href="/industry-solutions-page">Learn More</Link>
+                  <Link href="/industry-solutions">Learn More</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -659,9 +659,9 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold text-white mb-4">Products</h4>
               <ul className="space-y-2">
-                <li><Link href="/pos-systems-page" className="hover:text-white transition-colors">POS Systems</Link></li>
+                <li><Link href="/pos-systems" className="hover:text-white transition-colors">POS Systems</Link></li>
                 <li><Link href="/digital-wallet-page" className="hover:text-white transition-colors">Digital Wallet</Link></li>
-                <li><Link href="/industry-solutions-page" className="hover:text-white transition-colors">Industry Solutions</Link></li>
+                <li><Link href="/industry-solutions" className="hover:text-white transition-colors">Industry Solutions</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
               </ul>
             </div>
