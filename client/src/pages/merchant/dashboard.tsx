@@ -27,6 +27,7 @@ import {
   Award,
   DollarSign,
   CreditCard,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -367,6 +368,26 @@ export default function MerchantDashboard() {
                 <CardFooter>
                   <Button variant="ghost" size="sm" asChild className="w-full">
                     <Link href="/merchant/analytics">View Reports</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Affiliate Marketing</CardTitle>
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Active</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Earn commissions by referring merchants
+                  </p>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="ghost" size="sm" asChild className="w-full">
+                    <Link href="/merchant/affiliate-dashboard">Manage Referrals</Link>
                   </Button>
                 </CardFooter>
               </Card>
