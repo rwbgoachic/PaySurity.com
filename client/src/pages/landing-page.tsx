@@ -1363,7 +1363,7 @@ export default function LandingPage() {
             <Badge variant="outline" className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1">
               Available on Web & Mobile App
             </Badge>
-            <h2 className="text-3xl font-bold mb-4">Secure Digital Wallet Solutions</h2>
+            <h2 className="text-3xl font-bold mb-4">Secure Digital Wallet Solutions for Organizational Expense Management, with Free Family Plans*</h2>
             <p className="text-neutral-600">
               Our digital wallet technology offers secure, convenient, and flexible payment management for both businesses and consumers.
             </p>
@@ -1548,7 +1548,10 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm mb-4 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
+            <div>
+              <p className="text-sm mb-2 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
+              <p className="text-xs text-neutral-500 mb-4 md:mb-0">*Free family plans available with qualifying business accounts. Some limitations apply.</p>
+            </div>
             <div className="flex gap-4">
               <a href="#" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="text-neutral-400 hover:text-white transition-colors">Terms of Service</a>
