@@ -285,11 +285,11 @@ export default function LandingPage() {
             <div className="bg-neutral-50 p-6 rounded-lg border">
               <div className="flex items-center mb-4">
                 <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
-                  <span className="text-lg font-bold">JD</span>
+                  <span className="text-lg font-bold">JM</span>
                 </div>
                 <div>
-                  <p className="font-medium">Jane Doe</p>
-                  <p className="text-sm text-neutral-500">CFO, Restaurant Chain</p>
+                  <p className="font-medium">Jennifer Malone</p>
+                  <p className="text-sm text-neutral-500">CFO, FreshChoice Restaurants</p>
                 </div>
               </div>
               <p className="italic text-neutral-600">"Paysurity's BistroBeast™ POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."</p>
@@ -304,11 +304,11 @@ export default function LandingPage() {
             <div className="bg-neutral-50 p-6 rounded-lg border">
               <div className="flex items-center mb-4">
                 <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
-                  <span className="text-lg font-bold">JS</span>
+                  <span className="text-lg font-bold">MB</span>
                 </div>
                 <div>
-                  <p className="font-medium">John Smith</p>
-                  <p className="text-sm text-neutral-500">Owner, Legal Practice</p>
+                  <p className="font-medium">Michael Blackwell</p>
+                  <p className="text-sm text-neutral-500">Managing Partner, Blackwell & Associates Law</p>
                 </div>
               </div>
               <p className="italic text-neutral-600">"The secure payment processing and HIPAA compliance features have made Paysurity the perfect solution for our healthcare billing needs. Highly recommended!"</p>
@@ -323,11 +323,11 @@ export default function LandingPage() {
             <div className="bg-neutral-50 p-6 rounded-lg border md:col-span-2 lg:col-span-1">
               <div className="flex items-center mb-4">
                 <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
-                  <span className="text-lg font-bold">AR</span>
+                  <span className="text-lg font-bold">SC</span>
                 </div>
                 <div>
-                  <p className="font-medium">Amanda Rodriguez</p>
-                  <p className="text-sm text-neutral-500">CEO, Retail Chain</p>
+                  <p className="font-medium">Sarah Chen</p>
+                  <p className="text-sm text-neutral-500">CEO, StyleHub Retail Group</p>
                 </div>
               </div>
               <p className="italic text-neutral-600">"The digital wallet features have helped us create a seamless omnichannel experience for our customers. Integration was simple and the support team is always available."</p>
