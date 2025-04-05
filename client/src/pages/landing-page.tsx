@@ -56,8 +56,8 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
-              <Button variant="outline" onClick={() => navigate("/auth")}>Login</Button>
-              <Button onClick={() => navigate("/auth")} className="ml-2">Sign Up</Button>
+              <Button variant="outline" onClick={() => navigate("/auth?tab=login")}>Login</Button>
+              <Button onClick={() => navigate("/auth?tab=register")} className="ml-2">Sign Up</Button>
             </div>
             <Button 
               variant="ghost" 
@@ -117,8 +117,8 @@ export default function LandingPage() {
                 Blog
               </a>
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => navigate("/auth")} className="flex-1">Login</Button>
-                <Button onClick={() => navigate("/auth")} className="flex-1">Sign Up</Button>
+                <Button variant="outline" onClick={() => navigate("/auth?tab=login")} className="flex-1">Login</Button>
+                <Button onClick={() => navigate("/auth?tab=register")} className="flex-1">Sign Up</Button>
               </div>
               <div className="flex items-center gap-2 justify-center pt-2">
                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -164,7 +164,7 @@ export default function LandingPage() {
                   <Button 
                     size="lg" 
                     onClick={() => {
-                      if (email) navigate("/auth");
+                      if (email) navigate("/auth?tab=register");
                     }}
                   >
                     Schedule a Demo <ArrowRight className="ml-2 h-4 w-4" />
@@ -973,7 +973,7 @@ export default function LandingPage() {
               <Button 
                 size="lg" 
                 variant="secondary"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/auth?tab=register")}
               >
                 Schedule a Demo
               </Button>
@@ -981,7 +981,7 @@ export default function LandingPage() {
                 size="lg" 
                 variant="outline" 
                 className="bg-transparent text-white hover:bg-white hover:text-primary"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/auth?tab=register")}
               >
                 Create an Account
               </Button>

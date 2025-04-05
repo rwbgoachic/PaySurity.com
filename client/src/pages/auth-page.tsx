@@ -27,7 +27,11 @@ const registerSchema = z.object({
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  
+  // Parse the search params to determine the default tab
+  const params = new URLSearchParams(window.location.search);
+  const defaultTab = params.get("tab") === "register" ? "register" : "login";
 
   // Redirect if user is already logged in
   useEffect(() => {
@@ -79,7 +83,7 @@ export default function AuthPage() {
             <p className="text-neutral-500">Digital wallet solutions for businesses</p>
           </div>
 
-          <Tabs defaultValue="login">
+          <Tabs defaultValue={defaultTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
