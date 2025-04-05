@@ -4,6 +4,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import LandingPage from "@/pages/landing-page";
+import ProjectDependenciesPage from "@/pages/project-dependencies-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import EmployerDashboard from "./pages/employer/dashboard";
 import EmployerTransactions from "./pages/employer/transactions";
@@ -71,6 +72,7 @@ function Router() {
       <ProtectedRoute path="/merchant/applications-management" component={ApplicationsManagement} />
       <ProtectedRoute path="/merchant/applications/:id" component={ApplicationDetail} />
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
+      <ProtectedRoute path="/admin/project-dependencies" component={ProjectDependenciesPage} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog/industry/restaurant" component={RestaurantBlogPage} />
       <Route path="/blog/industry/healthcare" component={HealthcareBlogPage} />
