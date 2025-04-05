@@ -245,11 +245,11 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
             {/* Logos would be displayed here */}
-            <div className="text-neutral-400 font-bold text-xl">Company A</div>
-            <div className="text-neutral-400 font-bold text-xl">Company B</div>
-            <div className="text-neutral-400 font-bold text-xl">Company C</div>
-            <div className="text-neutral-400 font-bold text-xl">Company D</div>
-            <div className="text-neutral-400 font-bold text-xl">Company E</div>
+            <div className="text-neutral-400 font-bold text-xl">Greenfield Grocers</div>
+            <div className="text-neutral-400 font-bold text-xl">Summit View Hospitality</div>
+            <div className="text-neutral-400 font-bold text-xl">Bluewater Medical Group</div>
+            <div className="text-neutral-400 font-bold text-xl">Harbor City Electronics</div>
+            <div className="text-neutral-400 font-bold text-xl">Creekside Coffee Co.</div>
           </div>
           
           {/* Security and Compliance Badges */}
