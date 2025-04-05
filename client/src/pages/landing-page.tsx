@@ -928,9 +928,9 @@ export default function LandingPage() {
       <section id="industries" className="py-20 bg-gradient-to-br from-neutral-50 to-neutral-100">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold mb-4">Industry-Specific Solutions</h2>
+            <h2 className="text-3xl font-bold mb-4">Boost ROI & Delight Shareholders</h2>
             <p className="text-neutral-600">
-              Your Business grooves to its own beat. Our Payment Solutions sync up with your unique payment flow.
+              PaySurity's Payment and ancillary Solutions groove to Your Business-needs with fraud shields, Payroll, Analytics & much more....... PaySurity. Built for SMB growth
             </p>
           </div>
 
