@@ -27,7 +27,7 @@ export type HubspotToken = typeof hubspotTokens.$inferSelect;
 export type InsertHubspotToken = typeof hubspotTokens.$inferInsert;
 
 // User roles enum
-export const userRoleEnum = pgEnum("user_role", ["employee", "employer", "parent", "child", "admin", "affiliate"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate"]);
 
 // User schema
 export const users = pgTable("users", {
@@ -37,7 +37,7 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  role: text("role", { enum: ["employee", "employer", "parent", "child", "admin", "affiliate"] }).notNull().default("employee"),
+  role: text("role", { enum: ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate"] }).notNull().default("executive"),
   department: text("department"),
   organizationId: integer("organization_id"),
   dateOfBirth: date("date_of_birth"),

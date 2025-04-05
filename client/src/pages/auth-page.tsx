@@ -259,15 +259,15 @@ export default function AuthPage() {
                               {...field}
                             >
                               <option value="">Select your industry</option>
+                              <option value="education">Education & Training</option>
                               <option value="entertainment">Entertainment & Hospitality</option>
-                              <option value="tech">SaaS & Technology</option>
-                              <option value="retail">Retail & E-commerce</option>
+                              <option value="finance">Finance & Banking</option>
                               <option value="food">Food & Restaurant</option>
                               <option value="healthcare">Healthcare & Medical</option>
-                              <option value="finance">Finance & Banking</option>
-                              <option value="education">Education & Training</option>
                               <option value="manufacturing">Manufacturing & Industrial</option>
                               <option value="services">Professional Services</option>
+                              <option value="retail">Retail & E-commerce</option>
+                              <option value="tech">SaaS & Technology</option>
                               <option value="other">Other</option>
                             </select>
                             <FormMessage />
@@ -285,11 +285,11 @@ export default function AuthPage() {
                               className="w-full p-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                               {...field}
                             >
+                              <option value="admin">Admin</option>
+                              <option value="developer">Developer/IT</option>
                               <option value="executive">Executive/Management</option>
                               <option value="finance">CFO/Finance</option>
                               <option value="marketing">Marketing</option>
-                              <option value="admin">Admin</option>
-                              <option value="developer">Developer/IT</option>
                             </select>
                             <FormMessage />
                           </FormItem>
