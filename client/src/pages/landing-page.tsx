@@ -52,6 +52,18 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="bg-slate-800 p-6 rounded-lg shadow-xl">
+              {/* Happy CFO Illustration */}
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-4 rounded-lg mb-6">
+                <div className="flex items-center justify-center">
+                  <div className="text-center">
+                    <DollarSign className="h-16 w-16 text-white mb-2 mx-auto" />
+                    <h3 className="text-xl font-bold text-white">Happy CFO</h3>
+                    <p className="text-white text-sm">Reduced costs, increased revenue</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Payment Logos Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div className="flex items-center justify-center">
                   <SiVisa className="h-12 w-12 text-blue-500" />
