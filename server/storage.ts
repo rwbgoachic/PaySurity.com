@@ -3065,6 +3065,60 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
   
+  // Demo Request operations
+  async createDemoRequest(request: InsertDemoRequest): Promise<DemoRequest> {
+    const [demoRequest] = await db.insert(demoRequests).values(request).returning();
+    return demoRequest;
+  }
+  
+  async getDemoRequest(id: number): Promise<DemoRequest | undefined> {
+    const [demoRequest] = await db.select().from(demoRequests).where(eq(demoRequests.id, id));
+    return demoRequest;
+  }
+  
+  async getDemoRequestsByStatus(status: string): Promise<DemoRequest[]> {
+    return await db.select().from(demoRequests).where(eq(demoRequests.status, status));
+  }
+  
+  async getDemoRequestsByEmail(email: string): Promise<DemoRequest[]> {
+    return await db.select().from(demoRequests).where(eq(demoRequests.email, email));
+  }
+  
+  async getDemoRequestsByDateRange(startDate: Date, endDate: Date): Promise<DemoRequest[]> {
+    return await db.select().from(demoRequests).where(
+      and(
+        gte(demoRequests.appointmentDate, startDate),
+        lte(demoRequests.appointmentDate, endDate)
+      )
+    );
+  }
+  
+  async updateDemoRequestStatus(id: number, status: string): Promise<DemoRequest> {
+    const [updatedDemoRequest] = await db
+      .update(demoRequests)
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(demoRequests.id, id))
+      .returning();
+    return updatedDemoRequest;
+  }
+  
+  async processDemoRequest(id: number, processedBy: number): Promise<DemoRequest> {
+    const [processedDemoRequest] = await db
+      .update(demoRequests)
+      .set({ 
+        status: 'processed',
+        processedBy,
+        processedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(demoRequests.id, id))
+      .returning();
+    return processedDemoRequest;
+  }
+  
   // Tax Calculation System Implementation
 
   // Federal Tax Brackets
