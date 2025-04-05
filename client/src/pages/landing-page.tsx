@@ -311,7 +311,7 @@ export default function LandingPage() {
                   <p className="text-sm text-neutral-500">Managing Partner, Blackwell & Associates Law</p>
                 </div>
               </div>
-              <p className="italic text-neutral-600">"The secure payment processing and HIPAA compliance features have made Paysurity the perfect solution for our healthcare billing needs. Highly recommended!"</p>
+              <p className="italic text-neutral-600">"PaySurityLegalEdge has made PaySurity a perfect Solution to our seemless Business flow. Highly recommeded!"</p>
               <div className="mt-4 flex">
                 <Star className="h-4 w-4 text-amber-400" />
                 <Star className="h-4 w-4 text-amber-400" />
