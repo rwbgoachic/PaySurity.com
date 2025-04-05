@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Building2, Check, CreditCard, DollarSign, GalleryVerticalEnd, Gift, Heart, 
-         LineChart, PackageCheck, ReceiptText, Scale, ShieldCheck, ShoppingCart, Users, Users2, 
+import { Activity, ArrowRight, BarChart3, BrainCircuit, Building2, Check, Code, CreditCard, DollarSign, 
+         FileSearch, GalleryVerticalEnd, Gift, Heart, LineChart, PackageCheck, Percent, 
+         ReceiptText, Scale, ShieldCheck, ShoppingCart, Smartphone, Users, Users2, 
          LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu } from "lucide-react";
 import LandingBlogSection from "@/components/landing-blog-section";
 import { Badge } from "@/components/ui/badge";
@@ -671,6 +672,249 @@ export default function LandingPage() {
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
                       <span className="text-sm">Sales forecasting & analytics</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Activity className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Healthcare Payment Solutions</h3>
+                  <p className="text-neutral-600 mb-4">
+                    HIPAA-compliant payment processing and management solutions designed specifically for healthcare providers.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">HIPAA-compliant processing</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Patient payment plans</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Insurance verification tools</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <BarChart3 className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Analytics Dashboard</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Comprehensive business intelligence and reporting tools to help you make data-driven decisions.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Real-time sales reporting</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Customer behavior analytics</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Custom dashboard creation</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Smartphone className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Mobile POS</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Turn your mobile device into a powerful point-of-sale system for transactions anywhere, anytime.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">iOS and Android compatibility</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Card reader accessories</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Offline transaction mode</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <FileSearch className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity ACH Processing</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Secure and cost-effective direct bank transfer payment solutions for recurring and one-time transactions.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Lower transaction fees</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Recurring payment scheduling</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Next-day funding available</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Percent className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Subscription Billing</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Comprehensive recurring payment management solution for subscription-based businesses.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Flexible billing cycles</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Automated retry logic</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Customer subscription portal</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <FileText className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Tax Management</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Automated sales tax calculation, reporting, and filing solutions for businesses of all sizes.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Real-time tax rate calculation</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Multi-jurisdiction support</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Automated filing & remittance</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <ShieldCheck className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Fraud Prevention</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Advanced fraud detection and prevention tools to protect your business and customers.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">AI-powered risk scoring</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Real-time transaction monitoring</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Customizable fraud rules</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Users className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Affiliate Marketing Platform</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Comprehensive tools for managing and growing your affiliate marketing programs.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Affiliate recruitment & onboarding</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Commission tracking & payment</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Performance analytics</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Code className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity API & Developer Tools</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Powerful integration solutions for developers to build custom payment experiences.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">RESTful API access</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">SDK for major platforms</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Sandbox testing environment</span>
                     </li>
                   </ul>
                 </div>
