@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Activity, ArrowRight, BarChart3, BrainCircuit, Building2, Check, Code, CreditCard, DollarSign, 
-         FileSearch, GalleryVerticalEnd, Gift, Heart, LineChart, PackageCheck, Percent, 
+         FileSearch, GalleryVerticalEnd, Gift, Globe, Heart, LineChart, PackageCheck, Percent, 
          ReceiptText, Scale, ShieldCheck, ShoppingCart, Smartphone, Users, Users2, 
          LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu } from "lucide-react";
 import LandingBlogSection from "@/components/landing-blog-section";
@@ -915,6 +915,33 @@ export default function LandingPage() {
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
                       <span className="text-sm">Sandbox testing environment</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Globe className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity WebCon<sup className="text-xs">TM</sup></h3>
+                  <p className="text-neutral-600 mb-4">
+                    Comprehensive web development and integration services that seamlessly connect your website with your POS or billing systems.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Custom website development</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">POS & billing system integration</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Secure e-commerce solutions</span>
                     </li>
                   </ul>
                 </div>
