@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Building2, Check, CreditCard, DollarSign, LineChart, ReceiptText, ShieldCheck, Users, Users2, 
+import { ArrowRight, Building2, Check, CreditCard, DollarSign, GalleryVerticalEnd, Gift, Heart, 
+         LineChart, PackageCheck, ReceiptText, Scale, ShieldCheck, ShoppingCart, Users, Users2, 
          LockKeyhole, Star, Phone, AppWindow, FileEdit, FileText, Menu } from "lucide-react";
 import LandingBlogSection from "@/components/landing-blog-section";
 import { Badge } from "@/components/ui/badge";
@@ -508,6 +509,168 @@ export default function LandingPage() {
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
                       <span className="text-sm">Financial education tools</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <GalleryVerticalEnd className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">BistroBeast: Restaurant Management System</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Complete restaurant management solution with POS, staff scheduling, inventory, and delivery management.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Table management & ordering system</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Staff scheduling & tip calculations</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Kitchen display & delivery integration</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <ShoppingCart className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurityRetailer: Retail/Grocery</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Specialized POS and management system for retail stores and grocery markets with inventory and customer management.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Barcode scanning & inventory control</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Multi-register & shift management</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Customer loyalty & promotional tools</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Scale className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurityLegalPay</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Secure payment processing and practice management solution designed specifically for legal professionals.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Trust account management</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Client billing & installment plans</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Compliance & reporting tools</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Gift className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Gift Cards</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Customizable gift card program that integrates with your POS system to increase sales and customer loyalty.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Digital & physical gift card options</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Multi-location balance tracking</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Custom branding & design services</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <Heart className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Loyalty Program</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Comprehensive customer loyalty solution with points, rewards, and engagement tools to drive repeat business.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Custom rewards & tier programs</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Mobile app & digital rewards cards</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Customer analytics & segmentation</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden border">
+              <CardContent className="p-0">
+                <div className="h-3 bg-primary"></div>
+                <div className="p-6">
+                  <PackageCheck className="h-10 w-10 text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">PaySurity Inventory Management</h3>
+                  <p className="text-neutral-600 mb-4">
+                    Advanced inventory control system with real-time tracking, forecasting, and automated reordering capabilities.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Real-time inventory tracking</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Supplier management & ordering</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                      <span className="text-sm">Sales forecasting & analytics</span>
                     </li>
                   </ul>
                 </div>
