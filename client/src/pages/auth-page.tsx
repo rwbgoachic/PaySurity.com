@@ -21,6 +21,8 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
+  businessName: z.string().min(1, "Business name is required").optional().or(z.literal("")),
+  industry: z.string().min(1, "Industry is required").optional().or(z.literal("")),
   role: z.enum(["employer", "employee"]),
   department: z.string().optional(),
 });
@@ -56,7 +58,9 @@ export default function AuthPage() {
       firstName: "",
       lastName: "",
       email: "",
-      role: "employee",
+      businessName: "",
+      industry: "",
+      role: "executive",
       department: "",
     },
   });
@@ -64,6 +68,14 @@ export default function AuthPage() {
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     loginMutation.mutate(values);
   };
+
+  // Auto-populate username with email when email changes
+  const emailValue = registerForm.watch("email");
+  useEffect(() => {
+    if (emailValue && emailValue.trim() !== "") {
+      registerForm.setValue("username", emailValue);
+    }
+  }, [emailValue, registerForm]);
 
   const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
     registerMutation.mutate(values);
@@ -86,7 +98,7 @@ export default function AuthPage() {
           <Tabs defaultValue={defaultTab}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="register">Sign Up</TabsTrigger>
             </TabsList>
 
             {/* Login Form */}
@@ -224,6 +236,47 @@ export default function AuthPage() {
 
                       <FormField
                         control={registerForm.control}
+                        name="businessName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your Business Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={registerForm.control}
+                        name="industry"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Industry</FormLabel>
+                            <select 
+                              className="w-full p-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                              {...field}
+                            >
+                              <option value="">Select your industry</option>
+                              <option value="entertainment">Entertainment & Hospitality</option>
+                              <option value="tech">SaaS & Technology</option>
+                              <option value="retail">Retail & E-commerce</option>
+                              <option value="food">Food & Restaurant</option>
+                              <option value="healthcare">Healthcare & Medical</option>
+                              <option value="finance">Finance & Banking</option>
+                              <option value="education">Education & Training</option>
+                              <option value="manufacturing">Manufacturing & Industrial</option>
+                              <option value="services">Professional Services</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={registerForm.control}
                         name="role"
                         render={({ field }) => (
                           <FormItem>
@@ -232,36 +285,37 @@ export default function AuthPage() {
                               className="w-full p-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                               {...field}
                             >
-                              <option value="employer">Employer</option>
-                              <option value="employee">Employee</option>
+                              <option value="executive">Executive/Management</option>
+                              <option value="finance">CFO/Finance</option>
+                              <option value="marketing">Marketing</option>
+                              <option value="admin">Admin</option>
+                              <option value="developer">Developer/IT</option>
                             </select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      {registerForm.watch("role") === "employee" && (
-                        <FormField
-                          control={registerForm.control}
-                          name="department"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Department</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Marketing, Sales, Engineering, etc." {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
+                      <FormField
+                        control={registerForm.control}
+                        name="department"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Department</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Marketing, Sales, Engineering, etc." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <Button
                         type="submit"
                         className="w-full"
                         disabled={registerMutation.isPending}
                       >
-                        {registerMutation.isPending ? "Creating account..." : "Register"}
+                        {registerMutation.isPending ? "Creating account..." : "Sign Up"}
                       </Button>
                     </form>
                   </Form>
