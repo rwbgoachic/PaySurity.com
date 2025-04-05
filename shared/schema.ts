@@ -2079,6 +2079,28 @@ export type InsertTaxCalculation = z.infer<typeof insertTaxCalculationSchema>;
 export type PosTenant = typeof posTenants.$inferSelect;
 export type InsertPosTenant = z.infer<typeof insertPosTenantSchema>;
 
+// Click events for analytics tracking
+export const clickEvents = pgTable("click_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  elementId: text("element_id"),
+  elementType: text("element_type").notNull(),
+  elementText: text("element_text"),
+  pagePath: text("page_path").notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  metadata: jsonb("metadata"),
+  sessionId: text("session_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const insertClickEventSchema = createInsertSchema(clickEvents).omit({
+  id: true,
+  createdAt: true
+});
+
+export type ClickEvent = typeof clickEvents.$inferSelect;
+export type InsertClickEvent = z.infer<typeof insertClickEventSchema>;
+
 // Table relationships are defined through foreign keys in the table definitions above
 // We've documented these relationships in /docs/database-relationships.md for clarity
 // The schema uses explicit foreign key constraints where possible, but some circular references

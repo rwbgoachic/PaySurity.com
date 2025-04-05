@@ -13,6 +13,8 @@ import {
   employeeTaxProfiles, taxCalculations,
   // POS Tenant entities
   posTenants,
+  // Analytics tracking
+  clickEvents,
   // HubSpot integration entities
   hubspotTokens,
   
@@ -57,6 +59,9 @@ import {
   
   // POS Tenant types
   type PosTenant, type InsertPosTenant,
+  
+  // Analytics tracking types
+  type ClickEvent, type InsertClickEvent,
   
   // HubSpot integration types
   type HubspotToken, type InsertHubspotToken
@@ -329,6 +334,16 @@ export interface IStorage {
   }>;
   updateMerchantApplicationStatus(id: string, status: string, notes?: string): Promise<MerchantApplication | undefined>;
   
+  // Analytics tracking operations
+  getClickEvent(id: number): Promise<ClickEvent | undefined>;
+  getClickEventsByUserId(userId: number): Promise<ClickEvent[]>;
+  getClickEventsBySession(sessionId: string): Promise<ClickEvent[]>;
+  getClickEventsByDateRange(startDate: Date, endDate: Date): Promise<ClickEvent[]>;
+  getClickEventsByElementType(elementType: string): Promise<ClickEvent[]>;
+  getClickEventsByPagePath(pagePath: string): Promise<ClickEvent[]>;
+  createClickEvent(event: InsertClickEvent): Promise<ClickEvent>;
+  getClickMetricsByPage(): Promise<any>;
+  
   // Tax Calculation System operations
   // Federal Tax Brackets
   getFederalTaxBracket(id: number): Promise<FederalTaxBracket | undefined>;
@@ -374,6 +389,16 @@ export interface IStorage {
   calculateStateTax(income: string, state: string, filingStatus: string, year: number): Promise<{tax: string, effectiveRate: string}>;
   calculateFicaTax(income: string, ytdEarnings: string, filingStatus: string, year: number): Promise<{socialSecurity: string, medicare: string, additionalMedicare: string, total: string}>;
   calculatePayrollTaxes(payrollEntryId: number, performedBy: number): Promise<TaxCalculation>;
+  
+  // Analytics Tracking
+  getClickEvent(id: number): Promise<ClickEvent | undefined>;
+  getClickEventsByUserId(userId: number): Promise<ClickEvent[]>;
+  getClickEventsBySession(sessionId: string): Promise<ClickEvent[]>;
+  getClickEventsByDateRange(startDate: Date, endDate: Date): Promise<ClickEvent[]>;
+  getClickEventsByElementType(elementType: string): Promise<ClickEvent[]>;
+  getClickEventsByPagePath(pagePath: string): Promise<ClickEvent[]>;
+  createClickEvent(event: InsertClickEvent): Promise<ClickEvent>;
+  getClickMetricsByPage(): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2977,6 +3002,55 @@ export class DatabaseStorage implements IStorage {
     return updatedApplication;
   }
 
+  // Analytics Tracking Implementation
+  
+  async getClickEvent(id: number): Promise<ClickEvent | undefined> {
+    const [event] = await db.select().from(clickEvents).where(eq(clickEvents.id, id));
+    return event;
+  }
+  
+  async getClickEventsByUserId(userId: number): Promise<ClickEvent[]> {
+    return await db.select().from(clickEvents).where(eq(clickEvents.userId, userId));
+  }
+  
+  async getClickEventsBySession(sessionId: string): Promise<ClickEvent[]> {
+    return await db.select().from(clickEvents).where(eq(clickEvents.sessionId, sessionId));
+  }
+  
+  async getClickEventsByDateRange(startDate: Date, endDate: Date): Promise<ClickEvent[]> {
+    return await db.select().from(clickEvents).where(
+      and(
+        gte(clickEvents.timestamp, startDate),
+        lte(clickEvents.timestamp, endDate)
+      )
+    );
+  }
+  
+  async getClickEventsByElementType(elementType: string): Promise<ClickEvent[]> {
+    return await db.select().from(clickEvents).where(eq(clickEvents.elementType, elementType));
+  }
+  
+  async getClickEventsByPagePath(pagePath: string): Promise<ClickEvent[]> {
+    return await db.select().from(clickEvents).where(eq(clickEvents.pagePath, pagePath));
+  }
+  
+  async createClickEvent(event: InsertClickEvent): Promise<ClickEvent> {
+    const [createdEvent] = await db.insert(clickEvents).values(event).returning();
+    return createdEvent;
+  }
+  
+  async getClickMetricsByPage(): Promise<any> {
+    const results = await db.select({
+      pagePath: clickEvents.pagePath,
+      count: count(),
+    })
+    .from(clickEvents)
+    .groupBy(clickEvents.pagePath)
+    .orderBy(desc(count()));
+    
+    return results;
+  }
+  
   // Tax Calculation System Implementation
 
   // Federal Tax Brackets

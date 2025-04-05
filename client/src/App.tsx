@@ -17,6 +17,7 @@ import EmployerBanking from "./pages/employer/banking";
 import EmployerPayroll from "./pages/employer/payroll";
 import EmployerSettings from "./pages/employer/settings";
 import HubSpotSettings from "./pages/admin/hubspot-settings";
+import AnalyticsDashboard from "./pages/admin/analytics-dashboard";
 import EmployeeDashboard from "./pages/employee/dashboard";
 import EmployeeTransactions from "./pages/employee/transactions";
 import EmployeeBanking from "./pages/employee/banking";
@@ -76,6 +77,7 @@ function Router() {
       <ProtectedRoute path="/merchant/applications-management" component={ApplicationsManagement} />
       <ProtectedRoute path="/merchant/applications/:id" component={ApplicationDetail} />
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
+      <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
       <ProtectedRoute path="/admin/project-dependencies" component={ProjectDependenciesPage} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog/industry/restaurant" component={RestaurantBlogPage} />

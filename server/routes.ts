@@ -34,6 +34,8 @@ import {
   insertTaxAllowanceSchema,
   insertEmployeeTaxProfileSchema,
   insertTaxCalculationSchema,
+  // Analytics tracking
+  insertClickEventSchema,
   // Merchant application types
   MerchantApplication, InsertMerchantApplication,
   // POS Tenant types
@@ -2294,6 +2296,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   };
+
+  // Analytics tracking endpoints
+  app.post("/api/analytics/events", async (req, res, next) => {
+    try {
+      const { events } = req.body;
+      
+      if (!Array.isArray(events) || events.length === 0) {
+        return res.status(400).json({ message: "Invalid events data. Expected non-empty array." });
+      }
+      
+      // Get user ID if authenticated
+      const userId = req.isAuthenticated() ? req.user?.id : null;
+      
+      // Create a session ID if not available
+      const sessionId = req.session.id || `anonymous-${Date.now()}`;
+      
+      // Process each event
+      const savedEvents = [];
+      for (const event of events) {
+        try {
+          // Add user and session information
+          const clickEvent = insertClickEventSchema.parse({
+            ...event,
+            userId,
+            sessionId,
+            timestamp: new Date(event.timestamp),
+          });
+          
+          // Store in database
+          const savedEvent = await storage.createClickEvent(clickEvent);
+          savedEvents.push(savedEvent);
+        } catch (error) {
+          console.error('Invalid click event:', error);
+          // Continue processing other events even if one fails
+        }
+      }
+      
+      res.status(201).json({ 
+        message: `Successfully processed ${savedEvents.length} of ${events.length} events`,
+        savedCount: savedEvents.length
+      });
+    } catch (error) {
+      console.error('Error processing analytics events:', error);
+      // Don't fail the request if something goes wrong
+      res.status(500).json({ message: "Error processing analytics events" });
+    }
+  });
+  
+  // Get analytics metrics by page
+  app.get("/api/analytics/metrics/by-page", async (req, res, next) => {
+    try {
+      // Check if user is admin or has analytics access
+      if (!req.isAuthenticated() || req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized. Only admins can access analytics metrics." });
+      }
+      
+      const metrics = await storage.getClickMetricsByPage();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching analytics metrics:', error);
+      res.status(500).json({ message: "Error fetching analytics metrics" });
+    }
+  });
+  
+  // Get click events by date range
+  app.get("/api/analytics/events", async (req, res, next) => {
+    try {
+      // Check if user is admin or has analytics access
+      if (!req.isAuthenticated() || req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized. Only admins can access analytics data." });
+      }
+      
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required." });
+      }
+      
+      const events = await storage.getClickEventsByDateRange(
+        new Date(startDate as string), 
+        new Date(endDate as string)
+      );
+      
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching analytics events:', error);
+      res.status(500).json({ message: "Error fetching analytics events" });
+    }
+  });
   
   return httpServer;
 }
