@@ -6,7 +6,7 @@ import { TrackedAccordion, TrackedAccordionTrigger } from "@/lib/analytics";
 import { Accordion, AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import { ScheduleDemoForm } from "@/components/schedule-demo-form";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import DownloadBRDButton from "@/components/download-brd-button";
+
 import { 
   CreditCard, 
   BarChart, 
@@ -175,13 +175,6 @@ export default function LandingPage() {
               <SiDiscover className="h-6 w-auto text-orange-600 opacity-70" />
               <SiApple className="h-6 w-auto text-gray-800 opacity-70" />
               <SiGoogle className="h-6 w-auto text-gray-600 opacity-70" />
-            </div>
-          </div>
-          
-          {/* BRD Download */}
-          <div className="mt-12 text-center">
-            <div className="inline-block">
-              <DownloadBRDButton />
             </div>
           </div>
         </div>
