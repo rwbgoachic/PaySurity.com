@@ -638,9 +638,11 @@ export default function LandingPage() {
               </DialogTrigger>
               <ScheduleDemoForm onSuccess={() => setIsScheduleModalOpen(false)} />
             </Dialog>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
-              <Link href="/pricing">View Pricing</Link>
-            </Button>
+            <Link href="/pricing">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                View Pricing
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
