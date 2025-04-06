@@ -18,6 +18,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve documentation files
   app.use('/docs', express.static(path.join(process.cwd(), 'docs')));
+  
+  // Direct BRD document access
+  app.get('/api/brd', (req, res) => {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="PaySurity_Business_Requirements_Document.xlsx"');
+    res.sendFile(path.join(process.cwd(), 'docs/PaySurity_Business_Requirements_Document.xlsx'));
+  });
 
   // Sitemap for SEO
   app.get("/sitemap.xml", generateSitemap);
