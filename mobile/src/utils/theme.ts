@@ -1,160 +1,132 @@
-import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { DefaultTheme, DarkTheme } from 'react-native-paper';
+import { Appearance } from 'react-native';
 
-// Define the extended theme colors
-const primaryColor = '#0D6EFD'; // Primary blue color matching web app
-const secondaryColor = '#6C757D';
-const errorColor = '#DC3545';
-const successColor = '#28A745';
-const warningColor = '#FFC107';
-const infoColor = '#17A2B8';
+// PaySurity brand colors
+const brandColors = {
+  primary: '#4F46E5', // Primary indigo
+  primaryDark: '#3730A3', // Darker indigo for hover states
+  primaryLight: '#818CF8', // Lighter indigo for backgrounds
+  secondary: '#10B981', // Emerald green for success and actions
+  secondaryDark: '#059669', // Darker emerald for hover states
+  accent: '#F59E0B', // Amber for accents and highlights
+  success: '#10B981', // Emerald for success states
+  warning: '#F59E0B', // Amber for warnings
+  error: '#EF4444', // Red for errors
+  info: '#3B82F6', // Blue for information
+  background: '#F9FAFB', // Light gray for backgrounds
+  backgroundDark: '#1F2937', // Dark background
+  surface: '#FFFFFF', // White for surfaces
+  surfaceDark: '#111827', // Dark surface
+  text: '#1F2937', // Dark gray for text
+  textDark: '#F9FAFB', // Light gray for text on dark
+  textSecondary: '#6B7280', // Medium gray for secondary text
+  textSecondaryDark: '#9CA3AF', // Medium light gray for secondary text on dark
+  border: '#E5E7EB', // Light gray for borders
+  borderDark: '#374151', // Dark gray for borders on dark
+};
 
 // Light theme
-const lightTheme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: primaryColor,
-    secondary: secondaryColor,
-    error: errorColor,
-    success: successColor,
-    warning: warningColor,
-    info: infoColor,
-    background: '#F8F9FA',
-    surface: '#FFFFFF',
-    text: '#212529',
-    placeholder: '#6C757D',
-    disabled: '#ADB5BD',
-    elevation: {
-      level0: 'transparent',
-      level1: '#F1F3F5',
-      level2: '#E9ECEF',
-      level3: '#DEE2E6',
-      level4: '#CED4DA',
-      level5: '#ADB5BD',
-    },
-  },
+export const lightTheme = {
+  ...DefaultTheme,
   roundness: 8,
-  animation: {
-    scale: 1.0,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: brandColors.primary,
+    accent: brandColors.accent,
+    background: brandColors.background,
+    surface: brandColors.surface,
+    text: brandColors.text,
+    placeholder: brandColors.textSecondary,
+    backdrop: 'rgba(0, 0, 0, 0.5)',
+    error: brandColors.error,
+    notification: brandColors.primary,
+    onSurface: brandColors.text,
+    disabled: brandColors.textSecondary,
+    // Additional custom colors
+    success: brandColors.success,
+    warning: brandColors.warning,
+    info: brandColors.info,
+    border: brandColors.border,
+    primaryDark: brandColors.primaryDark,
+    primaryLight: brandColors.primaryLight,
+    secondaryDark: brandColors.secondaryDark,
+    textSecondary: brandColors.textSecondary,
+    primaryContainer: 'rgba(79, 70, 229, 0.1)', // Light indigo for containers
+    secondaryContainer: 'rgba(16, 185, 129, 0.1)', // Light emerald for containers
+  },
+  fonts: {
+    ...DefaultTheme.fonts,
+    regular: {
+      fontFamily: 'sans-serif',
+      fontWeight: 'normal',
+    },
+    medium: {
+      fontFamily: 'sans-serif-medium',
+      fontWeight: 'normal',
+    },
+    light: {
+      fontFamily: 'sans-serif-light',
+      fontWeight: 'normal',
+    },
+    thin: {
+      fontFamily: 'sans-serif-thin',
+      fontWeight: 'normal',
+    },
   },
 };
 
 // Dark theme
-const darkTheme = {
-  ...MD3DarkTheme,
-  colors: {
-    ...MD3DarkTheme.colors,
-    primary: primaryColor,
-    secondary: secondaryColor,
-    error: errorColor,
-    success: successColor,
-    warning: warningColor,
-    info: infoColor,
-    background: '#212529',
-    surface: '#343A40',
-    text: '#F8F9FA',
-    placeholder: '#ADB5BD',
-    disabled: '#6C757D',
-    elevation: {
-      level0: 'transparent',
-      level1: '#2B3035',
-      level2: '#343A40',
-      level3: '#495057',
-      level4: '#6C757D',
-      level5: '#ADB5BD',
-    },
-  },
+export const darkTheme = {
+  ...DarkTheme,
   roundness: 8,
-  animation: {
-    scale: 1.0,
+  colors: {
+    ...DarkTheme.colors,
+    primary: brandColors.primaryLight,
+    accent: brandColors.accent,
+    background: brandColors.backgroundDark,
+    surface: brandColors.surfaceDark,
+    text: brandColors.textDark,
+    placeholder: brandColors.textSecondaryDark,
+    backdrop: 'rgba(0, 0, 0, 0.8)',
+    error: brandColors.error,
+    notification: brandColors.primaryLight,
+    onSurface: brandColors.textDark,
+    disabled: brandColors.textSecondaryDark,
+    // Additional custom colors
+    success: brandColors.success,
+    warning: brandColors.warning,
+    info: brandColors.info,
+    border: brandColors.borderDark,
+    primaryDark: brandColors.primary,
+    primaryLight: brandColors.primaryLight,
+    secondaryDark: brandColors.secondary,
+    textSecondary: brandColors.textSecondaryDark,
+    primaryContainer: 'rgba(129, 140, 248, 0.15)', // Darker indigo for containers on dark
+    secondaryContainer: 'rgba(16, 185, 129, 0.15)', // Darker emerald for containers on dark
   },
-};
-
-// Export the theme based on device settings or user preference
-// For now, default to light theme
-export const theme = lightTheme;
-
-// Function to toggle between light and dark themes
-export const getTheme = (isDarkMode: boolean) => {
-  return isDarkMode ? darkTheme : lightTheme;
-};
-
-// Typography scale
-export const typography = {
-  fontSizes: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
-  },
-  fontWeights: {
-    light: '300',
-    regular: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
-  },
-  lineHeights: {
-    xs: 16,
-    sm: 20,
-    md: 24,
-    lg: 28,
-    xl: 32,
-    xxl: 40,
-  },
-};
-
-// Spacing scale
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-  xxxl: 64,
-};
-
-// Common styling mixins
-export const mixins = {
-  shadow: {
-    small: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 1.5,
-      elevation: 2,
+  fonts: {
+    ...DarkTheme.fonts,
+    regular: {
+      fontFamily: 'sans-serif',
+      fontWeight: 'normal',
     },
     medium: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
+      fontFamily: 'sans-serif-medium',
+      fontWeight: 'normal',
     },
-    large: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4.65,
-      elevation: 8,
+    light: {
+      fontFamily: 'sans-serif-light',
+      fontWeight: 'normal',
     },
-  },
-  card: {
-    default: {
-      borderRadius: 8,
-      padding: spacing.md,
-      backgroundColor: lightTheme.colors.surface,
-      ...{
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
-      },
+    thin: {
+      fontFamily: 'sans-serif-thin',
+      fontWeight: 'normal',
     },
   },
 };
+
+// Detect the user's preferred theme
+const colorScheme = Appearance.getColorScheme();
+
+// Export the theme based on user preference
+export const theme = colorScheme === 'dark' ? darkTheme : lightTheme;

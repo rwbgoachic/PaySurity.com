@@ -1,29 +1,25 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Base URL configuration - will be different for development vs production
-const baseURL = process.env.NODE_ENV === 'production' 
-  ? 'https://paysurity.com/api' 
-  : 'http://localhost:3000/api';
+// Base URL
+const API_URL = process.env.REACT_APP_API_URL || 'https://paysurity.com/api';
 
 // Create axios instance
-const api = axios.create({
-  baseURL,
+export const api = axios.create({
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
 });
 
-// Add request interceptor to handle auth tokens
+// Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    // Get the auth token from storage if available
-    const token = await AsyncStorage.getItem('@auth_token');
-    
-    if (token && config.headers) {
+    const token = await AsyncStorage.getItem('auth_token');
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
     return config;
   },
   (error) => {
@@ -31,26 +27,46 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle token refresh or logout on unauthorized
+// Response interceptor to handle common errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     
-    // If unauthorized and not already retrying
+    // Handle token expiration
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
-        // Could implement token refresh logic here
-        // For now, just redirect to login by clearing token
-        await AsyncStorage.removeItem('@auth_token');
-        await AsyncStorage.removeItem('@auth_user');
+        // Attempt to refresh token
+        const refreshToken = await AsyncStorage.getItem('refresh_token');
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
         
-        // The app will redirect to login based on auth state in useAuth hook
-        return Promise.reject(error);
+        const response = await axios.post(`${API_URL}/auth/refresh`, {
+          refreshToken,
+        });
+        
+        if (response.data.token) {
+          // Save new tokens
+          await AsyncStorage.setItem('auth_token', response.data.token);
+          if (response.data.refreshToken) {
+            await AsyncStorage.setItem('refresh_token', response.data.refreshToken);
+          }
+          
+          // Update authorization header and retry the original request
+          api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+          originalRequest.headers['Authorization'] = `Bearer ${response.data.token}`;
+          return api(originalRequest);
+        }
       } catch (refreshError) {
-        return Promise.reject(refreshError);
+        // If refresh fails, redirect to login
+        await AsyncStorage.removeItem('auth_token');
+        await AsyncStorage.removeItem('refresh_token');
+        // Handle navigation to login or notification to user
       }
     }
     
@@ -58,4 +74,47 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+// Authentication functions
+export const authService = {
+  // Login
+  login: async (username: string, password: string) => {
+    const response = await api.post('/auth/login', { username, password });
+    const { token, refreshToken, user } = response.data;
+    
+    if (token) {
+      await AsyncStorage.setItem('auth_token', token);
+      if (refreshToken) {
+        await AsyncStorage.setItem('refresh_token', refreshToken);
+      }
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return user;
+  },
+  
+  // Register
+  register: async (userData: any) => {
+    const response = await api.post('/auth/register', userData);
+    return response.data;
+  },
+  
+  // Logout
+  logout: async () => {
+    await AsyncStorage.removeItem('auth_token');
+    await AsyncStorage.removeItem('refresh_token');
+    delete api.defaults.headers.common['Authorization'];
+    return true;
+  },
+  
+  // Check if user is logged in
+  isAuthenticated: async () => {
+    const token = await AsyncStorage.getItem('auth_token');
+    return !!token;
+  },
+  
+  // Get current user
+  getCurrentUser: async () => {
+    const response = await api.get('/auth/user');
+    return response.data;
+  },
+};

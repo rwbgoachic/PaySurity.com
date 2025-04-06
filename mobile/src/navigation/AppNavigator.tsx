@@ -21,6 +21,10 @@ import WalletTransactionsScreen from '../screens/wallet/WalletTransactionsScreen
 import WalletCardsScreen from '../screens/wallet/WalletCardsScreen';
 import WalletAddCardScreen from '../screens/wallet/WalletAddCardScreen';
 import WalletSettingsScreen from '../screens/wallet/WalletSettingsScreen';
+import ParentWalletScreen from '../screens/wallet/ParentWalletScreen';
+import ChildWalletScreen from '../screens/wallet/ChildWalletScreen';
+import EmployerWalletScreen from '../screens/wallet/EmployerWalletScreen';
+import EmployeeWalletScreen from '../screens/wallet/EmployeeWalletScreen';
 
 // Other Screens
 import ProfileScreen from '../screens/common/ProfileScreen';
@@ -62,6 +66,29 @@ const WalletNavigator = () => (
     <WalletStack.Screen name="WalletCards" component={WalletCardsScreen} options={{ title: 'Payment Methods' }} />
     <WalletStack.Screen name="WalletAddCard" component={WalletAddCardScreen} options={{ title: 'Add Payment Method' }} />
     <WalletStack.Screen name="WalletSettings" component={WalletSettingsScreen} options={{ title: 'Wallet Settings' }} />
+    
+    {/* User Role-specific Wallet Screens */}
+    <WalletStack.Screen name="ParentWallet" component={ParentWalletScreen} options={{ title: 'Family Wallet' }} />
+    <WalletStack.Screen name="ChildWallet" component={ChildWalletScreen} options={{ title: 'My Wallet' }} />
+    <WalletStack.Screen name="EmployerWallet" component={EmployerWalletScreen} options={{ title: 'Company Wallet' }} />
+    <WalletStack.Screen name="EmployeeWallet" component={EmployeeWalletScreen} options={{ title: 'Employee Wallet' }} />
+    
+    {/* Additional Screens for Parent Wallet */}
+    <WalletStack.Screen name="AddChild" component={WalletAddCardScreen} options={{ title: 'Add Child' }} />
+    <WalletStack.Screen name="ChildSettings" component={WalletSettingsScreen} options={{ title: 'Child Settings' }} />
+    <WalletStack.Screen name="TransferFunds" component={WalletTransactionsScreen} options={{ title: 'Transfer Funds' }} />
+    <WalletStack.Screen name="SavingsGoals" component={WalletTransactionsScreen} options={{ title: 'Savings Goals' }} />
+    <WalletStack.Screen name="AddSavingsGoal" component={WalletTransactionsScreen} options={{ title: 'Add Savings Goal' }} />
+    
+    {/* Additional Screens for Employer/Employee Wallet */}
+    <WalletStack.Screen name="Payroll" component={WalletTransactionsScreen} options={{ title: 'Payroll Management' }} />
+    <WalletStack.Screen name="TimeTracking" component={WalletTransactionsScreen} options={{ title: 'Time Tracking' }} />
+    <WalletStack.Screen name="RequestTimeOff" component={WalletTransactionsScreen} options={{ title: 'Request Time Off' }} />
+    <WalletStack.Screen name="AddEmployee" component={WalletAddCardScreen} options={{ title: 'Add Employee' }} />
+    <WalletStack.Screen name="EmployeeProfile" component={WalletSettingsScreen} options={{ title: 'Employee Profile' }} />
+    <WalletStack.Screen name="PayrollDetails" component={WalletTransactionsScreen} options={{ title: 'Payroll Details' }} />
+    <WalletStack.Screen name="PaycheckSettings" component={WalletSettingsScreen} options={{ title: 'Paycheck Settings' }} />
+    <WalletStack.Screen name="TaxDocuments" component={WalletTransactionsScreen} options={{ title: 'Tax Documents' }} />
   </WalletStack.Navigator>
 );
 
