@@ -61,6 +61,7 @@ const colWidths = [
   { wch: 25 }, // Stakeholders
   { wch: 25 }, // Dependencies
   { wch: 35 }, // Technical Notes
+  { wch: 40 }, // Decision Needed
 ];
 ws['!cols'] = colWidths;
 

@@ -1,4 +1,4 @@
-Requirement ID,Category,Sub-Category,Requirement Name,Description,Priority,Status,Stakeholders,Dependencies,Technical Notes
+Requirement ID,Category,Sub-Category,Requirement Name,Description,Priority,Status,Stakeholders,Dependencies,Technical Notes,Decision Needed
 UI-001,User Interface,Layout,Stripe-Inspired Design,"Site design to be 90% similar to Stripe.com with 10% differentiation for PaySurity's unique products, using light theme with dark accents",High,In Progress,Marketing/UX,"UI-002, UI-003",Use CSS variables for easier theming
 UI-002,User Interface,Navigation,Consistent Top Navigation,"Top navigation bar with PaySurity logo must appear on all pages for consistent branding, including hover dropdown menu for products",High,Not Started,UX/Marketing,UI-001,Consider using React Context for consistent navigation state
 UI-003,User Interface,Styling,Gradient Backgrounds,"Implement gradient backgrounds in key sections while maintaining PaySurity's unique brand identity",Medium,In Progress,UX/Marketing,UI-001,Use tailwind CSS gradients
