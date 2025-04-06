@@ -1,48 +1,38 @@
 import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import { Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-export function DownloadBRDButton() {
+export default function DownloadBRDButton() {
+  const { toast } = useToast();
+
   const handleDownload = () => {
-    // Creating a fetch request to get the file
-    fetch('/docs/PaySurity_Business_Requirements_Document.xlsx')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.blob();
-      })
-      .then(blob => {
-        // Create a URL for the blob
-        const url = window.URL.createObjectURL(blob);
-        
-        // Create an anchor element
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'PaySurity_Business_Requirements_Document.xlsx';
-        
-        // Append to the document
-        document.body.appendChild(a);
-        
-        // Trigger a click on the element
-        a.click();
-        
-        // Clean up
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      })
-      .catch(error => {
-        console.error('Error downloading the file:', error);
-        alert('There was an error downloading the file. Please try again later.');
-      });
+    // Get the current origin for the correct URL
+    const origin = window.location.origin;
+    const downloadUrl = `${origin}/api/brd`;
+    
+    // Create an invisible anchor element to trigger the download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'PaySurity_Business_Requirements_Document.xlsx';
+    
+    // Append to the document, click it, and remove it
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Download Started",
+      description: "Your Business Requirements Document is downloading."
+    });
   };
 
   return (
     <Button 
       onClick={handleDownload}
-      className="flex items-center gap-2"
+      className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
     >
-      <FileDown className="h-4 w-4" />
-      <span>Download Business Requirements Document</span>
+      <Download className="h-4 w-4" />
+      Download BRD
     </Button>
   );
 }
