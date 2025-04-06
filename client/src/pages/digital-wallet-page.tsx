@@ -21,13 +21,13 @@ import {
   FileText
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SiteLayout } from "@/components/layout/site-layout";
 
 export default function DigitalWalletPage() {
   const [, navigate] = useLocation();
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Navigation header would be inserted here */}
+    <SiteLayout>
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 pt-20 pb-12">
@@ -620,6 +620,6 @@ export default function DigitalWalletPage() {
           </div>
         </div>
       </footer>
-    </div>
+    </SiteLayout>
   );
 }

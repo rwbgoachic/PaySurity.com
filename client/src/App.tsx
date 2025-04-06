@@ -121,8 +121,8 @@ function App() {
     <AuthProvider>
       {/* Default SEO tags that will be overridden by page-specific ones */}
       <MetaTags 
-        title="Paysurity | Comprehensive Digital Payment Solutions"
-        description="Paysurity offers a comprehensive digital payment ecosystem with merchant services, POS solutions, and specialized payment processing for businesses of all sizes."
+        title="PaySurity | Comprehensive Digital Payment Solutions"
+        description="PaySurity offers a comprehensive digital payment ecosystem with merchant services, POS solutions, and specialized payment processing for businesses of all sizes."
         canonicalUrl="/"
         keywords="payment processing, merchant services, POS systems, digital wallet, payment gateway, BistroBeast, restaurant POS, retail payment solutions, legal payment solutions, healthcare payment solutions"
         ogType="website"
