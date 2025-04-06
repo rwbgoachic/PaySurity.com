@@ -9,6 +9,9 @@ import PricingPage from "@/pages/pricing-page";
 import IndustrySolutionsPage from "@/pages/industry-solutions-page";
 import DigitalWalletPage from "@/pages/digital-wallet-page";
 import PosSystemsPage from "@/pages/pos-systems-page";
+import WalletPage from "@/pages/wallet";
+import PosPage from "@/pages/pos";
+import MerchantPage from "@/pages/merchant";
 import { ProtectedRoute } from "./lib/protected-route";
 import EmployerDashboard from "./pages/employer/dashboard";
 import EmployerTransactions from "./pages/employer/transactions";
@@ -52,8 +55,49 @@ import { useEffect } from "react";
 function Router() {
   return (
     <Switch>
+      {/* Main marketing site routes */}
       <Route path="/" component={LandingPage} />
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/industry-solutions" component={IndustrySolutionsPage} />
+      <Route path="/digital-wallet" component={DigitalWalletPage} />
+      <Route path="/pos-systems" component={PosSystemsPage} />
+      <Route path="/auth" component={AuthPage} />
+      
+      {/* Blog routes */}
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/industry/restaurant" component={RestaurantBlogPage} />
+      <Route path="/blog/industry/healthcare" component={HealthcareBlogPage} />
+      <Route path="/blog/industry/legal" component={LegalBlogPage} />
+      <Route path="/blog/industry/retail" component={RetailBlogPage} />
+      <Route path="/blog/payment-industry-news" component={PaymentIndustryNewsPage} />
+      <Route path="/blog/:slug" component={BlogPostPage} />
+      
+      {/* Legacy dashboard (to be migrated) */}
       <ProtectedRoute path="/dashboard" component={Dashboard} />
+      
+      {/* Domain-separated routes */}
+      <ProtectedRoute path="/wallet" component={WalletPage} />
+      <ProtectedRoute path="/wallet/wallets" component={WalletPage} />
+      <ProtectedRoute path="/wallet/transactions" component={WalletPage} />
+      <ProtectedRoute path="/wallet/savings" component={WalletPage} />
+      <ProtectedRoute path="/wallet/family" component={WalletPage} />
+      <ProtectedRoute path="/wallet/settings" component={WalletPage} />
+      
+      <ProtectedRoute path="/pos" component={PosPage} />
+      <ProtectedRoute path="/pos/register" component={PosPage} />
+      <ProtectedRoute path="/pos/orders" component={PosPage} />
+      <ProtectedRoute path="/pos/inventory" component={PosPage} />
+      <ProtectedRoute path="/pos/staff" component={PosPage} />
+      <ProtectedRoute path="/pos/settings" component={PosPage} />
+      
+      <ProtectedRoute path="/merchant" component={MerchantPage} />
+      <ProtectedRoute path="/merchant/applications" component={MerchantPage} />
+      <ProtectedRoute path="/merchant/payment-gateways" component={MerchantPage} />
+      <ProtectedRoute path="/merchant/verification" component={MerchantPage} />
+      <ProtectedRoute path="/merchant/affiliates" component={MerchantPage} />
+      <ProtectedRoute path="/merchant/settings" component={MerchantPage} />
+      
+      {/* Legacy routes (to be migrated to new domain structure) */}
       <ProtectedRoute path="/employer/dashboard" component={EmployerDashboard} />
       <ProtectedRoute path="/employer/transactions" component={EmployerTransactions} />
       <ProtectedRoute path="/employer/users" component={EmployerUsers} />
@@ -81,18 +125,8 @@ function Router() {
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
       <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
       <ProtectedRoute path="/admin/project-dependencies" component={ProjectDependenciesPage} />
-      <Route path="/blog" component={BlogPage} />
-      <Route path="/blog/industry/restaurant" component={RestaurantBlogPage} />
-      <Route path="/blog/industry/healthcare" component={HealthcareBlogPage} />
-      <Route path="/blog/industry/legal" component={LegalBlogPage} />
-      <Route path="/blog/industry/retail" component={RetailBlogPage} />
-      <Route path="/blog/payment-industry-news" component={PaymentIndustryNewsPage} />
-      <Route path="/blog/:slug" component={BlogPostPage} />
-      <Route path="/pricing" component={PricingPage} />
-      <Route path="/industry-solutions" component={IndustrySolutionsPage} />
-      <Route path="/digital-wallet" component={DigitalWalletPage} />
-      <Route path="/pos-systems" component={PosSystemsPage} />
-      <Route path="/auth" component={AuthPage} />
+      
+      {/* Catch-all route */}
       <Route component={NotFound} />
     </Switch>
   );

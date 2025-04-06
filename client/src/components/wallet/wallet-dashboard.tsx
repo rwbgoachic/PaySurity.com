@@ -24,7 +24,9 @@ export function WalletDashboard() {
   }
   
   // Fetch transactions for the selected wallet
-  const { data: transactions = [], isLoading: transactionsLoading } = useTransactions(selectedWalletId);
+  const { data: transactions = [], isLoading: transactionsLoading } = useTransactions(
+    selectedWalletId === null ? undefined : selectedWalletId
+  );
   
   // Calculate total balance across all wallets
   const totalBalance = wallets.reduce((sum, wallet) => {

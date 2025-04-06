@@ -22,9 +22,20 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SiteLayout } from "@/components/layout/site-layout";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function DigitalWalletPage() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+
+  // Function to handle creating a web account or logging in
+  const handleSignUp = () => {
+    if (user) {
+      navigate("/wallet");
+    } else {
+      navigate("/auth");
+    }
+  };
 
   return (
     <SiteLayout>
@@ -44,7 +55,13 @@ export default function DigitalWalletPage() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button size="lg">Download Mobile App</Button>
-                  <Button variant="outline" size="lg">Create Web Account</Button>
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={handleSignUp}
+                  >
+                    {user ? "Access Your Wallet" : "Create Web Account"}
+                  </Button>
                 </div>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-lg border">
@@ -268,7 +285,9 @@ export default function DigitalWalletPage() {
                         </div>
                       </div>
                       
-                      <Button className="mt-6">Learn More About Business Solutions</Button>
+                      <Button className="mt-6" onClick={handleSignUp}>
+                        {user ? "Access Business Wallet" : "Create Business Account"}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -299,43 +318,52 @@ export default function DigitalWalletPage() {
                         </li>
                         <li className="flex items-start">
                           <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                          <span>Purchase notifications & approvals</span>
+                          <span>Real-time location-based spending alerts</span>
                         </li>
                         <li className="flex items-start">
                           <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                          <span>Merchant category restrictions</span>
+                          <span>Merchant & category spending restrictions</span>
                         </li>
                         <li className="flex items-start">
                           <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                          <span>Family expense tracking & budgeting</span>
+                          <span>Shared family expenses management</span>
                         </li>
                         <li className="flex items-start">
                           <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                          <span>Gift giving & special occasion funds</span>
+                          <span>Educational content for financial literacy</span>
                         </li>
                       </ul>
                     </div>
                     
                     <div>
-                      <div className="bg-primary/5 p-5 rounded-lg border border-primary/20 mb-6">
-                        <h5 className="font-bold text-primary mb-2">Free Family Plans*</h5>
-                        <p className="text-sm text-neutral-600 mb-4">
-                          Qualifying business accounts receive free family plans for up to 5 family members. Perfect for teaching kids financial responsibility while maintaining parental oversight.
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          *Free family plans available with qualifying business accounts. Some limitations apply.
-                        </p>
+                      <h4 className="font-bold text-lg mb-4">Family Benefits</h4>
+                      <div className="space-y-4">
+                        <div className="bg-neutral-50 p-4 rounded-lg border">
+                          <h5 className="font-medium mb-2">Teach Financial Responsibility</h5>
+                          <p className="text-sm text-neutral-600">
+                            Help children learn money management with guided, supervised spending experiences.
+                          </p>
+                        </div>
+                        <div className="bg-neutral-50 p-4 rounded-lg border">
+                          <h5 className="font-medium mb-2">Family Coordination</h5>
+                          <p className="text-sm text-neutral-600">
+                            Easily track and manage shared household expenses and allowances.
+                          </p>
+                        </div>
+                        <div className="bg-neutral-50 p-4 rounded-lg border">
+                          <h5 className="font-medium mb-2">Safety & Convenience</h5>
+                          <p className="text-sm text-neutral-600">
+                            Provide children with secure payment methods without the risks of cash or credit cards.
+                          </p>
+                        </div>
                       </div>
                       
-                      <h4 className="font-bold text-lg mb-4">Client Testimonial</h4>
-                      <div className="bg-neutral-50 p-4 rounded-lg border">
-                        <p className="italic text-neutral-600 text-sm mb-2">
-                          "The family accounts feature has been a game-changer for teaching my kids about money. I can easily send allowances, monitor spending, and help them save for goals."
-                        </p>
-                        <p className="text-sm font-medium">- Jennifer K., Business Owner & Parent</p>
-                      </div>
-                      
-                      <Button className="mt-6">Create Family Account</Button>
+                      <Button 
+                        className="mt-6"
+                        onClick={handleSignUp}
+                      >
+                        {user ? "Access Family Account" : "Create Family Account"}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -345,281 +373,33 @@ export default function DigitalWalletPage() {
         </div>
       </section>
       
-      {/* Mobile App Section */}
-      <section className="py-12">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="order-2 lg:order-1">
-                <h2 className="text-2xl font-bold mb-4">Mobile App Features</h2>
-                <p className="text-neutral-600 mb-6">
-                  Access your digital wallet on the go with our feature-rich mobile application.
-                </p>
-                
-                <div className="space-y-6">
-                  <div className="flex">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="text-lg font-medium">Tap-to-Pay Functionality</h4>
-                      <p className="text-neutral-600 mt-1">Make contactless payments directly from your phone at compatible terminals.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Smartphone className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="text-lg font-medium">Real-Time Notifications</h4>
-                      <p className="text-neutral-600 mt-1">Receive instant alerts for account activity, including purchases and deposits.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <FileEdit className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="text-lg font-medium">Receipt Capture</h4>
-                      <p className="text-neutral-600 mt-1">Snap photos of receipts to automatically organize and categorize your purchases.</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-8">
-                  <Button>Download iOS App</Button>
-                  <Button variant="outline" className="ml-4">Download Android App</Button>
-                </div>
-              </div>
-              
-              <div className="order-1 lg:order-2">
-                <div className="bg-white p-6 rounded-lg shadow-lg border">
-                  {/* Placeholder for mobile app screenshot */}
-                  <div className="aspect-[9/16] bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">Mobile App Interface</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Plans & Pricing */}
-      <section className="py-12 bg-neutral-50">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-8">Wallet Plans & Pricing</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="border shadow-lg relative overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-1">Personal</h3>
-                    <p className="text-neutral-600 text-sm mb-4">For individual users</p>
-                    <div className="mb-6">
-                      <span className="text-3xl font-bold">Free</span>
-                    </div>
-                    <ul className="space-y-3 mb-6">
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Basic digital wallet features</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Mobile app access</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Standard security features</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Limited transaction history</span>
-                      </li>
-                    </ul>
-                    <Button variant="outline" className="w-full">Sign Up Free</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border shadow-lg relative overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="absolute top-0 right-0 bg-primary text-white px-3 py-1 text-xs font-bold uppercase">
-                    Popular
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-1">Family</h3>
-                    <p className="text-neutral-600 text-sm mb-4">For families and households</p>
-                    <div className="mb-6">
-                      <span className="text-3xl font-bold">$9.99</span>
-                      <span className="text-neutral-600 text-sm"> / month</span>
-                    </div>
-                    <ul className="space-y-3 mb-6">
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">All Personal features</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Up to 5 connected accounts</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Parental controls & limits</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Savings goals & allowances</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Family expense tracking</span>
-                      </li>
-                    </ul>
-                    <Button className="w-full">Start Free Trial</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border shadow-lg relative overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-1">Business</h3>
-                    <p className="text-neutral-600 text-sm mb-4">For organizations of all sizes</p>
-                    <div className="mb-6">
-                      <span className="text-3xl font-bold">$29.99</span>
-                      <span className="text-neutral-600 text-sm"> / month</span>
-                    </div>
-                    <ul className="space-y-3 mb-6">
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">All Family features</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Unlimited business accounts</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Employee expense management</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Advanced reporting & analytics</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Accounting software integration</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                        <span className="text-sm">Free family accounts*</span>
-                      </li>
-                    </ul>
-                    <Button variant="outline" className="w-full">Contact Sales</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <p className="text-center text-neutral-500 text-sm mt-6">
-              *Free family plans available with qualifying business accounts. Some limitations apply.
-            </p>
-          </div>
-        </div>
-      </section>
-      
       {/* CTA Section */}
-      <section className="py-12 bg-primary text-white">
+      <section className="py-16 bg-gradient-to-br from-primary to-primary-dark">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Simplify Your Financial Life?</h2>
-            <p className="text-lg mb-8">
-              Join thousands of users who trust PaySurity for secure, flexible digital wallet solutions.
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl font-bold text-white mb-6">Ready to Transform Your Financial Management?</h2>
+            <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
+              Join thousands of individuals and businesses who trust PaySurity's digital wallet solutions for secure, convenient, and powerful financial management.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
                 variant="secondary"
+                onClick={handleSignUp}
               >
-                Create Your Wallet <ArrowRight className="ml-2 h-5 w-5" />
+                {user ? "Access Your Wallet" : "Create Web Account"}  
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="bg-transparent text-white hover:bg-white hover:text-primary"
-              >
-                Learn More
+              <Button size="lg" variant="outline" className="bg-transparent text-white border-white hover:bg-white/10">
+                Schedule Demo
               </Button>
             </div>
+            <p className="text-sm text-white/70 mt-6">
+              *Free family plans are included with business accounts or available with qualifying transactions.
+            </p>
           </div>
         </div>
       </section>
       
-      {/* Footer */}
-      <footer className="bg-neutral-900 text-neutral-300 py-12">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="text-white font-bold text-lg mb-4">Paysurity</h3>
-              <p className="text-sm mb-4">
-                Comprehensive payment processing and business management solutions for businesses of all sizes.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4">Solutions</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4">Industries</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Restaurants</a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Retail</a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Legal</a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">Healthcare</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/" className="hover:text-white transition-colors">About Us</a></li>
-                <li><a href="/" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="/" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="/blog" className="hover:text-white transition-colors">Blog</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <p className="text-sm mb-2 md:mb-0">© 2023 Paysurity. All rights reserved.</p>
-              <p className="text-xs text-neutral-500 mb-4 md:mb-0">*Free family plans available with qualifying business accounts. Some limitations apply.</p>
-            </div>
-            <div className="flex gap-4">
-              <a href="#" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="text-neutral-400 hover:text-white transition-colors">Terms of Service</a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </SiteLayout>
   );
 }

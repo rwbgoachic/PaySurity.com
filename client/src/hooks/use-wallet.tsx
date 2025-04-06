@@ -143,14 +143,14 @@ interface UpdateWalletLimitsInput {
 export function useWallets(): UseQueryResult<Wallet[], Error> {
   return useQuery({
     queryKey: ['/api/wallets'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 }
 
 export function useWallet(walletId: number): UseQueryResult<Wallet, Error> {
   return useQuery({
     queryKey: ['/api/wallets', walletId],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!walletId,
   });
 }
@@ -209,7 +209,7 @@ export function useUpdateWalletLimits(): UseMutationResult<Wallet, Error, Update
 export function useTransactions(walletId?: number): UseQueryResult<Transaction[], Error> {
   return useQuery({
     queryKey: walletId ? ['/api/transactions', { walletId }] : ['/api/transactions'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 }
 
@@ -243,7 +243,7 @@ export function useCreateTransaction(): UseMutationResult<Transaction, Error, Cr
 export function useBankAccounts(): UseQueryResult<BankAccount[], Error> {
   return useQuery({
     queryKey: ['/api/bank-accounts'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 }
 
@@ -275,7 +275,7 @@ export function useCreateBankAccount(): UseMutationResult<BankAccount, Error, Cr
 export function useFundRequests(): UseQueryResult<FundRequest[], Error> {
   return useQuery({
     queryKey: ['/api/fund-requests'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 }
 
