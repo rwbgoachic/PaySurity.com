@@ -41,7 +41,7 @@ export const users = pgTable("users", {
   department: text("department"),
   organizationId: integer("organization_id"),
   dateOfBirth: date("date_of_birth"),
-  ssn: text("ssn"),  // For payroll purposes, stores last 4 digits or encrypted
+  ssn: text("ssn"),  // For Payroll purposes, stores last 4 digits or encrypted
   address: text("address"), // Could be split into multiple fields in production
   parentId: integer("parent_id"), // For child accounts to link to parent
   dependents: integer("dependents"), // Number of dependents for tax calculations
@@ -233,13 +233,13 @@ export const insertFundRequestSchema = createInsertSchema(fundRequests).pick({
 });
 
 // Payroll schema
-export const payrollPeriodEnum = pgEnum("payroll_period", ["daily", "weekly", "biweekly", "monthly"]);
+export const payrollPeriodEnum = pgEnum("Payroll_period", ["daily", "weekly", "biweekly", "monthly"]);
 export const compensationTypeEnum = pgEnum("compensation_type", ["w2", "1099", "corp_to_corp"]);
 
 export const payrollEntries = pgTable("payroll_entries", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  employerId: integer("employer_id").notNull(), // The employer processing this payroll
+  employerId: integer("employer_id").notNull(), // The employer processing this Payroll
   payPeriodStart: date("pay_period_start").notNull(),
   payPeriodEnd: date("pay_period_end").notNull(),
   payDate: date("pay_date").notNull(),
