@@ -107,9 +107,6 @@ export default function LandingPage() {
                   <span>Contact sales</span>
                 </Link>
               </Button>
-              <div className="mt-4">
-                <DownloadBRDButton />
-              </div>
             </div>
           </div>
           
