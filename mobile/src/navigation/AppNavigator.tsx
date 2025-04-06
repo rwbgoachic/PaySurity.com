@@ -1,163 +1,323 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '../hooks/useAuth';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Platform, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Text, useTheme } from 'react-native-paper';
+import { colors, walletColorSchemes } from '../utils/theme';
+import { WalletProvider } from '../hooks/useWallet';
 
-// Auth Screens
+// Import screens
+// Auth screens
 import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
+import SignupScreen from '../screens/auth/SignupScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
-// POS Screens
-import POSDashboardScreen from '../screens/pos/POSDashboardScreen';
-import POSCheckoutScreen from '../screens/pos/POSCheckoutScreen';
-import POSInventoryScreen from '../screens/pos/POSInventoryScreen';
-import POSStaffScreen from '../screens/pos/POSStaffScreen';
-import POSSettingsScreen from '../screens/pos/POSSettingsScreen';
+// Main screens
+import HomeScreen from '../screens/HomeScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
-// Wallet Screens
-import WalletDashboardScreen from '../screens/wallet/WalletDashboardScreen';
-import WalletTransactionsScreen from '../screens/wallet/WalletTransactionsScreen';
-import WalletCardsScreen from '../screens/wallet/WalletCardsScreen';
-import WalletAddCardScreen from '../screens/wallet/WalletAddCardScreen';
-import WalletSettingsScreen from '../screens/wallet/WalletSettingsScreen';
+// Wallet screens
+import TransactionDetailsScreen from '../screens/wallet/TransactionDetailsScreen';
+import SendMoneyScreen from '../screens/wallet/SendMoneyScreen';
+import RequestMoneyScreen from '../screens/wallet/RequestMoneyScreen';
+import ScanQRScreen from '../screens/wallet/ScanQRScreen';
+import AddPaymentMethodScreen from '../screens/wallet/AddPaymentMethodScreen';
+import AddChildScreen from '../screens/wallet/AddChildScreen';
+import AddEmployeeScreen from '../screens/wallet/AddEmployeeScreen';
+import PayrollDetailsScreen from '../screens/wallet/PayrollDetailsScreen';
+import RunPayrollScreen from '../screens/wallet/RunPayrollScreen';
+import PayslipDetailsScreen from '../screens/wallet/PayslipDetailsScreen';
+import BenefitDetailsScreen from '../screens/wallet/BenefitDetailsScreen';
+import CreateExpenseReportScreen from '../screens/wallet/CreateExpenseReportScreen';
+import SubmitTimeEntryScreen from '../screens/wallet/SubmitTimeEntryScreen';
+import RequestTimeOffScreen from '../screens/wallet/RequestTimeOffScreen';
+import AddTaskScreen from '../screens/wallet/AddTaskScreen';
+import TaskDetailsScreen from '../screens/wallet/TaskDetailsScreen';
+import AddSavingsGoalScreen from '../screens/wallet/AddSavingsGoalScreen';
+import SavingsGoalDetailsScreen from '../screens/wallet/SavingsGoalDetailsScreen';
+import EmployeeDetailsScreen from '../screens/wallet/EmployeeDetailsScreen';
+
+// Role-specific wallet screens
 import ParentWalletScreen from '../screens/wallet/ParentWalletScreen';
 import ChildWalletScreen from '../screens/wallet/ChildWalletScreen';
 import EmployerWalletScreen from '../screens/wallet/EmployerWalletScreen';
 import EmployeeWalletScreen from '../screens/wallet/EmployeeWalletScreen';
+import WalletRouterScreen from '../screens/wallet/WalletRouterScreen';
 
-// Other Screens
-import ProfileScreen from '../screens/common/ProfileScreen';
-import SettingsScreen from '../screens/common/SettingsScreen';
-
-// Stacks
-const AuthStack = createNativeStackNavigator();
-const POSStack = createNativeStackNavigator();
-const WalletStack = createNativeStackNavigator();
-const SettingsStack = createNativeStackNavigator();
-
-// Tabs
+// Create navigators
+const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Auth Navigator
-const AuthNavigator = () => (
-  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-    <AuthStack.Screen name="Login" component={LoginScreen} />
-    <AuthStack.Screen name="Register" component={RegisterScreen} />
-  </AuthStack.Navigator>
+// Define your navigation theme
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: colors.primary,
+    background: colors.background,
+    card: colors.surface,
+    text: colors.textPrimary,
+    border: colors.border,
+  },
+};
+
+// Authentication stack
+const AuthStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Signup" component={SignupScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+  </Stack.Navigator>
 );
 
-// POS Stack Navigator
-const POSNavigator = () => (
-  <POSStack.Navigator>
-    <POSStack.Screen name="POSDashboard" component={POSDashboardScreen} options={{ title: 'BistroBeast POS' }} />
-    <POSStack.Screen name="POSCheckout" component={POSCheckoutScreen} options={{ title: 'Checkout' }} />
-    <POSStack.Screen name="POSInventory" component={POSInventoryScreen} options={{ title: 'Inventory' }} />
-    <POSStack.Screen name="POSStaff" component={POSStaffScreen} options={{ title: 'Staff Management' }} />
-    <POSStack.Screen name="POSSettings" component={POSSettingsScreen} options={{ title: 'POS Settings' }} />
-  </POSStack.Navigator>
-);
-
-// Wallet Stack Navigator
-const WalletNavigator = () => (
-  <WalletStack.Navigator>
-    <WalletStack.Screen name="WalletDashboard" component={WalletDashboardScreen} options={{ title: 'PaySurity Wallet' }} />
-    <WalletStack.Screen name="WalletTransactions" component={WalletTransactionsScreen} options={{ title: 'Transactions' }} />
-    <WalletStack.Screen name="WalletCards" component={WalletCardsScreen} options={{ title: 'Payment Methods' }} />
-    <WalletStack.Screen name="WalletAddCard" component={WalletAddCardScreen} options={{ title: 'Add Payment Method' }} />
-    <WalletStack.Screen name="WalletSettings" component={WalletSettingsScreen} options={{ title: 'Wallet Settings' }} />
-    
-    {/* User Role-specific Wallet Screens */}
-    <WalletStack.Screen name="ParentWallet" component={ParentWalletScreen} options={{ title: 'Family Wallet' }} />
-    <WalletStack.Screen name="ChildWallet" component={ChildWalletScreen} options={{ title: 'My Wallet' }} />
-    <WalletStack.Screen name="EmployerWallet" component={EmployerWalletScreen} options={{ title: 'Company Wallet' }} />
-    <WalletStack.Screen name="EmployeeWallet" component={EmployeeWalletScreen} options={{ title: 'Employee Wallet' }} />
-    
-    {/* Additional Screens for Parent Wallet */}
-    <WalletStack.Screen name="AddChild" component={WalletAddCardScreen} options={{ title: 'Add Child' }} />
-    <WalletStack.Screen name="ChildSettings" component={WalletSettingsScreen} options={{ title: 'Child Settings' }} />
-    <WalletStack.Screen name="TransferFunds" component={WalletTransactionsScreen} options={{ title: 'Transfer Funds' }} />
-    <WalletStack.Screen name="SavingsGoals" component={WalletTransactionsScreen} options={{ title: 'Savings Goals' }} />
-    <WalletStack.Screen name="AddSavingsGoal" component={WalletTransactionsScreen} options={{ title: 'Add Savings Goal' }} />
-    
-    {/* Additional Screens for Employer/Employee Wallet */}
-    <WalletStack.Screen name="Payroll" component={WalletTransactionsScreen} options={{ title: 'Payroll Management' }} />
-    <WalletStack.Screen name="TimeTracking" component={WalletTransactionsScreen} options={{ title: 'Time Tracking' }} />
-    <WalletStack.Screen name="RequestTimeOff" component={WalletTransactionsScreen} options={{ title: 'Request Time Off' }} />
-    <WalletStack.Screen name="AddEmployee" component={WalletAddCardScreen} options={{ title: 'Add Employee' }} />
-    <WalletStack.Screen name="EmployeeProfile" component={WalletSettingsScreen} options={{ title: 'Employee Profile' }} />
-    <WalletStack.Screen name="PayrollDetails" component={WalletTransactionsScreen} options={{ title: 'Payroll Details' }} />
-    <WalletStack.Screen name="PaycheckSettings" component={WalletSettingsScreen} options={{ title: 'Paycheck Settings' }} />
-    <WalletStack.Screen name="TaxDocuments" component={WalletTransactionsScreen} options={{ title: 'Tax Documents' }} />
-  </WalletStack.Navigator>
-);
-
-// Settings Stack Navigator
-const ProfileNavigator = () => (
-  <SettingsStack.Navigator>
-    <SettingsStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
-    <SettingsStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'App Settings' }} />
-  </SettingsStack.Navigator>
-);
-
-// Main App Navigator with Authentication Logic
-const AppNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading screen if auth state is being determined
-  if (isLoading) {
-    return null; // Or a loading component
-  }
-
-  // If not authenticated, show auth screens
-  if (!isAuthenticated) {
-    return <AuthNavigator />;
-  }
-
-  // Main App tabs when authenticated
+// Wallet stack
+const WalletStack = () => {
+  const theme = useTheme();
+  
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === 'POS') {
-            iconName = focused ? 'point-of-sale' : 'point-of-sale';
-          } else if (route.name === 'Wallet') {
-            iconName = focused ? 'wallet' : 'wallet-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'account-circle' : 'account-circle-outline';
-          }
-
-          return <Icon name={iconName} size={size} color={color} />;
+    <Stack.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: {
+          backgroundColor: theme.colors.primary,
         },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+        headerLeft: ({ canGoBack }) =>
+          canGoBack ? (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 10 }}
+            >
+              <Icon name="arrow-left" size={24} color="#fff" />
+            </TouchableOpacity>
+          ) : null,
       })}
     >
-      <Tab.Screen 
-        name="POS" 
-        component={POSNavigator} 
-        options={{ 
-          headerShown: false,
-          tabBarLabel: 'BistroBeast'
-        }} 
+      <Stack.Screen 
+        name="WalletRouter" 
+        component={WalletRouterScreen}
+        options={{ headerShown: false }}
       />
-      <Tab.Screen 
-        name="Wallet" 
-        component={WalletNavigator} 
-        options={{ 
-          headerShown: false,
-          tabBarLabel: 'Wallet'
-        }} 
+      <Stack.Screen 
+        name="ParentWalletScreen" 
+        component={ParentWalletScreen}
+        options={{ title: "Parent Wallet", headerShown: false }}
       />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileNavigator} 
-        options={{ 
-          headerShown: false,
-          tabBarLabel: 'Profile'
-        }} 
+      <Stack.Screen 
+        name="ChildWalletScreen" 
+        component={ChildWalletScreen}
+        options={{ title: "Child Wallet", headerShown: false }}
       />
-    </Tab.Navigator>
+      <Stack.Screen 
+        name="EmployerWalletScreen" 
+        component={EmployerWalletScreen}
+        options={{ title: "Employer Wallet", headerShown: false }}
+      />
+      <Stack.Screen 
+        name="EmployeeWalletScreen" 
+        component={EmployeeWalletScreen}
+        options={{ title: "Employee Wallet", headerShown: false }}
+      />
+      <Stack.Screen 
+        name="TransactionDetails" 
+        component={TransactionDetailsScreen}
+        options={{ title: "Transaction Details" }}
+      />
+      <Stack.Screen 
+        name="SendMoney" 
+        component={SendMoneyScreen}
+        options={{ title: "Send Money" }}
+      />
+      <Stack.Screen 
+        name="RequestMoney" 
+        component={RequestMoneyScreen}
+        options={{ title: "Request Money" }}
+      />
+      <Stack.Screen 
+        name="ScanQR" 
+        component={ScanQRScreen}
+        options={{ title: "Scan QR Code" }}
+      />
+      <Stack.Screen 
+        name="AddPaymentMethod" 
+        component={AddPaymentMethodScreen}
+        options={{ title: "Add Payment Method" }}
+      />
+      <Stack.Screen 
+        name="AddChild" 
+        component={AddChildScreen}
+        options={{ title: "Add Child" }}
+      />
+      <Stack.Screen 
+        name="AddEmployee" 
+        component={AddEmployeeScreen}
+        options={{ title: "Add Employee" }}
+      />
+      <Stack.Screen 
+        name="PayrollDetails" 
+        component={PayrollDetailsScreen}
+        options={{ title: "Payroll Details" }}
+      />
+      <Stack.Screen 
+        name="RunPayroll" 
+        component={RunPayrollScreen}
+        options={{ title: "Run Payroll" }}
+      />
+      <Stack.Screen 
+        name="PayslipDetails" 
+        component={PayslipDetailsScreen}
+        options={{ title: "Payslip Details" }}
+      />
+      <Stack.Screen 
+        name="BenefitDetails" 
+        component={BenefitDetailsScreen}
+        options={{ title: "Benefit Details" }}
+      />
+      <Stack.Screen 
+        name="CreateExpenseReport" 
+        component={CreateExpenseReportScreen}
+        options={{ title: "Create Expense Report" }}
+      />
+      <Stack.Screen 
+        name="SubmitTimeEntry" 
+        component={SubmitTimeEntryScreen}
+        options={{ title: "Submit Time Entry" }}
+      />
+      <Stack.Screen 
+        name="RequestTimeOff" 
+        component={RequestTimeOffScreen}
+        options={{ title: "Request Time Off" }}
+      />
+      <Stack.Screen 
+        name="AddTask" 
+        component={AddTaskScreen}
+        options={{ title: "Add Task" }}
+      />
+      <Stack.Screen 
+        name="TaskDetails" 
+        component={TaskDetailsScreen}
+        options={{ title: "Task Details" }}
+      />
+      <Stack.Screen 
+        name="AddSavingsGoal" 
+        component={AddSavingsGoalScreen}
+        options={{ title: "Add Savings Goal" }}
+      />
+      <Stack.Screen 
+        name="SavingsGoalDetails" 
+        component={SavingsGoalDetailsScreen}
+        options={{ title: "Savings Goal Details" }}
+      />
+      <Stack.Screen 
+        name="EmployeeDetails" 
+        component={EmployeeDetailsScreen}
+        options={{ title: "Employee Details" }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+// Home stack
+const HomeStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen name="HomeScreen" component={HomeScreen} options={{ headerShown: false }} />
+  </Stack.Navigator>
+);
+
+// Profile stack
+const ProfileStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Settings" component={SettingsScreen} />
+  </Stack.Navigator>
+);
+
+// Bottom tab navigator
+const TabNavigator = () => (
+  <Tab.Navigator
+    screenOptions={({ route }) => ({
+      tabBarIcon: ({ focused, color, size }) => {
+        let iconName;
+
+        if (route.name === 'Home') {
+          iconName = focused ? 'home' : 'home-outline';
+        } else if (route.name === 'Wallet') {
+          iconName = focused ? 'wallet' : 'wallet-outline';
+        } else if (route.name === 'Notifications') {
+          iconName = focused ? 'bell' : 'bell-outline';
+        } else if (route.name === 'Profile') {
+          iconName = focused ? 'account' : 'account-outline';
+        }
+
+        return <Icon name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.textSecondary,
+      tabBarLabel: ({ focused, color }) => {
+        return (
+          <Text
+            style={{
+              fontSize: 12,
+              color,
+              marginBottom: Platform.OS === 'ios' ? 0 : 5,
+            }}
+          >
+            {route.name}
+          </Text>
+        );
+      },
+    })}
+  >
+    <Tab.Screen name="Home" component={HomeStack} options={{ headerShown: false }} />
+    <Tab.Screen name="Wallet" component={WalletStack} options={{ headerShown: false }} />
+    <Tab.Screen name="Notifications" component={NotificationsScreen} />
+    <Tab.Screen name="Profile" component={ProfileStack} options={{ headerShown: false }} />
+  </Tab.Navigator>
+);
+
+// Main app navigator
+const AppNavigator = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('auth_token');
+        setIsAuthenticated(!!token);
+      } catch (error) {
+        console.error('Error checking authentication', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    // Show loading screen
+    return null;
+  }
+
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      <WalletProvider>
+        {isAuthenticated ? <TabNavigator /> : <AuthStack />}
+      </WalletProvider>
+    </NavigationContainer>
   );
 };
 

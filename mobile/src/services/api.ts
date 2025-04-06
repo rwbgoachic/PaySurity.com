@@ -1,24 +1,27 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import { useQuery as useReactQuery } from '@tanstack/react-query';
 
-// Base URL
-const API_URL = process.env.REACT_APP_API_URL || 'https://paysurity.com/api';
+// Base URL configuration
+const API_URL = Platform.OS === 'web' 
+  ? '/api' // For web, use relative URL
+  : 'https://api.paysurity.com'; // For mobile, use absolute URL
 
-// Create axios instance
-export const api = axios.create({
+// Axios instance with default configuration
+const instance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
+// Request interceptor to add authentication token
+instance.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('auth_token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
@@ -27,8 +30,8 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle common errors
-api.interceptors.response.use(
+// Response interceptor for error handling
+instance.interceptors.response.use(
   (response) => {
     return response;
   },
@@ -38,35 +41,31 @@ api.interceptors.response.use(
     // Handle token expiration
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
       try {
         // Attempt to refresh token
         const refreshToken = await AsyncStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-        
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refreshToken,
-        });
-        
-        if (response.data.token) {
-          // Save new tokens
-          await AsyncStorage.setItem('auth_token', response.data.token);
-          if (response.data.refreshToken) {
-            await AsyncStorage.setItem('refresh_token', response.data.refreshToken);
-          }
+        if (refreshToken) {
+          const response = await instance.post('/auth/refresh', { 
+            refreshToken 
+          });
           
-          // Update authorization header and retry the original request
-          api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-          originalRequest.headers['Authorization'] = `Bearer ${response.data.token}`;
-          return api(originalRequest);
+          const { token, refreshToken: newRefreshToken } = response.data;
+          await AsyncStorage.setItem('auth_token', token);
+          await AsyncStorage.setItem('refresh_token', newRefreshToken);
+          
+          // Retry original request with new token
+          originalRequest.headers['Authorization'] = `Bearer ${token}`;
+          return instance(originalRequest);
         }
       } catch (refreshError) {
-        // If refresh fails, redirect to login
+        // If refresh fails, log out user
         await AsyncStorage.removeItem('auth_token');
         await AsyncStorage.removeItem('refresh_token');
-        // Handle navigation to login or notification to user
+        await AsyncStorage.removeItem('user_data');
+        // Redirect to login if on web
+        if (Platform.OS === 'web') {
+          window.location.href = '/auth';
+        }
       }
     }
     
@@ -74,47 +73,120 @@ api.interceptors.response.use(
   }
 );
 
-// Authentication functions
-export const authService = {
-  // Login
-  login: async (username: string, password: string) => {
-    const response = await api.post('/auth/login', { username, password });
-    const { token, refreshToken, user } = response.data;
+// API interface options
+export interface ApiOptions {
+  withCredentials?: boolean;
+  headers?: Record<string, string>;
+  onUploadProgress?: (progressEvent: any) => void;
+}
+
+// API class with methods for making requests
+class Api {
+  // GET request
+  async get<T = any>(
+    endpoint: string,
+    params?: any,
+    options?: ApiOptions
+  ): Promise<T> {
+    const config: AxiosRequestConfig = {
+      params,
+      ...options,
+    };
     
-    if (token) {
-      await AsyncStorage.setItem('auth_token', token);
-      if (refreshToken) {
-        await AsyncStorage.setItem('refresh_token', refreshToken);
-      }
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const response: AxiosResponse<T> = await instance.get(endpoint, config);
+    return response.data;
+  }
+  
+  // POST request
+  async post<T = any>(
+    endpoint: string,
+    data?: any,
+    options?: ApiOptions
+  ): Promise<T> {
+    const response: AxiosResponse<T> = await instance.post(endpoint, data, options);
+    return response.data;
+  }
+  
+  // PUT request
+  async put<T = any>(
+    endpoint: string,
+    data?: any,
+    options?: ApiOptions
+  ): Promise<T> {
+    const response: AxiosResponse<T> = await instance.put(endpoint, data, options);
+    return response.data;
+  }
+  
+  // PATCH request
+  async patch<T = any>(
+    endpoint: string,
+    data?: any,
+    options?: ApiOptions
+  ): Promise<T> {
+    const response: AxiosResponse<T> = await instance.patch(endpoint, data, options);
+    return response.data;
+  }
+  
+  // DELETE request
+  async delete<T = any>(
+    endpoint: string,
+    params?: any,
+    options?: ApiOptions
+  ): Promise<T> {
+    const config: AxiosRequestConfig = {
+      params,
+      ...options,
+    };
+    
+    const response: AxiosResponse<T> = await instance.delete(endpoint, config);
+    return response.data;
+  }
+  
+  // Login method
+  async login(username: string, password: string): Promise<any> {
+    try {
+      const response = await this.post<{ token: string; refreshToken: string; user: any }>(
+        '/auth/login',
+        { username, password }
+      );
+      
+      await AsyncStorage.setItem('auth_token', response.token);
+      await AsyncStorage.setItem('refresh_token', response.refreshToken);
+      await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
+      
+      return response.user;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-    
-    return user;
-  },
+  }
   
-  // Register
-  register: async (userData: any) => {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
-  },
+  // Logout method
+  async logout(): Promise<void> {
+    try {
+      await this.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem('refresh_token');
+      await AsyncStorage.removeItem('user_data');
+    }
+  }
   
-  // Logout
-  logout: async () => {
-    await AsyncStorage.removeItem('auth_token');
-    await AsyncStorage.removeItem('refresh_token');
-    delete api.defaults.headers.common['Authorization'];
-    return true;
-  },
-  
-  // Check if user is logged in
-  isAuthenticated: async () => {
-    const token = await AsyncStorage.getItem('auth_token');
-    return !!token;
-  },
-  
-  // Get current user
-  getCurrentUser: async () => {
-    const response = await api.get('/auth/user');
-    return response.data;
-  },
-};
+  // Hook for React Query integration
+  useQuery<T = any>(
+    endpoint: string,
+    params?: any,
+    options?: ApiOptions
+  ) {
+    return useReactQuery<T>({
+      queryKey: [endpoint, params],
+      queryFn: () => this.get<T>(endpoint, params, options),
+    });
+  }
+}
+
+// Export a singleton instance
+const api = new Api();
+export default api;
