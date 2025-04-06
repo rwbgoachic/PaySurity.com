@@ -124,7 +124,7 @@ export default function PosSystemsPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-xl font-bold">BistroBeast<sup className="text-xs">TM</sup></h3>
+                        <h3 className="text-xl font-bold">BistroBeast Restaurant Management System</h3>
                         <p className="text-neutral-600">Restaurant Management System</p>
                       </div>
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -172,12 +172,12 @@ export default function PosSystemsPage() {
                       </div>
                       <div>
                         <div className="aspect-video bg-neutral-100 rounded mb-4 flex items-center justify-center">
-                          <p className="text-neutral-400">BistroBeast™ Interface</p>
+                          <p className="text-neutral-400">BistroBeast Restaurant Management System Interface</p>
                         </div>
                         <p className="text-sm text-neutral-600 mb-4">
-                          BistroBeast™ is our comprehensive restaurant management system designed specifically for foodservice operations of all sizes, from quick-service to fine dining.
+                          BistroBeast Restaurant Management System is our comprehensive solution designed specifically for foodservice operations of all sizes, from quick-service to fine dining.
                         </p>
-                        <Button>Learn More About BistroBeast™</Button>
+                        <Button>Learn More About BistroBeast Restaurant Management System</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -237,12 +237,12 @@ export default function PosSystemsPage() {
                       </div>
                       <div>
                         <div className="aspect-video bg-neutral-100 rounded mb-4 flex items-center justify-center">
-                          <p className="text-neutral-400">PaySurity ECom Ready™ Interface</p>
+                          <p className="text-neutral-400">PaySurity ECom Ready Interface</p>
                         </div>
                         <p className="text-sm text-neutral-600 mb-4">
-                          PaySurity ECom Ready™ bridges the gap between in-store and online sales with a unified inventory and customer experience across all channels.
+                          PaySurity ECom Ready bridges the gap between in-store and online sales with a unified inventory and customer experience across all channels.
                         </p>
-                        <Button>Learn More About PaySurity ECom Ready™</Button>
+                        <Button>Learn More About PaySurity ECom Ready</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -254,7 +254,7 @@ export default function PosSystemsPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-xl font-bold">PaySurity LegalEdge<sup className="text-xs">TM</sup></h3>
+                        <h3 className="text-xl font-bold">PaySurity LegalEdge</h3>
                         <p className="text-neutral-600">Law Practice Management</p>
                       </div>
                       <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
@@ -302,12 +302,12 @@ export default function PosSystemsPage() {
                       </div>
                       <div>
                         <div className="aspect-video bg-neutral-100 rounded mb-4 flex items-center justify-center">
-                          <p className="text-neutral-400">PaySurity LegalEdge™ Interface</p>
+                          <p className="text-neutral-400">PaySurity LegalEdge Interface</p>
                         </div>
                         <p className="text-sm text-neutral-600 mb-4">
-                          PaySurity LegalEdge™ is designed specifically for law firms with features that help manage cases, track billable hours, and maintain client trust accounts.
+                          PaySurity LegalEdge is designed specifically for law firms with features that help manage cases, track billable hours, and maintain client trust accounts.
                         </p>
-                        <Button>Learn More About PaySurity LegalEdge™</Button>
+                        <Button>Learn More About PaySurity LegalEdge</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -319,7 +319,7 @@ export default function PosSystemsPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-xl font-bold">PaySurityMedPay<sup className="text-xs">TM</sup></h3>
+                        <h3 className="text-xl font-bold">PaySurityMedPay</h3>
                         <p className="text-neutral-600">Healthcare Payment Solutions</p>
                       </div>
                       <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
@@ -367,12 +367,12 @@ export default function PosSystemsPage() {
                       </div>
                       <div>
                         <div className="aspect-video bg-neutral-100 rounded mb-4 flex items-center justify-center">
-                          <p className="text-neutral-400">PaySurityMedPay™ Interface</p>
+                          <p className="text-neutral-400">PaySurityMedPay Interface</p>
                         </div>
                         <p className="text-sm text-neutral-600 mb-4">
-                          PaySurityMedPay™ provides HIPAA-compliant payment processing and practice management tools specifically designed for healthcare providers.
+                          PaySurityMedPay provides HIPAA-compliant payment processing and practice management tools specifically designed for healthcare providers.
                         </p>
-                        <Button>Learn More About PaySurityMedPay™</Button>
+                        <Button>Learn More About PaySurityMedPay</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -389,7 +389,7 @@ export default function PosSystemsPage() {
           <div className="max-w-4xl mx-auto">
             <div className="bg-neutral-50 rounded-lg p-8 border">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold mb-2">PaySurity POS Hardware<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-200">Enterprise Grade</Badge></h3>
+                <h3 className="text-2xl font-bold mb-2">PaySurity POS Hardware <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-200">Enterprise Grade</Badge></h3>
                 <p className="text-neutral-600">Premium Paysurity-branded hardware with seamless software integration</p>
               </div>
 
@@ -475,7 +475,7 @@ export default function PosSystemsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-lg shadow border">
                 <p className="italic text-neutral-600 mb-4">
-                  "Paysurity's BistroBeast™ POS system has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."
+                  "Paysurity's BistroBeast Restaurant Management System has streamlined our operations and reduced our payment processing costs by 22%. The staff management features are outstanding."
                 </p>
                 <div className="flex items-center">
                   <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
@@ -490,7 +490,7 @@ export default function PosSystemsPage() {
               
               <div className="bg-white p-6 rounded-lg shadow border">
                 <p className="italic text-neutral-600 mb-4">
-                  "PaySurityLegalEdge has made PaySurity a perfect Solution to our seemless Business flow. Highly recommeded!"
+                  "PaySurity LegalEdge has made PaySurity a perfect solution to our seamless business flow. Highly recommended!"
                 </p>
                 <div className="flex items-center">
                   <div className="mr-4 w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500">
@@ -547,15 +547,15 @@ export default function PosSystemsPage() {
             <div>
               <h4 className="text-white font-bold mb-4">Solutions</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services</a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast Restaurant Management System</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay</a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon</a></li>
+                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates</a></li>
               </ul>
             </div>
             <div>

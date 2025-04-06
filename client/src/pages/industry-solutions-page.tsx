@@ -47,7 +47,7 @@ export default function IndustrySolutionsPage() {
             <TabsContent value="restaurant" className="mt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-1">BistroBeast<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">PCI Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">BistroBeast Restaurant Management System <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">PCI Compliant</Badge></h3>
                   <h4 className="text-lg text-neutral-700 mb-3">Restaurant Management System</h4>
                   <p className="text-neutral-600 mb-4">
                     Complete restaurant management solution with specialized POS, staff scheduling, inventory, and customer loyalty features.
@@ -90,14 +90,14 @@ export default function IndustrySolutionsPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for restaurant POS image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">BistroBeast™ Interface</p>
+                    <p className="text-neutral-400">BistroBeast Restaurant Management System Interface</p>
                   </div>
                   
                   <div className="mt-6">
                     <h4 className="font-bold mb-4">What our restaurant clients say:</h4>
                     <div className="bg-neutral-50 p-4 rounded-lg border">
                       <p className="italic text-neutral-600 text-sm mb-2">
-                        "BistroBeast has transformed our operations. We've reduced wait times by 15% and increased table turnover while providing better service to our guests."
+                        "BistroBeast Restaurant Management System has transformed our operations. We've reduced wait times by 15% and increased table turnover while providing better service to our guests."
                       </p>
                       <p className="text-sm font-medium">- Jennifer Malone, FreshChoice Restaurants</p>
                     </div>
@@ -142,7 +142,7 @@ export default function IndustrySolutionsPage() {
             <TabsContent value="retail" className="mt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-1">PaySurity ECom Ready<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">E-Commerce Ready</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">PaySurity ECom Ready <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">E-Commerce Ready</Badge></h3>
                   <h4 className="text-lg text-neutral-700 mb-3">Complete Store Management</h4>
                   <p className="text-neutral-600 mb-4">
                     Unified retail management solution that bridges in-store and online sales channels with integrated inventory and customer data.
@@ -185,7 +185,7 @@ export default function IndustrySolutionsPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for retail POS image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">PaySurity ECom Ready™ Interface</p>
+                    <p className="text-neutral-400">PaySurity ECom Ready Interface</p>
                   </div>
                   
                   <div className="mt-6">
@@ -204,7 +204,7 @@ export default function IndustrySolutionsPage() {
             <TabsContent value="legal" className="mt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-1">PaySurity LegalEdge<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-indigo-50 text-indigo-700 border-indigo-200">ABA Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">PaySurity LegalEdge <Badge variant="outline" className="ml-2 bg-indigo-50 text-indigo-700 border-indigo-200">ABA Compliant</Badge></h3>
                   <h4 className="text-lg text-neutral-700 mb-3">Law Practice Management</h4>
                   <p className="text-neutral-600 mb-4">
                     Comprehensive practice management solution built for legal professionals with secure payment processing and case management.
@@ -247,14 +247,14 @@ export default function IndustrySolutionsPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for legal practice management image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">PaySurity LegalEdge™ Interface</p>
+                    <p className="text-neutral-400">PaySurity LegalEdge Interface</p>
                   </div>
                   
                   <div className="mt-6">
                     <h4 className="font-bold mb-4">What our legal clients say:</h4>
                     <div className="bg-neutral-50 p-4 rounded-lg border">
                       <p className="italic text-neutral-600 text-sm mb-2">
-                        "PaySurityLegalEdge has made PaySurity a perfect Solution to our seemless Business flow. Highly recommeded!"
+                        "PaySurity LegalEdge has made PaySurity a perfect solution to our seamless business flow. Highly recommended!"
                       </p>
                       <p className="text-sm font-medium">- Sarah Johnson, Meridian Law Partners</p>
                     </div>
@@ -266,7 +266,7 @@ export default function IndustrySolutionsPage() {
             <TabsContent value="healthcare" className="mt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-2xl font-bold mb-1">PaySurityMedPay<sup className="text-xs">TM</sup> <Badge variant="outline" className="ml-2 bg-teal-50 text-teal-700 border-teal-200">HIPAA Compliant</Badge></h3>
+                  <h3 className="text-2xl font-bold mb-1">PaySurity MedPay <Badge variant="outline" className="ml-2 bg-teal-50 text-teal-700 border-teal-200">HIPAA Compliant</Badge></h3>
                   <h4 className="text-lg text-neutral-700 mb-3">Healthcare Payment Solutions</h4>
                   <p className="text-neutral-600 mb-4">
                     HIPAA-compliant payment processing and practice management for healthcare providers.
@@ -309,14 +309,14 @@ export default function IndustrySolutionsPage() {
                 <div className="bg-white p-6 rounded-lg shadow-lg border">
                   {/* Placeholder for healthcare management image */}
                   <div className="aspect-video bg-neutral-100 rounded flex items-center justify-center">
-                    <p className="text-neutral-400">PaySurityMedPay™ Interface</p>
+                    <p className="text-neutral-400">PaySurity MedPay Interface</p>
                   </div>
                   
                   <div className="mt-6">
                     <h4 className="font-bold mb-4">What our healthcare clients say:</h4>
                     <div className="bg-neutral-50 p-4 rounded-lg border">
                       <p className="italic text-neutral-600 text-sm mb-2">
-                        "The HIPAA compliance features of PaySurityMedPay give us peace of mind, while the integrated payment system has improved our collection rates and patient satisfaction."
+                        "The HIPAA compliance features of PaySurity MedPay give us peace of mind, while the integrated payment system has improved our collection rates and patient satisfaction."
                       </p>
                       <p className="text-sm font-medium">- Dr. Thomas Rivera, Bluewater Medical Group</p>
                     </div>
@@ -451,15 +451,15 @@ export default function IndustrySolutionsPage() {
             <div>
               <h4 className="text-white font-bold mb-4">Solutions</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services</a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast Restaurant Management System</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity MedPay</a></li>
+                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon</a></li>
+                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet</a></li>
+                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates</a></li>
               </ul>
             </div>
             <div>

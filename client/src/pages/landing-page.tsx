@@ -108,27 +108,27 @@ export default function LandingPage() {
             <div className="bg-slate-50 p-6 rounded-lg text-center">
               <ShieldCheck className="h-12 w-12 mx-auto mb-4 text-green-600" />
               <h3 className="font-bold mb-2">PCI Compliant</h3>
-              <p className="text-sm text-slate-600">BistroBeast™</p>
+              <p className="text-sm text-slate-600">BistroBeast Restaurant Management System</p>
             </div>
             <div className="bg-slate-50 p-6 rounded-lg text-center">
               <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-blue-600" />
               <h3 className="font-bold mb-2">E-Commerce Ready</h3>
-              <p className="text-sm text-slate-600">PaySurity ECom Ready™</p>
+              <p className="text-sm text-slate-600">PaySurity ECom Ready</p>
             </div>
             <div className="bg-slate-50 p-6 rounded-lg text-center">
               <Building2 className="h-12 w-12 mx-auto mb-4 text-slate-700" />
               <h3 className="font-bold mb-2">ABA Compliant</h3>
-              <p className="text-sm text-slate-600">PaySurity LegalEdge™</p>
+              <p className="text-sm text-slate-600">PaySurity LegalEdge</p>
             </div>
             <div className="bg-slate-50 p-6 rounded-lg text-center">
               <HeartHandshake className="h-12 w-12 mx-auto mb-4 text-red-600" />
               <h3 className="font-bold mb-2">HIPAA Compliant</h3>
-              <p className="text-sm text-slate-600">PaySurityMedPay™</p>
+              <p className="text-sm text-slate-600">PaySurityMedPay</p>
             </div>
             <div className="bg-slate-50 p-6 rounded-lg text-center">
               <CreditCard className="h-12 w-12 mx-auto mb-4 text-purple-600" />
               <h3 className="font-bold mb-2">Enterprise Grade</h3>
-              <p className="text-sm text-slate-600">PaySurity POS Hardware™</p>
+              <p className="text-sm text-slate-600">PaySurity POS Hardware</p>
             </div>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
           <TrackedAccordion type="single" collapsible className="w-full max-w-4xl mx-auto">
             <AccordionItem value="item-1">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="bistrobeast">
-                <h3 className="text-xl font-semibold mr-auto">BistroBeast™</h3>
+                <h3 className="text-xl font-semibold mr-auto">BistroBeast Restaurant Management System</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -179,7 +179,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-2">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="ecom-ready">
-                <h3 className="text-xl font-semibold mr-auto">PaySurity ECom Ready™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurity ECom Ready</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -211,7 +211,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-3">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="legaledge">
-                <h3 className="text-xl font-semibold mr-auto">PaySurity LegalEdge™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurity LegalEdge</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -243,7 +243,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-4">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="medpay">
-                <h3 className="text-xl font-semibold mr-auto">PaySurityMedPay™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurityMedPay</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -275,7 +275,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-5">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="pos-hardware">
-                <h3 className="text-xl font-semibold mr-auto">PaySurity POS Hardware™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurity POS Hardware</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -307,7 +307,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-6">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="webcon">
-                <h3 className="text-xl font-semibold mr-auto">PaySurity WebCon™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurity WebCon</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -339,7 +339,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-7">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="merchant-services">
-                <h3 className="text-xl font-semibold mr-auto">PaySurity Merchant Services™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurity Merchant Services</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -371,7 +371,7 @@ export default function LandingPage() {
 
             <AccordionItem value="item-8">
               <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="appointment-scheduler">
-                <h3 className="text-xl font-semibold mr-auto">PaySurity Appointment Scheduler™</h3>
+                <h3 className="text-xl font-semibold mr-auto">PaySurity Appointment Scheduler</h3>
               </TrackedAccordionTrigger>
               <AccordionContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
@@ -508,8 +508,8 @@ export default function LandingPage() {
               <p className="text-xs text-slate-500 mb-6">
                 * Family plans are free with any business subscription. See pricing for details.
               </p>
-              <Button>
-                <Link href="/digital-wallet-page">Explore Digital Wallet</Link>
+              <Button asChild>
+                <Link href="/digital-wallet">Explore Digital Wallet</Link>
               </Button>
             </div>
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-xl shadow-lg">
@@ -561,7 +561,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-slate-600 mb-4">
-                  "BistroBeast™ completely transformed our operations. The integrated payment solution and inventory management saved us countless hours and improved our bottom line."
+                  "BistroBeast Restaurant Management System completely transformed our operations. The integrated payment solution and inventory management saved us countless hours and improved our bottom line."
                 </p>
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
@@ -585,7 +585,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-slate-600 mb-4">
-                  "PaySurityMedPay™ has streamlined our patient billing process while ensuring HIPAA compliance. The payment plans feature has significantly improved our collection rates."
+                  "PaySurityMedPay has streamlined our patient billing process while ensuring HIPAA compliance. The payment plans feature has significantly improved our collection rates."
                 </p>
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
@@ -609,7 +609,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-slate-600 mb-4">
-                  "PaySurity LegalEdge™ has been a game-changer for our firm. The trust accounting features ensure compliance, and the client payment portal has improved cash flow tremendously."
+                  "PaySurity LegalEdge has been a game-changer for our firm. The trust accounting features ensure compliance, and the client payment portal has improved cash flow tremendously."
                 </p>
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
@@ -663,7 +663,7 @@ export default function LandingPage() {
               <h4 className="font-bold text-white mb-4">Products</h4>
               <ul className="space-y-2">
                 <li><Link href="/pos-systems" className="hover:text-white transition-colors">POS Systems</Link></li>
-                <li><Link href="/digital-wallet-page" className="hover:text-white transition-colors">Digital Wallet</Link></li>
+                <li><Link href="/digital-wallet" className="hover:text-white transition-colors">Digital Wallet</Link></li>
                 <li><Link href="/industry-solutions" className="hover:text-white transition-colors">Industry Solutions</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
               </ul>

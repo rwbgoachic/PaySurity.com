@@ -111,7 +111,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
         <DialogTitle className="text-2xl">Schedule a Demo with PaySurity</DialogTitle>
         <DialogDescription>
           Fill out the form below to schedule a personalized demo with our team
-          using the PaySurity Appointment Scheduler<sup className="text-xs">TM</sup>
+          using the PaySurity Appointment Scheduler
         </DialogDescription>
       </DialogHeader>
       
@@ -125,7 +125,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 <FormItem>
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John" {...field} />
+                    <Input placeholder="Enter your first name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,7 +139,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 <FormItem>
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Doe" {...field} />
+                    <Input placeholder="Enter your last name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +155,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="john.doe@example.com" {...field} />
+                    <Input type="email" placeholder="Enter your email address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -169,7 +169,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 <FormItem>
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
-                    <Input placeholder="(555) 123-4567" {...field} />
+                    <Input placeholder="Enter your phone number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -185,7 +185,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 <FormItem>
                   <FormLabel>Company Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Acme Inc." {...field} />
+                    <Input placeholder="Enter your company name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -244,7 +244,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               control={form.control}
               name="appointmentDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -252,14 +252,14 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                         <Button
                           variant={"outline"}
                           className={cn(
-                            "pl-3 text-left font-normal",
+                            "w-full h-10 pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}
                         >
                           {field.value ? (
                             format(field.value, "PPP")
                           ) : (
-                            <span>Pick a date</span>
+                            <span>Select a date</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -295,7 +295,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10">
                         <SelectValue placeholder="Select time" />
                       </SelectTrigger>
                     </FormControl>
