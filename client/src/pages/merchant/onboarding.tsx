@@ -63,6 +63,7 @@ const merchantFormSchema = z.object({
   postalCode: z.string().min(5, "Please enter a valid postal code"),
   country: z.string().min(2, "Please enter a valid country"),
   taxId: z.string().optional(),
+  referralCode: z.string().optional(),
 });
 
 type MerchantFormValues = z.infer<typeof merchantFormSchema>;
@@ -90,6 +91,7 @@ export default function MerchantOnboarding() {
       postalCode: "",
       country: "United States",
       taxId: "",
+      referralCode: "",
     },
   });
 
@@ -639,6 +641,94 @@ export default function MerchantOnboarding() {
                         </div>
                       )}
                     </dl>
+                  </div>
+                  
+                  {/* Referral Code Section */}
+                  <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                    <h3 className="text-lg font-medium flex items-center gap-2 mb-2">
+                      <CreditCard className="h-4 w-4" />
+                      Referral Information
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      If you were referred by an affiliate, please enter their referral code below.
+                    </p>
+                    <FormField
+                      control={form.control}
+                      name="referralCode"
+                      render={({ field }) => {
+                        const [validatingCode, setValidatingCode] = useState(false);
+                        const [validCode, setValidCode] = useState(false);
+                        const [affiliateInfo, setAffiliateInfo] = useState<{id: number, name: string, referralCode: string} | null>(null);
+                        
+                        // Function to validate the referral code
+                        const validateReferralCode = async (code: string) => {
+                          if (!code) return;
+                          
+                          setValidatingCode(true);
+                          try {
+                            const response = await fetch(`/api/validate-referral-code/${code}`);
+                            const data = await response.json();
+                            
+                            if (data.valid) {
+                              setValidCode(true);
+                              setAffiliateInfo(data.affiliate);
+                            } else {
+                              setValidCode(false);
+                              setAffiliateInfo(null);
+                            }
+                          } catch (error) {
+                            setValidCode(false);
+                            setAffiliateInfo(null);
+                          } finally {
+                            setValidatingCode(false);
+                          }
+                        };
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel>Referral Code (Optional)</FormLabel>
+                            <div className="flex space-x-2">
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter referral code if you have one" 
+                                  {...field} 
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    // Remove validation if field is cleared
+                                    if (!e.target.value) {
+                                      setValidCode(false);
+                                      setAffiliateInfo(null);
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={() => validateReferralCode(field.value)}
+                                disabled={!field.value || validatingCode}
+                                size="sm"
+                              >
+                                {validatingCode ? "Checking..." : "Verify"}
+                              </Button>
+                            </div>
+                            
+                            {validCode && affiliateInfo && (
+                              <div className="mt-2 p-3 bg-muted/50 rounded-md border border-border">
+                                <p className="text-xs text-muted-foreground mb-1">Referred by:</p>
+                                <p className="text-sm font-medium">{affiliateInfo.name}</p>
+                                <p className="text-xs text-muted-foreground">Code: {affiliateInfo.referralCode}</p>
+                              </div>
+                            )}
+                            
+                            <FormDescription>
+                              Leave blank if you don't have a referral code.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">

@@ -482,6 +482,7 @@ export const merchantProfiles = pgTable("merchant_profiles", {
   website: text("website"),
   description: text("description"),
   logo: text("logo_url"),
+  referralCode: text("referral_code"), // Affiliate referral code used during signup
   status: text("status", { enum: ["pending", "active", "suspended", "inactive"] }).notNull().default("pending"),
   verificationStatus: text("verification_status").notNull().default("pending"), // pending, verified, rejected
   verificationDocuments: jsonb("verification_documents"), // Document URLs and metadata
@@ -508,6 +509,7 @@ export const insertMerchantProfileSchema = createInsertSchema(merchantProfiles).
   website: true,
   description: true,
   logo: true,
+  referralCode: true,
   status: true,
   processingFeePercentage: true,
   monthlyFee: true,

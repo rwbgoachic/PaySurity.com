@@ -424,6 +424,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Merchant Profiles API
+  app.post("/api/merchant-profiles", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Check if profile already exists
+      const existingProfile = await storage.getMerchantProfileByUserId(req.user.id);
+      if (existingProfile) {
+        return res.status(409).json({ error: "Merchant profile already exists" });
+      }
+      
+      // Process referral code if provided
+      const { referralCode, ...merchantData } = req.body;
+      let affiliateProfile = null;
+      
+      if (referralCode) {
+        // Look up the affiliate by referral code
+        affiliateProfile = await storage.getAffiliateProfileByReferralCode(referralCode);
+        if (!affiliateProfile) {
+          return res.status(400).json({ error: "Invalid referral code" });
+        }
+      }
+      
+      // Create merchant profile with validated data
+      const profileData = insertMerchantProfileSchema.parse({
+        ...merchantData,
+        userId: req.user.id,
+        referralCode: referralCode || null,
+      });
+      
+      const merchantProfile = await storage.createMerchantProfile(profileData);
+      
+      // If referral code was provided and valid, create a referral record
+      let referral = null;
+      if (affiliateProfile) {
+        const referralData = insertMerchantReferralSchema.parse({
+          affiliateId: affiliateProfile.id,
+          merchantId: merchantProfile.id,
+          referralCode: referralCode,
+          status: "pending",
+          notes: "Created via merchant onboarding form"
+        });
+        
+        referral = await storage.createMerchantReferral(referralData);
+        
+        // Notify the affiliate about the new referral via WebSocket
+        broadcast(`user-${affiliateProfile.userId}`, {
+          type: 'new_referral',
+          data: {
+            referral,
+            merchantName: merchantProfile.businessName
+          }
+        });
+      }
+      
+      res.status(201).json({ 
+        merchantProfile,
+        referral
+      });
+    } catch (error) {
+      console.error("Error creating merchant profile:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid merchant profile data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create merchant profile" });
+    }
+  });
+  
+  app.get("/api/merchant-profiles", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantProfile = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchantProfile) {
+        return res.status(404).json({ error: "Merchant profile not found" });
+      }
+      
+      res.json(merchantProfile);
+    } catch (error) {
+      console.error("Error fetching merchant profile:", error);
+      res.status(500).json({ error: "Failed to fetch merchant profile" });
+    }
+  });
+  
   app.get("/api/affiliate/marketing-materials", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -504,14 +592,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create the payout
-      const payout = await storage.createAffiliatePayout({
+      // Get a random referral for this affiliate to link the payout to
+      const referrals = await storage.getMerchantReferralsByAffiliateId(affiliateId);
+      if (!referrals.length) {
+        return res.status(400).json({ error: "Affiliate has no referrals to process payment for" });
+      }
+      
+      // Define payout data with correct schema
+      const payoutData = insertAffiliatePayoutSchema.parse({
         affiliateId,
+        referralId: referrals[0].id, // Use the first referral
+        milestoneName: `Monthly payout ${year}-${month.toString().padStart(2, '0')}`,
         amount,
-        period: `${year}-${month.toString().padStart(2, '0')}`,
-        status: "processed",
-        notes,
-        processedById: req.user.id
+        status: "pending",
+        notes: notes || `Processed by admin: ${req.user.username}`
       });
+      
+      const payout = await storage.createAffiliatePayout(payoutData);
       
       // Notify the affiliate about the payout via WebSocket
       broadcast(`affiliate-${affiliateId}`, {
@@ -544,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         valid: true,
         affiliate: {
           id: affiliate.id,
-          name: affiliate.displayName || "Affiliate Partner",
+          name: affiliate.companyName || "Affiliate Partner",
           referralCode: affiliate.referralCode
         }
       });
@@ -585,12 +682,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Create a merchant referral record
-      const referral = await storage.createMerchantReferral({
+      // Define referral data with proper validation
+      const referralData = insertMerchantReferralSchema.parse({
         affiliateId: affiliate.id,
         merchantId: merchantProfile.id,
         referralCode: referralCode,
-        status: "pending" as any // Cast to fix type issue with the enum
+        status: "pending"
       });
+      
+      const referral = await storage.createMerchantReferral(referralData);
       
       // Notify the affiliate about the referral via WebSocket
       broadcast(`affiliate-${affiliate.id}`, {
