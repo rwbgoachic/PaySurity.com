@@ -54,6 +54,8 @@ export const users = pgTable("users", {
   securityQuestions: jsonb("security_questions"), // For account recovery
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: text("two_factor_secret"), // For storing 2FA secret
+  stripeCustomerId: text("stripe_customer_id"), // For Stripe integration
+  stripeSubscriptionId: text("stripe_subscription_id"), // For Stripe subscriptions
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -70,6 +72,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   address: true,
   parentId: true,
   dependents: true,
+  stripeCustomerId: true,
+  stripeSubscriptionId: true,
 });
 
 // Wallet types enum
