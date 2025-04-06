@@ -661,7 +661,7 @@ export default function MerchantOnboarding() {
                         const [affiliateInfo, setAffiliateInfo] = useState<{id: number, name: string, referralCode: string} | null>(null);
                         
                         // Function to validate the referral code
-                        const validateReferralCode = async (code: string) => {
+                        const validateReferralCode = async (code: string | undefined) => {
                           if (!code) return;
                           
                           setValidatingCode(true);
@@ -705,7 +705,7 @@ export default function MerchantOnboarding() {
                               <Button 
                                 type="button" 
                                 variant="outline" 
-                                onClick={() => validateReferralCode(field.value)}
+                                onClick={() => field.value && validateReferralCode(field.value)}
                                 disabled={!field.value || validatingCode}
                                 size="sm"
                               >

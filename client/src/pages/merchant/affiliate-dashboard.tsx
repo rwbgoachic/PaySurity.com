@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ import { format } from "date-fns";
 import { 
   Download, Copy, ChevronDown, Filter, RefreshCw, UserPlus, 
   DollarSign, Share2, Mail, Image, Tv, Facebook, Twitter, 
-  Linkedin, Instagram
+  Linkedin, Instagram, AlertCircle, CheckCircle2, Bell
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,8 +42,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
+import {
+  Tooltip as TooltipComponent,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Badge
+} from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Sample data - would be replaced with actual API calls
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -52,6 +70,18 @@ const AffiliateDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState("month");
   const [referralLink, setReferralLink] = useState("https://paysurity.com/ref/merchant123");
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const [realtimeStats, setRealtimeStats] = useState({
+    totalReferrals: 0,
+    totalRevenue: 0,
+    totalCommission: 0,
+    activeVisitors: 0
+  });
+  const [liveActivity, setLiveActivity] = useState<any[]>([]);
+  const socketRef = useRef<WebSocket | null>(null);
+  const { user } = useAuth();
   
   const { data: affiliateStats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/affiliate/stats", dateRange],
@@ -88,10 +118,106 @@ const AffiliateDashboard = () => {
       return res.json();
     },
   });
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    // Only connect if we have a user
+    if (!user) return;
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+    
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+      // Subscribe to affiliate channel
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'subscribe',
+          channel: 'affiliate',
+          userId: user.id
+        }));
+      }
+    };
+    
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      switch(data.type) {
+        case 'stats_update':
+          setRealtimeStats(prev => ({
+            ...prev,
+            ...data.stats
+          }));
+          break;
+        
+        case 'new_referral':
+          // Add new referral to notifications
+          setNotifications(prev => [data.referral, ...prev]);
+          setHasNewNotifications(true);
+          
+          // Update stats
+          setRealtimeStats(prev => ({
+            ...prev,
+            totalReferrals: prev.totalReferrals + 1
+          }));
+          
+          // Force refresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/affiliate/referrals"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/affiliate/stats"] });
+          
+          // Show toast notification
+          toast({
+            title: "New Referral!",
+            description: `${data.referral.name} just signed up using your referral link`,
+          });
+          break;
+          
+        case 'visitor_activity':
+          setLiveActivity(prev => [data.activity, ...prev.slice(0, 9)]);
+          setRealtimeStats(prev => ({
+            ...prev,
+            activeVisitors: data.activeVisitors
+          }));
+          break;
+          
+        case 'payout_update':
+          setNotifications(prev => [data.payout, ...prev]);
+          setHasNewNotifications(true);
+          
+          // Force refresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/affiliate/payouts"] });
+          
+          // Show toast notification
+          toast({
+            title: "Payout Status Updated",
+            description: `Your payout of $${data.payout.amount} has been ${data.payout.status}`,
+          });
+          break;
+      }
+    };
+    
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    socket.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
+    
+    // Clean up on unmount
+    return () => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+    };
+  }, [user]);
   
   // Chart data - would come from API
   const conversionData = [
-    { name: 'Visits', value: 1000 },
+    { name: 'Visits', value: realtimeStats.activeVisitors || 1000 },
     { name: 'Sign-ups', value: 250 },
     { name: 'Activated', value: 120 },
     { name: 'Paying', value: 80 },
@@ -121,15 +247,67 @@ const AffiliateDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/affiliate/marketing-materials"] });
   };
   
+  const handleNotificationsOpen = () => {
+    setIsNotificationsOpen(true);
+    setHasNewNotifications(false);
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Affiliate Dashboard</h1>
         <div className="flex space-x-2">
+          <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={handleNotificationsOpen} className="relative">
+                <Bell className="h-4 w-4 mr-2" />
+                Notifications
+                {hasNewNotifications && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border border-background"></span>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Notifications</DialogTitle>
+                <DialogDescription>
+                  Real-time updates about your affiliate activities
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No notifications yet
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {notifications.map((notification, index) => (
+                      <div key={index} className="flex p-3 border rounded-lg">
+                        {notification.type === 'referral' ? (
+                          <UserPlus className="h-5 w-5 text-blue-500 mr-3 mt-1 flex-shrink-0" />
+                        ) : notification.type === 'payout' ? (
+                          <DollarSign className="h-5 w-5 text-green-500 mr-3 mt-1 flex-shrink-0" />
+                        ) : (
+                          <Bell className="h-5 w-5 text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className="font-medium">{notification.title}</p>
+                          <p className="text-sm text-gray-500">{notification.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{notification.time || 'Just now'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+          
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -273,59 +451,118 @@ const AffiliateDashboard = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-4">
-              <h3 className="text-lg font-medium mb-4">Referral Performance</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="referrals" stroke="#8884d8" activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="commission" stroke="#82ca9d" />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                <Card className="p-4">
+                  <h3 className="text-lg font-medium mb-4">Referral Performance</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="referrals" stroke="#8884d8" activeDot={{ r: 8 }} />
+                      <Line type="monotone" dataKey="commission" stroke="#82ca9d" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card>
+                
+                <Card className="p-4">
+                  <h3 className="text-lg font-medium mb-4">Conversion Funnel</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={conversionData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {conversionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Card>
+                
+                <Card className="p-4 md:col-span-2">
+                  <h3 className="text-lg font-medium mb-4">Monthly Performance</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="revenue" fill="#8884d8" />
+                      <Bar dataKey="commission" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
+            </div>
             
-            <Card className="p-4">
-              <h3 className="text-lg font-medium mb-4">Conversion Funnel</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={conversionData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {conversionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            <div className="h-full">
+              <Card className="p-4 h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium">Live Activity</h3>
+                  <Badge className="bg-green-600">
+                    {realtimeStats.activeVisitors || 0} Active Visitors
+                  </Badge>
+                </div>
+                
+                {liveActivity.length === 0 ? (
+                  <div className="h-[300px] flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-full">
+                      <AlertCircle className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No live activity yet</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        When visitors use your referral link, you'll see their activity here
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                    {liveActivity.map((activity, index) => (
+                      <div
+                        key={index}
+                        className="relative pl-6 pb-4 border-l border-dashed border-gray-200 dark:border-gray-700"
+                      >
+                        <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-blue-500"></div>
+                        <div className="flex flex-col">
+                          <div className="flex items-center mb-1">
+                            <span className="text-sm font-medium">{activity.event}</span>
+                            {activity.isConversion && (
+                              <TooltipProvider>
+                                <TooltipComponent>
+                                  <TooltipTrigger>
+                                    <CheckCircle2 className="ml-1 h-4 w-4 text-green-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Conversion</p>
+                                  </TooltipContent>
+                                </TooltipComponent>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{activity.details}</p>
+                          <p className="text-xs text-gray-400 mt-1">{activity.time || 'Just now'}</p>
+                        </div>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-            
-            <Card className="p-4 md:col-span-2">
-              <h3 className="text-lg font-medium mb-4">Monthly Performance</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="revenue" fill="#8884d8" />
-                  <Bar dataKey="commission" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
+                  </div>
+                )}
+              </Card>
+            </div>
           </div>
         </TabsContent>
         

@@ -472,11 +472,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referral = await storage.createMerchantReferral(referralData);
         
         // Notify the affiliate about the new referral via WebSocket
-        broadcast(`user-${affiliateProfile.userId}`, {
+        notifyAffiliate(affiliateProfile.userId, {
           type: 'new_referral',
-          data: {
-            referral,
-            merchantName: merchantProfile.businessName
+          referral: {
+            id: referral.id,
+            name: merchantProfile.businessName,
+            date: new Date().toISOString(),
+            status: "pending",
+            revenue: 0,
+            commission: 0,
+            type: 'referral',
+            title: 'New Merchant Referral',
+            message: `${merchantProfile.businessName} just signed up using your referral link`
           }
         });
       }
@@ -693,9 +700,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const referral = await storage.createMerchantReferral(referralData);
       
       // Notify the affiliate about the referral via WebSocket
-      broadcast(`affiliate-${affiliate.id}`, {
+      notifyAffiliate(affiliate.userId, {
         type: 'new_referral',
-        data: referral
+        referral: {
+          id: referral.id,
+          name: merchantProfile.businessName,
+          date: new Date().toISOString(),
+          status: "pending",
+          revenue: 0,
+          commission: 0,
+          type: 'referral',
+          title: 'New Merchant Referral',
+          message: `${merchantProfile.businessName} just signed up using your referral link`
+        }
       });
       
       // Log the user in automatically
@@ -726,22 +743,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
   interface ExtendedWebSocket extends WebSocket {
     userId?: number;
     channels?: string[];
+    affiliateId?: number;
+    isAffiliate?: boolean;
+    lastActivity?: number;
   }
 
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Track active visitors for affiliates
+  const activeVisitors: Record<string, number> = {};
+  
+  // Send periodic stats to all connected affiliate users
+  setInterval(() => {
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.isAffiliate &&
+        extClient.channels?.includes('affiliate')
+      ) {
+        // Get active visitors for this affiliate
+        const visitorCount = activeVisitors[`affiliate-${extClient.affiliateId}`] || 0;
+        
+        // Send real-time stats update
+        extClient.send(JSON.stringify({
+          type: 'stats_update',
+          stats: {
+            activeVisitors: visitorCount,
+            // Other stats could be fetched from storage
+          }
+        }));
+      }
+    });
+  }, 30000); // Every 30 seconds
+  
+  // Simulate some visitor activity for demo purposes
+  setInterval(() => {
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.isAffiliate &&
+        extClient.channels?.includes('affiliate')
+      ) {
+        const affiliateId = extClient.affiliateId;
+        if (!affiliateId) return;
+        
+        // Simulate visitor activity
+        const eventTypes = ['pageview', 'click', 'form_start', 'signup_started', 'merchant_registration'];
+        const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+        const isConversion = randomEvent === 'merchant_registration';
+        
+        // Visitor tracking for this affiliate
+        const visitorKey = `affiliate-${affiliateId}`;
+        if (!activeVisitors[visitorKey]) {
+          activeVisitors[visitorKey] = 0;
+        }
+        
+        // Create random activity (only for demo purposes)
+        const locations = ['New York', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco'];
+        const pages = ['Home Page', 'Pricing', 'Features', 'About Us', 'Contact'];
+        const sources = ['Google', 'Facebook', 'Direct', 'Twitter', 'LinkedIn'];
+        
+        // Don't increase too much to be realistic
+        if (Math.random() > 0.8) {
+          activeVisitors[visitorKey] += 1;
+        }
+        
+        extClient.send(JSON.stringify({
+          type: 'visitor_activity',
+          activity: {
+            event: randomEvent,
+            isConversion,
+            details: `Visitor from ${locations[Math.floor(Math.random() * locations.length)]} viewed ${pages[Math.floor(Math.random() * pages.length)]} via ${sources[Math.floor(Math.random() * sources.length)]}`,
+            time: new Date().toISOString()
+          },
+          activeVisitors: activeVisitors[visitorKey]
+        }));
+      }
+    });
+  }, 15000); // Every 15 seconds
 
   wss.on('connection', (ws: ExtendedWebSocket) => {
     ws.channels = [];
+    ws.lastActivity = Date.now();
 
-    ws.on('message', (message: string) => {
+    ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message);
         
-        if (data.type === 'subscribe' && data.channel) {
+        if (data.type === 'subscribe') {
           if (!ws.channels) ws.channels = [];
-          if (!ws.channels.includes(data.channel)) {
+          
+          // Add channel to subscription list
+          if (data.channel && !ws.channels.includes(data.channel)) {
             ws.channels.push(data.channel);
             ws.send(JSON.stringify({ type: 'subscribed', channel: data.channel }));
+            
+            // Special handling for affiliate dashboard
+            if (data.channel === 'affiliate' && data.userId) {
+              ws.userId = data.userId;
+              
+              // Lookup affiliate profile
+              const profile = await storage.getAffiliateProfileByUserId(data.userId);
+              if (profile) {
+                ws.isAffiliate = true;
+                ws.affiliateId = profile.id;
+                
+                // Initialize visitor count
+                const visitorKey = `affiliate-${profile.id}`;
+                if (!activeVisitors[visitorKey]) {
+                  activeVisitors[visitorKey] = Math.floor(Math.random() * 20) + 5; // Random initial count
+                }
+                
+                // Send initial stats
+                ws.send(JSON.stringify({
+                  type: 'stats_update',
+                  stats: {
+                    activeVisitors: activeVisitors[visitorKey],
+                    totalReferrals: (await storage.getMerchantReferralsByAffiliateId(profile.id)).length,
+                  }
+                }));
+              }
+            }
           }
         } else if (data.type === 'unsubscribe' && data.channel) {
           if (ws.channels) {
@@ -749,6 +873,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ws.send(JSON.stringify({ type: 'unsubscribed', channel: data.channel }));
           }
         }
+        
+        ws.lastActivity = Date.now();
       } catch (error) {
         console.error('WebSocket message error:', error);
       }
@@ -756,8 +882,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Clean up on disconnect
     ws.on('close', () => {
-      // Clear any resources or remove from any tracking
+      if (ws.isAffiliate && ws.affiliateId) {
+        // Reduce active visitor count gradually when affiliate disconnects
+        const visitorKey = `affiliate-${ws.affiliateId}`;
+        if (activeVisitors[visitorKey]) {
+          // Reduce by 30% but keep some visitors
+          activeVisitors[visitorKey] = Math.max(
+            Math.floor(activeVisitors[visitorKey] * 0.7), 
+            3
+          );
+        }
+      }
     });
+    
+    // Send ping to keep connection alive
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      } else {
+        clearInterval(pingInterval);
+      }
+    }, 30000);
   });
 
   // Broadcast helper function
@@ -765,6 +910,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     wss.clients.forEach((client) => {
       const extClient = client as ExtendedWebSocket;
       if (extClient.readyState === WebSocket.OPEN && extClient.channels?.includes(channel)) {
+        extClient.send(JSON.stringify(data));
+      }
+    });
+  };
+  
+  // Helper function to notify affiliate about specific events
+  const notifyAffiliate = (affiliateUserId: number, data: any) => {
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.userId === affiliateUserId &&
+        extClient.channels?.includes('affiliate')
+      ) {
         extClient.send(JSON.stringify(data));
       }
     });
