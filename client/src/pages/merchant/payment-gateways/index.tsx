@@ -2,6 +2,30 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+
+// Define types for payment gateways
+interface PaymentGateway {
+  id: number;
+  name: string;
+  type: string;
+  merchantId: number;
+  isActive: boolean;
+  isDefault?: boolean;
+  lastTransaction?: string;
+  supportedPaymentMethods?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface MerchantProfile {
+  id: number;
+  userId: number;
+  businessName: string;
+  businessType: string;
+  verificationStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
 import {
   Card,
   CardContent,
@@ -37,7 +61,7 @@ export default function PaymentGateways() {
   const {
     data: merchantProfiles,
     isLoading: isLoadingProfile,
-  } = useQuery({
+  } = useQuery<MerchantProfile[]>({
     queryKey: ["/api/merchant-profiles"],
   });
   
@@ -47,7 +71,7 @@ export default function PaymentGateways() {
   const {
     data: paymentGateways,
     isLoading: isLoadingGateways,
-  } = useQuery({
+  } = useQuery<PaymentGateway[]>({
     queryKey: ["/api/merchant-profiles", merchantProfile?.id, "payment-gateways"],
     enabled: !!merchantProfile?.id,
   });
@@ -250,7 +274,7 @@ export default function PaymentGateways() {
                       )}
                     </div>
                   </CardHeader>
-                  <div className="flex items-center justify-center px-6 py-4">
+                  <div className="flex items-center justify-center px-6 py-4 space-x-2">
                     <Button 
                       variant="outline" 
                       className="gap-2"
@@ -258,6 +282,14 @@ export default function PaymentGateways() {
                     >
                       Manage
                       <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      className="gap-2"
+                      onClick={() => navigate(`/merchant/payment-gateways/${gateway.id}/process-payment`)}
+                    >
+                      Process Payment
+                      <ShoppingCart className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

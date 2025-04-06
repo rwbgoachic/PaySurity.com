@@ -31,6 +31,7 @@ import MerchantOnboarding from "./pages/merchant/onboarding";
 import MerchantVerification from "./pages/merchant/verification";
 import PaymentGateways from "./pages/merchant/payment-gateways/index";
 import NewPaymentGateway from "./pages/merchant/payment-gateways/new";
+import ProcessPaymentPage from "./pages/merchant/payment-gateways/process-payment";
 import LoyaltyPrograms from "./pages/merchant/loyalty-programs/index";
 import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
 import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
@@ -115,6 +116,7 @@ function Router() {
       <ProtectedRoute path="/merchant/verification" component={MerchantVerification} />
       <ProtectedRoute path="/merchant/payment-gateways" component={PaymentGateways} />
       <ProtectedRoute path="/merchant/payment-gateways/new" component={NewPaymentGateway} />
+      <ProtectedRoute path="/merchant/payment-gateways/:id/process-payment" component={ProcessPaymentPage} />
       <ProtectedRoute path="/merchant/payment-settings" component={PaymentSettings} />
       <ProtectedRoute path="/merchant/loyalty-programs" component={LoyaltyPrograms} />
       <ProtectedRoute path="/merchant/affiliate-dashboard" component={AffiliateDashboard} />
@@ -167,8 +169,8 @@ function App() {
       />
       <OrganizationSchema />
       <Router />
-      {/* Only include WebSocketHandler on pages that need it,
-          now also included directly in applications-management.tsx */}
+      {/* WebSocketHandler for real-time notifications */}
+      <WebSocketHandler />
       <Toaster />
     </AuthProvider>
   );

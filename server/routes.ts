@@ -1171,8 +1171,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process payment
       const paymentResponse = await helcimService.processPayment(validatedData);
       
-      // Record transaction in our system if needed
-      // This would depend on how you want to track transactions
+      // Record transaction in our system
+      if (paymentResponse.success || (paymentResponse as any).approved) {
+        try {
+          // Check if there's a wallet specified for this merchant
+          const merchantWallets = await storage.getWalletsByUserId(req.user.id);
+          const defaultWallet = merchantWallets.find(w => w.walletType === "main") || merchantWallets[0];
+          
+          if (defaultWallet) {
+            // Create a transaction record
+            const transactionData: any = {
+              userId: req.user.id,
+              walletId: defaultWallet.id,
+              amount: validatedData.amount.toString(),
+              type: "incoming",
+              method: "credit_card", // Using transactionMethodEnum values 
+              description: `Payment via Helcim - ${paymentResponse.response?.transactionId || "Unknown"}`,
+              category: "payment",
+              metadata: { 
+                gatewayResponse: paymentResponse,
+                paymentMethod: validatedData.paymentMethod,
+                customerInfo: validatedData.customer,
+                transactionType: validatedData.transactionType
+              }
+            };
+            
+            await storage.createTransaction(transactionData);
+            
+            // Update wallet balance if needed
+            const newBalance = (parseFloat(defaultWallet.balance) + validatedData.amount).toString();
+            await storage.updateWalletBalance(defaultWallet.id, newBalance);
+            
+            // Notify via WebSocket
+            broadcast(`wallet-${defaultWallet.id}`, {
+              type: 'transaction',
+              data: {
+                amount: validatedData.amount,
+                currency: validatedData.currency || "USD",
+                status: "completed",
+                description: `Payment received via Helcim`
+              }
+            });
+          }
+        } catch (txError) {
+          console.error("Error recording transaction:", txError);
+          // Don't fail the overall request if just the record keeping fails
+        }
+      }
 
       res.json(paymentResponse);
     } catch (error) {

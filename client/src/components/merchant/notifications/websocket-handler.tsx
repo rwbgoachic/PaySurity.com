@@ -20,8 +20,8 @@ export function WebSocketHandler() {
   
   // Function to create a new WebSocket connection
   const createWebSocketConnection = () => {
-    // Only connect if user is admin
-    if (!user || user.role !== 'admin') return;
+    // Only connect if user is logged in
+    if (!user || !user.id) return;
     
     // Close existing connection if there is one
     if (socketRef.current && 
@@ -44,11 +44,30 @@ export function WebSocketHandler() {
         setConnected(true);
         retryCountRef.current = 0; // Reset retry counter on successful connection
         
-        // Subscribe to admin dashboard for notifications
+        // Determine channels based on user role
+        const channels = [];
+        
+        if (user.role === 'admin') {
+          channels.push('admin-dashboard');
+        }
+        
+        // Special channel for merchant users based on their department or organization
+        if (user.role === 'executive' || user.role === 'employer') {
+          channels.push('merchant');
+        }
+        
+        if (user.role === 'affiliate') {
+          channels.push('affiliate');
+        }
+        
+        // Add general notification channel for all users
+        channels.push('notifications');
+        
+        // Subscribe to channels
         socket.send(JSON.stringify({
           type: 'subscribe',
           userId: user.id,
-          channels: ['admin-dashboard']
+          channels
         }));
       });
       
