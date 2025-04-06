@@ -1866,7 +1866,7 @@ export interface MerchantApplicationPaymentProcessing {
   currentProcessor?: string;
 }
 
-// Tax System - For advanced payroll tax calculations
+// Tax System - For advanced Payroll tax calculations
 
 // Tax Filing Status Enum
 export const taxFilingStatusEnum = pgEnum("tax_filing_status", [
