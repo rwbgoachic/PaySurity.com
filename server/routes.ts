@@ -7,7 +7,17 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { z } from "zod";
-import { insertWalletSchema, insertTransactionSchema, insertBankAccountSchema, insertFundRequestSchema } from "@shared/schema";
+import { 
+  insertWalletSchema, 
+  insertTransactionSchema, 
+  insertBankAccountSchema, 
+  insertFundRequestSchema,
+  insertAffiliateProfileSchema,
+  insertMerchantProfileSchema,
+  insertMerchantReferralSchema,
+  insertAffiliatePayoutSchema,
+  referralStatusEnum,
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Authentication Routes
@@ -279,6 +289,328 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching fund requests:", error);
       res.status(500).json({ error: "Failed to fetch fund requests" });
+    }
+  });
+  
+  // Affiliate Management API
+  app.get("/api/affiliate/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Affiliate profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching affiliate profile:", error);
+      res.status(500).json({ error: "Failed to fetch affiliate profile" });
+    }
+  });
+  
+  app.post("/api/affiliate/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Check if profile already exists
+      const existingProfile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (existingProfile) {
+        return res.status(409).json({ error: "Affiliate profile already exists" });
+      }
+      
+      // Generate unique referral code if not provided
+      const referralCode = req.body.referralCode || 
+        `${req.user.username.substring(0, 5)}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`.toLowerCase();
+      
+      const profileData = insertAffiliateProfileSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+        referralCode
+      });
+      
+      const profile = await storage.createAffiliateProfile(profileData);
+      
+      // Update user role to include affiliate
+      await storage.updateUser(req.user.id, { role: "affiliate" });
+      
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error("Error creating affiliate profile:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid profile data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create affiliate profile" });
+    }
+  });
+  
+  app.patch("/api/affiliate/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Affiliate profile not found" });
+      }
+      
+      const updatedProfile = await storage.updateAffiliateProfile(profile.id, req.body);
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error("Error updating affiliate profile:", error);
+      res.status(500).json({ error: "Failed to update affiliate profile" });
+    }
+  });
+  
+  app.get("/api/affiliate/referrals", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Affiliate profile not found" });
+      }
+      
+      const referrals = await storage.getMerchantReferralsByAffiliateId(profile.id);
+      res.json(referrals);
+    } catch (error) {
+      console.error("Error fetching referrals:", error);
+      res.status(500).json({ error: "Failed to fetch referrals" });
+    }
+  });
+  
+  app.get("/api/affiliate/payouts", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Affiliate profile not found" });
+      }
+      
+      const payouts = await storage.getAffiliatePayoutsByAffiliateId(profile.id);
+      res.json(payouts);
+    } catch (error) {
+      console.error("Error fetching payouts:", error);
+      res.status(500).json({ error: "Failed to fetch payouts" });
+    }
+  });
+  
+  app.get("/api/affiliate/stats", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Affiliate profile not found" });
+      }
+      
+      const range = req.query.range as string || 'month';
+      const stats = await storage.getAffiliateStats(profile.id, range);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching affiliate stats:", error);
+      res.status(500).json({ error: "Failed to fetch affiliate stats" });
+    }
+  });
+  
+  app.get("/api/affiliate/marketing-materials", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profile = await storage.getAffiliateProfileByUserId(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Affiliate profile not found" });
+      }
+      
+      // For now, we'll return a static list of marketing materials
+      // In the future, this would be dynamically generated based on the affiliate's profile
+      const marketingMaterials = [
+        {
+          id: 1,
+          name: "Banner - Generic",
+          type: "image",
+          size: "300x250",
+          url: "/affiliate/banners/banner1.png",
+          category: "general",
+          html: `<a href="https://paysurity.com/ref/${profile.referralCode}"><img src="https://paysurity.com/affiliate/banners/banner1.png" alt="PaySurity Payment Solutions" width="300" height="250" /></a>`
+        },
+        {
+          id: 2,
+          name: "Banner - Restaurant",
+          type: "image",
+          size: "728x90",
+          url: "/affiliate/banners/banner2.png",
+          category: "restaurant",
+          html: `<a href="https://paysurity.com/ref/${profile.referralCode}"><img src="https://paysurity.com/affiliate/banners/banner2.png" alt="PaySurity Payment Solutions for Restaurants" width="728" height="90" /></a>`
+        },
+        {
+          id: 3,
+          name: "Banner - Retail",
+          type: "image",
+          size: "300x250",
+          url: "/affiliate/banners/banner3.png",
+          category: "retail",
+          html: `<a href="https://paysurity.com/ref/${profile.referralCode}"><img src="https://paysurity.com/affiliate/banners/banner3.png" alt="PaySurity Payment Solutions for Retail" width="300" height="250" /></a>`
+        },
+        {
+          id: 4,
+          name: "Text Link - Standard",
+          type: "text",
+          category: "general",
+          html: `<a href="https://paysurity.com/ref/${profile.referralCode}">PaySurity - Modern Payment Solutions for Businesses</a>`
+        },
+        {
+          id: 5,
+          name: "Text Link - Healthcare",
+          type: "text",
+          category: "healthcare",
+          html: `<a href="https://paysurity.com/ref/${profile.referralCode}">PaySurity - Secure Healthcare Payment Processing</a>`
+        }
+      ];
+      
+      res.json(marketingMaterials);
+    } catch (error) {
+      console.error("Error fetching marketing materials:", error);
+      res.status(500).json({ error: "Failed to fetch marketing materials" });
+    }
+  });
+  
+  // Admin API for managing affiliate payouts
+  app.post("/api/admin/affiliate/process-payouts", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized. Admin access required." });
+    }
+    
+    try {
+      const { affiliateId, month, year, amount, notes } = req.body;
+      
+      // Validate the affiliate exists
+      const affiliate = await storage.getAffiliateProfile(affiliateId);
+      if (!affiliate) {
+        return res.status(404).json({ error: "Affiliate not found" });
+      }
+      
+      // Create the payout
+      const payout = await storage.createAffiliatePayout({
+        affiliateId,
+        amount,
+        period: `${year}-${month.toString().padStart(2, '0')}`,
+        status: "processed",
+        notes,
+        processedById: req.user.id
+      });
+      
+      // Notify the affiliate about the payout via WebSocket
+      broadcast(`affiliate-${affiliateId}`, {
+        type: 'payout_processed',
+        data: payout
+      });
+      
+      res.status(201).json(payout);
+    } catch (error) {
+      console.error("Error processing affiliate payout:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid payout data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to process payout" });
+    }
+  });
+  
+  // API endpoint to validate a referral code
+  app.get("/api/validate-referral-code/:code", async (req, res) => {
+    try {
+      const referralCode = req.params.code;
+      const affiliate = await storage.getAffiliateProfileByReferralCode(referralCode);
+      
+      if (!affiliate) {
+        return res.status(404).json({ valid: false, message: "Invalid referral code" });
+      }
+      
+      // Return minimal info about the affiliate for validation display
+      res.json({
+        valid: true,
+        affiliate: {
+          id: affiliate.id,
+          name: affiliate.displayName || "Affiliate Partner",
+          referralCode: affiliate.referralCode
+        }
+      });
+    } catch (error) {
+      console.error("Error validating referral code:", error);
+      res.status(500).json({ valid: false, message: "Error validating referral code" });
+    }
+  });
+  
+  // Merchant registration with referral tracking
+  app.post("/api/register-with-referral", async (req, res) => {
+    try {
+      const { referralCode, ...userData } = req.body;
+      
+      // Validate the referral code
+      const affiliate = await storage.getAffiliateProfileByReferralCode(referralCode);
+      if (!affiliate) {
+        return res.status(404).json({ error: "Invalid referral code" });
+      }
+      
+      // Register the user
+      const user = await storage.createUser(userData);
+      
+      // Create a merchant profile for the user
+      const merchantProfile = await storage.createMerchantProfile({
+        userId: user.id,
+        businessName: userData.businessName || "New Business",
+        businessType: userData.businessType || "retail",
+        taxId: userData.taxId || "",
+        address: userData.address || "",
+        city: userData.city || "",
+        state: userData.state || "",
+        zip: userData.zip || "",
+        country: "USA",
+        phone: userData.phone || "",
+        email: userData.email,
+        status: "pending"
+      });
+      
+      // Create a merchant referral record
+      const referral = await storage.createMerchantReferral({
+        affiliateId: affiliate.id,
+        merchantId: merchantProfile.id,
+        referralCode: referralCode,
+        status: "pending" as any // Cast to fix type issue with the enum
+      });
+      
+      // Notify the affiliate about the referral via WebSocket
+      broadcast(`affiliate-${affiliate.id}`, {
+        type: 'new_referral',
+        data: referral
+      });
+      
+      // Log the user in automatically
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ error: "Login failed after registration" });
+        }
+        return res.status(201).json({ user, merchantProfile, referral });
+      });
+    } catch (error) {
+      console.error("Error registering with referral:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid registration data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to register with referral" });
     }
   });
 
