@@ -9,6 +9,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
+  NavigationMenuViewport,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 
@@ -30,9 +31,9 @@ export function SiteHeader() {
           </Link>
           
           <NavigationMenu className="hidden md:flex ml-6">
-            <NavigationMenuList>
+            <NavigationMenuList className="flex items-center gap-1">
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Products</NavigationMenuTrigger>
+                <NavigationMenuTrigger className="h-10">Products</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
                     <li className="row-span-3">
@@ -64,7 +65,7 @@ export function SiteHeader() {
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Solutions</NavigationMenuTrigger>
+                <NavigationMenuTrigger className="h-10">Solutions</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid gap-3 p-4 w-[500px] md:grid-cols-2">
                     <ProductItem to="/industry-solutions#restaurant" title="Restaurant">

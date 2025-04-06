@@ -6,6 +6,7 @@ import { TrackedAccordion, TrackedAccordionTrigger } from "@/lib/analytics";
 import { Accordion, AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import { ScheduleDemoForm } from "@/components/schedule-demo-form";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { DownloadBRDButton } from "@/components/download-brd-button";
 import { 
   CreditCard, 
   BarChart, 
@@ -106,6 +107,9 @@ export default function LandingPage() {
                   <span>Contact sales</span>
                 </Link>
               </Button>
+              <div className="mt-4">
+                <DownloadBRDButton />
+              </div>
             </div>
           </div>
           
