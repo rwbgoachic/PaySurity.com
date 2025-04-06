@@ -39,6 +39,7 @@ import BistroBeastTransactions from "./pages/merchant/pos/bistro/transactions";
 import ApplicationsManagement from "./pages/merchant/applications-management";
 import ApplicationDetail from "./pages/merchant/application-detail";
 import AffiliateDashboard from "./pages/merchant/affiliate-dashboard";
+import PaymentSettings from "./pages/merchant/payment-settings";
 import BlogPage from "./pages/blog";
 import BlogPostPage from "./pages/blog/[slug]";
 import RestaurantBlogPage from "./pages/blog/industry/restaurant";
@@ -114,6 +115,7 @@ function Router() {
       <ProtectedRoute path="/merchant/verification" component={MerchantVerification} />
       <ProtectedRoute path="/merchant/payment-gateways" component={PaymentGateways} />
       <ProtectedRoute path="/merchant/payment-gateways/new" component={NewPaymentGateway} />
+      <ProtectedRoute path="/merchant/payment-settings" component={PaymentSettings} />
       <ProtectedRoute path="/merchant/loyalty-programs" component={LoyaltyPrograms} />
       <ProtectedRoute path="/merchant/affiliate-dashboard" component={AffiliateDashboard} />
       <ProtectedRoute path="/merchant/pos/bistro" component={BistroBeastPOS} />

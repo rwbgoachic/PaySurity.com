@@ -17,6 +17,8 @@ import {
   insertMerchantReferralSchema,
   insertAffiliatePayoutSchema,
   referralStatusEnum,
+  insertPaymentGatewaySchema,
+  insertHelcimIntegrationSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -736,6 +738,451 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Sitemap for SEO
   app.get("/sitemap.xml", generateSitemap);
+
+  // Import payment gateway services
+  const { paymentGatewayService, HelcimPaymentMethod, HelcimTransactionType } = await import('./services');
+
+  // Payment Gateway API Routes
+  app.get("/api/payment-gateways", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      // Validate user has merchant access
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant) {
+        return res.status(403).json({ error: "User is not associated with a merchant account" });
+      }
+      
+      const gateways = await paymentGatewayService.getMerchantPaymentGateways(merchant.id);
+      res.json(gateways);
+    } catch (error) {
+      console.error("Error fetching payment gateways:", error);
+      res.status(500).json({ error: "Failed to fetch payment gateways" });
+    }
+  });
+
+  // Create a new payment gateway
+  app.post("/api/payment-gateways", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      // Validate user has merchant access
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant) {
+        return res.status(403).json({ error: "User is not associated with a merchant account" });
+      }
+
+      // Parse request body
+      const createSchema = z.object({
+        gatewayType: z.enum(["stripe", "paypal", "square", "adyen", "helcim", "custom"]),
+        accountId: z.string().optional(),
+        apiKey: z.string().optional(),
+        publicKey: z.string().optional(),
+        webhookSecret: z.string().optional(),
+        supportedPaymentMethods: z.array(z.string()).optional(),
+        processingFeeSettings: z.any().optional(),
+      });
+
+      const validatedData = createSchema.parse(req.body);
+      
+      // Create payment gateway
+      const gateway = await paymentGatewayService.createPaymentGateway({
+        merchantId: merchant.id,
+        ...validatedData,
+      });
+      
+      res.status(201).json(gateway);
+    } catch (error) {
+      console.error("Error creating payment gateway:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create payment gateway" });
+    }
+  });
+
+  // Get payment gateway details
+  app.get("/api/payment-gateways/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(id);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+      
+      res.json(gateway);
+    } catch (error) {
+      console.error("Error fetching payment gateway:", error);
+      res.status(500).json({ error: "Failed to fetch payment gateway" });
+    }
+  });
+
+  // Update payment gateway
+  app.put("/api/payment-gateways/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(id);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+
+      // Parse request body
+      const updateSchema = z.object({
+        gatewayType: z.enum(["stripe", "paypal", "square", "adyen", "helcim", "custom"]).optional(),
+        accountId: z.string().optional(),
+        apiKey: z.string().optional(),
+        publicKey: z.string().optional(),
+        webhookSecret: z.string().optional(),
+        isActive: z.boolean().optional(),
+        supportedPaymentMethods: z.array(z.string()).optional(),
+        processingFeeSettings: z.any().optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+      
+      // Update payment gateway
+      const updatedGateway = await paymentGatewayService.updatePaymentGateway(id, validatedData);
+      res.json(updatedGateway);
+    } catch (error) {
+      console.error("Error updating payment gateway:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update payment gateway" });
+    }
+  });
+
+  // Delete payment gateway
+  app.delete("/api/payment-gateways/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(id);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+      
+      // Delete gateway
+      await paymentGatewayService.deletePaymentGateway(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting payment gateway:", error);
+      res.status(500).json({ error: "Failed to delete payment gateway" });
+    }
+  });
+
+  // Helcim Integration API Routes
+  app.post("/api/payment-gateways/:id/helcim", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const paymentGatewayId = parseInt(req.params.id);
+      if (isNaN(paymentGatewayId)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(paymentGatewayId);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+
+      // Parse request body
+      const createSchema = z.object({
+        helcimAccountId: z.string(),
+        helcimApiKey: z.string(),
+        helcimTerminalId: z.string().optional(),
+        testMode: z.boolean().default(true),
+      });
+
+      const validatedData = createSchema.parse(req.body);
+      
+      // Create Helcim integration
+      const integration = await paymentGatewayService.createHelcimIntegration({
+        paymentGatewayId,
+        merchantId: merchant.id,
+        ...validatedData,
+      });
+      
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Error creating Helcim integration:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create Helcim integration" });
+    }
+  });
+
+  // Update Helcim integration
+  app.put("/api/payment-gateways/:id/helcim", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const paymentGatewayId = parseInt(req.params.id);
+      if (isNaN(paymentGatewayId)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(paymentGatewayId);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+
+      // Check if integration exists
+      const existingIntegration = await paymentGatewayService.getHelcimIntegration(paymentGatewayId);
+      if (!existingIntegration) {
+        return res.status(404).json({ error: "Helcim integration not found" });
+      }
+
+      // Parse request body
+      const updateSchema = z.object({
+        helcimAccountId: z.string().optional(),
+        helcimApiKey: z.string().optional(),
+        helcimTerminalId: z.string().optional(),
+        testMode: z.boolean().optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+      
+      // Update Helcim integration
+      const integration = await paymentGatewayService.updateHelcimIntegration(
+        paymentGatewayId, 
+        validatedData
+      );
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Error updating Helcim integration:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update Helcim integration" });
+    }
+  });
+
+  // Get Helcim integration
+  app.get("/api/payment-gateways/:id/helcim", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const paymentGatewayId = parseInt(req.params.id);
+      if (isNaN(paymentGatewayId)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(paymentGatewayId);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+
+      // Get integration
+      const integration = await paymentGatewayService.getHelcimIntegration(paymentGatewayId);
+      if (!integration) {
+        return res.status(404).json({ error: "Helcim integration not found" });
+      }
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Error fetching Helcim integration:", error);
+      res.status(500).json({ error: "Failed to fetch Helcim integration" });
+    }
+  });
+
+  // Test Helcim integration
+  app.post("/api/payment-gateways/:id/helcim/test", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const paymentGatewayId = parseInt(req.params.id);
+      if (isNaN(paymentGatewayId)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(paymentGatewayId);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+
+      // Test integration
+      const isValid = await paymentGatewayService.verifyHelcimIntegration(paymentGatewayId);
+      
+      res.json({ success: isValid });
+    } catch (error) {
+      console.error("Error testing Helcim integration:", error);
+      res.status(500).json({ error: "Failed to test Helcim integration" });
+    }
+  });
+
+  // Process a payment through Helcim
+  app.post("/api/payment-gateways/:id/helcim/payment", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const paymentGatewayId = parseInt(req.params.id);
+      if (isNaN(paymentGatewayId)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(paymentGatewayId);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+
+      // Validate user has access to this merchant
+      const merchant = await storage.getMerchantProfileByUserId(req.user.id);
+      if (!merchant || merchant.id !== gateway.merchantId) {
+        return res.status(403).json({ error: "Unauthorized access to payment gateway" });
+      }
+
+      // Get integration
+      const integration = await paymentGatewayService.getHelcimIntegration(paymentGatewayId);
+      if (!integration) {
+        return res.status(404).json({ error: "Helcim integration not found" });
+      }
+
+      // Parse request body
+      const paymentSchema = z.object({
+        amount: z.number().positive(),
+        currency: z.string().optional(),
+        paymentMethod: z.nativeEnum(HelcimPaymentMethod),
+        transactionType: z.nativeEnum(HelcimTransactionType),
+        cardToken: z.string().optional(),
+        cardNumber: z.string().optional(),
+        cardExpiry: z.string().optional(),
+        cardCvv: z.string().optional(),
+        cardHolderName: z.string().optional(),
+        billingAddress: z.object({
+          name: z.string().optional(),
+          street1: z.string().optional(),
+          street2: z.string().optional(),
+          city: z.string().optional(),
+          province: z.string().optional(),
+          country: z.string().optional(),
+          postalCode: z.string().optional(),
+          phoneNumber: z.string().optional(),
+          email: z.string().optional(),
+        }).optional(),
+        customer: z.object({
+          id: z.string().optional(),
+          name: z.string().optional(),
+          email: z.string().optional(),
+          phone: z.string().optional(),
+        }).optional(),
+        taxAmount: z.number().optional(),
+        invoiceNumber: z.string().optional(),
+        orderNumber: z.string().optional(),
+        comments: z.string().optional(),
+      });
+
+      const validatedData = paymentSchema.parse(req.body);
+      
+      // Create Helcim service
+      const helcimService = await import('./services').then(m => 
+        m.createHelcimService(integration)
+      );
+      
+      // Process payment
+      const paymentResponse = await helcimService.processPayment(validatedData);
+      
+      // Record transaction in our system if needed
+      // This would depend on how you want to track transactions
+
+      res.json(paymentResponse);
+    } catch (error) {
+      console.error("Error processing Helcim payment:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
 
   // WebSocket for real-time notifications
   const httpServer = createServer(app);

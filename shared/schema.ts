@@ -518,12 +518,12 @@ export const insertMerchantProfileSchema = createInsertSchema(merchantProfiles).
 });
 
 // Payment Gateway Schema
-export const paymentGatewayTypeEnum = pgEnum("payment_gateway_type", ["stripe", "paypal", "square", "adyen", "custom"]);
+export const paymentGatewayTypeEnum = pgEnum("payment_gateway_type", ["stripe", "paypal", "square", "adyen", "helcim", "custom"]);
 
 export const paymentGateways = pgTable("payment_gateways", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(), // Link to the merchant profile
-  gatewayType: text("gateway_type", { enum: ["stripe", "paypal", "square", "adyen", "custom"] }).notNull(),
+  gatewayType: text("gateway_type", { enum: ["stripe", "paypal", "square", "adyen", "helcim", "custom"] }).notNull(),
   accountId: text("account_id"), // External account/merchant ID in the payment system
   apiKey: text("api_key"), // Encrypted API key
   publicKey: text("public_key"), // Public API key
@@ -2140,3 +2140,25 @@ export type InsertDemoRequest = z.infer<typeof insertDemoRequestSchema>;
 // We've documented these relationships in /docs/database-relationships.md for clarity
 // The schema uses explicit foreign key constraints where possible, but some circular references
 // require careful handling at the application level.
+
+// Helcim API Integration Schema
+export const helcimIntegrations = pgTable("helcim_integrations", {
+  id: serial("id").primaryKey(),
+  paymentGatewayId: integer("payment_gateway_id").notNull().references(() => paymentGateways.id),
+  merchantId: integer("merchant_id").notNull(),
+  helcimAccountId: text("helcim_account_id").notNull(), // Helcim.com merchant account ID
+  helcimApiKey: text("helcim_api_key").notNull(), // Helcim.com API key
+  helcimTerminalId: text("helcim_terminal_id"), // Optional: Terminal ID for card-present transactions
+  testMode: boolean("test_mode").default(true), // Whether the integration is in test mode
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHelcimIntegrationSchema = createInsertSchema(helcimIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type HelcimIntegration = typeof helcimIntegrations.$inferSelect;
+export type InsertHelcimIntegration = z.infer<typeof insertHelcimIntegrationSchema>;
