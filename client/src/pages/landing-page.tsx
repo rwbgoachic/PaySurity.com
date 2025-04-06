@@ -138,7 +138,7 @@ export default function LandingPage() {
       <section id="solutions" className="py-20 bg-slate-50">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold mb-4">Comprehensive Payment, PayRoll, Expense Management and Digital Payment Solutions for Merchants</h2>
+            <h2 className="text-3xl font-bold mb-4">Comprehensive Payment, Payroll, Expense Management and Digital Payment Solutions for Merchants</h2>
             <p className="text-slate-600">
               Discover our complete suite of payment solutions designed to boost your business efficiency
             </p>
