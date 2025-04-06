@@ -5,7 +5,7 @@ import {
   // New merchant and value-added service entities
   merchantProfiles, paymentGateways, pointOfSaleSystems, loyaltyPrograms, 
   customerLoyaltyAccounts, promotionalCampaigns, analyticsReports,
-  businessFinancing, virtualTerminals, merchantApplications,
+  businessFinancing, virtualTerminals, merchantApplications, merchantTransactions,
   // Affiliate system entities
   affiliateProfiles, merchantReferrals, affiliatePayouts,
   // Tax calculation system entities
@@ -45,6 +45,7 @@ import {
   type BusinessFinancing, type InsertBusinessFinancing,
   type VirtualTerminal, type InsertVirtualTerminal,
   type MerchantApplication, type InsertMerchantApplication,
+  type MerchantTransaction, type InsertMerchantTransaction,
   
   // Affiliate system types
   type AffiliateProfile, type InsertAffiliateProfile,
@@ -413,6 +414,15 @@ export interface IStorage {
   getClickEventsByPagePath(pagePath: string): Promise<ClickEvent[]>;
   createClickEvent(event: InsertClickEvent): Promise<ClickEvent>;
   getClickMetricsByPage(): Promise<any>;
+  
+  // Merchant Transaction operations
+  getMerchantTransaction(id: number): Promise<MerchantTransaction | undefined>;
+  getMerchantTransactionsByMerchantId(merchantId: number): Promise<MerchantTransaction[]>;
+  getMerchantTransactionsByPaymentGatewayId(paymentGatewayId: number): Promise<MerchantTransaction[]>;
+  getMerchantTransactionsByStatus(status: string): Promise<MerchantTransaction[]>;
+  createMerchantTransaction(transaction: InsertMerchantTransaction): Promise<MerchantTransaction>;
+  updateMerchantTransactionStatus(id: number, status: string): Promise<MerchantTransaction>;
+  updateMerchantTransactionMetadata(id: number, metadata: any): Promise<MerchantTransaction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3783,6 +3793,92 @@ export class DatabaseStorage implements IStorage {
     };
     
     return await this.createTaxCalculation(taxCalculation);
+  }
+
+  // Merchant Transaction operations
+  async getMerchantTransaction(id: number): Promise<MerchantTransaction | undefined> {
+    try {
+      const [transaction] = await db.select().from(merchantTransactions).where(eq(merchantTransactions.id, id));
+      return transaction;
+    } catch (error) {
+      console.error(`Error getting merchant transaction ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getMerchantTransactionsByMerchantId(merchantId: number): Promise<MerchantTransaction[]> {
+    try {
+      return await db.select().from(merchantTransactions).where(eq(merchantTransactions.merchantId, merchantId));
+    } catch (error) {
+      console.error(`Error getting merchant transactions for merchant ${merchantId}:`, error);
+      return [];
+    }
+  }
+
+  async getMerchantTransactionsByPaymentGatewayId(paymentGatewayId: number): Promise<MerchantTransaction[]> {
+    try {
+      return await db.select().from(merchantTransactions).where(eq(merchantTransactions.paymentGatewayId, paymentGatewayId));
+    } catch (error) {
+      console.error(`Error getting merchant transactions for payment gateway ${paymentGatewayId}:`, error);
+      return [];
+    }
+  }
+
+  async getMerchantTransactionsByStatus(status: string): Promise<MerchantTransaction[]> {
+    try {
+      return await db.select().from(merchantTransactions).where(eq(merchantTransactions.status as any, status));
+    } catch (error) {
+      console.error(`Error getting merchant transactions with status ${status}:`, error);
+      return [];
+    }
+  }
+
+  async createMerchantTransaction(transaction: InsertMerchantTransaction): Promise<MerchantTransaction> {
+    try {
+      const [newTransaction] = await db.insert(merchantTransactions).values(transaction).returning();
+      return newTransaction;
+    } catch (error) {
+      console.error("Error creating merchant transaction:", error);
+      throw new Error("Failed to create merchant transaction");
+    }
+  }
+
+  async updateMerchantTransactionStatus(id: number, status: string): Promise<MerchantTransaction> {
+    try {
+      const [updatedTransaction] = await db
+        .update(merchantTransactions)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(merchantTransactions.id, id))
+        .returning();
+      
+      if (!updatedTransaction) {
+        throw new Error(`Merchant transaction with id ${id} not found`);
+      }
+      
+      return updatedTransaction;
+    } catch (error) {
+      console.error(`Error updating merchant transaction ${id} status:`, error);
+      throw new Error("Failed to update merchant transaction status");
+    }
+  }
+
+  async updateMerchantTransactionMetadata(id: number, metadata: any): Promise<MerchantTransaction> {
+    try {
+      const [updatedTransaction] = await db
+        .update(merchantTransactions)
+        .set({ metadata, updatedAt: new Date() })
+        .where(eq(merchantTransactions.id, id))
+        .returning();
+      
+      if (!updatedTransaction) {
+        throw new Error(`Merchant transaction with id ${id} not found`);
+      }
+      
+      return updatedTransaction;
+    } catch (error) {
+      console.error(`Error updating merchant transaction ${id} metadata:`, error);
+      throw new Error("Failed to update merchant transaction metadata");
+    }
   }
 }
 

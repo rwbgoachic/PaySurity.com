@@ -763,6 +763,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available payment gateways (for public checkout)
+  app.get("/api/payment-gateways/available", async (req, res) => {
+    try {
+      // Import necessary modules
+      const { db } = await import('./db');
+      const { paymentGateways } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // For public checkout, we need to find at least one active gateway
+      const availableGateways = await db
+        .select()
+        .from(paymentGateways)
+        .where(eq(paymentGateways.isActive, true))
+        .limit(5); // Limit to 5 active gateways
+      
+      if (!availableGateways || availableGateways.length === 0) {
+        return res.status(404).json({ error: "No available payment gateways found" });
+      }
+      
+      // Remove sensitive fields
+      const safeGateways = availableGateways.map((gateway: any) => ({
+        id: gateway.id,
+        gatewayType: gateway.gatewayType,
+        merchantId: gateway.merchantId,
+        supportedPaymentMethods: gateway.supportedPaymentMethods
+      }));
+      
+      res.json(safeGateways);
+    } catch (error) {
+      console.error("Error fetching available payment gateways:", error);
+      res.status(500).json({ error: "Failed to fetch available payment gateways" });
+    }
+  });
+
   // Create a new payment gateway
   app.post("/api/payment-gateways", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -1239,6 +1273,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAffiliate?: boolean;
     lastActivity?: number;
   }
+
+  // Public Payment Processing API Endpoint for Helcim
+  app.post('/api/payment-gateways/:id/helcim/payment', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const paymentGatewayId = parseInt(id);
+      
+      if (isNaN(paymentGatewayId)) {
+        return res.status(400).json({ error: "Invalid payment gateway ID" });
+      }
+      
+      // Get the payment gateway
+      const gateway = await paymentGatewayService.getPaymentGateway(paymentGatewayId);
+      if (!gateway) {
+        return res.status(404).json({ error: "Payment gateway not found" });
+      }
+      
+      // Get the Helcim integration
+      const helcimIntegration = await paymentGatewayService.getHelcimIntegration(paymentGatewayId);
+      if (!helcimIntegration) {
+        return res.status(404).json({ error: "Helcim integration not found for this gateway" });
+      }
+      
+      // Import services and create Helcim service
+      const { createHelcimService, HelcimPaymentMethod, HelcimTransactionType } = await import('./services');
+      const helcimService = createHelcimService(helcimIntegration);
+      
+      // Process the payment
+      const paymentData = req.body;
+      
+      // Transform the payment method if needed
+      let paymentMethod = paymentData.paymentMethod;
+      if (paymentMethod === 'creditCard') {
+        paymentMethod = HelcimPaymentMethod.CREDIT_CARD;
+      } else if (paymentMethod === 'bankAccount') {
+        paymentMethod = HelcimPaymentMethod.BANK_ACCOUNT;
+      }
+      
+      // Transform the transaction type if needed
+      let transactionType = paymentData.transactionType;
+      if (transactionType === 'purchase') {
+        transactionType = HelcimTransactionType.PURCHASE;
+      } else if (transactionType === 'preAuth') {
+        transactionType = HelcimTransactionType.PRE_AUTHORIZATION;
+      }
+      
+      // Build the request object for Helcim
+      const helcimPaymentRequest = {
+        amount: parseFloat(paymentData.amount),
+        currency: paymentData.currency || 'USD',
+        paymentMethod,
+        transactionType,
+        cardNumber: paymentData.cardNumber,
+        cardExpiry: paymentData.cardExpiry,
+        cardCvv: paymentData.cardCvv,
+        cardHolderName: paymentData.cardHolderName,
+        billingAddress: paymentData.billingAddress,
+        customer: paymentData.customer,
+        invoiceNumber: paymentData.invoiceNumber,
+        orderNumber: paymentData.orderNumber,
+        comments: paymentData.comments,
+      };
+      
+      // Process the payment with Helcim
+      const paymentResponse = await helcimService.processPayment(helcimPaymentRequest);
+      
+      // Record the transaction in our database
+      if (paymentResponse.success) {
+        try {
+          // Import db and schema for transaction storage
+          const { db } = await import('./db');
+          const { merchantTransactions } = await import('@shared/schema');
+          
+          // Store transaction details
+          const transactionData = {
+            merchantId: gateway.merchantId,
+            paymentGatewayId: gateway.id,
+            amount: String(paymentResponse.response.amount),
+            currency: paymentResponse.response.currency,
+            paymentMethod: paymentData.paymentMethod,
+            status: paymentResponse.success ? 'completed' : 'failed',
+            externalId: paymentResponse.response.transactionId,
+            description: paymentData.comments || 'Payment processed via Helcim',
+            metadata: JSON.stringify({
+              responseDetails: paymentResponse.response,
+            }),
+            customerInfo: JSON.stringify(paymentData.customer || {}),
+          };
+          
+          // Insert transaction record
+          await db.insert(merchantTransactions).values([transactionData]);
+          console.log('Transaction recorded successfully:', transactionData.externalId);
+        } catch (transactionError: any) {
+          // Log error but don't fail the payment processing
+          console.error('Error recording transaction:', transactionError?.message || transactionError);
+        }
+      }
+      
+      // Return the response to the client
+      return res.json(paymentResponse);
+    } catch (error: any) {
+      console.error('Error processing payment:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Payment processing failed',
+        notice: error?.message || 'An unknown error occurred'
+      });
+    }
+  });
 
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   

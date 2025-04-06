@@ -2166,3 +2166,28 @@ export const insertHelcimIntegrationSchema = createInsertSchema(helcimIntegratio
 
 export type HelcimIntegration = typeof helcimIntegrations.$inferSelect;
 export type InsertHelcimIntegration = z.infer<typeof insertHelcimIntegrationSchema>;
+
+// Merchant Transactions Table - For payment processing transactions
+export const merchantTransactions = pgTable("merchant_transactions", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id"), // Link to merchant profile (optional for public checkout)
+  paymentGatewayId: integer("payment_gateway_id"), // Link to payment gateway
+  amount: numeric("amount").notNull(),
+  currency: text("currency").default("USD").notNull(),
+  paymentMethod: text("payment_method").notNull(), // credit_card, bank_account, etc.
+  status: text("status").notNull(), // completed, pending, failed, refunded, etc.
+  externalId: text("external_id"), // Transaction ID from external payment processor
+  description: text("description"),
+  metadata: jsonb("metadata"), // Additional data from payment processor
+  customerInfo: jsonb("customer_info"), // Optional customer information
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantTransactionSchema = createInsertSchema(merchantTransactions).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type MerchantTransaction = typeof merchantTransactions.$inferSelect;
+export type InsertMerchantTransaction = z.infer<typeof insertMerchantTransactionSchema>;
