@@ -2948,6 +2948,17 @@ export const restaurantOrders = pgTable("restaurant_orders", {
   deliveryAddress: text("delivery_address"),
   customerName: text("customer_name"),
   customerPhone: text("customer_phone"),
+  // QR code ordering specific fields
+  isQrOrder: boolean("is_qr_order").default(false),
+  qrOrderSource: text("qr_order_source"), // Store info about which QR code was used
+  estimatedPrepTime: integer("estimated_prep_time"), // In minutes
+  actualPrepTime: integer("actual_prep_time"), // In minutes, for analytics
+  smsNotificationSent: boolean("sms_notification_sent").default(false),
+  smsNotificationCount: integer("sms_notification_count").default(0),
+  smsOptedIn: boolean("sms_opted_in").default(false), // Customer opted in for SMS
+  lastSmsTimestamp: timestamp("last_sms_timestamp"),
+  modificationToken: text("modification_token"), // Token for order modification link
+  modificationTokenExpiry: timestamp("modification_token_expiry"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -2957,7 +2968,10 @@ export const insertRestaurantOrderSchema = createInsertSchema(restaurantOrders).
   id: true,
   createdAt: true,
   updatedAt: true,
-  completedAt: true
+  completedAt: true,
+  lastSmsTimestamp: true,
+  modificationTokenExpiry: true,
+  actualPrepTime: true
 });
 
 export type RestaurantOrder = typeof restaurantOrders.$inferSelect;

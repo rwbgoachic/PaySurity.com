@@ -4603,13 +4603,26 @@ export class DatabaseStorage implements IStorage {
     return newOrder;
   }
 
-  async updateRestaurantOrderStatus(id: number, status: string): Promise<RestaurantOrder> {
+  async updateRestaurantOrderStatus(
+    id: number, 
+    status: string, 
+    updateInfo?: { 
+      actualPrepTime?: number, 
+      smsNotificationSent?: boolean,
+      smsNotificationCount?: number,
+      lastSmsTimestamp?: Date
+    }
+  ): Promise<RestaurantOrder> {
     const [updatedOrder] = await db
       .update(restaurantOrders)
       .set({ 
         status, 
         updatedAt: new Date(),
-        ...(status === "completed" ? { completedAt: new Date() } : {})
+        ...(status === "completed" ? { completedAt: new Date() } : {}),
+        ...(updateInfo?.actualPrepTime !== undefined ? { actualPrepTime: updateInfo.actualPrepTime } : {}),
+        ...(updateInfo?.smsNotificationSent !== undefined ? { smsNotificationSent: updateInfo.smsNotificationSent } : {}),
+        ...(updateInfo?.smsNotificationCount !== undefined ? { smsNotificationCount: updateInfo.smsNotificationCount } : {}),
+        ...(updateInfo?.lastSmsTimestamp ? { lastSmsTimestamp: updateInfo.lastSmsTimestamp } : {})
       })
       .where(eq(restaurantOrders.id, id))
       .returning();
@@ -4980,6 +4993,34 @@ export class DatabaseStorage implements IStorage {
   async createRestaurantInventoryTransaction(transaction: InsertRestaurantInventoryTransaction): Promise<RestaurantInventoryTransaction> {
     const [newTransaction] = await db.insert(restaurantInventoryTransactions).values(transaction).returning();
     return newTransaction;
+  }
+
+  // QR code order implementation
+  async getRestaurantOrderByToken(token: string): Promise<RestaurantOrder | undefined> {
+    const [order] = await db
+      .select()
+      .from(restaurantOrders)
+      .where(eq(restaurantOrders.modificationToken, token))
+      .limit(1);
+    return order;
+  }
+
+  async getRecentRestaurantOrders(merchantId: number, minutes: number): Promise<RestaurantOrder[]> {
+    const cutoffTime = new Date();
+    cutoffTime.setMinutes(cutoffTime.getMinutes() - minutes);
+    
+    const orders = await db
+      .select()
+      .from(restaurantOrders)
+      .where(
+        and(
+          eq(restaurantOrders.merchantId, merchantId),
+          gte(restaurantOrders.createdAt, cutoffTime)
+        )
+      )
+      .orderBy(desc(restaurantOrders.createdAt));
+    
+    return orders;
   }
 
   // =========================================
