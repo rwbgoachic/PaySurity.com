@@ -1,151 +1,228 @@
 import { useState, useCallback } from 'react';
-import ApiService from '../services/api';
+import api, { ApiOptions, ApiError } from '../services/api';
 
 /**
- * Custom hook to handle API requests with loading and error states
- * This hook provides a consistent way to make API requests across the application
+ * Hook for making API requests with loading and error states
  */
-interface UseApiReturnType {
-  loading: boolean;
-  error: string | null;
-  get: <T>(endpoint: string, params?: Record<string, any>) => Promise<T | null>;
-  post: <T>(endpoint: string, data?: any) => Promise<T | null>;
-  put: <T>(endpoint: string, data?: any) => Promise<T | null>;
-  delete: <T>(endpoint: string) => Promise<T | null>;
-  uploadFile: <T>(
-    endpoint: string,
-    fileUri: string,
-    formName?: string,
-    mimeType?: string,
-    extraData?: Record<string, string>
-  ) => Promise<T | null>;
-  clearError: () => void;
-}
-
-const useApi = (): UseApiReturnType => {
-  const [loading, setLoading] = useState<boolean>(false);
+export default function useApi() {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Clear any existing error messages
+   * Generic request handler with loading and error states
    */
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  /**
-   * Generic request handler that wraps the ApiService methods
-   */
-  const handleRequest = useCallback(async <T>(
-    requestFn: () => Promise<Response>
+  const request = useCallback(async <T>(
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    endpoint: string,
+    data?: any,
+    options?: ApiOptions
   ): Promise<T | null> => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-
+    
     try {
-      const response = await requestFn();
-
-      if (!response.ok) {
-        let errorMessage = 'An error occurred';
-        
-        try {
-          // Try to get a more specific error message from the API
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || `Error: ${response.status} ${response.statusText}`;
-        } catch (parseError) {
-          errorMessage = `Error: ${response.status} ${response.statusText}`;
-        }
-        
-        setError(errorMessage);
-        setLoading(false);
-        return null;
+      let result: T;
+      
+      switch (method) {
+        case 'GET':
+          result = await api.get<T>(endpoint, options);
+          break;
+        case 'POST':
+          result = await api.post<T>(endpoint, data, options);
+          break;
+        case 'PUT':
+          result = await api.put<T>(endpoint, data, options);
+          break;
+        case 'PATCH':
+          result = await api.patch<T>(endpoint, data, options);
+          break;
+        case 'DELETE':
+          result = await api.del<T>(endpoint, options);
+          break;
+        default:
+          throw new Error(`Invalid method: ${method}`);
       }
-
-      // Handle empty responses (like for DELETE operations)
-      if (response.status === 204) {
-        setLoading(false);
-        return {} as T;
-      }
-
-      const data = await response.json();
-      setLoading(false);
-      return data as T;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Network error occurred';
+      
+      return result;
+    } catch (err) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.data?.message || apiError.message || 'An error occurred';
+      
       setError(errorMessage);
-      setLoading(false);
+      console.error(`API Error (${endpoint}):`, errorMessage);
+      
       return null;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   /**
-   * GET request handler
+   * GET request
    */
-  const get = useCallback(<T>(
-    endpoint: string,
-    params?: Record<string, any>
-  ): Promise<T | null> => {
-    return handleRequest<T>(() => ApiService.get(endpoint, params));
-  }, [handleRequest]);
+  const get = useCallback(<T>(endpoint: string, options?: ApiOptions): Promise<T | null> => {
+    return request<T>('GET', endpoint, undefined, options);
+  }, [request]);
 
   /**
-   * POST request handler
+   * POST request
    */
-  const post = useCallback(<T>(
-    endpoint: string,
-    data?: any
-  ): Promise<T | null> => {
-    return handleRequest<T>(() => ApiService.post(endpoint, data));
-  }, [handleRequest]);
+  const post = useCallback(<T>(endpoint: string, data: any, options?: ApiOptions): Promise<T | null> => {
+    return request<T>('POST', endpoint, data, options);
+  }, [request]);
 
   /**
-   * PUT request handler
+   * PUT request
    */
-  const put = useCallback(<T>(
-    endpoint: string,
-    data?: any
-  ): Promise<T | null> => {
-    return handleRequest<T>(() => ApiService.put(endpoint, data));
-  }, [handleRequest]);
+  const put = useCallback(<T>(endpoint: string, data: any, options?: ApiOptions): Promise<T | null> => {
+    return request<T>('PUT', endpoint, data, options);
+  }, [request]);
 
   /**
-   * DELETE request handler
+   * PATCH request
    */
-  const deleteRequest = useCallback(<T>(
-    endpoint: string
-  ): Promise<T | null> => {
-    return handleRequest<T>(() => ApiService.delete(endpoint));
-  }, [handleRequest]);
+  const patch = useCallback(<T>(endpoint: string, data: any, options?: ApiOptions): Promise<T | null> => {
+    return request<T>('PATCH', endpoint, data, options);
+  }, [request]);
 
   /**
-   * File upload handler
+   * DELETE request
    */
-  const uploadFile = useCallback(<T>(
-    endpoint: string,
-    fileUri: string,
-    formName: string = 'file',
-    mimeType: string = 'image/jpeg',
-    extraData?: Record<string, string>
-  ): Promise<T | null> => {
-    return handleRequest<T>(() => ApiService.uploadFile(
-      endpoint,
-      fileUri,
-      formName,
-      mimeType,
-      extraData
-    ));
-  }, [handleRequest]);
+  const del = useCallback(<T>(endpoint: string, options?: ApiOptions): Promise<T | null> => {
+    return request<T>('DELETE', endpoint, undefined, options);
+  }, [request]);
 
+  /**
+   * Upload file request
+   */
+  const uploadFile = useCallback(async <T>(
+    endpoint: string,
+    file: { uri: string; name: string; type: string },
+    fieldName: string = 'file',
+    additionalData?: Record<string, any>,
+    options?: ApiOptions
+  ): Promise<T | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await api.uploadFile<T>(endpoint, file, fieldName, additionalData, options);
+      return result;
+    } catch (err) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.data?.message || apiError.message || 'Upload failed';
+      
+      setError(errorMessage);
+      console.error(`Upload Error (${endpoint}):`, errorMessage);
+      
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Login request
+   */
+  const login = useCallback(async (
+    username: string,
+    password: string
+  ): Promise<{ user: any } | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await api.login(username, password);
+      return { user: response.user };
+    } catch (err) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.data?.message || apiError.message || 'Login failed';
+      
+      setError(errorMessage);
+      console.error('Login Error:', errorMessage);
+      
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Register request
+   */
+  const register = useCallback(async (
+    userData: {
+      username: string;
+      password: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      [key: string]: any;
+    }
+  ): Promise<{ user: any } | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await api.register(userData);
+      return { user: response.user };
+    } catch (err) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.data?.message || apiError.message || 'Registration failed';
+      
+      setError(errorMessage);
+      console.error('Registration Error:', errorMessage);
+      
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Logout request
+   */
+  const logout = useCallback(async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await api.logout();
+      return true;
+    } catch (err) {
+      const apiError = err as ApiError;
+      const errorMessage = apiError.data?.message || apiError.message || 'Logout failed';
+      
+      setError(errorMessage);
+      console.error('Logout Error:', errorMessage);
+      
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Clear any previous errors
+   */
+  const clearError = useCallback((): void => {
+    setError(null);
+  }, []);
+  
+  // Return the API methods and state
   return {
-    loading,
+    isLoading,
     error,
+    clearError,
+    request,
     get,
     post,
     put,
-    delete: deleteRequest,
+    patch,
+    del,
     uploadFile,
-    clearError,
+    login,
+    register,
+    logout,
   };
-};
-
-export default useApi;
+}

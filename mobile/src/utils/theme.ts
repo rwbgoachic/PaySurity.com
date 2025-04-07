@@ -1,430 +1,393 @@
-import { MD3LightTheme } from 'react-native-paper';
-import { StyleSheet } from 'react-native';
+import { Platform, Dimensions } from 'react-native';
 
-// Color palette
-export const colors = {
-  // Primary colors
-  primary: '#5E35B1', // Deep purple
-  primaryDark: '#4527A0',
-  primaryLight: '#7E57C2',
-  
-  // Secondary colors
-  secondary: '#00BCD4', // Cyan
-  secondaryDark: '#0097A7',
-  secondaryLight: '#4DD0E1',
-  
-  // Tertiary colors
-  tertiary: '#FF5722', // Deep orange
-  tertiaryDark: '#E64A19',
-  tertiaryLight: '#FF8A65',
-  
-  // Neutrals
-  background: '#FFFFFF',
-  backgroundDarker: '#F5F5F5',
-  backgroundCard: '#FAFAFA',
-  
-  // Text colors
-  text: '#212121',
-  textMedium: '#616161',
-  textLight: '#9E9E9E',
-  
-  // Status colors
-  success: '#4CAF50',
-  warning: '#FFC107',
-  error: '#F44336',
-  info: '#2196F3',
-  
-  // Misc
-  border: '#E0E0E0',
-  divider: '#EEEEEE',
-  disabled: '#BDBDBD',
-  placeholder: '#9E9E9E',
-  highlight: '#F5F5F5',
-  transparent: 'transparent',
+// Get screen dimensions
+const { width, height } = Dimensions.get('window');
+
+// Platform specific values
+const isIOS = Platform.OS === 'ios';
+
+// Color Palettes
+const primaryPalette = {
+  50: '#F0F7FF',
+  100: '#E0EFFF',
+  200: '#C0DFFF',
+  300: '#80BFFF',
+  400: '#4099FF',
+  500: '#0073E6',
+  600: '#0059B3',
+  700: '#004080',
+  800: '#00264D',
+  900: '#001226',
 };
 
-// Typography
-export const typography = {
-  fontFamily: {
-    regular: 'System',
-    medium: 'System',
-    bold: 'System',
+const grayPalette = {
+  50: '#F9FAFB',
+  100: '#F3F4F6',
+  200: '#E5E7EB',
+  300: '#D1D5DB',
+  400: '#9CA3AF',
+  500: '#6B7280',
+  600: '#4B5563',
+  700: '#374151',
+  800: '#1F2937',
+  900: '#111827',
+};
+
+// Core colors
+const colors = {
+  // Brand Colors
+  primary: primaryPalette[500],
+  primaryLight: primaryPalette[300],
+  primaryDark: primaryPalette[700],
+  secondary: '#FF9900',
+  secondaryLight: '#FFCC80',
+  secondaryDark: '#F57C00',
+  
+  // Text Colors
+  textDark: grayPalette[900],
+  textMedium: grayPalette[700],
+  textMuted: grayPalette[500],
+  textLight: grayPalette[300],
+  
+  // UI Colors
+  backgroundPrimary: '#FFFFFF',
+  backgroundSecondary: grayPalette[50],
+  backgroundTertiary: grayPalette[100],
+  border: grayPalette[200],
+  borderDark: grayPalette[300],
+  
+  // State Colors
+  success: '#10B981',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+  
+  // Additional Colors
+  white: '#FFFFFF',
+  black: '#000000',
+  
+  // Gradient Base Colors
+  gradientStart: '#0073E6',
+  gradientEnd: '#00C6FF',
+  
+  // Additional Gray Palette
+  gray50: grayPalette[50],
+  gray100: grayPalette[100],
+  gray200: grayPalette[200],
+  gray300: grayPalette[300],
+  gray400: grayPalette[400],
+  gray500: grayPalette[500],
+  gray600: grayPalette[600],
+  gray700: grayPalette[700],
+  gray800: grayPalette[800],
+  gray900: grayPalette[900],
+};
+
+// Wallet color schemes based on account type
+const walletColorSchemes = {
+  personal: {
+    primary: colors.primary,
+    secondary: colors.gradientEnd,
+    background: colors.backgroundPrimary,
+    accent: '#3B82F6',
   },
-  fontSize: {
-    xxs: 10,
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 18,
-    xl: 20,
-    '2xl': 24,
-    '3xl': 30,
-    '4xl': 36,
-    '5xl': 48,
-    '6xl': 60,
-    '7xl': 72,
-    '8xl': 96,
+  family: {
+    primary: '#8B5CF6',
+    secondary: '#C4B5FD',
+    background: '#F5F3FF',
+    accent: '#7C3AED',
   },
-  lineHeight: {
-    none: 1,
-    tight: 1.25,
-    normal: 1.5,
-    loose: 2,
+  business: {
+    primary: '#2563EB',
+    secondary: '#93C5FD',
+    background: '#EFF6FF',
+    accent: '#1D4ED8',
   },
-  fontWeight: {
-    regular: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
+  child: {
+    primary: '#EC4899',
+    secondary: '#FBCFE8',
+    background: '#FCE7F3',
+    accent: '#DB2777',
+  },
+  employee: {
+    primary: '#10B981',
+    secondary: '#6EE7B7',
+    background: '#ECFDF5',
+    accent: '#059669',
   },
 };
 
 // Spacing
-export const spacing = {
-  none: 0,
-  xxs: 2,
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  '2xl': 40,
-  '3xl': 48,
-  '4xl': 56,
-  '5xl': 64,
-  '6xl': 72,
+const baseSpacing = 4;
+const spacing = {
+  '0': 0,
+  '0.5': baseSpacing / 2,
+  '1': baseSpacing,
+  '2': baseSpacing * 2,
+  '3': baseSpacing * 3,
+  '4': baseSpacing * 4,
+  '5': baseSpacing * 5,
+  '6': baseSpacing * 6,
+  '8': baseSpacing * 8,
+  '10': baseSpacing * 10,
+  '12': baseSpacing * 12,
+  '14': baseSpacing * 14,
+  '16': baseSpacing * 16,
+  '20': baseSpacing * 20,
+  '24': baseSpacing * 24,
+  '28': baseSpacing * 28,
+  '32': baseSpacing * 32,
+  '36': baseSpacing * 36,
+  '40': baseSpacing * 40,
+  '48': baseSpacing * 48,
+  '56': baseSpacing * 56,
+  '64': baseSpacing * 64,
+  '72': baseSpacing * 72,
+  '80': baseSpacing * 80,
+  '96': baseSpacing * 96,
+};
+
+// Typography
+const fontFamily = {
+  sans: isIOS ? 'System' : 'Roboto',
+  serif: isIOS ? 'Georgia' : 'serif',
+  mono: isIOS ? 'Courier' : 'monospace',
+};
+
+const fontSize = {
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 30,
+  '4xl': 36,
+  '5xl': 48,
+  '6xl': 60,
+};
+
+const fontWeight = {
+  hairline: '100',
+  thin: '200',
+  light: '300',
+  normal: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  extrabold: '800',
+  black: '900',
+};
+
+const typography = {
+  fontFamily,
+  fontSize,
+  fontWeight,
+  lineHeight: {
+    none: 1,
+    tight: 1.25,
+    snug: 1.375,
+    normal: 1.5,
+    relaxed: 1.625,
+    loose: 2,
+  },
+  letterSpacing: {
+    tighter: -0.8,
+    tight: -0.4,
+    normal: 0,
+    wide: 0.4,
+    wider: 0.8,
+    widest: 1.6,
+  },
 };
 
 // Border radius
-export const borderRadius = {
+const borderRadius = {
   none: 0,
-  xs: 2,
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  '2xl': 24,
-  '3xl': 32,
+  sm: 2,
+  md: 4,
+  lg: 8,
+  xl: 12,
+  '2xl': 16,
+  '3xl': 24,
   full: 9999,
 };
 
 // Shadows
-export const shadows = {
+const shadows = {
   none: {
-    shadowColor: colors.text,
+    shadowColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,
     shadowRadius: 0,
     elevation: 0,
   },
   xs: {
-    shadowColor: colors.text,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
     elevation: 1,
   },
   sm: {
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
     elevation: 2,
   },
   md: {
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 3,
   },
   lg: {
-    shadowColor: colors.text,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 5,
   },
   xl: {
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  '2xl': {
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
     elevation: 12,
   },
 };
 
-// Wallet-specific color schemes
-export const walletColorSchemes = {
-  parent: {
-    primary: '#5E35B1', // Deep purple
-    secondary: '#00BCD4', // Cyan
-    tertiary: '#FF5722', // Deep orange
-    dark: '#4527A0',
-    light: '#7E57C2',
-    gradient: ['#5E35B1', '#7E57C2'],
-  },
-  child: {
-    primary: '#2196F3', // Blue
-    secondary: '#4CAF50', // Green
-    tertiary: '#FF9800', // Orange
-    dark: '#1976D2',
-    light: '#64B5F6',
-    gradient: ['#2196F3', '#64B5F6'],
-  },
-  employer: {
-    primary: '#3F51B5', // Indigo
-    secondary: '#009688', // Teal
-    tertiary: '#F44336', // Red
-    dark: '#303F9F',
-    light: '#7986CB',
-    gradient: ['#3F51B5', '#7986CB'],
-  },
-  employee: {
-    primary: '#673AB7', // Deep purple
-    secondary: '#03A9F4', // Light blue
-    tertiary: '#FFC107', // Amber
-    dark: '#512DA8',
-    light: '#9575CD',
-    gradient: ['#673AB7', '#9575CD'],
-  },
-};
-
-// React Native Paper theme
-export const paperTheme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: colors.primary,
-    secondary: colors.secondary,
-    accent: colors.tertiary,
-    background: colors.background,
-    surface: colors.backgroundCard,
-    error: colors.error,
-    text: colors.text,
-    disabled: colors.disabled,
-    placeholder: colors.placeholder,
-    backdrop: 'rgba(0, 0, 0, 0.5)',
-    notification: colors.primary,
-  },
-  roundness: borderRadius.md,
-};
-
-// Common styles
-export const commonStyles = StyleSheet.create({
-  // Layout
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rowSpaceBetween: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  // Spacing
-  padding: {
-    padding: spacing.md,
-  },
-  paddingHorizontal: {
-    paddingHorizontal: spacing.md,
-  },
-  paddingVertical: {
-    paddingVertical: spacing.md,
-  },
-  margin: {
-    margin: spacing.md,
-  },
-  marginBottom: {
-    marginBottom: spacing.md,
-  },
-  marginTop: {
-    marginTop: spacing.md,
-  },
-  marginHorizontal: {
-    marginHorizontal: spacing.md,
-  },
-  marginVertical: {
-    marginVertical: spacing.md,
-  },
-  
-  // Borders
-  border: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-  },
-  borderBottom: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  roundedFull: {
-    borderRadius: borderRadius.full,
-  },
-  
-  // Cards
+// Common styles for reuse
+const commonStyles = {
   card: {
-    backgroundColor: colors.backgroundCard,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
-    ...shadows.sm,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.backgroundPrimary,
+    padding: spacing[4],
+    ...shadows.md,
   },
-  cardWithBorder: {
-    backgroundColor: colors.backgroundCard,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  
-  // Typography
-  title: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  body: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.regular,
-    color: colors.text,
-  },
-  caption: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.regular,
-    color: colors.textLight,
-  },
-  
-  // Buttons
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: spacing[3],
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
+  cardTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textDark,
   },
-  buttonOutline: {
-    backgroundColor: 'transparent',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
+  cardContent: {
+    marginVertical: spacing[2],
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: spacing[3],
+  },
+  section: {
+    marginBottom: spacing[8],
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: spacing[4],
   },
-  buttonOutlineText: {
-    color: colors.primary,
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
+  sectionTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textDark,
   },
-
-  // Form
   input: {
     height: 48,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-    backgroundColor: colors.background,
+    paddingHorizontal: spacing[3],
+    fontSize: fontSize.base,
+    color: colors.textDark,
+    backgroundColor: colors.backgroundPrimary,
   },
-  inputLabel: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.textMedium,
-    marginBottom: spacing.xs,
+  button: {
+    primary: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing[3],
+      paddingHorizontal: spacing[4],
+      minWidth: 120,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    secondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing[3],
+      paddingHorizontal: spacing[4],
+      minWidth: 120,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   },
-  
-  // Lists
-  listItem: {
+  buttonText: {
+    primary: {
+      fontSize: fontSize.base,
+      fontWeight: fontWeight.medium,
+      color: colors.white,
+    },
+    secondary: {
+      fontSize: fontSize.base,
+      fontWeight: fontWeight.medium,
+      color: colors.primary,
+    },
+  },
+  containerPadding: {
+    paddingHorizontal: spacing[4],
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
-  
-  // For wallet-specific styling
-  balanceContainer: {
-    paddingVertical: spacing.lg,
+  center: {
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  balanceAmount: {
-    fontSize: typography.fontSize['3xl'],
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing[4],
   },
-  balanceLabel: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textLight,
-    marginTop: spacing.xs,
+};
+
+// Define responsive dimensions
+const responsive = {
+  isSmallDevice: width < 375,
+  screen: {
+    width,
+    height,
   },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  transactionIcon: {
-    marginRight: spacing.md,
-  },
-  transactionContent: {
-    flex: 1,
-  },
-  transactionTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text,
-  },
-  transactionDescription: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textLight,
-  },
-  transactionAmount: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-  },
-  
-  // Status indicators
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.full,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.medium,
-  },
-  
-  // Icons
-  iconButton: {
-    padding: spacing.sm,
-  },
-});
+};
+
+// Export the theme
+const theme = {
+  colors,
+  walletColorSchemes,
+  spacing,
+  typography,
+  borderRadius,
+  shadows,
+  commonStyles,
+  responsive,
+};
+
+export default theme;
