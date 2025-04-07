@@ -37,7 +37,7 @@ export interface Allowance {
   nextPaymentDate?: string | null;
   description?: string | null;
   childId?: string;
-  parentId?: string;
+  parentUserId?: string;
   conditions?: string | null;
   autoTransfer?: boolean | null;
 }
@@ -55,7 +55,7 @@ interface AllowanceModalProps {
   currentAllowance?: Allowance;
 }
 
-export default function AllowanceModal({
+export function AllowanceModal({
   isOpen,
   onClose,
   onSave,
@@ -267,6 +267,8 @@ export default function AllowanceModal({
       const finalAllowance: Allowance = {
         ...allowance,
         childId: childInfo.id,
+        // Make sure we include parentUserId if provided by parent component
+        ...(allowance.parentUserId && { parentUserId: allowance.parentUserId }),
         conditions: hasConditions ? allowance.conditions : null,
         // Compute nextPaymentDate if needed
         nextPaymentDate: allowance.type === 'recurring' 
@@ -669,3 +671,5 @@ export default function AllowanceModal({
     </Dialog>
   );
 }
+
+// Exported as a named export: export function AllowanceModal

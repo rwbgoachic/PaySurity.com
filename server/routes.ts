@@ -2395,7 +2395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is the parent or the child
       const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
-      const isParent = familyGroup const isParent = familyGroup && familyGroup.parentId === req.user.id;const isParent = familyGroup && familyGroup.parentId === req.user.id; familyGroup.parentUserId === req.user.id;
+      const isParent = familyGroup && familyGroup.parentUserId === req.user.id;
       const isChild = familyMember.userId === req.user.id;
       
       if (!isParent && !isChild) {
@@ -2499,7 +2499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is the parent or the child
       const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
-      const isParent = familyGroup const isParent = familyGroup && familyGroup.parentId === req.user.id;const isParent = familyGroup && familyGroup.parentId === req.user.id; familyGroup.parentUserId === req.user.id;
+      const isParent = familyGroup && familyGroup.parentUserId === req.user.id;
       const isChild = familyMember.userId === req.user.id;
       
       if (!isParent && !isChild) {
@@ -2841,7 +2841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is the parent or the child
       const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
-      const isParent = familyGroup const isParent = familyGroup && familyGroup.parentId === req.user.id;const isParent = familyGroup && familyGroup.parentId === req.user.id; familyGroup.parentUserId === req.user.id;
+      const isParent = familyGroup && familyGroup.parentUserId === req.user.id;
       const isChild = childAccount.userId === req.user.id;
       
       if (!isParent && !isChild) {
@@ -2876,7 +2876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is the parent or the child
       const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
-      const isParent = familyGroup const isParent = familyGroup && familyGroup.parentId === req.user.id;const isParent = familyGroup && familyGroup.parentId === req.user.id; familyGroup.parentUserId === req.user.id;
+      const isParent = familyGroup && familyGroup.parentUserId === req.user.id;
       const isChild = childAccount.userId === req.user.id;
       
       if (!isParent && !isChild) {
@@ -2936,7 +2936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is the parent or the child
       const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
-      const isParent = familyGroup const isParent = familyGroup && familyGroup.parentId === req.user.id;const isParent = familyGroup && familyGroup.parentId === req.user.id; familyGroup.parentUserId === req.user.id;
+      const isParent = familyGroup && familyGroup.parentUserId === req.user.id;
       const isChild = childAccount.userId === req.user.id;
       
       if (!isParent && !isChild) {

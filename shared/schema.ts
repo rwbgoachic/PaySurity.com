@@ -43,7 +43,7 @@ export const users = pgTable("users", {
   dateOfBirth: date("date_of_birth"),
   ssn: text("ssn"),  // For Payroll purposes, stores last 4 digits or encrypted
   address: text("address"), // Could be split into multiple fields in production
-  parentId: integer("parent_id"), // For child accounts to link to parent
+  parentUserId: integer("parent_user_id"), // For child accounts to link to parent
   dependents: integer("dependents"), // Number of dependents for tax calculations
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
@@ -70,7 +70,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   dateOfBirth: true,
   ssn: true,
   address: true,
-  parentId: true,
+  parentUserId: true,
   dependents: true,
   stripeCustomerId: true,
   stripeSubscriptionId: true,

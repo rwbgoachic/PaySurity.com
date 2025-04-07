@@ -88,7 +88,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and, gte, lte, or, desc, asc, isNull, ne, gt, count, sql } from "drizzle-orm";
+import { eq, and, gte, lte, or, desc, asc, isNull, ne, gt, count, sql, inArray } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { Pool } from "@neondatabase/serverless";
 
@@ -634,7 +634,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getChildrenByParentId(parentId: number): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.parentId, parentId));
+    return await db.select().from(users).where(eq(users.parentUserId, parentId));
   }
   
   async getEmployeesByEmployerId(employerId: number): Promise<User[]> {
@@ -1608,9 +1608,9 @@ export class DatabaseStorage implements IStorage {
         parseFloat(goal.parentMatchPercentage.toString()) > 0) {
       // Get the child user
       const childUser = await this.getUser(goal.userId);
-      if (childUser && childUser.parentId) {
+      if (childUser && childUser.parentUserId) {
         // Get the parent wallet (assuming main wallet)
-        const parentWallets = await this.getWalletsByUserId(childUser.parentId);
+        const parentWallets = await this.getWalletsByUserId(childUser.parentUserId);
         const parentMainWallet = parentWallets.find(w => w.isMain);
         
         if (parentMainWallet) {
@@ -4170,7 +4170,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(familyMembers.isActive, true),
           eq(familyMembers.role, 'child'),
-          inArray(familyMembers.familyGroupId, groupIds)
+          familyMembers.familyGroupId.in(groupIds)
         )
       );
   }
@@ -4183,7 +4183,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(familyMembers.isActive, true),
           eq(familyMembers.role, 'child'),
-          inArray(familyMembers.familyGroupId, groupIds)
+          familyMembers.familyGroupId.in(groupIds)
         )
       );
     return members.map(m => m.id);
