@@ -121,6 +121,82 @@ export interface IStorage {
   getHubSpotToken(userId: number): Promise<any | undefined>;
   saveHubSpotToken(userId: number, token: any): Promise<any>;
   
+  // POS operations
+  getPosLocationsByUserId(userId: number): Promise<PosLocation[]>;
+  getPosLocation(id: number): Promise<PosLocation | undefined>;
+  createPosLocation(location: InsertPosLocation): Promise<PosLocation>;
+  updatePosLocation(id: number, updates: Partial<PosLocation>): Promise<PosLocation | undefined>;
+  deletePosLocation(id: number): Promise<void>;
+  
+  // POS Areas operations
+  getPosAreas(locationId: number): Promise<PosArea[]>;
+  getPosArea(id: number): Promise<PosArea | undefined>;
+  createPosArea(area: InsertPosArea): Promise<PosArea>;
+  updatePosArea(id: number, updates: Partial<PosArea>): Promise<PosArea | undefined>;
+  deletePosArea(id: number): Promise<void>;
+  
+  // POS Tables operations
+  getPosTables(locationId: number): Promise<PosTable[]>;
+  getPosTable(id: number): Promise<PosTable | undefined>;
+  createPosTable(table: InsertPosTable): Promise<PosTable>;
+  updatePosTable(id: number, updates: Partial<PosTable>): Promise<PosTable | undefined>;
+  updatePosTableStatus(id: number, status: string, currentOrderId?: number): Promise<PosTable | undefined>;
+  deletePosTable(id: number): Promise<void>;
+  
+  // POS Orders operations
+  getPosOrders(locationId: number): Promise<PosOrder[]>;
+  getPosOrdersByStatus(locationId: number, status: string): Promise<PosOrder[]>;
+  getPosOrder(id: number): Promise<PosOrder | undefined>;
+  createPosOrder(order: InsertPosOrder): Promise<PosOrder>;
+  updatePosOrder(id: number, updates: Partial<PosOrder>): Promise<PosOrder | undefined>;
+  updatePosOrderStatus(id: number, status: string): Promise<PosOrder | undefined>;
+  completePosOrder(id: number, paymentMethod: string, totalPaid: string): Promise<PosOrder | undefined>;
+  deletePosOrder(id: number): Promise<void>;
+  
+  // POS Order Items operations
+  getPosOrderItems(orderId: number): Promise<PosOrderItem[]>;
+  getPosOrderItem(id: number): Promise<PosOrderItem | undefined>;
+  createPosOrderItem(item: InsertPosOrderItem): Promise<PosOrderItem>;
+  updatePosOrderItem(id: number, updates: Partial<PosOrderItem>): Promise<PosOrderItem | undefined>;
+  updatePosOrderItemQuantity(id: number, quantity: number): Promise<PosOrderItem | undefined>;
+  deletePosOrderItem(id: number): Promise<void>;
+  
+  // POS Inventory operations
+  getPosInventoryItems(locationId: number): Promise<PosInventoryItem[]>;
+  getPosInventoryItem(id: number): Promise<PosInventoryItem | undefined>;
+  createPosInventoryItem(item: InsertPosInventoryItem): Promise<PosInventoryItem>;
+  updatePosInventoryItem(id: number, updates: Partial<PosInventoryItem>): Promise<PosInventoryItem | undefined>;
+  updatePosInventoryItemStock(id: number, newStock: string): Promise<PosInventoryItem | undefined>;
+  deletePosInventoryItem(id: number): Promise<void>;
+  
+  // POS Categories operations
+  getPosCategories(locationId: number): Promise<PosCategory[]>;
+  getPosCategory(id: number): Promise<PosCategory | undefined>;
+  createPosCategory(category: InsertPosCategory): Promise<PosCategory>;
+  updatePosCategory(id: number, updates: Partial<PosCategory>): Promise<PosCategory | undefined>;
+  deletePosCategory(id: number): Promise<void>;
+  
+  // POS Menu Items operations
+  getPosMenuItems(locationId: number): Promise<PosMenuItem[]>;
+  getPosMenuItemsByCategory(categoryId: number): Promise<PosMenuItem[]>;
+  getPosMenuItem(id: number): Promise<PosMenuItem | undefined>;
+  createPosMenuItem(item: InsertPosMenuItem): Promise<PosMenuItem>;
+  updatePosMenuItem(id: number, updates: Partial<PosMenuItem>): Promise<PosMenuItem | undefined>;
+  deletePosMenuItem(id: number): Promise<void>;
+  
+  // POS Staff operations
+  getPosStaffByLocationId(locationId: number): Promise<PosStaff[]>;
+  getPosStaff(id: number): Promise<PosStaff | undefined>;
+  createPosStaff(staff: InsertPosStaff): Promise<PosStaff>;
+  updatePosStaff(id: number, updates: Partial<PosStaff>): Promise<PosStaff | undefined>;
+  deletePosStaff(id: number): Promise<void>;
+  
+  // POS Payments operations
+  getPosPaymentsByLocationId(locationId: number): Promise<PosPayment[]>;
+  getPosPaymentsByOrderId(orderId: number): Promise<PosPayment[]>;
+  getPosPayment(id: number): Promise<PosPayment | undefined>;
+  createPosPayment(payment: InsertPosPayment): Promise<PosPayment>;
+  
   // POS Tenant operations
   getPosTenant(id: number): Promise<PosTenant | undefined>;
   getPosTenantBySubdomain(subdomain: string): Promise<PosTenant | undefined>;
@@ -4891,6 +4967,501 @@ export class DatabaseStorage implements IStorage {
   async createRestaurantInventoryTransaction(transaction: InsertRestaurantInventoryTransaction): Promise<RestaurantInventoryTransaction> {
     const [newTransaction] = await db.insert(restaurantInventoryTransactions).values(transaction).returning();
     return newTransaction;
+  }
+
+  // =========================================
+  // New Modern POS Implementation
+  // =========================================
+  
+  // ======== POS Locations ========
+  async getPosLocationsByUserId(userId: number): Promise<PosLocation[]> {
+    return await db.select().from(posLocations).where(eq(posLocations.merchantId, userId));
+  }
+  
+  async getPosLocation(id: number): Promise<PosLocation | undefined> {
+    const [location] = await db.select().from(posLocations).where(eq(posLocations.id, id));
+    return location;
+  }
+  
+  async createPosLocation(locationData: InsertPosLocation): Promise<PosLocation> {
+    const [location] = await db.insert(posLocations).values(locationData).returning();
+    return location;
+  }
+  
+  async updatePosLocation(id: number, updates: Partial<PosLocation>): Promise<PosLocation | undefined> {
+    const [location] = await db
+      .update(posLocations)
+      .set(updates)
+      .where(eq(posLocations.id, id))
+      .returning();
+    return location;
+  }
+  
+  async deletePosLocation(id: number): Promise<void> {
+    await db.delete(posLocations).where(eq(posLocations.id, id));
+  }
+  
+  // ======== POS Areas ========
+  async getPosAreas(locationId: number): Promise<PosArea[]> {
+    return await db.select().from(posAreas).where(eq(posAreas.locationId, locationId));
+  }
+  
+  async getPosArea(id: number): Promise<PosArea | undefined> {
+    const [area] = await db.select().from(posAreas).where(eq(posAreas.id, id));
+    return area;
+  }
+  
+  async createPosArea(areaData: InsertPosArea): Promise<PosArea> {
+    const [area] = await db.insert(posAreas).values(areaData).returning();
+    return area;
+  }
+  
+  async updatePosArea(id: number, updates: Partial<PosArea>): Promise<PosArea | undefined> {
+    const [area] = await db
+      .update(posAreas)
+      .set(updates)
+      .where(eq(posAreas.id, id))
+      .returning();
+    return area;
+  }
+  
+  async deletePosArea(id: number): Promise<void> {
+    await db.delete(posAreas).where(eq(posAreas.id, id));
+  }
+  
+  // ======== POS Tables ========
+  async getPosTables(locationId: number): Promise<PosTable[]> {
+    return await db.select().from(posTables).where(eq(posTables.locationId, locationId));
+  }
+  
+  async getPosTable(id: number): Promise<PosTable | undefined> {
+    const [table] = await db.select().from(posTables).where(eq(posTables.id, id));
+    return table;
+  }
+  
+  async createPosTable(tableData: InsertPosTable): Promise<PosTable> {
+    const [table] = await db.insert(posTables).values(tableData).returning();
+    return table;
+  }
+  
+  async updatePosTable(id: number, updates: Partial<PosTable>): Promise<PosTable | undefined> {
+    const [table] = await db
+      .update(posTables)
+      .set(updates)
+      .where(eq(posTables.id, id))
+      .returning();
+    return table;
+  }
+  
+  async updatePosTableStatus(id: number, status: string, currentOrderId?: number): Promise<PosTable | undefined> {
+    const updateData: Partial<PosTable> = {
+      status,
+    };
+    
+    if (currentOrderId !== undefined) {
+      updateData.currentOrderId = currentOrderId;
+    }
+    
+    const [table] = await db
+      .update(posTables)
+      .set(updateData)
+      .where(eq(posTables.id, id))
+      .returning();
+    return table;
+  }
+  
+  async deletePosTable(id: number): Promise<void> {
+    await db.delete(posTables).where(eq(posTables.id, id));
+  }
+  
+  // ======== POS Orders ========
+  async getPosOrders(locationId: number): Promise<PosOrder[]> {
+    return await db.select().from(posOrders)
+      .where(eq(posOrders.locationId, locationId))
+      .orderBy(desc(posOrders.createdAt));
+  }
+  
+  async getPosOrdersByStatus(locationId: number, status: string): Promise<PosOrder[]> {
+    return await db
+      .select()
+      .from(posOrders)
+      .where(
+        and(
+          eq(posOrders.locationId, locationId),
+          eq(posOrders.status, status)
+        )
+      )
+      .orderBy(desc(posOrders.createdAt));
+  }
+  
+  async getPosOrder(id: number): Promise<PosOrder | undefined> {
+    const [order] = await db.select().from(posOrders).where(eq(posOrders.id, id));
+    return order;
+  }
+  
+  async createPosOrder(orderData: InsertPosOrder): Promise<PosOrder> {
+    // Generate order number if not provided
+    if (!orderData.orderNumber) {
+      orderData.orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+    }
+    
+    const [order] = await db.insert(posOrders).values(orderData).returning();
+    return order;
+  }
+  
+  async updatePosOrder(id: number, updates: Partial<PosOrder>): Promise<PosOrder | undefined> {
+    const [order] = await db
+      .update(posOrders)
+      .set(updates)
+      .where(eq(posOrders.id, id))
+      .returning();
+    return order;
+  }
+  
+  async updatePosOrderStatus(id: number, status: string): Promise<PosOrder | undefined> {
+    const updateData: Partial<PosOrder> = {
+      status,
+    };
+    
+    if (status === "completed") {
+      updateData.completedAt = new Date();
+    }
+    
+    const [order] = await db
+      .update(posOrders)
+      .set(updateData)
+      .where(eq(posOrders.id, id))
+      .returning();
+    return order;
+  }
+  
+  async completePosOrder(id: number, paymentMethod: string, totalPaid: string): Promise<PosOrder | undefined> {
+    const [order] = await db
+      .update(posOrders)
+      .set({ 
+        status: "completed",
+        paymentStatus: "paid", 
+        completedAt: new Date(),
+      })
+      .where(eq(posOrders.id, id))
+      .returning();
+      
+    // Create payment record
+    if (order) {
+      await db.insert(posPayments).values({
+        orderId: id,
+        locationId: order.locationId,
+        amount: totalPaid,
+        method: paymentMethod,
+        status: "completed"
+      });
+    }
+    
+    return order;
+  }
+  
+  async deletePosOrder(id: number): Promise<void> {
+    await db.delete(posOrders).where(eq(posOrders.id, id));
+  }
+  
+  // ======== POS Order Items ========
+  async getPosOrderItems(orderId: number): Promise<PosOrderItem[]> {
+    return await db.select().from(posOrderItems).where(eq(posOrderItems.orderId, orderId));
+  }
+  
+  async getPosOrderItem(id: number): Promise<PosOrderItem | undefined> {
+    const [item] = await db.select().from(posOrderItems).where(eq(posOrderItems.id, id));
+    return item;
+  }
+  
+  async createPosOrderItem(item: InsertPosOrderItem): Promise<PosOrderItem> {
+    // Calculate totals if not provided
+    if (!item.subtotal && item.unitPrice && item.quantity) {
+      item.subtotal = (parseFloat(item.unitPrice) * item.quantity).toString();
+    }
+    
+    if (!item.totalAmount && item.subtotal && item.taxAmount) {
+      const subtotal = parseFloat(item.subtotal);
+      const tax = parseFloat(item.taxAmount);
+      const discount = item.discount ? parseFloat(item.discount) : 0;
+      item.totalAmount = (subtotal + tax - discount).toString();
+    }
+    
+    const [orderItem] = await db.insert(posOrderItems).values(item).returning();
+    
+    // Update order totals
+    if (orderItem) {
+      const allItems = await this.getPosOrderItems(orderItem.orderId);
+      
+      const subtotal = allItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+      const taxAmount = allItems.reduce((sum, item) => sum + parseFloat(item.taxAmount), 0);
+      const discountAmount = allItems.reduce((sum, item) => sum + parseFloat(item.discount ? item.discount : "0"), 0);
+      const totalAmount = subtotal + taxAmount - discountAmount;
+      
+      await db
+        .update(posOrders)
+        .set({ 
+          subtotal: subtotal.toString(),
+          taxAmount: taxAmount.toString(),
+          discountAmount: discountAmount.toString(),
+          totalAmount: totalAmount.toString()
+        })
+        .where(eq(posOrders.id, orderItem.orderId));
+    }
+    
+    return orderItem;
+  }
+  
+  async updatePosOrderItem(id: number, updates: Partial<PosOrderItem>): Promise<PosOrderItem | undefined> {
+    const [orderItem] = await db
+      .update(posOrderItems)
+      .set(updates)
+      .where(eq(posOrderItems.id, id))
+      .returning();
+    
+    // Update order totals
+    if (orderItem) {
+      const allItems = await this.getPosOrderItems(orderItem.orderId);
+      
+      const subtotal = allItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+      const taxAmount = allItems.reduce((sum, item) => sum + parseFloat(item.taxAmount), 0);
+      const discountAmount = allItems.reduce((sum, item) => sum + parseFloat(item.discount ? item.discount : "0"), 0);
+      const totalAmount = subtotal + taxAmount - discountAmount;
+      
+      await db
+        .update(posOrders)
+        .set({ 
+          subtotal: subtotal.toString(),
+          taxAmount: taxAmount.toString(),
+          discountAmount: discountAmount.toString(),
+          totalAmount: totalAmount.toString()
+        })
+        .where(eq(posOrders.id, orderItem.orderId));
+    }
+    
+    return orderItem;
+  }
+  
+  async updatePosOrderItemQuantity(id: number, quantity: number): Promise<PosOrderItem | undefined> {
+    const item = await this.getPosOrderItem(id);
+    if (!item) return undefined;
+    
+    const unitPrice = parseFloat(item.unitPrice);
+    const subtotal = (unitPrice * quantity).toString();
+    
+    // Recalculate tax based on the original tax rate
+    const originalSubtotal = parseFloat(item.subtotal);
+    const originalTax = parseFloat(item.taxAmount);
+    const taxRate = originalTax / originalSubtotal;
+    const taxAmount = (parseFloat(subtotal) * taxRate).toString();
+    
+    // Keep discount the same
+    const discount = item.discount || "0";
+    
+    // Calculate total
+    const totalAmount = (parseFloat(subtotal) + parseFloat(taxAmount) - parseFloat(discount)).toString();
+    
+    const updates: Partial<PosOrderItem> = {
+      quantity,
+      subtotal,
+      taxAmount,
+      totalAmount
+    };
+    
+    return this.updatePosOrderItem(id, updates);
+  }
+  
+  async deletePosOrderItem(id: number): Promise<void> {
+    const item = await this.getPosOrderItem(id);
+    if (!item) return;
+    
+    const orderId = item.orderId;
+    
+    await db.delete(posOrderItems).where(eq(posOrderItems.id, id));
+    
+    // Update order totals
+    const allItems = await this.getPosOrderItems(orderId);
+    
+    if (allItems.length > 0) {
+      const subtotal = allItems.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+      const taxAmount = allItems.reduce((sum, item) => sum + parseFloat(item.taxAmount), 0);
+      const discountAmount = allItems.reduce((sum, item) => sum + parseFloat(item.discount ? item.discount : "0"), 0);
+      const totalAmount = subtotal + taxAmount - discountAmount;
+      
+      await db
+        .update(posOrders)
+        .set({ 
+          subtotal: subtotal.toString(),
+          taxAmount: taxAmount.toString(),
+          discountAmount: discountAmount.toString(),
+          totalAmount: totalAmount.toString()
+        })
+        .where(eq(posOrders.id, orderId));
+    } else {
+      // If no items left, set totals to 0
+      await db
+        .update(posOrders)
+        .set({ 
+          subtotal: "0",
+          taxAmount: "0",
+          discountAmount: "0",
+          totalAmount: "0"
+        })
+        .where(eq(posOrders.id, orderId));
+    }
+  }
+  
+  // ======== POS Categories ========
+  async getPosCategories(locationId: number): Promise<PosCategory[]> {
+    return await db.select().from(posCategories).where(eq(posCategories.locationId, locationId));
+  }
+  
+  async getPosCategory(id: number): Promise<PosCategory | undefined> {
+    const [category] = await db.select().from(posCategories).where(eq(posCategories.id, id));
+    return category;
+  }
+  
+  async createPosCategory(categoryData: InsertPosCategory): Promise<PosCategory> {
+    const [category] = await db.insert(posCategories).values(categoryData).returning();
+    return category;
+  }
+  
+  async updatePosCategory(id: number, updates: Partial<PosCategory>): Promise<PosCategory | undefined> {
+    const [category] = await db
+      .update(posCategories)
+      .set(updates)
+      .where(eq(posCategories.id, id))
+      .returning();
+    return category;
+  }
+  
+  async deletePosCategory(id: number): Promise<void> {
+    await db.delete(posCategories).where(eq(posCategories.id, id));
+  }
+  
+  // ======== POS Menu Items ========
+  async getPosMenuItems(locationId: number): Promise<PosMenuItem[]> {
+    return await db.select().from(posMenuItems).where(eq(posMenuItems.locationId, locationId));
+  }
+  
+  async getPosMenuItemsByCategory(categoryId: number): Promise<PosMenuItem[]> {
+    return await db.select().from(posMenuItems).where(eq(posMenuItems.categoryId, categoryId));
+  }
+  
+  async getPosMenuItem(id: number): Promise<PosMenuItem | undefined> {
+    const [item] = await db.select().from(posMenuItems).where(eq(posMenuItems.id, id));
+    return item;
+  }
+  
+  async createPosMenuItem(itemData: InsertPosMenuItem): Promise<PosMenuItem> {
+    const [item] = await db.insert(posMenuItems).values(itemData).returning();
+    return item;
+  }
+  
+  async updatePosMenuItem(id: number, updates: Partial<PosMenuItem>): Promise<PosMenuItem | undefined> {
+    const [item] = await db
+      .update(posMenuItems)
+      .set(updates)
+      .where(eq(posMenuItems.id, id))
+      .returning();
+    return item;
+  }
+  
+  async deletePosMenuItem(id: number): Promise<void> {
+    await db.delete(posMenuItems).where(eq(posMenuItems.id, id));
+  }
+  
+  // ======== POS Staff ========
+  async getPosStaffByLocationId(locationId: number): Promise<PosStaff[]> {
+    return await db.select().from(posStaff).where(eq(posStaff.locationId, locationId));
+  }
+  
+  async getPosStaff(id: number): Promise<PosStaff | undefined> {
+    const [staff] = await db.select().from(posStaff).where(eq(posStaff.id, id));
+    return staff;
+  }
+  
+  async createPosStaff(staffData: InsertPosStaff): Promise<PosStaff> {
+    const [staff] = await db.insert(posStaff).values(staffData).returning();
+    return staff;
+  }
+  
+  async updatePosStaff(id: number, updates: Partial<PosStaff>): Promise<PosStaff | undefined> {
+    const [staff] = await db
+      .update(posStaff)
+      .set(updates)
+      .where(eq(posStaff.id, id))
+      .returning();
+    return staff;
+  }
+  
+  async deletePosStaff(id: number): Promise<void> {
+    await db.delete(posStaff).where(eq(posStaff.id, id));
+  }
+  
+  // ======== POS Payments ========
+  async getPosPaymentsByLocationId(locationId: number): Promise<PosPayment[]> {
+    return await db.select().from(posPayments).where(eq(posPayments.locationId, locationId));
+  }
+  
+  async getPosPaymentsByOrderId(orderId: number): Promise<PosPayment[]> {
+    return await db.select().from(posPayments).where(eq(posPayments.orderId, orderId));
+  }
+  
+  async getPosPayment(id: number): Promise<PosPayment | undefined> {
+    const [payment] = await db.select().from(posPayments).where(eq(posPayments.id, id));
+    return payment;
+  }
+  
+  async createPosPayment(paymentData: InsertPosPayment): Promise<PosPayment> {
+    const [payment] = await db.insert(posPayments).values(paymentData).returning();
+    
+    // If this payment completes the order, update the order status
+    if (paymentData.status === 'completed') {
+      const order = await this.getPosOrder(paymentData.orderId);
+      if (order) {
+        await this.updatePosOrderStatus(paymentData.orderId, 'completed');
+      }
+    }
+    
+    return payment;
+  }
+  
+  // ======== POS Inventory Items ========
+  async getPosInventoryItems(locationId: number): Promise<PosInventoryItem[]> {
+    return await db.select().from(posInventoryItems).where(eq(posInventoryItems.locationId, locationId));
+  }
+  
+  async getPosInventoryItem(id: number): Promise<PosInventoryItem | undefined> {
+    const [item] = await db.select().from(posInventoryItems).where(eq(posInventoryItems.id, id));
+    return item;
+  }
+  
+  async createPosInventoryItem(itemData: InsertPosInventoryItem): Promise<PosInventoryItem> {
+    const [item] = await db.insert(posInventoryItems).values(itemData).returning();
+    return item;
+  }
+  
+  async updatePosInventoryItem(id: number, updates: Partial<PosInventoryItem>): Promise<PosInventoryItem | undefined> {
+    const [item] = await db
+      .update(posInventoryItems)
+      .set(updates)
+      .where(eq(posInventoryItems.id, id))
+      .returning();
+    return item;
+  }
+  
+  async updatePosInventoryItemStock(id: number, newStock: string): Promise<PosInventoryItem | undefined> {
+    const [item] = await db
+      .update(posInventoryItems)
+      .set({ stock: newStock })
+      .where(eq(posInventoryItems.id, id))
+      .returning();
+    return item;
+  }
+  
+  async deletePosInventoryItem(id: number): Promise<void> {
+    await db.delete(posInventoryItems).where(eq(posInventoryItems.id, id));
   }
 }
 

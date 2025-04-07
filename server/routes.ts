@@ -3008,44 +3008,871 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =========================================
-  // Restaurant POS API Routes
+  // BistroBeast POS API Routes
   // =========================================
-  
-  // Restaurant Tables API
-  app.get("/api/restaurant/tables", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+
+  // POS Locations API
+  app.get("/api/pos/locations", async (req, res) => {
+    if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     
     try {
-      const merchantId = req.user.id;
-      const tables = await storage.getRestaurantTablesByMerchantId(merchantId);
+      const userId = req.user.id;
+      const locations = await storage.getPosLocationsByUserId(userId);
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching POS locations:", error);
+      res.status(500).json({ error: "Failed to fetch POS locations" });
+    }
+  });
+
+  app.post("/api/pos/locations", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const locationData = insertPosLocationSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const location = await storage.createPosLocation(locationData);
+      res.status(201).json(location);
+    } catch (error) {
+      console.error("Error creating POS location:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid location data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS location" });
+    }
+  });
+
+  // POS Tables API
+  app.get("/api/pos/tables", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId } = req.query;
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const tables = await storage.getPosTables(parseInt(locationId));
       res.json(tables);
     } catch (error) {
-      console.error("Error fetching restaurant tables:", error);
-      res.status(500).json({ error: "Failed to fetch restaurant tables" });
+      console.error("Error fetching POS tables:", error);
+      res.status(500).json({ error: "Failed to fetch POS tables" });
     }
   });
   
-  app.post("/api/restaurant/tables", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+  app.post("/api/pos/tables", async (req, res) => {
+    if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     
     try {
-      const tableData = insertRestaurantTableSchema.parse({
-        ...req.body,
-        merchantId: req.user.id
+      const tableData = insertPosTableSchema.parse({
+        ...req.body
       });
       
-      const table = await storage.createRestaurantTable(tableData);
+      const table = await storage.createPosTable(tableData);
+      
+      // Notify clients about new table
+      broadcast(`pos-location-${tableData.locationId}`, {
+        type: 'table_created',
+        data: table
+      });
+      
       res.status(201).json(table);
     } catch (error) {
-      console.error("Error creating restaurant table:", error);
+      console.error("Error creating POS table:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid table data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create restaurant table" });
+      res.status(500).json({ error: "Failed to create POS table" });
+    }
+  });
+  
+  app.put("/api/pos/tables/:id/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const { status, currentOrderId } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+      
+      const updatedTable = await storage.updatePosTableStatus(parseInt(id), status, currentOrderId);
+      
+      if (!updatedTable) {
+        return res.status(404).json({ error: "Table not found" });
+      }
+      
+      // Notify clients about table status change
+      broadcast(`pos-location-${updatedTable.locationId}`, {
+        type: 'table_updated',
+        data: updatedTable
+      });
+      
+      res.json(updatedTable);
+    } catch (error) {
+      console.error("Error updating POS table status:", error);
+      res.status(500).json({ error: "Failed to update POS table status" });
+    }
+  });
+  
+  // POS Areas API
+  app.get("/api/pos/areas", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId } = req.query;
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const areas = await storage.getPosAreas(parseInt(locationId));
+      res.json(areas);
+    } catch (error) {
+      console.error("Error fetching POS areas:", error);
+      res.status(500).json({ error: "Failed to fetch POS areas" });
+    }
+  });
+  
+  app.post("/api/pos/areas", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const areaData = insertPosAreaSchema.parse({
+        ...req.body
+      });
+      
+      const area = await storage.createPosArea(areaData);
+      
+      // Notify clients about new area
+      broadcast(`pos-location-${areaData.locationId}`, {
+        type: 'area_created',
+        data: area
+      });
+      
+      res.status(201).json(area);
+    } catch (error) {
+      console.error("Error creating POS area:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid area data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS area" });
+    }
+  });
+  
+  // POS Categories API
+  app.get("/api/pos/categories", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId } = req.query;
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const categories = await storage.getPosCategories(parseInt(locationId));
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching POS categories:", error);
+      res.status(500).json({ error: "Failed to fetch POS categories" });
+    }
+  });
+  
+  app.post("/api/pos/categories", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const categoryData = insertPosCategorySchema.parse({
+        ...req.body
+      });
+      
+      const category = await storage.createPosCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating POS category:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid category data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS category" });
+    }
+  });
+  
+  // POS Menu Items API
+  app.get("/api/pos/menu-items", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId, categoryId } = req.query;
+      
+      if (categoryId && typeof categoryId === 'string') {
+        const menuItems = await storage.getPosMenuItemsByCategory(parseInt(categoryId));
+        return res.json(menuItems);
+      }
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const menuItems = await storage.getPosMenuItems(parseInt(locationId));
+      res.json(menuItems);
+    } catch (error) {
+      console.error("Error fetching POS menu items:", error);
+      res.status(500).json({ error: "Failed to fetch POS menu items" });
+    }
+  });
+  
+  app.post("/api/pos/menu-items", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const menuItemData = insertPosMenuItemSchema.parse({
+        ...req.body
+      });
+      
+      const menuItem = await storage.createPosMenuItem(menuItemData);
+      res.status(201).json(menuItem);
+    } catch (error) {
+      console.error("Error creating POS menu item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid menu item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS menu item" });
+    }
+  });
+  
+  // POS Orders API
+  app.get("/api/pos/orders", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId, status } = req.query;
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      if (status && typeof status === 'string') {
+        const orders = await storage.getPosOrdersByStatus(parseInt(locationId), status);
+        return res.json(orders);
+      }
+      
+      const orders = await storage.getPosOrders(parseInt(locationId));
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching POS orders:", error);
+      res.status(500).json({ error: "Failed to fetch POS orders" });
+    }
+  });
+  
+  app.get("/api/pos/orders/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const order = await storage.getPosOrder(parseInt(id));
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Get order items
+      const orderItems = await storage.getPosOrderItems(parseInt(id));
+      
+      res.json({
+        ...order,
+        items: orderItems
+      });
+    } catch (error) {
+      console.error("Error fetching POS order:", error);
+      res.status(500).json({ error: "Failed to fetch POS order" });
+    }
+  });
+  
+  app.post("/api/pos/orders", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderData = insertPosOrderSchema.parse({
+        ...req.body
+      });
+      
+      const order = await storage.createPosOrder(orderData);
+      
+      // Notify clients about new order
+      broadcast(`pos-location-${orderData.locationId}`, {
+        type: 'order_created',
+        data: order
+      });
+      
+      // If table is provided, update table status
+      if (orderData.tableId) {
+        await storage.updatePosTableStatus(orderData.tableId, "occupied", order.id);
+        
+        // Get updated table to broadcast
+        const updatedTable = await storage.getPosTable(orderData.tableId);
+        if (updatedTable) {
+          broadcast(`pos-location-${orderData.locationId}`, {
+            type: 'table_updated',
+            data: updatedTable
+          });
+        }
+      }
+      
+      res.status(201).json(order);
+    } catch (error) {
+      console.error("Error creating POS order:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid order data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS order" });
+    }
+  });
+  
+  app.put("/api/pos/orders/:id/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+      
+      const updatedOrder = await storage.updatePosOrderStatus(parseInt(id), status);
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Notify clients about order status change
+      broadcast(`pos-location-${updatedOrder.locationId}`, {
+        type: 'order_updated',
+        data: updatedOrder
+      });
+      
+      // If order is completed and there's a table, update table status to available
+      if (status === "completed" && updatedOrder.tableId) {
+        await storage.updatePosTableStatus(updatedOrder.tableId, "available", null);
+        
+        // Get updated table to broadcast
+        const updatedTable = await storage.getPosTable(updatedOrder.tableId);
+        if (updatedTable) {
+          broadcast(`pos-location-${updatedOrder.locationId}`, {
+            type: 'table_updated',
+            data: updatedTable
+          });
+        }
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating POS order status:", error);
+      res.status(500).json({ error: "Failed to update POS order status" });
+    }
+  });
+  
+  app.post("/api/pos/orders/:id/complete", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const { paymentMethod, totalPaid } = req.body;
+      
+      if (!paymentMethod || !totalPaid) {
+        return res.status(400).json({ error: "Payment method and total paid are required" });
+      }
+      
+      const completedOrder = await storage.completePosOrder(parseInt(id), paymentMethod, totalPaid);
+      
+      if (!completedOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Notify clients about order completion
+      broadcast(`pos-location-${completedOrder.locationId}`, {
+        type: 'order_completed',
+        data: completedOrder
+      });
+      
+      // If there's a table, update table status to available
+      if (completedOrder.tableId) {
+        await storage.updatePosTableStatus(completedOrder.tableId, "available", null);
+        
+        // Get updated table to broadcast
+        const updatedTable = await storage.getPosTable(completedOrder.tableId);
+        if (updatedTable) {
+          broadcast(`pos-location-${completedOrder.locationId}`, {
+            type: 'table_updated',
+            data: updatedTable
+          });
+        }
+      }
+      
+      res.json(completedOrder);
+    } catch (error) {
+      console.error("Error completing POS order:", error);
+      res.status(500).json({ error: "Failed to complete POS order" });
+    }
+  });
+  
+  // POS Order Items API
+  app.get("/api/pos/order-items/:orderId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { orderId } = req.params;
+      const orderItems = await storage.getPosOrderItems(parseInt(orderId));
+      res.json(orderItems);
+    } catch (error) {
+      console.error("Error fetching POS order items:", error);
+      res.status(500).json({ error: "Failed to fetch POS order items" });
+    }
+  });
+  
+  app.post("/api/pos/order-items", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderItemData = insertPosOrderItemSchema.parse({
+        ...req.body
+      });
+      
+      const orderItem = await storage.createPosOrderItem(orderItemData);
+      
+      // Get the updated order with new totals
+      const updatedOrder = await storage.getPosOrder(orderItemData.orderId);
+      
+      // Notify clients about updated order
+      if (updatedOrder) {
+        broadcast(`pos-location-${updatedOrder.locationId}`, {
+          type: 'order_updated',
+          data: updatedOrder
+        });
+        
+        // Also notify specifically for the order
+        broadcast(`pos-order-${orderItemData.orderId}`, {
+          type: 'order_item_added',
+          data: orderItem
+        });
+      }
+      
+      res.status(201).json(orderItem);
+    } catch (error) {
+      console.error("Error creating POS order item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid order item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS order item" });
+    }
+  });
+  
+  app.put("/api/pos/order-items/:id/quantity", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const { quantity } = req.body;
+      
+      if (quantity === undefined || quantity < 1) {
+        return res.status(400).json({ error: "Valid quantity is required" });
+      }
+      
+      const updatedItem = await storage.updatePosOrderItemQuantity(parseInt(id), quantity);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Order item not found" });
+      }
+      
+      // Get the updated order with new totals
+      const updatedOrder = await storage.getPosOrder(updatedItem.orderId);
+      
+      // Notify clients about updated order
+      if (updatedOrder) {
+        broadcast(`pos-location-${updatedOrder.locationId}`, {
+          type: 'order_updated',
+          data: updatedOrder
+        });
+        
+        // Also notify specifically for the order
+        broadcast(`pos-order-${updatedItem.orderId}`, {
+          type: 'order_item_updated',
+          data: updatedItem
+        });
+      }
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating POS order item quantity:", error);
+      res.status(500).json({ error: "Failed to update order item quantity" });
+    }
+  });
+  
+  app.delete("/api/pos/order-items/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const item = await storage.getPosOrderItem(parseInt(id));
+      
+      if (!item) {
+        return res.status(404).json({ error: "Order item not found" });
+      }
+      
+      const orderId = item.orderId;
+      const order = await storage.getPosOrder(orderId);
+      
+      await storage.deletePosOrderItem(parseInt(id));
+      
+      // Get the updated order with new totals
+      const updatedOrder = await storage.getPosOrder(orderId);
+      
+      // Notify clients about updated order
+      if (order) {
+        broadcast(`pos-location-${order.locationId}`, {
+          type: 'order_updated',
+          data: updatedOrder || order
+        });
+        
+        // Also notify specifically for the order
+        broadcast(`pos-order-${orderId}`, {
+          type: 'order_item_deleted',
+          data: item
+        });
+      }
+      
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error deleting POS order item:", error);
+      res.status(500).json({ error: "Failed to delete order item" });
+    }
+  });
+  
+  // POS Inventory API
+  app.get("/api/pos/inventory", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId } = req.query;
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const inventoryItems = await storage.getPosInventoryItems(parseInt(locationId));
+      res.json(inventoryItems);
+    } catch (error) {
+      console.error("Error fetching POS inventory:", error);
+      res.status(500).json({ error: "Failed to fetch POS inventory" });
+    }
+  });
+  
+  app.post("/api/pos/inventory", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const inventoryItemData = insertPosInventoryItemSchema.parse({
+        ...req.body
+      });
+      
+      const inventoryItem = await storage.createPosInventoryItem(inventoryItemData);
+      res.status(201).json(inventoryItem);
+    } catch (error) {
+      console.error("Error creating POS inventory item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid inventory item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS inventory item" });
+    }
+  });
+  
+  app.put("/api/pos/inventory/:id/stock", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const { stock } = req.body;
+      
+      if (stock === undefined) {
+        return res.status(400).json({ error: "Stock amount is required" });
+      }
+      
+      const updatedItem = await storage.updatePosInventoryItemStock(parseInt(id), stock.toString());
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating POS inventory stock:", error);
+      res.status(500).json({ error: "Failed to update inventory stock" });
+    }
+  });
+  
+  // POS Staff API
+  app.get("/api/pos/staff", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId } = req.query;
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const staff = await storage.getPosStaffByLocationId(parseInt(locationId));
+      res.json(staff);
+    } catch (error) {
+      console.error("Error fetching POS staff:", error);
+      res.status(500).json({ error: "Failed to fetch POS staff" });
+    }
+  });
+  
+  app.post("/api/pos/staff", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const staffData = insertPosStaffSchema.parse({
+        ...req.body
+      });
+      
+      const staff = await storage.createPosStaff(staffData);
+      res.status(201).json(staff);
+    } catch (error) {
+      console.error("Error creating POS staff member:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid staff data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS staff member" });
+    }
+  });
+  
+  app.put("/api/pos/staff/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedStaff = await storage.updatePosStaff(parseInt(id), updates);
+      
+      if (!updatedStaff) {
+        return res.status(404).json({ error: "Staff member not found" });
+      }
+      
+      res.json(updatedStaff);
+    } catch (error) {
+      console.error("Error updating POS staff member:", error);
+      res.status(500).json({ error: "Failed to update staff member" });
+    }
+  });
+  
+  app.delete("/api/pos/staff/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      await storage.deletePosStaff(parseInt(id));
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error deleting POS staff member:", error);
+      res.status(500).json({ error: "Failed to delete staff member" });
+    }
+  });
+  
+  // POS Payments API
+  app.get("/api/pos/payments", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { locationId, orderId } = req.query;
+      
+      if (orderId && typeof orderId === 'string') {
+        const payments = await storage.getPosPaymentsByOrderId(parseInt(orderId));
+        return res.json(payments);
+      }
+      
+      if (!locationId || typeof locationId !== 'string') {
+        return res.status(400).json({ error: "Location ID is required" });
+      }
+      
+      const payments = await storage.getPosPaymentsByLocationId(parseInt(locationId));
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching POS payments:", error);
+      res.status(500).json({ error: "Failed to fetch POS payments" });
+    }
+  });
+  
+  app.post("/api/pos/payments", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const paymentData = insertPosPaymentSchema.parse({
+        ...req.body
+      });
+      
+      const payment = await storage.createPosPayment(paymentData);
+      
+      // Get associated order
+      const order = await storage.getPosOrder(paymentData.orderId);
+      
+      // If payment completed, notify clients
+      if (payment.status === "completed" && order) {
+        broadcast(`pos-location-${order.locationId}`, {
+          type: 'payment_completed',
+          data: {
+            payment,
+            order
+          }
+        });
+        
+        // Also notify specifically for the order
+        broadcast(`pos-order-${paymentData.orderId}`, {
+          type: 'payment_completed',
+          data: payment
+        });
+      }
+      
+      res.status(201).json(payment);
+    } catch (error) {
+      console.error("Error creating POS payment:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid payment data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create POS payment" });
+    }
+  });
+  
+  // POS WebSocket Channels API
+  app.post("/api/pos/subscribe", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { channel } = req.body;
+      
+      if (!channel) {
+        return res.status(400).json({ error: "Channel name is required" });
+      }
+      
+      // Find user's websocket connection
+      let found = false;
+      wss.clients.forEach((client: ExtendedWebSocket) => {
+        if (client.userId === req.user!.id) {
+          // Add channel to this connection
+          if (!client.channels) {
+            client.channels = [];
+          }
+          
+          if (!client.channels.includes(channel)) {
+            client.channels.push(channel);
+          }
+          
+          found = true;
+        }
+      });
+      
+      res.json({ 
+        success: found,
+        message: found ? `Subscribed to ${channel}` : "No active connection found for user. Try refreshing the page."
+      });
+    } catch (error) {
+      console.error("Error subscribing to POS channel:", error);
+      res.status(500).json({ error: "Failed to subscribe to channel" });
+    }
+  });
+  
+  app.post("/api/pos/unsubscribe", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { channel } = req.body;
+      
+      if (!channel) {
+        return res.status(400).json({ error: "Channel name is required" });
+      }
+      
+      // Find user's websocket connection
+      wss.clients.forEach((client: ExtendedWebSocket) => {
+        if (client.userId === req.user!.id && client.channels) {
+          // Remove channel from this connection
+          client.channels = client.channels.filter(ch => ch !== channel);
+        }
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error unsubscribing from POS channel:", error);
+      res.status(500).json({ error: "Failed to unsubscribe from channel" });
     }
   });
   
