@@ -1,15 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -17,185 +28,282 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CalendarIcon, Info } from "lucide-react";
 
-interface ChildSelectOption {
-  id: string;
-  name: string;
-  age: number;
+export interface AllowanceSettings {
+  amount: string;
+  frequency: "weekly" | "biweekly" | "monthly";
+  startDate: string;
+  autoDeposit: boolean;
+  distributionRatio?: {
+    spendable: number;
+    savings: number;
+  };
 }
 
 interface AllowanceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  children: ChildSelectOption[];
-  onSetAllowance: (childId: string, amount: string, frequency: string, startDate: string, notes: string) => void;
-  selectedChildId?: string;
+  onSave: (childId: string, settings: AllowanceSettings) => void;
+  childAccount: {
+    id: string;
+    name: string;
+  };
+  currentSettings?: Partial<AllowanceSettings>;
 }
+
+const formSchema = z.object({
+  amount: z.string()
+    .refine(val => !isNaN(parseFloat(val)), {
+      message: "Amount must be a number",
+    })
+    .refine(val => parseFloat(val) > 0, {
+      message: "Amount must be greater than 0",
+    }),
+  frequency: z.enum(["weekly", "biweekly", "monthly"]),
+  startDate: z.date(),
+  autoDeposit: z.boolean(),
+  spendablePercentage: z.number().min(0).max(100),
+});
 
 export default function AllowanceModal({
   isOpen,
   onClose,
-  children,
-  onSetAllowance,
-  selectedChildId,
+  onSave,
+  childAccount,
+  currentSettings,
 }: AllowanceModalProps) {
-  const [childId, setChildId] = useState(selectedChildId || "");
-  const [amount, setAmount] = useState("");
-  const [frequency, setFrequency] = useState("weekly");
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [notes, setNotes] = useState("");
+  const { toast } = useToast();
   
-  // Reset the form when opening the modal or when selectedChildId changes
-  useEffect(() => {
-    if (isOpen) {
-      if (selectedChildId) {
-        setChildId(selectedChildId);
-      } else {
-        setChildId(children[0]?.id || "");
-      }
-      setAmount("");
-      setFrequency("weekly");
-      setDate(new Date());
-      setNotes("");
-    }
-  }, [isOpen, selectedChildId, children]);
+  // Calculate default distribution values
+  const defaultSpendablePercentage = currentSettings?.distributionRatio?.spendable 
+    ? Math.round(currentSettings.distributionRatio.spendable * 100) 
+    : 70;
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      amount: currentSettings?.amount || "10.00",
+      frequency: currentSettings?.frequency || "weekly",
+      startDate: currentSettings?.startDate ? new Date(currentSettings.startDate) : new Date(),
+      autoDeposit: currentSettings?.autoDeposit !== undefined 
+        ? currentSettings.autoDeposit 
+        : true,
+      spendablePercentage: defaultSpendablePercentage,
+    },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!childId || !amount || !frequency || !date) return;
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    const settings: AllowanceSettings = {
+      amount: values.amount,
+      frequency: values.frequency,
+      startDate: format(values.startDate, "yyyy-MM-dd"),
+      autoDeposit: values.autoDeposit,
+      distributionRatio: {
+        spendable: values.spendablePercentage / 100,
+        savings: (100 - values.spendablePercentage) / 100,
+      },
+    };
     
-    onSetAllowance(
-      childId,
-      amount,
-      frequency,
-      format(date, "PP"),
-      notes,
-    );
+    onSave(childAccount.id, settings);
+    
+    toast({
+      title: "Allowance settings saved",
+      description: `Allowance for ${childAccount.name} has been set to $${values.amount} ${values.frequency}.`,
+    });
     
     onClose();
   };
 
+  const spendablePercentage = form.watch("spendablePercentage");
+  const savingsPercentage = 100 - spendablePercentage;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Set Allowance</DialogTitle>
-            <DialogDescription>
-              Configure regular allowance payments for your child.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="child" className="text-right">
-                Child
-              </Label>
-              <Select
-                value={childId}
-                onValueChange={setChildId}
-                disabled={!!selectedChildId}
-              >
-                <SelectTrigger className="col-span-3" id="child">
-                  <SelectValue placeholder="Select a child" />
-                </SelectTrigger>
-                <SelectContent>
-                  {children.map((child) => (
-                    <SelectItem key={child.id} value={child.id}>
-                      {child.name} ({child.age} years)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Amount
-              </Label>
-              <div className="col-span-3 flex items-center">
-                <span className="mr-2 text-sm text-neutral-500">$</span>
-                <Input
-                  id="amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="frequency" className="text-right">
-                Frequency
-              </Label>
-              <Select
-                value={frequency}
-                onValueChange={setFrequency}
-              >
-                <SelectTrigger className="col-span-3" id="frequency">
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="startDate" className="text-right">
-                Start Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="col-span-3 text-left font-normal justify-start"
-                    id="startDate"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="notes" className="text-right">
-                Notes
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional notes about this allowance"
-                className="col-span-3 resize-none"
-                rows={3}
+        <DialogHeader>
+          <DialogTitle>Set Allowance for {childAccount.name}</DialogTitle>
+          <DialogDescription>
+            Configure the allowance amount and payment schedule.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount ($)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Allowance amount per period
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="frequency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Frequency</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      How often the allowance is paid
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">Set Allowance</Button>
-          </DialogFooter>
-        </form>
+            
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Start Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    When to start paying the allowance
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <FormLabel>Distribution</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium text-primary">{spendablePercentage}%</span> spendable, <span className="font-medium text-primary">{savingsPercentage}%</span> savings
+                </div>
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="spendablePercentage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="space-y-1">
+                        <div className="grid grid-cols-11 gap-2 pb-1">
+                          <div className="col-span-5 text-left text-sm">Savings</div>
+                          <div className="col-span-1 text-center text-sm"></div>
+                          <div className="col-span-5 text-right text-sm">Spendable</div>
+                        </div>
+                        <Input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={10}
+                          className="accent-primary"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>0%</span>
+                          <span>50%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      How the allowance is distributed between spending and savings
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="autoDeposit"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Automatic Deposits</FormLabel>
+                    <FormDescription>
+                      Automatically deposit allowance on schedule
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose} type="button">
+                Cancel
+              </Button>
+              <Button type="submit">Save Settings</Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
