@@ -1,27 +1,20 @@
 import { useState } from "react";
+import { Dialog, DialogTitle, DialogContent, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { 
+  CreditCard, 
+  DollarSign, 
+  Calendar, 
+  Clock, 
+  ShoppingCart, 
+  Store, 
+  AtomIcon, 
+  CreditCardIcon 
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,431 +22,599 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 import {
-  Check,
-  CreditCard,
-  DollarSign,
-  ShoppingBag,
-  ShoppingCart,
-  AlertTriangle,
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface SpendingRules {
-  dailyLimit: string;
-  weeklyLimit: string;
-  monthlyLimit: string;
-  perTransactionLimit: string;
-  blockedCategories: string[];
-  blockedMerchants: string[];
-  requireApprovalAmount: string;
-  requireApprovalForAll: boolean;
-  allowOnlinePurchases: boolean;
-  allowInStorePurchases: boolean;
-  allowWithdrawals: boolean;
-  withdrawalLimit: string;
+  id?: string;
+  childId: string;
+  dailyLimit: string | null;
+  weeklyLimit: string | null;
+  monthlyLimit: string | null;
+  perTransactionLimit: string | null;
+  withdrawalLimit: string | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+  allowedMerchantCategories: string[] | null;
+  blockedMerchantCategories: string[] | null;
+  restrictedDaysOfWeek: string[] | null;
+  allowInternationalTransactions: boolean | null;
+  requireParentalApprovalAbove: string | null;
+  requireParentalApprovalForMerchants: string[] | null;
+  allowOnlineTransactions: boolean | null;
+  allowWithdrawals: boolean | null;
 }
 
 interface SpendingRulesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (childId: string, rules: SpendingRules) => void;
-  childAccount: {
-    id: string;
-    name: string;
-  };
-  currentRules?: Partial<SpendingRules>;
+  onSave: (rules: SpendingRules) => void;
+  currentRules?: SpendingRules;
+  childId: string;
+  childName: string;
 }
 
-// Categories that can be blocked
-const categories = [
-  { value: "gaming", label: "Gaming & Apps" },
-  { value: "entertainment", label: "Entertainment" },
-  { value: "food_delivery", label: "Food Delivery" },
-  { value: "subscriptions", label: "Subscriptions" },
-  { value: "electronics", label: "Electronics" },
-  { value: "clothing", label: "Clothing & Accessories" },
-  { value: "transportation", label: "Transportation" },
-  { value: "toys", label: "Toys & Games" },
-  { value: "social_media", label: "Social Media" },
+const merchantCategories = [
+  { id: "retail", name: "Retail Stores" },
+  { id: "food", name: "Restaurants & Food" },
+  { id: "entertainment", name: "Entertainment" },
+  { id: "digital", name: "Digital & Online Services" },
+  { id: "education", name: "Education" },
+  { id: "health", name: "Health & Wellness" },
+  { id: "gaming", name: "Gaming" },
+  { id: "transportation", name: "Transportation" },
+  { id: "subscriptions", name: "Subscriptions" },
+  { id: "cashback", name: "ATM Withdrawals" },
 ];
 
-const formSchema = z.object({
-  dailyLimit: z.string().optional(),
-  weeklyLimit: z.string().optional(),
-  monthlyLimit: z.string().optional(),
-  perTransactionLimit: z.string().optional(),
-  blockedCategories: z.array(z.string()).default([]),
-  blockedMerchants: z.string().optional(),
-  requireApprovalAmount: z.string().optional(),
-  requireApprovalForAll: z.boolean().default(false),
-  allowOnlinePurchases: z.boolean().default(true),
-  allowInStorePurchases: z.boolean().default(true),
-  allowWithdrawals: z.boolean().default(false),
-  withdrawalLimit: z.string().optional(),
-});
+const daysOfWeek = [
+  { id: "monday", name: "Monday" },
+  { id: "tuesday", name: "Tuesday" },
+  { id: "wednesday", name: "Wednesday" },
+  { id: "thursday", name: "Thursday" },
+  { id: "friday", name: "Friday" },
+  { id: "saturday", name: "Saturday" },
+  { id: "sunday", name: "Sunday" },
+];
 
 export default function SpendingRulesModal({
   isOpen,
   onClose,
   onSave,
-  childAccount,
   currentRules,
+  childId,
+  childName,
 }: SpendingRulesModalProps) {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("limits");
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      dailyLimit: currentRules?.dailyLimit || "",
-      weeklyLimit: currentRules?.weeklyLimit || "",
-      monthlyLimit: currentRules?.monthlyLimit || "",
-      perTransactionLimit: currentRules?.perTransactionLimit || "",
-      blockedCategories: currentRules?.blockedCategories || [],
-      blockedMerchants: currentRules?.blockedMerchants?.join(", ") || "",
-      requireApprovalAmount: currentRules?.requireApprovalAmount || "",
-      requireApprovalForAll: currentRules?.requireApprovalForAll || false,
-      allowOnlinePurchases: currentRules?.allowOnlinePurchases !== undefined 
-        ? currentRules.allowOnlinePurchases 
-        : true,
-      allowInStorePurchases: currentRules?.allowInStorePurchases !== undefined 
-        ? currentRules.allowInStorePurchases 
-        : true,
-      allowWithdrawals: currentRules?.allowWithdrawals || false,
-      withdrawalLimit: currentRules?.withdrawalLimit || "",
-    },
-  });
-
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    const merchants = values.blockedMerchants 
-      ? values.blockedMerchants.split(",").map(m => m.trim()).filter(Boolean)
-      : [];
+  const [rules, setRules] = useState<SpendingRules>(() => {
+    if (currentRules) {
+      return {
+        ...currentRules,
+        createdAt: currentRules.createdAt ? new Date(currentRules.createdAt) : null,
+        updatedAt: currentRules.updatedAt ? new Date(currentRules.updatedAt) : null,
+      };
+    }
     
-    const rules: SpendingRules = {
-      ...values,
-      blockedMerchants: merchants,
+    // Default values for new rules
+    return {
+      childId,
+      dailyLimit: "10",
+      weeklyLimit: "50",
+      monthlyLimit: "150",
+      perTransactionLimit: "25",
+      withdrawalLimit: "20",
+      allowedMerchantCategories: [],
+      blockedMerchantCategories: ["gaming"],
+      restrictedDaysOfWeek: [],
+      allowInternationalTransactions: false,
+      requireParentalApprovalAbove: "25",
+      requireParentalApprovalForMerchants: [],
+      allowOnlineTransactions: true,
+      allowWithdrawals: true,
+    };
+  });
+  
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [limitType, setLimitType] = useState<'all' | 'specific'>(
+    rules.allowedMerchantCategories && rules.allowedMerchantCategories.length > 0 ? 'specific' : 'all'
+  );
+  
+  const [merchantControlType, setMerchantControlType] = useState<'allowed' | 'blocked'>(
+    rules.allowedMerchantCategories && rules.allowedMerchantCategories.length > 0 ? 'allowed' : 'blocked'
+  );
+  
+  const handleAmountChange = (field: keyof SpendingRules, value: string) => {
+    // Only allow numbers and up to 2 decimal places
+    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+      setRules({
+        ...rules,
+        [field]: value || null
+      });
+      
+      if (errors[field]) {
+        setErrors({
+          ...errors,
+          [field]: ""
+        });
+      }
+    }
+  };
+  
+  const handleSwitchChange = (field: keyof SpendingRules, checked: boolean) => {
+    setRules({
+      ...rules,
+      [field]: checked
+    });
+  };
+  
+  const handleMerchantCategorySelection = (selectedCategories: string[]) => {
+    if (merchantControlType === 'allowed') {
+      setRules({
+        ...rules,
+        allowedMerchantCategories: selectedCategories.length > 0 ? selectedCategories : null,
+        blockedMerchantCategories: null
+      });
+    } else {
+      setRules({
+        ...rules,
+        blockedMerchantCategories: selectedCategories.length > 0 ? selectedCategories : null,
+        allowedMerchantCategories: null
+      });
+    }
+  };
+  
+  const handleRestrictedDaysChange = (selectedDays: string[]) => {
+    setRules({
+      ...rules,
+      restrictedDaysOfWeek: selectedDays.length > 0 ? selectedDays : null
+    });
+  };
+  
+  const handleApprovalMerchantsChange = (selectedCategories: string[]) => {
+    setRules({
+      ...rules,
+      requireParentalApprovalForMerchants: selectedCategories.length > 0 ? selectedCategories : null
+    });
+  };
+  
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    const validateLimit = (field: keyof SpendingRules, value: string | null, label: string) => {
+      if (value !== null && value !== "") {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue) || numValue < 0) {
+          newErrors[field] = `${label} must be a positive number`;
+        }
+      }
     };
     
-    onSave(childAccount.id, rules);
+    validateLimit('dailyLimit', rules.dailyLimit, 'Daily limit');
+    validateLimit('weeklyLimit', rules.weeklyLimit, 'Weekly limit');
+    validateLimit('monthlyLimit', rules.monthlyLimit, 'Monthly limit');
+    validateLimit('perTransactionLimit', rules.perTransactionLimit, 'Transaction limit');
+    validateLimit('withdrawalLimit', rules.withdrawalLimit, 'Withdrawal limit');
+    validateLimit('requireParentalApprovalAbove', rules.requireParentalApprovalAbove, 'Approval threshold');
     
-    toast({
-      title: "Spending rules updated",
-      description: `Spending rules for ${childAccount.name} have been updated.`,
-    });
+    // Check if daily limit is less than weekly limit
+    if (rules.dailyLimit && rules.weeklyLimit) {
+      const dailyLimit = parseFloat(rules.dailyLimit);
+      const weeklyLimit = parseFloat(rules.weeklyLimit);
+      if (dailyLimit > weeklyLimit) {
+        newErrors.dailyLimit = "Daily limit cannot be greater than weekly limit";
+      }
+    }
     
-    onClose();
+    // Check if weekly limit is less than monthly limit
+    if (rules.weeklyLimit && rules.monthlyLimit) {
+      const weeklyLimit = parseFloat(rules.weeklyLimit);
+      const monthlyLimit = parseFloat(rules.monthlyLimit);
+      if (weeklyLimit > monthlyLimit) {
+        newErrors.weeklyLimit = "Weekly limit cannot be greater than monthly limit";
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
-
+  
+  const handleSave = () => {
+    if (validateForm()) {
+      onSave(rules);
+      onClose();
+    }
+  };
+  
+  const formatCurrency = (amount: string | null | undefined) => {
+    if (!amount) return '';
+    return amount;
+  };
+  
+  // Helper to check if a value is included in an array
+  const isSelected = (arr: string[] | null, value: string) => {
+    return arr ? arr.includes(value) : false;
+  };
+  
+  // Toggle selection in an array
+  const toggleSelected = (arr: string[] | null, value: string) => {
+    if (!arr) arr = [];
+    
+    if (arr.includes(value)) {
+      return arr.filter(item => item !== value);
+    } else {
+      return [...arr, value];
+    }
+  };
+  
+  const handleMerchantControlTypeChange = (value: 'allowed' | 'blocked') => {
+    setMerchantControlType(value);
+    
+    // Convert existing selections if changing types
+    if (value === 'allowed') {
+      if (rules.blockedMerchantCategories && rules.blockedMerchantCategories.length > 0) {
+        const allCategories = merchantCategories.map(cat => cat.id);
+        const allowedCategories = allCategories.filter(
+          cat => !rules.blockedMerchantCategories?.includes(cat)
+        );
+        
+        setRules({
+          ...rules,
+          allowedMerchantCategories: allowedCategories.length > 0 ? allowedCategories : null,
+          blockedMerchantCategories: null
+        });
+      }
+    } else {
+      if (rules.allowedMerchantCategories && rules.allowedMerchantCategories.length > 0) {
+        const allCategories = merchantCategories.map(cat => cat.id);
+        const blockedCategories = allCategories.filter(
+          cat => !rules.allowedMerchantCategories?.includes(cat)
+        );
+        
+        setRules({
+          ...rules,
+          blockedMerchantCategories: blockedCategories.length > 0 ? blockedCategories : null,
+          allowedMerchantCategories: null
+        });
+      }
+    }
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Spending Rules for {childAccount.name}</DialogTitle>
-          <DialogDescription>
-            Set rules and limits to help manage your child's spending.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="flex items-center">
+          <CreditCard className="mr-2 h-5 w-5" />
+          Spending Rules for {childName}
+        </DialogTitle>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <Tabs defaultValue="limits" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="limits">Spending Limits</TabsTrigger>
-                <TabsTrigger value="permissions">Purchase Types</TabsTrigger>
-                <TabsTrigger value="restrictions">Restrictions</TabsTrigger>
-              </TabsList>
+        <DialogDescription>
+          Configure spending limits and restrictions to help your child learn financial responsibility.
+        </DialogDescription>
+        
+        <div className="grid gap-6 py-4">
+          <div>
+            <h3 className="text-base font-medium mb-3">Spending Limits</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dailyLimit" className="flex items-center">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Daily Limit
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="dailyLimit"
+                    value={formatCurrency(rules.dailyLimit)}
+                    onChange={(e) => handleAmountChange("dailyLimit", e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
+                  />
+                </div>
+                {errors.dailyLimit && (
+                  <p className="text-sm text-red-500">{errors.dailyLimit}</p>
+                )}
+              </div>
               
-              <TabsContent value="limits" className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="dailyLimit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Daily Limit ($)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="No limit" />
-                        </FormControl>
-                        <FormDescription>
-                          Maximum amount to spend per day
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="weeklyLimit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Weekly Limit ($)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="No limit" />
-                        </FormControl>
-                        <FormDescription>
-                          Maximum amount to spend per week
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <div className="space-y-2">
+                <Label htmlFor="weeklyLimit" className="flex items-center">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Weekly Limit
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="weeklyLimit"
+                    value={formatCurrency(rules.weeklyLimit)}
+                    onChange={(e) => handleAmountChange("weeklyLimit", e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
                   />
                 </div>
-                
-                <div className="grid md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="monthlyLimit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Limit ($)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="No limit" />
-                        </FormControl>
-                        <FormDescription>
-                          Maximum amount to spend per month
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="perTransactionLimit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Per Transaction Limit ($)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="No limit" />
-                        </FormControl>
-                        <FormDescription>
-                          Maximum amount per individual purchase
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="space-y-1">
-                  <FormField
-                    control={form.control}
-                    name="requireApprovalAmount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Require Approval Above ($)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="No approval required" />
-                        </FormControl>
-                        <FormDescription>
-                          Transactions above this amount require your approval
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="requireApprovalForAll"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Require Approval for All Spending</FormLabel>
-                        <FormDescription>
-                          All transactions require your approval regardless of amount
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
+                {errors.weeklyLimit && (
+                  <p className="text-sm text-red-500">{errors.weeklyLimit}</p>
+                )}
+              </div>
               
-              <TabsContent value="permissions" className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="allowInStorePurchases"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5 flex items-center">
-                        <ShoppingCart className="h-5 w-5 mr-3 text-primary" />
-                        <div>
-                          <FormLabel className="text-base">In-Store Purchases</FormLabel>
-                          <FormDescription>
-                            Allow purchases in physical stores
-                          </FormDescription>
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="allowOnlinePurchases"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5 flex items-center">
-                        <ShoppingBag className="h-5 w-5 mr-3 text-primary" />
-                        <div>
-                          <FormLabel className="text-base">Online Purchases</FormLabel>
-                          <FormDescription>
-                            Allow purchases online and in apps
-                          </FormDescription>
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="allowWithdrawals"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5 flex items-center">
-                          <DollarSign className="h-5 w-5 mr-3 text-primary" />
-                          <div>
-                            <FormLabel className="text-base">Cash Withdrawals</FormLabel>
-                            <FormDescription>
-                              Allow ATM and cash withdrawals
-                            </FormDescription>
-                          </div>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
+              <div className="space-y-2">
+                <Label htmlFor="monthlyLimit" className="flex items-center">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Monthly Limit
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="monthlyLimit"
+                    value={formatCurrency(rules.monthlyLimit)}
+                    onChange={(e) => handleAmountChange("monthlyLimit", e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
                   />
-                  
-                  {form.watch("allowWithdrawals") && (
-                    <div className="pl-10 pb-2">
-                      <FormField
-                        control={form.control}
-                        name="withdrawalLimit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Withdrawal Limit ($)</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="No limit" />
-                            </FormControl>
-                            <FormDescription>
-                              Maximum amount per withdrawal
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
                 </div>
-              </TabsContent>
+                {errors.monthlyLimit && (
+                  <p className="text-sm text-red-500">{errors.monthlyLimit}</p>
+                )}
+              </div>
               
-              <TabsContent value="restrictions" className="space-y-6">
-                <div>
-                  <FormField
-                    control={form.control}
-                    name="blockedCategories"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Blocked Categories</FormLabel>
-                        <div className="space-y-4">
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {categories.map((category) => {
-                              const isSelected = field.value?.includes(category.value);
-                              return (
-                                <Badge
-                                  key={category.value}
-                                  variant={isSelected ? "default" : "outline"}
-                                  className={`cursor-pointer px-3 py-1 rounded-full ${
-                                    isSelected ? "bg-primary" : ""
-                                  }`}
-                                  onClick={() => {
-                                    const newValue = isSelected
-                                      ? field.value?.filter(
-                                          (value) => value !== category.value
-                                        )
-                                      : [...(field.value || []), category.value];
-                                    field.onChange(newValue);
-                                  }}
-                                >
-                                  {isSelected && (
-                                    <Check className="h-3.5 w-3.5 mr-1" />
-                                  )}
-                                  {category.label}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                          <FormDescription>
-                            Transactions in these categories will be blocked
-                          </FormDescription>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
+              <div className="space-y-2">
+                <Label htmlFor="perTransactionLimit" className="flex items-center">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Per Transaction Limit
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="perTransactionLimit"
+                    value={formatCurrency(rules.perTransactionLimit)}
+                    onChange={(e) => handleAmountChange("perTransactionLimit", e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="blockedMerchants"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Blocked Merchants</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Enter merchant names separated by commas"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Transactions with these merchants will be blocked
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-            </Tabs>
+                {errors.perTransactionLimit && (
+                  <p className="text-sm text-red-500">{errors.perTransactionLimit}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="text-base font-medium mb-3">Merchant Controls</h3>
             
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose} type="button">
-                Cancel
-              </Button>
-              <Button type="submit">Save Rules</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            <RadioGroup 
+              value={merchantControlType} 
+              onValueChange={(v) => handleMerchantControlTypeChange(v as 'allowed' | 'blocked')}
+              className="flex flex-col space-y-3 mb-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="blocked" id="blocked" />
+                <Label htmlFor="blocked" className="cursor-pointer">Block specific merchant categories</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="allowed" id="allowed" />
+                <Label htmlFor="allowed" className="cursor-pointer">Only allow specific merchant categories</Label>
+              </div>
+            </RadioGroup>
+            
+            <div className="space-y-3">
+              <Label>
+                {merchantControlType === 'allowed' ? 'Allowed Categories' : 'Blocked Categories'}:
+              </Label>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {merchantCategories.map((category) => {
+                  const isChecked = merchantControlType === 'allowed'
+                    ? isSelected(rules.allowedMerchantCategories, category.id)
+                    : isSelected(rules.blockedMerchantCategories, category.id);
+                    
+                  return (
+                    <div key={category.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`category-${category.id}`}
+                        checked={isChecked}
+                        onChange={() => {
+                          if (merchantControlType === 'allowed') {
+                            const newCategories = toggleSelected(rules.allowedMerchantCategories, category.id);
+                            handleMerchantCategorySelection(newCategories);
+                          } else {
+                            const newCategories = toggleSelected(rules.blockedMerchantCategories, category.id);
+                            handleMerchantCategorySelection(newCategories);
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor={`category-${category.id}`} className="cursor-pointer">
+                        {category.name}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="text-base font-medium mb-3">Parental Approval</h3>
+            
+            <div className="space-y-2 mb-4">
+              <Label htmlFor="requireParentalApprovalAbove" className="flex items-center">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Require approval for purchases above
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="requireParentalApprovalAbove"
+                  value={formatCurrency(rules.requireParentalApprovalAbove)}
+                  onChange={(e) => handleAmountChange("requireParentalApprovalAbove", e.target.value)}
+                  className="pl-9"
+                  placeholder="0.00"
+                />
+              </div>
+              {errors.requireParentalApprovalAbove && (
+                <p className="text-sm text-red-500">{errors.requireParentalApprovalAbove}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Your child will need to request approval for any purchases above this amount
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <Label>Always require approval for these categories:</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {merchantCategories.map((category) => (
+                  <div key={`approval-${category.id}`} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`approval-${category.id}`}
+                      checked={isSelected(rules.requireParentalApprovalForMerchants, category.id)}
+                      onChange={() => {
+                        const newCategories = toggleSelected(
+                          rules.requireParentalApprovalForMerchants, 
+                          category.id
+                        );
+                        handleApprovalMerchantsChange(newCategories);
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`approval-${category.id}`} className="cursor-pointer">
+                      {category.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="text-base font-medium mb-3">Time Restrictions</h3>
+            
+            <div className="space-y-3">
+              <Label>Restrict spending on these days:</Label>
+              <div className="flex flex-wrap gap-2">
+                {daysOfWeek.map((day) => (
+                  <div key={day.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`day-${day.id}`}
+                      checked={isSelected(rules.restrictedDaysOfWeek, day.id)}
+                      onChange={() => {
+                        const newDays = toggleSelected(
+                          rules.restrictedDaysOfWeek, 
+                          day.id
+                        );
+                        handleRestrictedDaysChange(newDays);
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`day-${day.id}`} className="cursor-pointer">
+                      {day.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Your child will not be able to make purchases on selected days
+              </p>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="text-base font-medium mb-3">Additional Controls</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allowWithdrawals" className="flex items-center">
+                    <CreditCardIcon className="mr-2 h-4 w-4" />
+                    Allow ATM Withdrawals
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Let your child withdraw cash from ATMs
+                  </p>
+                </div>
+                <Switch
+                  id="allowWithdrawals"
+                  checked={rules.allowWithdrawals || false}
+                  onCheckedChange={(checked) => handleSwitchChange("allowWithdrawals", checked)}
+                />
+              </div>
+              
+              {rules.allowWithdrawals && (
+                <div className="pl-6 border-l-2 border-muted space-y-2">
+                  <Label htmlFor="withdrawalLimit">
+                    Maximum withdrawal amount
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="withdrawalLimit"
+                      value={formatCurrency(rules.withdrawalLimit)}
+                      onChange={(e) => handleAmountChange("withdrawalLimit", e.target.value)}
+                      className="pl-9"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {errors.withdrawalLimit && (
+                    <p className="text-sm text-red-500">{errors.withdrawalLimit}</p>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allowOnlineTransactions" className="flex items-center">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Allow Online Purchases
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable or disable online shopping
+                  </p>
+                </div>
+                <Switch
+                  id="allowOnlineTransactions"
+                  checked={rules.allowOnlineTransactions || false}
+                  onCheckedChange={(checked) => handleSwitchChange("allowOnlineTransactions", checked)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allowInternationalTransactions" className="flex items-center">
+                    <Store className="mr-2 h-4 w-4" />
+                    Allow International Purchases
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable or disable purchases from foreign merchants
+                  </p>
+                </div>
+                <Switch
+                  id="allowInternationalTransactions"
+                  checked={rules.allowInternationalTransactions || false}
+                  onCheckedChange={(checked) => handleSwitchChange("allowInternationalTransactions", checked)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Save Rules</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
