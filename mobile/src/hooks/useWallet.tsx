@@ -1,545 +1,708 @@
-import React, { useState, useContext, createContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import useApi from './useApi';
 import { useNavigation } from '@react-navigation/native';
 
-// Types
-export type WalletRole = 'parent' | 'child' | 'employer' | 'employee';
-
-export type WalletStatus = 'active' | 'inactive' | 'suspended' | 'pending';
-
-export type AllowanceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
-
+// Transaction types
 export type TransactionType = 
   | 'deposit' 
   | 'withdrawal' 
   | 'transfer' 
   | 'payment' 
-  | 'allowance' 
-  | 'payroll';
+  | 'payment_received' 
+  | 'expense_reimbursement' 
+  | 'payroll'
+  | 'allowance'
+  | 'reward';
 
+// Transaction status
 export type TransactionStatus = 
   | 'pending' 
   | 'completed' 
   | 'failed' 
-  | 'cancelled';
+  | 'canceled';
 
-export type RequestStatus = 
-  | 'pending' 
-  | 'approved' 
-  | 'rejected' 
-  | 'cancelled';
-
-export type SavingsGoalStatus = 
-  | 'active' 
-  | 'completed' 
-  | 'cancelled';
-
-export interface WalletInfo {
-  id: number;
-  userId: number;
-  role: WalletRole;
-  status: WalletStatus;
-  balance: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  createdAt: string;
-  updatedAt: string;
-  
-  // Parent/Child specific
-  parentId?: number;
-  allowance?: string;
-  allowanceFrequency?: AllowanceFrequency;
-  nextAllowanceDate?: string;
-  
-  // Employer/Employee specific
-  employerId?: number;
-  payFrequency?: 'weekly' | 'biweekly' | 'monthly';
-  nextPayDate?: string;
-  payrollId?: number;
-}
-
+// Transaction model
 export interface Transaction {
   id: number;
-  walletId: number;
-  toWalletId?: number;
-  fromWalletId?: number;
   type: TransactionType;
-  status: TransactionStatus;
   amount: string;
   description: string;
+  status: TransactionStatus;
   createdAt: string;
   updatedAt: string;
-  completedAt?: string;
-  failedAt?: string;
-  failureReason?: string;
+  fromWalletId?: number;
+  toWalletId?: number;
   metadata?: any;
 }
 
+// Wallet model
+export interface Wallet {
+  id: number;
+  userId: number;
+  name: string;
+  type: 'parent' | 'child' | 'employer' | 'employee';
+  balance: string;
+  currency: string;
+  status: 'active' | 'inactive' | 'frozen';
+  createdAt: string;
+  updatedAt: string;
+  metadata?: any;
+}
+
+// Family connection model (parent-child relationship)
+export interface FamilyConnection {
+  id: number;
+  parentWalletId: number;
+  childWalletId: number;
+  status: 'active' | 'pending' | 'inactive';
+  allowanceAmount?: string;
+  allowanceFrequency?: 'weekly' | 'biweekly' | 'monthly';
+  allowanceNextDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Business connection model (employer-employee relationship)
+export interface BusinessConnection {
+  id: number;
+  employerWalletId: number;
+  employeeWalletId: number;
+  status: 'active' | 'pending' | 'inactive';
+  salaryAmount?: string;
+  salaryFrequency?: 'weekly' | 'biweekly' | 'monthly' | 'hourly';
+  salaryNextDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Savings goal model for child wallet
 export interface SavingsGoal {
   id: number;
   walletId: number;
   name: string;
-  description: string;
   targetAmount: string;
   currentAmount: string;
-  status: SavingsGoalStatus;
-  deadline: string;
+  deadline?: string;
+  status: 'active' | 'completed' | 'canceled';
   createdAt: string;
   updatedAt: string;
-  completedAt?: string;
-  cancelledAt?: string;
-  iconName?: string;
   metadata?: any;
 }
 
-export interface FundRequest {
+// Task model for child wallet
+export interface ChildTask {
   id: number;
-  requesterId: number;
-  requesteeId: number;
-  amount: string;
-  reason: string;
-  status: RequestStatus;
+  walletId: number;
+  name: string;
+  description: string;
+  reward: string;
+  status: 'pending' | 'completed' | 'approved' | 'rejected';
+  dueDate?: string;
+  completedDate?: string;
+  approvedDate?: string;
   createdAt: string;
   updatedAt: string;
-  approvedAt?: string;
-  rejectedAt?: string;
-  cancelledAt?: string;
-  rejectionReason?: string;
-  metadata?: any;
+}
+
+// Payroll model for employer wallet
+export interface Payroll {
+  id: number;
+  employerWalletId: number;
+  totalAmount: string;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  payDate: string;
+  status: 'draft' | 'pending' | 'processing' | 'completed' | 'failed';
+  employeeCount: number;
+  createdAt: string;
+  updatedAt: string;
+  processedAt?: string;
+}
+
+// Payslip model for employee wallet
+export interface Payslip {
+  id: number;
+  employeeWalletId: number;
+  payrollId: number;
+  grossAmount: string;
+  netAmount: string;
+  deductions: string;
+  taxes: string;
+  hoursWorked?: string;
+  rate?: string;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  payDate: string;
+  status: 'pending' | 'paid' | 'failed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Expense report model for employee wallet
+export interface ExpenseReport {
+  id: number;
+  employeeWalletId: number;
+  employerWalletId: number;
+  totalAmount: string;
+  description: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'paid';
+  submittedDate?: string;
+  processedDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: ExpenseItem[];
+}
+
+// Expense item model
+export interface ExpenseItem {
+  id: number;
+  expenseReportId: number;
+  amount: string;
+  category: string;
+  description: string;
+  date: string;
+  receiptUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Time entry model for employee wallet
+export interface TimeEntry {
+  id: number;
+  employeeWalletId: number;
+  employerWalletId: number;
+  date: string;
+  hoursWorked: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedDate: string;
+  processedDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Time off request model for employee wallet
+export interface TimeOffRequest {
+  id: number;
+  employeeWalletId: number;
+  employerWalletId: number;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  type: 'vacation' | 'sick' | 'personal' | 'other';
+  status: 'pending' | 'approved' | 'rejected';
+  submittedDate: string;
+  processedDate?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Context interface
-interface WalletContextType {
-  currentWallet: WalletInfo | null;
-  setCurrentWallet: (wallet: WalletInfo | null) => void;
+export interface WalletContextProps {
+  currentWallet: Wallet | null;
   loading: boolean;
-  error: Error | null;
-  getWalletInfo: () => Promise<WalletInfo>;
-  getTransactions: () => Promise<Transaction[]>;
-  getSavingsGoals: () => Promise<SavingsGoal[]>;
-  createTransaction: (data: Partial<Transaction>) => Promise<Transaction>;
-  createSavingsGoal: (data: Partial<SavingsGoal>) => Promise<SavingsGoal>;
-  updateSavingsGoal: (goalId: number, data: Partial<SavingsGoal>) => Promise<SavingsGoal>;
-  requestFunds: (amount: string, reason: string, targetUserId: number) => Promise<FundRequest>;
-  approveFundRequest: (requestId: number) => Promise<Transaction>;
-  rejectFundRequest: (requestId: number, reason?: string) => Promise<FundRequest>;
-  transferToSavingsGoal: (goalId: number, amount: string) => Promise<{transaction: Transaction, goal: SavingsGoal}>;
-  formatCurrency: (amount: string | number) => string;
-  navigateToWallet: (role: WalletRole) => void;
-  handleError: (error: any, message?: string) => void;
+  error: string | null;
+  setWalletType: (type: 'parent' | 'child' | 'employer' | 'employee') => Promise<Wallet>;
+  getCurrentWalletInfo: () => Promise<Wallet | null>;
+  getTransactions: (options?: { limit?: number; offset?: number; type?: TransactionType }) => Promise<Transaction[]>;
+  getTransaction: (id: number) => Promise<Transaction>;
+  sendMoney: (toWalletId: number, amount: string, description: string) => Promise<Transaction>;
+  requestMoney: (fromWalletId: number, amount: string, description: string) => Promise<Transaction>;
+  depositFunds: (amount: string, paymentMethodId: number, description: string) => Promise<Transaction>;
+  withdrawFunds: (amount: string, bankAccountId: number, description: string) => Promise<Transaction>;
+  getFamilyConnections: () => Promise<FamilyConnection[]>;
+  getBusinessConnections: () => Promise<BusinessConnection[]>;
+  addChild: (email: string, name: string) => Promise<FamilyConnection>;
+  addEmployee: (email: string, name: string, role: string) => Promise<BusinessConnection>;
+  formatCurrency: (amount: string) => string;
+  
+  // Child wallet specific methods
+  getSavingsGoals?: () => Promise<SavingsGoal[]>;
+  createSavingsGoal?: (name: string, targetAmount: string, deadline?: string) => Promise<SavingsGoal>;
+  contributeSavingsGoal?: (goalId: number, amount: string) => Promise<SavingsGoal>;
+  getChildTasks?: () => Promise<ChildTask[]>;
+  submitTaskCompletion?: (taskId: number) => Promise<ChildTask>;
+  
+  // Parent wallet specific methods
+  getChildren?: () => Promise<FamilyConnection[]>;
+  setAllowance?: (childWalletId: number, amount: string, frequency: 'weekly' | 'biweekly' | 'monthly') => Promise<FamilyConnection>;
+  createChildTask?: (childWalletId: number, name: string, description: string, reward: string, dueDate?: string) => Promise<ChildTask>;
+  approveChildTask?: (taskId: number) => Promise<ChildTask>;
+  
+  // Employer wallet specific methods
+  getEmployees?: () => Promise<BusinessConnection[]>;
+  createPayroll?: (payPeriodStart: string, payPeriodEnd: string, payDate: string) => Promise<Payroll>;
+  processPayroll?: (payrollId: number) => Promise<Payroll>;
+  getPayrolls?: () => Promise<Payroll[]>;
+  getExpenseReports?: () => Promise<ExpenseReport[]>;
+  reviewExpenseReport?: (reportId: number, status: 'approved' | 'rejected') => Promise<ExpenseReport>;
+  
+  // Employee wallet specific methods
+  getPayslips?: () => Promise<Payslip[]>;
+  createExpenseReport?: (description: string) => Promise<ExpenseReport>;
+  addExpenseItem?: (reportId: number, amount: string, category: string, description: string, date: string, receiptUrl?: string) => Promise<ExpenseItem>;
+  submitExpenseReport?: (reportId: number) => Promise<ExpenseReport>;
+  submitTimeEntry?: (date: string, hoursWorked: string, description: string) => Promise<TimeEntry>;
+  requestTimeOff?: (startDate: string, endDate: string, reason: string, type: 'vacation' | 'sick' | 'personal' | 'other') => Promise<TimeOffRequest>;
 }
 
-// Create the context
-const WalletContext = createContext<WalletContextType | null>(null);
+// Create context
+export const WalletContext = createContext<WalletContextProps | null>(null);
 
 // Provider component
-export const WalletProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const { loading, error, get, post, put, patch, delete: del } = useApi();
-  const [currentWallet, setCurrentWallet] = useState<WalletInfo | null>(null);
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [currentWallet, setCurrentWallet] = useState<Wallet | null>(null);
+  const [walletLoading, setWalletLoading] = useState<boolean>(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  
+  const api = useApi();
   const navigation = useNavigation();
   
-  // Helper function to format currency
-  const formatCurrency = useCallback((amount: string | number): string => {
-    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${numericAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+  // Initialize wallet on mount
+  useEffect(() => {
+    // Try to load wallet info from local storage or API
+    getCurrentWalletInfo();
   }, []);
   
-  // Helper function to handle errors
-  const handleError = useCallback((error: any, message?: string) => {
-    console.error(error);
-    Alert.alert(
-      'Error',
-      message || 'Something went wrong. Please try again.',
-      [{ text: 'OK' }]
-    );
-  }, []);
-  
-  // Function to get wallet info
-  const getWalletInfo = useCallback(async (): Promise<WalletInfo> => {
+  const getCurrentWalletInfo = async (): Promise<Wallet | null> => {
     try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockWalletInfo: WalletInfo = {
+      setWalletLoading(true);
+      
+      // For demo purposes, we'll simulate API call
+      // In production, this would call: api.get('/wallets/current')
+      
+      if (currentWallet) {
+        return currentWallet;
+      }
+      
+      // Simulate API delay
+      setTimeout(() => {
+        setWalletLoading(false);
+      }, 500);
+      
+      return null;
+    } catch (error: any) {
+      setWalletError(error.message);
+      return null;
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+  
+  const setWalletType = async (type: 'parent' | 'child' | 'employer' | 'employee'): Promise<Wallet> => {
+    try {
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/wallets', { type })
+      
+      // Mock wallet creation
+      const mockWallet: Wallet = {
         id: 1,
-        userId: 123,
-        role: 'parent', // This would come from the API
-        status: 'active',
-        balance: '1250.75',
-        name: 'John Doe',
-        email: 'john@example.com',
-        phoneNumber: '555-1234',
+        userId: 1,
+        name: `${type.charAt(0).toUpperCase() + type.slice(1)} Wallet`,
+        type,
+        balance: "1000.00",
+        currency: "USD",
+        status: "active",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       
-      setCurrentWallet(mockWalletInfo);
-      return mockWalletInfo;
-    } catch (error) {
-      handleError(error, 'Failed to load wallet information');
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setCurrentWallet(mockWallet);
+      return mockWallet;
+    } catch (error: any) {
+      setWalletError(error.message);
       throw error;
+    } finally {
+      setWalletLoading(false);
     }
-  }, [handleError]);
+  };
   
-  // Function to get transactions
-  const getTransactions = useCallback(async (): Promise<Transaction[]> => {
+  const getTransactions = async (options?: { limit?: number; offset?: number; type?: TransactionType }): Promise<Transaction[]> => {
     try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockTransactions: Transaction[] = [
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.get('/transactions', options)
+      
+      // Mock transactions
+      const transactions: Transaction[] = [
         {
           id: 1,
-          walletId: currentWallet?.id || 1,
-          type: 'deposit',
-          status: 'completed',
-          amount: '500.00',
-          description: 'Initial deposit',
-          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          type: "deposit",
+          amount: "500.00",
+          description: "Initial deposit",
+          status: "completed",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
         {
           id: 2,
-          walletId: currentWallet?.id || 1,
-          type: 'withdrawal',
-          status: 'completed',
-          amount: '150.00',
-          description: 'ATM withdrawal',
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          type: "transfer",
+          amount: "50.00",
+          description: "Transfer to Sarah",
+          status: "completed",
+          fromWalletId: 1,
+          toWalletId: 2,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
         {
           id: 3,
-          walletId: currentWallet?.id || 1,
-          toWalletId: 101, // Child's wallet
-          type: 'transfer',
-          status: 'completed',
-          amount: '50.00',
-          description: 'Weekly allowance to Emma',
-          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 4,
-          walletId: currentWallet?.id || 1,
-          type: 'payment',
-          status: 'completed',
-          amount: '75.25',
-          description: 'Grocery shopping',
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 5,
-          walletId: currentWallet?.id || 1,
-          toWalletId: 102, // Child's wallet
-          type: 'transfer',
-          status: 'completed',
-          amount: '40.00',
-          description: 'Weekly allowance to Jacob',
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        },
+          type: "payment",
+          amount: "35.50",
+          description: "Coffee shop payment",
+          status: "completed",
+          fromWalletId: 1,
+          toWalletId: 3,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
       ];
       
-      return mockTransactions;
-    } catch (error) {
-      handleError(error, 'Failed to load transactions');
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return transactions;
+    } catch (error: any) {
+      setWalletError(error.message);
       throw error;
+    } finally {
+      setWalletLoading(false);
     }
-  }, [currentWallet, handleError]);
+  };
   
-  // Function to get savings goals
-  const getSavingsGoals = useCallback(async (): Promise<SavingsGoal[]> => {
+  const getTransaction = async (id: number): Promise<Transaction> => {
     try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockSavingsGoals: SavingsGoal[] = [
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.get(`/transactions/${id}`)
+      
+      // Mock transaction
+      const mockTransaction: Transaction = {
+        id,
+        type: "transfer",
+        amount: "50.00",
+        description: "Transfer to Sarah",
+        status: "completed",
+        fromWalletId: 1,
+        toWalletId: 2,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return mockTransaction;
+    } catch (error: any) {
+      setWalletError(error.message);
+      throw error;
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+  
+  const sendMoney = async (toWalletId: number, amount: string, description: string): Promise<Transaction> => {
+    try {
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/transactions/send', { toWalletId, amount, description })
+      
+      // Mock transaction
+      const mockTransaction: Transaction = {
+        id: Date.now(),
+        type: "transfer",
+        amount,
+        description,
+        status: "completed",
+        fromWalletId: currentWallet?.id,
+        toWalletId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return mockTransaction;
+    } catch (error: any) {
+      setWalletError(error.message);
+      throw error;
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+  
+  const requestMoney = async (fromWalletId: number, amount: string, description: string): Promise<Transaction> => {
+    try {
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/transactions/request', { fromWalletId, amount, description })
+      
+      // Mock transaction
+      const mockTransaction: Transaction = {
+        id: Date.now(),
+        type: "transfer",
+        amount,
+        description,
+        status: "pending",
+        fromWalletId,
+        toWalletId: currentWallet?.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return mockTransaction;
+    } catch (error: any) {
+      setWalletError(error.message);
+      throw error;
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+  
+  const depositFunds = async (amount: string, paymentMethodId: number, description: string): Promise<Transaction> => {
+    try {
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/transactions/deposit', { amount, paymentMethodId, description })
+      
+      // Mock transaction
+      const mockTransaction: Transaction = {
+        id: Date.now(),
+        type: "deposit",
+        amount,
+        description,
+        status: "completed",
+        toWalletId: currentWallet?.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return mockTransaction;
+    } catch (error: any) {
+      setWalletError(error.message);
+      throw error;
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+  
+  const withdrawFunds = async (amount: string, bankAccountId: number, description: string): Promise<Transaction> => {
+    try {
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/transactions/withdraw', { amount, bankAccountId, description })
+      
+      // Mock transaction
+      const mockTransaction: Transaction = {
+        id: Date.now(),
+        type: "withdrawal",
+        amount,
+        description,
+        status: "completed",
+        fromWalletId: currentWallet?.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return mockTransaction;
+    } catch (error: any) {
+      setWalletError(error.message);
+      throw error;
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+  
+  const getFamilyConnections = async (): Promise<FamilyConnection[]> => {
+    try {
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.get('/family-connections')
+      
+      // Mock family connections
+      const mockConnections: FamilyConnection[] = [
         {
           id: 1,
-          walletId: currentWallet?.id || 1,
-          name: 'Vacation Fund',
-          description: 'Saving for summer vacation',
-          targetAmount: '1500.00',
-          currentAmount: '750.00',
-          status: 'active',
-          deadline: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          iconName: 'beach',
-        },
-        {
-          id: 2,
-          walletId: currentWallet?.id || 1,
-          name: 'New Laptop',
-          description: 'Saving for a new laptop',
-          targetAmount: '1200.00',
-          currentAmount: '300.00',
-          status: 'active',
-          deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          iconName: 'laptop',
-        },
+          parentWalletId: 1,
+          childWalletId: 2,
+          status: "active",
+          allowanceAmount: "25.00",
+          allowanceFrequency: "weekly",
+          allowanceNextDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
       ];
       
-      return mockSavingsGoals;
-    } catch (error) {
-      handleError(error, 'Failed to load savings goals');
-      throw error;
-    }
-  }, [currentWallet, handleError]);
-  
-  // Function to create a transaction
-  const createTransaction = useCallback(async (data: Partial<Transaction>): Promise<Transaction> => {
-    try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockTransaction: Transaction = {
-        id: 100, // Would be assigned by the server
-        walletId: currentWallet?.id || 1,
-        toWalletId: data.toWalletId,
-        fromWalletId: data.fromWalletId,
-        type: data.type || 'transfer',
-        status: 'completed',
-        amount: data.amount || '0.00',
-        description: data.description || 'Transaction',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        completedAt: new Date().toISOString(),
-      };
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      return mockTransaction;
-    } catch (error) {
-      handleError(error, 'Failed to create transaction');
+      return mockConnections;
+    } catch (error: any) {
+      setWalletError(error.message);
       throw error;
+    } finally {
+      setWalletLoading(false);
     }
-  }, [currentWallet, handleError]);
+  };
   
-  // Function to create a savings goal
-  const createSavingsGoal = useCallback(async (data: Partial<SavingsGoal>): Promise<SavingsGoal> => {
+  const getBusinessConnections = async (): Promise<BusinessConnection[]> => {
     try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockSavingsGoal: SavingsGoal = {
-        id: 100, // Would be assigned by the server
-        walletId: currentWallet?.id || 1,
-        name: data.name || 'New Goal',
-        description: data.description || '',
-        targetAmount: data.targetAmount || '0.00',
-        currentAmount: data.currentAmount || '0.00',
-        status: 'active',
-        deadline: data.deadline || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        iconName: data.iconName,
-      };
+      setWalletLoading(true);
       
-      return mockSavingsGoal;
-    } catch (error) {
-      handleError(error, 'Failed to create savings goal');
-      throw error;
-    }
-  }, [currentWallet, handleError]);
-  
-  // Function to update a savings goal
-  const updateSavingsGoal = useCallback(async (goalId: number, data: Partial<SavingsGoal>): Promise<SavingsGoal> => {
-    try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockSavingsGoal: SavingsGoal = {
-        id: goalId,
-        walletId: currentWallet?.id || 1,
-        name: data.name || 'Updated Goal',
-        description: data.description || '',
-        targetAmount: data.targetAmount || '1000.00',
-        currentAmount: data.currentAmount || '500.00',
-        status: data.status || 'active',
-        deadline: data.deadline || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        iconName: data.iconName,
-      };
+      // For demo purposes, simulating API call
+      // In production, this would call: api.get('/business-connections')
       
-      return mockSavingsGoal;
-    } catch (error) {
-      handleError(error, 'Failed to update savings goal');
-      throw error;
-    }
-  }, [currentWallet, handleError]);
-  
-  // Function to request funds
-  const requestFunds = useCallback(async (amount: string, reason: string, targetUserId: number): Promise<FundRequest> => {
-    try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockFundRequest: FundRequest = {
-        id: 100, // Would be assigned by the server
-        requesterId: currentWallet?.userId || 0,
-        requesteeId: targetUserId,
-        amount: amount,
-        reason: reason,
-        status: 'pending',
+      // Mock business connections
+      const mockConnection: BusinessConnection = {
+        id: 1,
+        employerWalletId: 1,
+        employeeWalletId: 2,
+        status: "active",
+        salaryAmount: "4000.00",
+        salaryFrequency: "biweekly",
+        salaryNextDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       
-      return mockFundRequest;
-    } catch (error) {
-      handleError(error, 'Failed to request funds');
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return [mockConnection];
+    } catch (error: any) {
+      setWalletError(error.message);
       throw error;
+    } finally {
+      setWalletLoading(false);
     }
-  }, [currentWallet, handleError]);
+  };
   
-  // Function to approve a fund request
-  const approveFundRequest = useCallback(async (requestId: number): Promise<Transaction> => {
+  const addChild = async (email: string, name: string): Promise<FamilyConnection> => {
     try {
-      // In a real app, this would call the API to approve the request
-      // and create a transaction
-      // For demo purposes, we'll return mock data
-      const mockTransaction: Transaction = {
-        id: 100, // Would be assigned by the server
-        walletId: currentWallet?.id || 1,
-        toWalletId: 101, // The requester's wallet
-        type: 'transfer',
-        status: 'completed',
-        amount: '25.00', // This would come from the request
-        description: 'Approved fund request',
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/family-connections', { email, name })
+      
+      // Mock family connection
+      const mockConnection: FamilyConnection = {
+        id: Date.now(),
+        parentWalletId: currentWallet?.id || 0,
+        childWalletId: Date.now() + 1,
+        status: "pending",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        completedAt: new Date().toISOString(),
       };
       
-      return mockTransaction;
-    } catch (error) {
-      handleError(error, 'Failed to approve fund request');
-      throw error;
-    }
-  }, [currentWallet, handleError]);
-  
-  // Function to reject a fund request
-  const rejectFundRequest = useCallback(async (requestId: number, reason?: string): Promise<FundRequest> => {
-    try {
-      // In a real app, this would call the API
-      // For demo purposes, we'll return mock data
-      const mockFundRequest: FundRequest = {
-        id: requestId,
-        requesterId: 101, // Child's userId
-        requesteeId: currentWallet?.userId || 0,
-        amount: '25.00',
-        reason: 'School supplies',
-        status: 'rejected',
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        rejectedAt: new Date().toISOString(),
-        rejectionReason: reason || 'Request denied',
-      };
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      return mockFundRequest;
-    } catch (error) {
-      handleError(error, 'Failed to reject fund request');
+      return mockConnection;
+    } catch (error: any) {
+      setWalletError(error.message);
       throw error;
+    } finally {
+      setWalletLoading(false);
     }
-  }, [currentWallet, handleError]);
+  };
   
-  // Function to transfer funds to a savings goal
-  const transferToSavingsGoal = useCallback(async (goalId: number, amount: string): Promise<{transaction: Transaction, goal: SavingsGoal}> => {
+  const addEmployee = async (email: string, name: string, role: string): Promise<BusinessConnection> => {
     try {
-      // In a real app, this would call the API to create a transaction
-      // and update the savings goal
-      // For demo purposes, we'll return mock data
-      const mockTransaction: Transaction = {
-        id: 100, // Would be assigned by the server
-        walletId: currentWallet?.id || 1,
-        type: 'transfer',
-        status: 'completed',
-        amount: amount,
-        description: 'Transfer to savings goal',
+      setWalletLoading(true);
+      
+      // For demo purposes, simulating API call
+      // In production, this would call: api.post('/business-connections', { email, name, role })
+      
+      // Mock business connection
+      const mockConnection: BusinessConnection = {
+        id: Date.now(),
+        employerWalletId: currentWallet?.id || 0,
+        employeeWalletId: Date.now() + 1,
+        status: "pending",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        completedAt: new Date().toISOString(),
-        metadata: { goalId },
       };
       
-      const mockSavingsGoal: SavingsGoal = {
-        id: goalId,
-        walletId: currentWallet?.id || 1,
-        name: 'Savings Goal',
-        description: 'Updated savings goal',
-        targetAmount: '1000.00',
-        currentAmount: '500.00', // This would be updated based on the amount
-        status: 'active',
-        deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      return { transaction: mockTransaction, goal: mockSavingsGoal };
-    } catch (error) {
-      handleError(error, 'Failed to transfer funds to savings goal');
+      return mockConnection;
+    } catch (error: any) {
+      setWalletError(error.message);
       throw error;
+    } finally {
+      setWalletLoading(false);
     }
-  }, [currentWallet, handleError]);
+  };
   
-  // Function to navigate to a specific wallet type
-  const navigateToWallet = useCallback((role: WalletRole) => {
-    switch (role) {
-      case 'parent':
-        navigation.navigate('ParentWalletScreen' as never);
-        break;
-      case 'child':
-        navigation.navigate('ChildWalletScreen' as never);
-        break;
-      case 'employer':
-        navigation.navigate('EmployerWalletScreen' as never);
-        break;
-      case 'employee':
-        navigation.navigate('EmployeeWalletScreen' as never);
-        break;
-      default:
-        navigation.navigate('WalletRouter' as never);
-        break;
-    }
-  }, [navigation]);
+  // Format currency based on wallet settings
+  const formatCurrency = (amount: string): string => {
+    const currency = currentWallet?.currency || 'USD';
+    return new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency, 
+      minimumFractionDigits: 2 
+    }).format(parseFloat(amount));
+  };
+  
+  const contextValue: WalletContextProps = {
+    currentWallet,
+    loading: walletLoading || api.loading,
+    error: walletError || api.error,
+    setWalletType,
+    getCurrentWalletInfo,
+    getTransactions,
+    getTransaction,
+    sendMoney,
+    requestMoney,
+    depositFunds,
+    withdrawFunds,
+    getFamilyConnections,
+    getBusinessConnections,
+    addChild,
+    addEmployee,
+    formatCurrency,
+  };
   
   return (
-    <WalletContext.Provider
-      value={{
-        currentWallet,
-        setCurrentWallet,
-        loading,
-        error,
-        getWalletInfo,
-        getTransactions,
-        getSavingsGoals,
-        createTransaction,
-        createSavingsGoal,
-        updateSavingsGoal,
-        requestFunds,
-        approveFundRequest,
-        rejectFundRequest,
-        transferToSavingsGoal,
-        formatCurrency,
-        navigateToWallet,
-        handleError,
-      }}
-    >
+    <WalletContext.Provider value={contextValue}>
       {children}
     </WalletContext.Provider>
   );
 };
 
-// Custom hook to use the wallet context
+// Hook to use wallet context
 export const useWallet = () => {
   const context = useContext(WalletContext);
+  
   if (!context) {
     throw new Error('useWallet must be used within a WalletProvider');
   }
+  
   return context;
 };
 

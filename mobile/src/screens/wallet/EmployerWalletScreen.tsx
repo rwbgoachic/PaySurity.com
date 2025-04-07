@@ -1,719 +1,971 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { Card, Text, Title, Paragraph, Button, Divider, List, Avatar, FAB, Surface, ProgressBar, Chip, Badge, DataTable } from 'react-native-paper';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, FlatList, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, Card, Button, Divider, Avatar, FAB, Badge, Chip, ProgressBar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// Employer Wallet Screen
+import useWallet, { Transaction } from '../../hooks/useWallet';
+import { colors, spacing, shadows, borderRadius, walletColorSchemes } from '../../utils/theme';
+
+// Types
+type PayrollStatus = 'draft' | 'scheduled' | 'processing' | 'completed' | 'failed';
+
+interface Employee {
+  id: number;
+  name: string;
+  role: string;
+  hourlyRate: string;
+  hoursWorked: string;
+  joinDate: string;
+  lastPaid?: string;
+  walletId: number;
+  status: 'active' | 'inactive' | 'pending';
+  avatar?: string;
+}
+
+interface PayrollRun {
+  id: number;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  payDate: string;
+  status: PayrollStatus;
+  totalAmount: string;
+  employeeCount: number;
+  createdAt: string;
+  completedAt?: string;
+}
+
+interface PaymentMethod {
+  id: number;
+  name: string;
+  type: string;
+  lastFour?: string;
+  expiryDate?: string;
+  isDefault: boolean;
+}
+
+/**
+ * EmployerWalletScreen
+ * 
+ * This screen displays the employer wallet interface where employers can:
+ * - View their wallet balance and recent transactions
+ * - Manage employees and their payroll settings
+ * - Run payroll and view payroll history
+ * - Manage payment methods for the business
+ */
 const EmployerWalletScreen = () => {
   const navigation = useNavigation();
+  const { 
+    currentWallet, 
+    loading,
+    error,
+    getTransactions,
+    getCurrentWalletInfo,
+    formatCurrency
+  } = useWallet();
+  
+  // State
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'employees' | 'payroll' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [payrollHistory, setPayrollHistory] = useState<PayrollRun[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   
-  // Sample data for demonstration
-  const employerInfo = {
-    name: 'Acme Corporation',
-    balance: '25750.50',
-    employeeCount: 15,
-    pendingPayroll: '15250.75',
-    nextPayrollDate: '2025-04-15',
-    logo: 'https://randomuser.me/api/portraits/men/32.jpg',
+  // Load wallet data on mount
+  useEffect(() => {
+    loadWalletData();
+  }, []);
+  
+  // Load wallet data
+  const loadWalletData = async () => {
+    try {
+      await getCurrentWalletInfo();
+      loadTransactions();
+      loadEmployees();
+      loadPayrollHistory();
+      loadPaymentMethods();
+    } catch (error) {
+      console.error('Error loading wallet data:', error);
+    }
   };
   
-  const employees = [
-    {
-      id: 1,
-      name: 'John Smith',
-      position: 'Software Engineer',
-      salary: '5500.00',
-      payPeriod: 'monthly',
-      startDate: '2024-01-15',
-      status: 'active',
-      avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-      bonus: '1000.00',
-      lastPayDate: '2025-03-15',
-    },
-    {
-      id: 2,
-      name: 'Jane Doe',
-      position: 'Product Manager',
-      salary: '6500.00',
-      payPeriod: 'monthly',
-      startDate: '2023-10-01',
-      status: 'active',
-      avatar: 'https://randomuser.me/api/portraits/women/32.jpg',
-      bonus: '1200.00',
-      lastPayDate: '2025-03-15',
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      position: 'UX Designer',
-      salary: '4800.00',
-      payPeriod: 'monthly',
-      startDate: '2024-02-15',
-      status: 'active',
-      avatar: 'https://randomuser.me/api/portraits/men/42.jpg',
-      bonus: '800.00',
-      lastPayDate: '2025-03-15',
+  // Load recent transactions
+  const loadTransactions = async () => {
+    try {
+      const data = await getTransactions({ limit: 5 });
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
     }
-  ];
-  
-  const payrollTransactions = [
-    {
-      id: 1,
-      date: '2025-03-15',
-      description: 'March 2025 Payroll',
-      employeeCount: 15,
-      amount: '15250.75',
-      status: 'completed',
-      processingFee: '150.00'
-    },
-    {
-      id: 2,
-      date: '2025-02-15',
-      description: 'February 2025 Payroll',
-      employeeCount: 15,
-      amount: '15100.50',
-      status: 'completed',
-      processingFee: '150.00'
-    },
-    {
-      id: 3,
-      date: '2025-01-15',
-      description: 'January 2025 Payroll',
-      employeeCount: 14,
-      amount: '14500.25',
-      status: 'completed',
-      processingFee: '145.00'
-    }
-  ];
-  
-  const payrollRequests = [
-    {
-      id: 1,
-      employeeName: 'Mike Johnson',
-      employeeAvatar: 'https://randomuser.me/api/portraits/men/42.jpg',
-      requestType: 'Advance Payment',
-      reason: 'Medical emergency',
-      amount: '1000.00',
-      date: '2025-04-05',
-      status: 'pending'
-    }
-  ];
-  
-  const stats = {
-    totalEmployees: 15,
-    activeEmployees: 15,
-    averageSalary: '5166.67',
-    totalPayrollYTD: '44851.50',
-    processingFeesYTD: '445.00',
-    employeeTurnoverRate: '5%'
   };
   
-  // Handle refresh
-  const onRefresh = () => {
+  // Load employees (mock data for now)
+  const loadEmployees = () => {
+    // Mock data for employees
+    const mockEmployees: Employee[] = [
+      {
+        id: 1,
+        name: 'John Doe',
+        role: 'Software Developer',
+        hourlyRate: '40.00',
+        hoursWorked: '160',
+        joinDate: new Date(Date.now() - 86400000 * 365).toISOString(), // 1 year ago
+        lastPaid: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        walletId: 101,
+        status: 'active',
+      },
+      {
+        id: 2,
+        name: 'Jane Smith',
+        role: 'UI/UX Designer',
+        hourlyRate: '35.00',
+        hoursWorked: '120',
+        joinDate: new Date(Date.now() - 86400000 * 180).toISOString(), // 6 months ago
+        lastPaid: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        walletId: 102,
+        status: 'active',
+      },
+      {
+        id: 3,
+        name: 'Robert Johnson',
+        role: 'Project Manager',
+        hourlyRate: '45.00',
+        hoursWorked: '80',
+        joinDate: new Date(Date.now() - 86400000 * 90).toISOString(), // 3 months ago
+        lastPaid: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        walletId: 103,
+        status: 'active',
+      },
+    ];
+    
+    setEmployees(mockEmployees);
+  };
+  
+  // Load payroll history (mock data for now)
+  const loadPayrollHistory = () => {
+    // Mock data for payroll history
+    const mockPayrollHistory: PayrollRun[] = [
+      {
+        id: 1,
+        payPeriodStart: new Date(Date.now() - 86400000 * 28).toISOString(), // 4 weeks ago
+        payPeriodEnd: new Date(Date.now() - 86400000 * 15).toISOString(), // 15 days ago
+        payDate: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        status: 'completed',
+        totalAmount: '12500.00',
+        employeeCount: 3,
+        createdAt: new Date(Date.now() - 86400000 * 16).toISOString(), // 16 days ago
+        completedAt: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+      },
+      {
+        id: 2,
+        payPeriodStart: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        payPeriodEnd: new Date(Date.now() - 86400000 * 1).toISOString(), // Yesterday
+        payDate: new Date().toISOString(), // Today
+        status: 'scheduled',
+        totalAmount: '12500.00',
+        employeeCount: 3,
+        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+      },
+    ];
+    
+    setPayrollHistory(mockPayrollHistory);
+  };
+  
+  // Load payment methods (mock data for now)
+  const loadPaymentMethods = () => {
+    // Mock data for payment methods
+    const mockPaymentMethods: PaymentMethod[] = [
+      {
+        id: 1,
+        name: 'Business Checking',
+        type: 'bank',
+        lastFour: '4567',
+        isDefault: true,
+      },
+      {
+        id: 2,
+        name: 'Business Credit Card',
+        type: 'card',
+        lastFour: '8901',
+        expiryDate: '05/25',
+        isDefault: false,
+      },
+    ];
+    
+    setPaymentMethods(mockPaymentMethods);
+  };
+  
+  // Pull to refresh
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // In a real app, refetch data from API
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await loadWalletData();
+    setRefreshing(false);
+  }, []);
+  
+  // Navigate to transaction details
+  const goToTransactionDetails = (transaction: Transaction) => {
+    navigation.navigate('TransactionDetailsScreen' as never, { transactionId: transaction.id } as never);
   };
   
-  // Format currency
-  const formatCurrency = (amount: string) => {
-    return parseFloat(amount).toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    });
+  // Get card icon for transaction type
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'deposit':
+        return 'bank-transfer-in';
+      case 'withdrawal':
+        return 'bank-transfer-out';
+      case 'transfer':
+        return 'bank-transfer';
+      case 'payment':
+        return 'credit-card-outline';
+      case 'payment_received':
+        return 'cash-plus';
+      case 'expense_reimbursement':
+        return 'cash-refund';
+      case 'payroll':
+        return 'cash-multiple';
+      default:
+        return 'cash';
+    }
   };
   
-  // Format date
+  // Format date string
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
   };
   
-  // Add employee
-  const addEmployee = () => {
-    // @ts-ignore
-    navigation.navigate('AddEmployee');
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+      case 'draft':
+      case 'scheduled':
+        return colors.warning;
+      case 'approved':
+      case 'completed':
+      case 'active':
+        return colors.success;
+      case 'rejected':
+      case 'failed':
+      case 'inactive':
+        return colors.error;
+      case 'processing':
+        return colors.primary;
+      default:
+        return colors.primary;
+    }
   };
   
-  // Run payroll
-  const runPayroll = () => {
-    // @ts-ignore
-    navigation.navigate('RunPayroll');
+  // Render Tab Navigation
+  const renderTabNavigation = () => {
+    return (
+      <View style={styles.tabContainer}>
+        {['overview', 'employees', 'payroll', 'settings'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              styles.tabButton,
+              activeTab === tab && { 
+                borderBottomWidth: 2,
+                borderBottomColor: walletColorSchemes.employer.primary
+              }
+            ]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text 
+              style={[
+                styles.tabLabel, 
+                activeTab === tab && { 
+                  color: walletColorSchemes.employer.primary,
+                  fontWeight: 'bold'
+                }
+              ]}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
   };
   
-  // View employee details
-  const viewEmployeeDetails = (employeeId: number) => {
-    // @ts-ignore
-    navigation.navigate('EmployeeDetails', { employeeId });
+  // Render Overview Tab
+  const renderOverviewTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        {/* Balance Card */}
+        <Card style={styles.walletCard}>
+          <Card.Content>
+            <Text style={styles.walletLabel}>Available Balance</Text>
+            <Text style={styles.walletBalance}>
+              {currentWallet ? formatCurrency(currentWallet.balance) : '$0.00'}
+            </Text>
+            
+            <View style={styles.walletActions}>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('SendMoneyScreen' as never)}
+                style={[styles.actionButton, { backgroundColor: walletColorSchemes.employer.primary }]}
+                icon="bank-transfer-out"
+              >
+                Transfer
+              </Button>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('AddPaymentMethodScreen' as never)}
+                style={[styles.actionButton, { backgroundColor: walletColorSchemes.employer.secondary }]}
+                icon="credit-card-plus-outline"
+              >
+                Add Funds
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+        
+        {/* Quick Actions */}
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity 
+            style={styles.quickAction}
+            onPress={() => navigation.navigate('RunPayrollScreen' as never)}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.info }]}>
+              <Icon name="cash-multiple" size={24} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>Run Payroll</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.quickAction}
+            onPress={() => navigation.navigate('AddEmployeeScreen' as never)}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.info }]}>
+              <Icon name="account-plus" size={24} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>Add Employee</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.quickAction}
+            onPress={() => navigation.navigate('PayrollDetailsScreen' as never)}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.info }]}>
+              <Icon name="calendar-check" size={24} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>Scheduled Payroll</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Business Summary */}
+        <Card style={styles.summaryCard}>
+          <Card.Content>
+            <Text style={styles.cardTitle}>Business Summary</Text>
+            <Divider style={{ marginVertical: 10 }} />
+            
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Active Employees</Text>
+                <Text style={styles.summaryValue}>{employees.filter(e => e.status === 'active').length}</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Next Payroll</Text>
+                <Text style={styles.summaryValue}>
+                  {payrollHistory.find(p => p.status === 'scheduled')
+                    ? formatDate(payrollHistory.find(p => p.status === 'scheduled')!.payDate)
+                    : 'Not Scheduled'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Total Hours</Text>
+                <Text style={styles.summaryValue}>
+                  {employees.reduce((sum, emp) => sum + parseFloat(emp.hoursWorked), 0)} hrs
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Est. Payroll Amount</Text>
+                <Text style={styles.summaryValue}>
+                  {formatCurrency(
+                    employees
+                      .reduce((sum, emp) => sum + parseFloat(emp.hourlyRate) * parseFloat(emp.hoursWorked), 0)
+                      .toString()
+                  )}
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+        
+        {/* Recent Transactions */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('TransactionsScreen' as never)}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {transactions.length > 0 ? (
+          transactions.map((transaction) => (
+            <TouchableOpacity 
+              key={transaction.id}
+              onPress={() => goToTransactionDetails(transaction)}
+            >
+              <Card style={styles.transactionCard}>
+                <Card.Content style={styles.transactionContent}>
+                  <View style={styles.transactionIconContainer}>
+                    <Icon 
+                      name={getTransactionIcon(transaction.type)} 
+                      size={24} 
+                      color={walletColorSchemes.employer.primary}
+                    />
+                  </View>
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.transactionDescription}>
+                      {transaction.description}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      {formatDate(transaction.createdAt)}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionAmount}>
+                    <Text 
+                      style={[
+                        styles.amountText,
+                        {
+                          color: ['deposit', 'payment_received'].includes(transaction.type)
+                            ? colors.success
+                            : colors.error
+                        }
+                      ]}
+                    >
+                      {['deposit', 'payment_received'].includes(transaction.type) ? '+' : '-'}
+                      {formatCurrency(transaction.amount)}
+                    </Text>
+                    <Chip 
+                      style={{ 
+                        backgroundColor: getStatusColor(transaction.status) + '20', 
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(transaction.status),
+                        fontSize: 12
+                      }}>
+                        {transaction.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="cash" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No recent transactions</Text>
+            </Card.Content>
+          </Card>
+        )}
+      </View>
+    );
   };
   
-  // Handle payroll request
-  const handlePayrollRequest = (requestId: number, action: 'approve' | 'reject') => {
-    console.log(`${action} request ${requestId}`);
-    // In a real app, call API
+  // Render Employees Tab
+  const renderEmployeesTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your Team</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AddEmployeeScreen' as never)}>
+            <Text style={styles.seeAllText}>Add Employee</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {employees.length > 0 ? (
+          employees.map((employee) => (
+            <TouchableOpacity 
+              key={employee.id}
+              onPress={() => navigation.navigate('EmployeeDetailsScreen' as never, { employeeId: employee.id } as never)}
+            >
+              <Card style={styles.employeeCard}>
+                <Card.Content style={styles.employeeContent}>
+                  <View style={styles.employeeAvatarContainer}>
+                    <Avatar.Text 
+                      size={48} 
+                      label={employee.name.charAt(0)} 
+                      backgroundColor={walletColorSchemes.employer.primary}
+                    />
+                    <Chip 
+                      style={{ 
+                        position: 'absolute',
+                        bottom: -5,
+                        right: -10,
+                        backgroundColor: getStatusColor(employee.status) + '20',
+                        height: 20,
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(employee.status),
+                        fontSize: 10
+                      }}>
+                        {employee.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                  
+                  <View style={styles.employeeDetails}>
+                    <Text style={styles.employeeName}>{employee.name}</Text>
+                    <Text style={styles.employeeRole}>{employee.role}</Text>
+                    <Text style={styles.employeeJoinDate}>Joined: {formatDate(employee.joinDate)}</Text>
+                  </View>
+                  
+                  <View style={styles.employeeStats}>
+                    <View style={styles.employeeStat}>
+                      <Text style={styles.employeeStatLabel}>Rate</Text>
+                      <Text style={styles.employeeStatValue}>${employee.hourlyRate}/hr</Text>
+                    </View>
+                    <View style={styles.employeeStat}>
+                      <Text style={styles.employeeStatLabel}>Hours</Text>
+                      <Text style={styles.employeeStatValue}>{employee.hoursWorked} hrs</Text>
+                    </View>
+                  </View>
+                </Card.Content>
+                
+                <Divider />
+                
+                <Card.Actions style={styles.employeeActions}>
+                  <Button 
+                    mode="text" 
+                    onPress={() => navigation.navigate('SendMoneyScreen' as never, { toWalletId: employee.walletId } as never)}
+                    icon="bank-transfer"
+                    textColor={walletColorSchemes.employer.primary}
+                  >
+                    Pay Now
+                  </Button>
+                  <Button 
+                    mode="text" 
+                    onPress={() => navigation.navigate('EmployeeDetailsScreen' as never, { employeeId: employee.id } as never)}
+                    icon="eye"
+                    textColor={walletColorSchemes.employer.secondary}
+                  >
+                    View Details
+                  </Button>
+                </Card.Actions>
+              </Card>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="account-group" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No employees found</Text>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('AddEmployeeScreen' as never)}
+                style={[styles.emptyButton, { backgroundColor: walletColorSchemes.employer.primary }]}
+                icon="account-plus"
+              >
+                Add Employee
+              </Button>
+            </Card.Content>
+          </Card>
+        )}
+      </View>
+    );
   };
+  
+  // Render Payroll Tab
+  const renderPayrollTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        {/* Next Payroll Card */}
+        {payrollHistory.find(p => p.status === 'scheduled') && (
+          <Card style={[styles.payrollCard, { backgroundColor: walletColorSchemes.employer.background }]}>
+            <Card.Content>
+              <View style={styles.payrollCardHeader}>
+                <View>
+                  <Text style={styles.payrollCardTitle}>Next Payroll</Text>
+                  <Chip 
+                    style={{ 
+                      backgroundColor: colors.warning + '20',
+                      height: 24,
+                      marginTop: 5
+                    }}
+                  >
+                    <Text style={{ 
+                      color: colors.warning,
+                      fontSize: 12
+                    }}>
+                      SCHEDULED
+                    </Text>
+                  </Chip>
+                </View>
+                <Button 
+                  mode="contained" 
+                  onPress={() => navigation.navigate('PayrollDetailsScreen' as never, { 
+                    payrollId: payrollHistory.find(p => p.status === 'scheduled')!.id 
+                  } as never)}
+                  style={[{ backgroundColor: walletColorSchemes.employer.primary }]}
+                >
+                  Run Now
+                </Button>
+              </View>
+              
+              <Divider style={{ marginVertical: 10 }} />
+              
+              <View style={styles.payrollDetails}>
+                <View style={styles.payrollDetail}>
+                  <Text style={styles.payrollDetailLabel}>Pay Period</Text>
+                  <Text style={styles.payrollDetailValue}>
+                    {formatDate(payrollHistory.find(p => p.status === 'scheduled')!.payPeriodStart)} - {formatDate(payrollHistory.find(p => p.status === 'scheduled')!.payPeriodEnd)}
+                  </Text>
+                </View>
+                
+                <View style={styles.payrollDetail}>
+                  <Text style={styles.payrollDetailLabel}>Pay Date</Text>
+                  <Text style={styles.payrollDetailValue}>
+                    {formatDate(payrollHistory.find(p => p.status === 'scheduled')!.payDate)}
+                  </Text>
+                </View>
+                
+                <View style={styles.payrollDetail}>
+                  <Text style={styles.payrollDetailLabel}>Employees</Text>
+                  <Text style={styles.payrollDetailValue}>
+                    {payrollHistory.find(p => p.status === 'scheduled')!.employeeCount}
+                  </Text>
+                </View>
+                
+                <View style={styles.payrollDetail}>
+                  <Text style={styles.payrollDetailLabel}>Total Amount</Text>
+                  <Text style={styles.payrollDetailValue}>
+                    {formatCurrency(payrollHistory.find(p => p.status === 'scheduled')!.totalAmount)}
+                  </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+        
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Payroll History</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('RunPayrollScreen' as never)}>
+            <Text style={styles.seeAllText}>Run New Payroll</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {payrollHistory.length > 0 ? (
+          payrollHistory.map((payroll) => (
+            <TouchableOpacity 
+              key={payroll.id}
+              onPress={() => navigation.navigate('PayrollDetailsScreen' as never, { payrollId: payroll.id } as never)}
+            >
+              <Card style={styles.historyCard}>
+                <Card.Content>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.historyPeriod}>
+                      <Text style={styles.historyPeriodLabel}>Pay Period</Text>
+                      <Text style={styles.historyPeriodValue}>
+                        {formatDate(payroll.payPeriodStart)} - {formatDate(payroll.payPeriodEnd)}
+                      </Text>
+                    </View>
+                    
+                    <Chip 
+                      style={{ 
+                        backgroundColor: getStatusColor(payroll.status) + '20',
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(payroll.status),
+                        fontSize: 12
+                      }}>
+                        {payroll.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                  
+                  <Divider style={{ marginVertical: 10 }} />
+                  
+                  <View style={styles.historyDetails}>
+                    <View style={styles.historyDetail}>
+                      <Text style={styles.historyDetailLabel}>Pay Date</Text>
+                      <Text style={styles.historyDetailValue}>{formatDate(payroll.payDate)}</Text>
+                    </View>
+                    
+                    <View style={styles.historyDetail}>
+                      <Text style={styles.historyDetailLabel}>Employees</Text>
+                      <Text style={styles.historyDetailValue}>{payroll.employeeCount}</Text>
+                    </View>
+                    
+                    <View style={styles.historyDetail}>
+                      <Text style={styles.historyDetailLabel}>Total Amount</Text>
+                      <Text style={styles.historyDetailValue}>{formatCurrency(payroll.totalAmount)}</Text>
+                    </View>
+                    
+                    {payroll.completedAt && (
+                      <View style={styles.historyDetail}>
+                        <Text style={styles.historyDetailLabel}>Completed On</Text>
+                        <Text style={styles.historyDetailValue}>{formatDate(payroll.completedAt)}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="calendar-check" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No payroll history</Text>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('RunPayrollScreen' as never)}
+                style={[styles.emptyButton, { backgroundColor: walletColorSchemes.employer.primary }]}
+                icon="cash-multiple"
+              >
+                Run First Payroll
+              </Button>
+            </Card.Content>
+          </Card>
+        )}
+      </View>
+    );
+  };
+  
+  // Render Settings Tab
+  const renderSettingsTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        {/* Payment Methods */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Payment Methods</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AddPaymentMethodScreen' as never)}>
+            <Text style={styles.seeAllText}>Add New</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {paymentMethods.length > 0 ? (
+          paymentMethods.map((method) => (
+            <Card key={method.id} style={styles.methodCard}>
+              <Card.Content style={styles.methodContent}>
+                <View style={styles.methodIconContainer}>
+                  <Icon 
+                    name={method.type === 'bank' ? 'bank' : 'credit-card'} 
+                    size={24} 
+                    color={walletColorSchemes.employer.primary}
+                  />
+                </View>
+                <View style={styles.methodDetails}>
+                  <Text style={styles.methodName}>{method.name}</Text>
+                  <Text style={styles.methodInfo}>
+                    {method.type === 'bank' 
+                      ? `Bank Account ending in ${method.lastFour}` 
+                      : `Card ending in ${method.lastFour}`}
+                  </Text>
+                  {method.expiryDate && (
+                    <Text style={styles.methodExpiry}>Expires: {method.expiryDate}</Text>
+                  )}
+                </View>
+                <View style={styles.methodActions}>
+                  {method.isDefault ? (
+                    <Chip 
+                      style={{ 
+                        backgroundColor: colors.success + '20',
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: colors.success,
+                        fontSize: 12
+                      }}>
+                        DEFAULT
+                      </Text>
+                    </Chip>
+                  ) : (
+                    <Button 
+                      mode="text" 
+                      onPress={() => console.log('Set as default:', method.id)}
+                      textColor={walletColorSchemes.employer.primary}
+                      compact
+                    >
+                      Set Default
+                    </Button>
+                  )}
+                </View>
+              </Card.Content>
+            </Card>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="credit-card" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No payment methods</Text>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('AddPaymentMethodScreen' as never)}
+                style={[styles.emptyButton, { backgroundColor: walletColorSchemes.employer.primary }]}
+                icon="credit-card-plus"
+              >
+                Add Payment Method
+              </Button>
+            </Card.Content>
+          </Card>
+        )}
+        
+        {/* Payroll Settings */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Payroll Settings</Text>
+        </View>
+        
+        <Card style={styles.settingsCard}>
+          <Card.Content>
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => console.log('Navigate to payment schedule settings')}
+            >
+              <Icon name="calendar-clock" size={24} color={walletColorSchemes.employer.primary} />
+              <View style={styles.settingsItemContent}>
+                <Text style={styles.settingsItemTitle}>Payment Schedule</Text>
+                <Text style={styles.settingsItemDescription}>Set your default payroll frequency</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+            
+            <Divider style={{ marginVertical: 10 }} />
+            
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => console.log('Navigate to tax settings')}
+            >
+              <Icon name="file-document" size={24} color={walletColorSchemes.employer.primary} />
+              <View style={styles.settingsItemContent}>
+                <Text style={styles.settingsItemTitle}>Tax Settings</Text>
+                <Text style={styles.settingsItemDescription}>Manage tax withholding and reporting</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+            
+            <Divider style={{ marginVertical: 10 }} />
+            
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => console.log('Navigate to notifications settings')}
+            >
+              <Icon name="bell" size={24} color={walletColorSchemes.employer.primary} />
+              <View style={styles.settingsItemContent}>
+                <Text style={styles.settingsItemTitle}>Notifications</Text>
+                <Text style={styles.settingsItemDescription}>Manage payroll reminders and alerts</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+            
+            <Divider style={{ marginVertical: 10 }} />
+            
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => console.log('Navigate to business info settings')}
+            >
+              <Icon name="domain" size={24} color={walletColorSchemes.employer.primary} />
+              <View style={styles.settingsItemContent}>
+                <Text style={styles.settingsItemTitle}>Business Information</Text>
+                <Text style={styles.settingsItemDescription}>Update your company details</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </Card.Content>
+        </Card>
+      </View>
+    );
+  };
+  
+  // Render the appropriate tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return renderOverviewTab();
+      case 'employees':
+        return renderEmployeesTab();
+      case 'payroll':
+        return renderPayrollTab();
+      case 'settings':
+        return renderSettingsTab();
+      default:
+        return renderOverviewTab();
+    }
+  };
+  
+  // If loading and not refreshing
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={walletColorSchemes.employer.primary} />
+        <Text style={styles.loadingText}>Loading employer wallet...</Text>
+      </View>
+    );
+  }
   
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[walletColorSchemes.employer.primary]}
+          />
         }
       >
-        {/* Employer Profile */}
-        <View style={styles.profileContainer}>
-          <Avatar.Image 
-            source={{ uri: employerInfo.logo }} 
-            size={80} 
-            style={styles.profileAvatar}
-          />
-          <View style={styles.profileDetails}>
-            <Title style={styles.profileName}>{employerInfo.name}</Title>
-            <Text style={styles.profileRole}>Employer Account</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Hello,</Text>
+            <Text style={styles.name}>{currentWallet?.name || 'Business Owner'}</Text>
           </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('ProfileScreen' as never)}
+          >
+            <Avatar.Text 
+              size={40} 
+              label={(currentWallet?.name?.charAt(0) || 'B')} 
+              backgroundColor={walletColorSchemes.employer.primary}
+            />
+          </TouchableOpacity>
         </View>
         
-        {/* Account Balance */}
-        <Surface style={styles.balanceCard}>
-          <View style={styles.balanceHeader}>
-            <View>
-              <Text style={styles.balanceLabel}>Available Balance</Text>
-              <Text style={styles.balanceAmount}>{formatCurrency(employerInfo.balance)}</Text>
-            </View>
-            
-            <View style={styles.payrollInfo}>
-              <Text style={styles.payrollInfoLabel}>Next Payroll</Text>
-              <Text style={styles.payrollInfoDate}>{formatDate(employerInfo.nextPayrollDate)}</Text>
-              <Text style={styles.payrollInfoAmount}>{formatCurrency(employerInfo.pendingPayroll)}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.quickActions}>
-            <Button 
-              mode="contained" 
-              icon="cash-plus"
-              onPress={() => {}}
-              style={styles.addFundsButton}
-            >
-              Add Funds
-            </Button>
-            
-            <Button 
-              mode="outlined" 
-              icon="calendar-clock"
-              onPress={runPayroll}
-              style={styles.runPayrollButton}
-            >
-              Run Payroll
-            </Button>
-          </View>
-        </Surface>
-        
         {/* Tab Navigation */}
-        <Card style={styles.tabsCard}>
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'dashboard' && styles.activeTab]}
-              onPress={() => setActiveTab('dashboard')}
-            >
-              <Text style={[styles.tabText, activeTab === 'dashboard' && styles.activeTabText]}>
-                Dashboard
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'employees' && styles.activeTab]}
-              onPress={() => setActiveTab('employees')}
-            >
-              <Text style={[styles.tabText, activeTab === 'employees' && styles.activeTabText]}>
-                Employees
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'payroll' && styles.activeTab]}
-              onPress={() => setActiveTab('payroll')}
-            >
-              <Text style={[styles.tabText, activeTab === 'payroll' && styles.activeTabText]}>
-                Payroll
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'settings' && styles.activeTab]}
-              onPress={() => setActiveTab('settings')}
-            >
-              <Text style={[styles.tabText, activeTab === 'settings' && styles.activeTabText]}>
-                Settings
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          <Card.Content>
-            {/* Dashboard Tab */}
-            {activeTab === 'dashboard' && (
-              <>
-                <Title style={styles.sectionTitle}>Payroll Requests</Title>
-                
-                {payrollRequests.length > 0 ? (
-                  payrollRequests.map(request => (
-                    <Card key={request.id} style={styles.requestCard}>
-                      <Card.Content>
-                        <View style={styles.requestHeader}>
-                          <View style={styles.requestUser}>
-                            <Avatar.Image 
-                              source={{ uri: request.employeeAvatar }} 
-                              size={40}
-                            />
-                            <View style={styles.requestUserInfo}>
-                              <Text style={styles.requestUserName}>{request.employeeName}</Text>
-                              <Text style={styles.requestType}>{request.requestType}</Text>
-                            </View>
-                          </View>
-                          
-                          <View style={styles.requestAmountContainer}>
-                            <Text style={styles.requestAmount}>{formatCurrency(request.amount)}</Text>
-                            <Text style={styles.requestDate}>{formatDate(request.date)}</Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.requestReason}>
-                          <Text style={styles.requestReasonLabel}>Reason:</Text>
-                          <Text style={styles.requestReasonText}>{request.reason}</Text>
-                        </View>
-                        
-                        <View style={styles.requestActions}>
-                          <Button 
-                            mode="contained" 
-                            onPress={() => handlePayrollRequest(request.id, 'approve')}
-                            style={[styles.requestButton, styles.approveButton]}
-                          >
-                            Approve
-                          </Button>
-                          
-                          <Button 
-                            mode="outlined" 
-                            onPress={() => handlePayrollRequest(request.id, 'reject')}
-                            style={styles.requestButton}
-                          >
-                            Decline
-                          </Button>
-                        </View>
-                      </Card.Content>
-                    </Card>
-                  ))
-                ) : (
-                  <Card style={styles.emptyStateCard}>
-                    <Card.Content style={styles.emptyStateContent}>
-                      <Icon name="check-circle" size={48} color="#9CA3AF" />
-                      <Text style={styles.emptyStateText}>No pending payroll requests</Text>
-                    </Card.Content>
-                  </Card>
-                )}
-                
-                <Title style={styles.sectionTitle}>Payroll Statistics</Title>
-                
-                <Card style={styles.statsCard}>
-                  <Card.Content>
-                    <View style={styles.statsGrid}>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{stats.totalEmployees}</Text>
-                        <Text style={styles.statLabel}>Total Employees</Text>
-                      </View>
-                      
-                      <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{formatCurrency(stats.averageSalary)}</Text>
-                        <Text style={styles.statLabel}>Avg. Salary</Text>
-                      </View>
-                      
-                      <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{formatCurrency(stats.totalPayrollYTD)}</Text>
-                        <Text style={styles.statLabel}>YTD Payroll</Text>
-                      </View>
-                      
-                      <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{stats.employeeTurnoverRate}</Text>
-                        <Text style={styles.statLabel}>Turnover Rate</Text>
-                      </View>
-                    </View>
-                  </Card.Content>
-                </Card>
-                
-                <Title style={styles.sectionTitle}>Recent Payroll History</Title>
-                
-                {payrollTransactions.map(transaction => (
-                  <Card key={transaction.id} style={styles.transactionCard}>
-                    <Card.Content>
-                      <View style={styles.transactionHeader}>
-                        <View>
-                          <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                          <Text style={styles.transactionDate}>{formatDate(transaction.date)}</Text>
-                        </View>
-                        
-                        <View style={styles.transactionAmountContainer}>
-                          <Text style={styles.transactionAmount}>{formatCurrency(transaction.amount)}</Text>
-                          <Chip style={styles.statusChip}>
-                            <Text style={{ color: '#10B981' }}>Completed</Text>
-                          </Chip>
-                        </View>
-                      </View>
-                      
-                      <Divider style={styles.divider} />
-                      
-                      <View style={styles.transactionDetails}>
-                        <View style={styles.transactionDetailItem}>
-                          <Text style={styles.transactionDetailLabel}>Employees Paid:</Text>
-                          <Text style={styles.transactionDetailValue}>{transaction.employeeCount}</Text>
-                        </View>
-                        
-                        <View style={styles.transactionDetailItem}>
-                          <Text style={styles.transactionDetailLabel}>Processing Fee:</Text>
-                          <Text style={styles.transactionDetailValue}>{formatCurrency(transaction.processingFee)}</Text>
-                        </View>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <Button 
-                  mode="text" 
-                  icon="history"
-                  onPress={() => {}}
-                  style={styles.viewAllButton}
-                >
-                  View All Transactions
-                </Button>
-              </>
-            )}
-            
-            {/* Employees Tab */}
-            {activeTab === 'employees' && (
-              <>
-                <Title style={styles.sectionTitle}>Employee Directory</Title>
-                
-                {employees.map(employee => (
-                  <Card 
-                    key={employee.id} 
-                    style={styles.employeeCard}
-                    onPress={() => viewEmployeeDetails(employee.id)}
-                  >
-                    <Card.Content>
-                      <View style={styles.employeeHeader}>
-                        <View style={styles.employeeInfo}>
-                          <Avatar.Image 
-                            source={{ uri: employee.avatar }} 
-                            size={50}
-                          />
-                          <View style={styles.employeeDetails}>
-                            <Text style={styles.employeeName}>{employee.name}</Text>
-                            <Text style={styles.employeePosition}>{employee.position}</Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.employeeStatusContainer}>
-                          <Chip 
-                            style={[styles.statusChip, { backgroundColor: '#DCFCE7' }]}
-                          >
-                            <Text style={{ color: '#10B981' }}>Active</Text>
-                          </Chip>
-                        </View>
-                      </View>
-                      
-                      <Divider style={styles.divider} />
-                      
-                      <View style={styles.employeePayInfo}>
-                        <View style={styles.employeePayItem}>
-                          <Text style={styles.employeePayLabel}>Salary:</Text>
-                          <Text style={styles.employeePayValue}>{formatCurrency(employee.salary)}/{employee.payPeriod}</Text>
-                        </View>
-                        
-                        <View style={styles.employeePayItem}>
-                          <Text style={styles.employeePayLabel}>Start Date:</Text>
-                          <Text style={styles.employeePayValue}>{formatDate(employee.startDate)}</Text>
-                        </View>
-                        
-                        <View style={styles.employeePayItem}>
-                          <Text style={styles.employeePayLabel}>Last Paid:</Text>
-                          <Text style={styles.employeePayValue}>{formatDate(employee.lastPayDate)}</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.employeeActions}>
-                        <Button 
-                          mode="contained" 
-                          icon="cash-fast"
-                          onPress={() => {}}
-                          style={styles.payNowButton}
-                        >
-                          Pay Now
-                        </Button>
-                        
-                        <Button 
-                          mode="outlined" 
-                          icon="pencil"
-                          onPress={() => {}}
-                          style={styles.editButton}
-                        >
-                          Edit
-                        </Button>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <Button 
-                  mode="contained" 
-                  icon="account-plus"
-                  onPress={addEmployee}
-                  style={styles.addEmployeeButton}
-                >
-                  Add Employee
-                </Button>
-              </>
-            )}
-            
-            {/* Payroll Tab */}
-            {activeTab === 'payroll' && (
-              <>
-                <Title style={styles.sectionTitle}>Upcoming Payroll</Title>
-                
-                <Card style={styles.upcomingPayrollCard}>
-                  <Card.Content>
-                    <View style={styles.upcomingPayrollHeader}>
-                      <View>
-                        <Text style={styles.upcomingPayrollTitle}>April 2025 Payroll</Text>
-                        <Text style={styles.upcomingPayrollDate}>Due: {formatDate(employerInfo.nextPayrollDate)}</Text>
-                      </View>
-                      
-                      <Text style={styles.upcomingPayrollAmount}>{formatCurrency(employerInfo.pendingPayroll)}</Text>
-                    </View>
-                    
-                    <View style={styles.payrollDetailsList}>
-                      <View style={styles.payrollDetailsItem}>
-                        <Text style={styles.payrollDetailsLabel}>Total Employees:</Text>
-                        <Text style={styles.payrollDetailsValue}>{employerInfo.employeeCount}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollDetailsItem}>
-                        <Text style={styles.payrollDetailsLabel}>Base Salaries:</Text>
-                        <Text style={styles.payrollDetailsValue}>{formatCurrency('14500.00')}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollDetailsItem}>
-                        <Text style={styles.payrollDetailsLabel}>Bonuses:</Text>
-                        <Text style={styles.payrollDetailsValue}>{formatCurrency('600.00')}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollDetailsItem}>
-                        <Text style={styles.payrollDetailsLabel}>Tax Withholdings:</Text>
-                        <Text style={styles.payrollDetailsValue}>{formatCurrency('3625.00')}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollDetailsItem}>
-                        <Text style={styles.payrollDetailsLabel}>Processing Fee:</Text>
-                        <Text style={styles.payrollDetailsValue}>{formatCurrency('150.75')}</Text>
-                      </View>
-                    </View>
-                    
-                    <Divider style={styles.divider} />
-                    
-                    <View style={styles.payrollTotal}>
-                      <Text style={styles.payrollTotalLabel}>Total Amount:</Text>
-                      <Text style={styles.payrollTotalValue}>{formatCurrency(employerInfo.pendingPayroll)}</Text>
-                    </View>
-                    
-                    <Button 
-                      mode="contained" 
-                      icon="calendar-clock"
-                      onPress={runPayroll}
-                      style={styles.runPayrollDetailButton}
-                    >
-                      Run Payroll Now
-                    </Button>
-                  </Card.Content>
-                </Card>
-                
-                <Title style={styles.sectionTitle}>Payroll History</Title>
-                
-                <DataTable style={styles.dataTable}>
-                  <DataTable.Header>
-                    <DataTable.Title>Date</DataTable.Title>
-                    <DataTable.Title>Description</DataTable.Title>
-                    <DataTable.Title numeric>Employees</DataTable.Title>
-                    <DataTable.Title numeric>Amount</DataTable.Title>
-                  </DataTable.Header>
-                  
-                  {payrollTransactions.map(transaction => (
-                    <DataTable.Row key={transaction.id}>
-                      <DataTable.Cell>{formatDate(transaction.date)}</DataTable.Cell>
-                      <DataTable.Cell>{transaction.description}</DataTable.Cell>
-                      <DataTable.Cell numeric>{transaction.employeeCount}</DataTable.Cell>
-                      <DataTable.Cell numeric>{formatCurrency(transaction.amount)}</DataTable.Cell>
-                    </DataTable.Row>
-                  ))}
-                </DataTable>
-                
-                <Card style={styles.payrollSummaryCard}>
-                  <Card.Content>
-                    <Text style={styles.payrollSummaryTitle}>Year-to-Date Summary</Text>
-                    
-                    <View style={styles.payrollSummaryGrid}>
-                      <View style={styles.payrollSummaryItem}>
-                        <Text style={styles.payrollSummaryValue}>{formatCurrency(stats.totalPayrollYTD)}</Text>
-                        <Text style={styles.payrollSummaryLabel}>Total Payroll</Text>
-                      </View>
-                      
-                      <View style={styles.payrollSummaryItem}>
-                        <Text style={styles.payrollSummaryValue}>{formatCurrency(stats.processingFeesYTD)}</Text>
-                        <Text style={styles.payrollSummaryLabel}>Processing Fees</Text>
-                      </View>
-                    </View>
-                  </Card.Content>
-                </Card>
-              </>
-            )}
-            
-            {/* Settings Tab */}
-            {activeTab === 'settings' && (
-              <>
-                <Title style={styles.sectionTitle}>Account Settings</Title>
-                
-                <Card style={styles.settingsCard}>
-                  <Card.Content>
-                    <List.Item
-                      title="Company Information"
-                      description="Update your company details"
-                      left={props => <List.Icon {...props} icon="office-building" />}
-                      right={props => <List.Icon {...props} icon="chevron-right" />}
-                      onPress={() => {}}
-                      style={styles.settingsItem}
-                    />
-                    
-                    <Divider />
-                    
-                    <List.Item
-                      title="Payment Methods"
-                      description="Manage funding sources"
-                      left={props => <List.Icon {...props} icon="credit-card" />}
-                      right={props => <List.Icon {...props} icon="chevron-right" />}
-                      onPress={() => {}}
-                      style={styles.settingsItem}
-                    />
-                    
-                    <Divider />
-                    
-                    <List.Item
-                      title="Payroll Schedule"
-                      description="Set up your payroll frequency"
-                      left={props => <List.Icon {...props} icon="calendar" />}
-                      right={props => <List.Icon {...props} icon="chevron-right" />}
-                      onPress={() => {}}
-                      style={styles.settingsItem}
-                    />
-                    
-                    <Divider />
-                    
-                    <List.Item
-                      title="Tax Settings"
-                      description="Configure tax withholding"
-                      left={props => <List.Icon {...props} icon="file-document" />}
-                      right={props => <List.Icon {...props} icon="chevron-right" />}
-                      onPress={() => {}}
-                      style={styles.settingsItem}
-                    />
-                    
-                    <Divider />
-                    
-                    <List.Item
-                      title="Notifications"
-                      description="Manage email and push notifications"
-                      left={props => <List.Icon {...props} icon="bell" />}
-                      right={props => <List.Icon {...props} icon="chevron-right" />}
-                      onPress={() => {}}
-                      style={styles.settingsItem}
-                    />
-                    
-                    <Divider />
-                    
-                    <List.Item
-                      title="Security"
-                      description="Password and authentication settings"
-                      left={props => <List.Icon {...props} icon="shield" />}
-                      right={props => <List.Icon {...props} icon="chevron-right" />}
-                      onPress={() => {}}
-                      style={styles.settingsItem}
-                    />
-                  </Card.Content>
-                </Card>
-                
-                <Title style={styles.sectionTitle}>Subscription Plans</Title>
-                
-                <Card style={styles.planCard}>
-                  <Card.Content>
-                    <View style={styles.planHeader}>
-                      <Text style={styles.planName}>Business Pro Plan</Text>
-                      <Chip style={styles.activePlanChip}>
-                        <Text style={{ color: '#10B981' }}>Active</Text>
-                      </Chip>
-                    </View>
-                    
-                    <Text style={styles.planPrice}>{formatCurrency('49.99')}/month</Text>
-                    
-                    <Divider style={styles.divider} />
-                    
-                    <View style={styles.planFeatures}>
-                      <View style={styles.planFeatureItem}>
-                        <Icon name="check" size={16} color="#10B981" style={styles.featureIcon} />
-                        <Text style={styles.planFeatureText}>Up to 20 employees</Text>
-                      </View>
-                      
-                      <View style={styles.planFeatureItem}>
-                        <Icon name="check" size={16} color="#10B981" style={styles.featureIcon} />
-                        <Text style={styles.planFeatureText}>Direct deposit payroll</Text>
-                      </View>
-                      
-                      <View style={styles.planFeatureItem}>
-                        <Icon name="check" size={16} color="#10B981" style={styles.featureIcon} />
-                        <Text style={styles.planFeatureText}>Tax filing service</Text>
-                      </View>
-                      
-                      <View style={styles.planFeatureItem}>
-                        <Icon name="check" size={16} color="#10B981" style={styles.featureIcon} />
-                        <Text style={styles.planFeatureText}>Employee self-service portal</Text>
-                      </View>
-                      
-                      <View style={styles.planFeatureItem}>
-                        <Icon name="check" size={16} color="#10B981" style={styles.featureIcon} />
-                        <Text style={styles.planFeatureText}>Benefits administration</Text>
-                      </View>
-                    </View>
-                    
-                    <Button 
-                      mode="outlined" 
-                      onPress={() => {}}
-                      style={styles.changePlanButton}
-                    >
-                      Change Plan
-                    </Button>
-                  </Card.Content>
-                </Card>
-              </>
-            )}
-          </Card.Content>
-        </Card>
+        {renderTabNavigation()}
+        
+        {/* Tab Content */}
+        {renderTabContent()}
       </ScrollView>
       
-      {/* FAB for quick actions */}
+      {/* FAB */}
       <FAB
-        style={styles.fab}
         icon="plus"
-        onPress={() => {}}
+        style={[styles.fab, { backgroundColor: walletColorSchemes.employer.primary }]}
+        onPress={() => {
+          switch (activeTab) {
+            case 'employees':
+              navigation.navigate('AddEmployeeScreen' as never);
+              break;
+            case 'payroll':
+              navigation.navigate('RunPayrollScreen' as never);
+              break;
+            case 'settings':
+              navigation.navigate('AddPaymentMethodScreen' as never);
+              break;
+            default:
+              navigation.navigate('SendMoneyScreen' as never);
+              break;
+          }
+        }}
       />
     </SafeAreaView>
   );
@@ -722,467 +974,384 @@ const EmployerWalletScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
   },
-  profileContainer: {
-    padding: 16,
-    backgroundColor: '#10B981', // Green for employer wallet
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  profileAvatar: {
-    backgroundColor: 'white',
-  },
-  profileDetails: {
-    marginLeft: 16,
-  },
-  profileName: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  profileRole: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  loadingText: {
+    marginTop: spacing.md,
     fontSize: 16,
+    color: colors.textSecondary,
   },
-  balanceCard: {
-    margin: 16,
-    marginTop: -20,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'white',
-    elevation: 4,
-  },
-  balanceHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  balanceAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#10B981', // Green for employer wallet
-  },
-  payrollInfo: {
-    alignItems: 'flex-end',
-  },
-  payrollInfoLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  payrollInfoDate: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  payrollInfoAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#10B981', // Green for employer wallet
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  addFundsButton: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: '#10B981', // Green for employer wallet
-  },
-  runPayrollButton: {
-    flex: 1,
-    marginLeft: 8,
-    borderColor: '#10B981', // Green for employer wallet
-  },
-  tabsCard: {
-    margin: 16,
-    marginBottom: 80, // Space for FAB
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
     alignItems: 'center',
+    padding: spacing.md,
+    paddingBottom: spacing.md,
   },
-  activeTab: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#10B981', // Green for employer wallet
+  greeting: {
+    fontSize: 16,
+    color: colors.textSecondary,
   },
-  tabText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  activeTabText: {
-    color: '#10B981', // Green for employer wallet
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
+  name: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 24,
-    marginBottom: 16,
+    color: colors.text,
   },
-  emptyStateCard: {
-    marginBottom: 24,
+  profileButton: {
+    ...shadows.small,
   },
-  emptyStateContent: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  emptyStateText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  statsCard: {
-    marginBottom: 24,
-  },
-  statsGrid: {
+  tabContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: spacing.md,
   },
-  statItem: {
-    width: '48%',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+  tabButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#10B981', // Green for employer wallet
-    marginBottom: 4,
-  },
-  statLabel: {
+  tabLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
+  },
+  tabContent: {
+    padding: spacing.md,
+    paddingTop: 0,
+  },
+  walletCard: {
+    marginBottom: spacing.md,
+    ...shadows.medium,
+    backgroundColor: walletColorSchemes.employer.background,
+  },
+  walletLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  walletBalance: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginVertical: spacing.sm,
+  },
+  walletActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: spacing.xs,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  quickAction: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  quickActionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: walletColorSchemes.employer.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    ...shadows.small,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: colors.text,
     textAlign: 'center',
   },
-  requestCard: {
-    marginBottom: 16,
+  summaryCard: {
+    marginBottom: spacing.md,
+    ...shadows.small,
   },
-  requestHeader: {
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    marginTop: spacing.sm,
   },
-  requestUser: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  summaryItem: {
+    flex: 1,
   },
-  requestUserInfo: {
-    marginLeft: 12,
-  },
-  requestUserName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  requestType: {
+  summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
-  },
-  requestAmountContainer: {
-    alignItems: 'flex-end',
-  },
-  requestAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#10B981', // Green for employer wallet
-  },
-  requestDate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  requestReason: {
-    backgroundColor: '#F3F4F6',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  requestReasonLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
-  requestReasonText: {
-    fontSize: 14,
-  },
-  requestActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  requestButton: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  approveButton: {
-    backgroundColor: '#10B981', // Green for employer wallet
-  },
-  transactionCard: {
-    marginBottom: 16,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  transactionDescription: {
+  summaryValue: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: colors.text,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  seeAllText: {
+    color: walletColorSchemes.employer.primary,
+    fontWeight: '500',
+  },
+  transactionCard: {
+    marginBottom: spacing.sm,
+    ...shadows.small,
+  },
+  transactionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transactionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: walletColorSchemes.employer.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  transactionDetails: {
+    flex: 1,
+  },
+  transactionDescription: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
   },
   transactionDate: {
     fontSize: 12,
-    color: '#6B7280',
-  },
-  transactionAmountContainer: {
-    alignItems: 'flex-end',
+    color: colors.textSecondary,
   },
   transactionAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#EF4444', // Red for outgoing
-    marginBottom: 4,
+    alignItems: 'flex-end',
   },
-  statusChip: {
-    height: 24,
-    backgroundColor: '#DCFCE7',
-  },
-  divider: {
-    marginVertical: 12,
-  },
-  transactionDetails: {
-    marginVertical: 8,
-  },
-  transactionDetailItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  transactionDetailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  transactionDetailValue: {
+  amountText: {
     fontSize: 14,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
-  viewAllButton: {
-    alignSelf: 'center',
-    marginTop: 8,
+  emptyCard: {
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  emptyText: {
+    marginTop: spacing.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  emptyButton: {
+    marginTop: spacing.sm,
   },
   employeeCard: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
+    ...shadows.small,
   },
-  employeeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+  employeeContent: {
+    padding: spacing.md,
   },
-  employeeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  employeeAvatarContainer: {
+    position: 'relative',
+    marginRight: spacing.md,
+    alignSelf: 'flex-start',
   },
   employeeDetails: {
-    marginLeft: 12,
+    flex: 1,
+    marginLeft: 60,
+    marginTop: -48,
   },
   employeeName: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: colors.text,
   },
-  employeePosition: {
+  employeeRole: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  employeeStatusContainer: {
-    alignItems: 'flex-end',
+  employeeJoinDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
-  employeePayInfo: {
-    marginBottom: 12,
-  },
-  employeePayItem: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  employeePayLabel: {
-    fontSize: 14,
-    width: 80,
-    color: '#6B7280',
-  },
-  employeePayValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  employeeActions: {
+  employeeStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
   },
-  payNowButton: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: '#10B981', // Green for employer wallet
+  employeeStat: {
+    alignItems: 'center',
   },
-  editButton: {
-    flex: 1,
-    marginLeft: 8,
-    borderColor: '#10B981', // Green for employer wallet
+  employeeStatLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
-  addEmployeeButton: {
-    marginVertical: 16,
-    backgroundColor: '#10B981', // Green for employer wallet
+  employeeStatValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.text,
   },
-  upcomingPayrollCard: {
-    marginBottom: 24,
+  employeeActions: {
+    justifyContent: 'space-between',
   },
-  upcomingPayrollHeader: {
+  payrollCard: {
+    marginBottom: spacing.md,
+    ...shadows.medium,
+  },
+  payrollCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  payrollCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  payrollDetails: {
+    marginTop: spacing.sm,
+  },
+  payrollDetail: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  payrollDetailLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  payrollDetailValue: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  historyCard: {
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
   },
-  upcomingPayrollTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  historyPeriod: {
+    flex: 1,
   },
-  upcomingPayrollDate: {
+  historyPeriodLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  upcomingPayrollAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#EF4444', // Red for outgoing
-  },
-  payrollDetailsList: {
-    marginBottom: 16,
-  },
-  payrollDetailsItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  payrollDetailsLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  payrollDetailsValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  payrollTotal: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 8,
-  },
-  payrollTotalLabel: {
+  historyPeriodValue: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: colors.text,
   },
-  payrollTotalValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#EF4444', // Red for outgoing
-  },
-  runPayrollDetailButton: {
-    marginTop: 16,
-    backgroundColor: '#10B981', // Green for employer wallet
-  },
-  dataTable: {
-    marginBottom: 24,
-  },
-  payrollSummaryCard: {
-    marginBottom: 24,
-    backgroundColor: '#F0F9FF',
-  },
-  payrollSummaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  payrollSummaryGrid: {
+  historyDetails: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
-    justifyContent: 'space-between',
   },
-  payrollSummaryItem: {
+  historyDetail: {
+    width: '50%',
+    marginBottom: spacing.xs,
+  },
+  historyDetailLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  historyDetailValue: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  methodCard: {
+    marginBottom: spacing.sm,
+    ...shadows.small,
+  },
+  methodContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    width: '48%',
   },
-  payrollSummaryValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#10B981', // Green for employer wallet
-    marginBottom: 4,
+  methodIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: walletColorSchemes.employer.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
   },
-  payrollSummaryLabel: {
+  methodDetails: {
+    flex: 1,
+  },
+  methodName: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text,
+    fontWeight: '500',
+  },
+  methodInfo: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  methodExpiry: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  methodActions: {
+    alignItems: 'flex-end',
   },
   settingsCard: {
-    marginBottom: 24,
+    marginBottom: spacing.md,
+    ...shadows.small,
   },
   settingsItem: {
-    paddingVertical: 8,
-  },
-  planCard: {
-    marginBottom: 24,
-  },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  planName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  activePlanChip: {
-    backgroundColor: '#DCFCE7',
-  },
-  planPrice: {
-    fontSize: 20,
-    color: '#10B981', // Green for employer wallet
-    marginBottom: 12,
-  },
-  planFeatures: {
-    marginBottom: 16,
-  },
-  planFeatureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingVertical: spacing.sm,
   },
-  featureIcon: {
-    marginRight: 8,
+  settingsItemContent: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
-  planFeatureText: {
-    fontSize: 14,
+  settingsItemTitle: {
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '500',
   },
-  changePlanButton: {
-    borderColor: '#10B981', // Green for employer wallet
+  settingsItemDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   fab: {
     position: 'absolute',
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: '#10B981', // Green for employer wallet
   },
 });
 

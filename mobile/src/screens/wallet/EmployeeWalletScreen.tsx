@@ -1,958 +1,1034 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
-import { Card, Text, Title, Paragraph, Button, Divider, List, Avatar, FAB, Surface, ProgressBar, Chip, Badge, DataTable } from 'react-native-paper';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, FlatList, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, Card, Button, Divider, Avatar, FAB, Badge, Chip, ProgressBar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// Employee Wallet Screen
+import useWallet, { Transaction } from '../../hooks/useWallet';
+import { colors, spacing, shadows, borderRadius, walletColorSchemes } from '../../utils/theme';
+
+/**
+ * Types for Employee Wallet functionality
+ */
+interface TimeEntry {
+  id: number;
+  date: string;
+  hoursWorked: string;
+  project: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+}
+
+interface ExpenseReport {
+  id: number;
+  date: string;
+  amount: string;
+  category: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  receiptUrl?: string;
+}
+
+interface Payslip {
+  id: number;
+  employerId: number;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  payDate: string;
+  grossAmount: string;
+  deductions: string;
+  netAmount: string;
+  status: 'pending' | 'completed';
+  hoursWorked: string;
+  notes?: string;
+  createdAt: string;
+  documents?: string[];
+}
+
+interface Benefit {
+  id: number;
+  name: string;
+  type: 'health' | 'retirement' | 'insurance' | 'other';
+  description: string;
+  status: 'active' | 'inactive';
+  coverage?: string;
+  details?: any;
+}
+
+/**
+ * EmployeeWalletScreen
+ * This screen displays the employee wallet interface where employees can:
+ * - View their wallet balance and recent transactions
+ * - View and submit time entries
+ * - Submit expense reports for reimbursement
+ * - Access payroll information and benefits
+ */
 const EmployeeWalletScreen = () => {
   const navigation = useNavigation();
+  const { 
+    currentWallet, 
+    loading, 
+    error, 
+    getTransactions, 
+    getCurrentWalletInfo,
+    formatCurrency 
+  } = useWallet();
+  
+  // State variables
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'payroll' | 'benefits' | 'expenses'>('overview');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [expenseReports, setExpenseReports] = useState<ExpenseReport[]>([]);
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [benefits, setBenefits] = useState<Benefit[]>([]);
   
-  // Sample data for demonstration
-  const employeeInfo = {
-    name: 'John Smith',
-    position: 'Software Engineer',
-    company: 'Acme Corporation',
-    balance: '3250.75',
-    nextPayDate: '2025-04-15',
-    expectedPay: '5500.00',
-    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-    companyLogo: 'https://randomuser.me/api/portraits/men/32.jpg',
+  // Load data on mount
+  useEffect(() => {
+    loadWalletData();
+  }, []);
+  
+  // Load wallet data
+  const loadWalletData = async () => {
+    try {
+      await getCurrentWalletInfo();
+      loadTransactions();
+      loadTimeEntries();
+      loadExpenseReports();
+      loadPayslips();
+      loadBenefits();
+    } catch (error) {
+      console.error('Error loading wallet data:', error);
+    }
   };
   
-  const transactions = [
-    {
-      id: 1,
-      type: 'payroll',
-      amount: '5500.00',
-      description: 'March 2025 Salary',
-      date: '2025-03-15',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      type: 'expense_reimbursement',
-      amount: '250.75',
-      description: 'Client Meeting Expenses',
-      date: '2025-03-20',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      type: 'bonus',
-      amount: '1000.00',
-      description: 'Q1 Performance Bonus',
-      date: '2025-03-31',
-      status: 'completed'
-    },
-    {
-      id: 4,
-      type: 'withdrawal',
-      amount: '3500.00',
-      description: 'Transfer to Bank Account',
-      date: '2025-04-01',
-      status: 'completed'
+  // Load transactions
+  const loadTransactions = async () => {
+    try {
+      const data = await getTransactions({ limit: 5 });
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
     }
-  ];
+  };
   
-  const payslips = [
-    {
-      id: 1,
-      period: 'March 2025',
-      date: '2025-03-15',
-      grossAmount: '5500.00',
-      netAmount: '4235.00',
-      taxes: '1100.00',
-      benefits: '165.00',
-      status: 'paid'
-    },
-    {
-      id: 2,
-      period: 'February 2025',
-      date: '2025-02-15',
-      grossAmount: '5500.00',
-      netAmount: '4235.00',
-      taxes: '1100.00',
-      benefits: '165.00',
-      status: 'paid'
-    },
-    {
-      id: 3,
-      period: 'January 2025',
-      date: '2025-01-15',
-      grossAmount: '5500.00',
-      netAmount: '4235.00',
-      taxes: '1100.00',
-      benefits: '165.00',
-      status: 'paid'
-    }
-  ];
+  // Load time entries (mock data for now)
+  const loadTimeEntries = () => {
+    // Mock data for time entries
+    const mockTimeEntries: TimeEntry[] = [
+      {
+        id: 1,
+        date: new Date().toISOString(),
+        hoursWorked: '8',
+        project: 'Mobile App Development',
+        status: 'approved',
+      },
+      {
+        id: 2,
+        date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        hoursWorked: '7.5',
+        project: 'Client Meeting',
+        status: 'approved',
+      },
+      {
+        id: 3,
+        date: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+        hoursWorked: '8',
+        project: 'UI Design',
+        status: 'approved',
+      },
+    ];
+    
+    setTimeEntries(mockTimeEntries);
+  };
   
-  const benefits = [
-    {
-      id: 1,
-      name: 'Health Insurance',
-      provider: 'BlueCross Health',
-      monthlyDeduction: '120.00',
-      coverage: 'Full Family Plan',
-      status: 'active',
-      icon: 'medical-bag'
-    },
-    {
-      id: 2,
-      name: '401(k) Retirement',
-      provider: 'Fidelity Investments',
-      monthlyDeduction: '275.00',
-      employerMatch: '275.00',
-      status: 'active',
-      icon: 'piggy-bank'
-    },
-    {
-      id: 3,
-      name: 'Dental Insurance',
-      provider: 'Delta Dental',
-      monthlyDeduction: '25.00',
-      coverage: 'Individual Plan',
-      status: 'active',
-      icon: 'tooth'
-    },
-    {
-      id: 4,
-      name: 'Vision Insurance',
-      provider: 'Vision Care Plus',
-      monthlyDeduction: '20.00',
-      coverage: 'Individual Plan',
-      status: 'active',
-      icon: 'eye'
-    }
-  ];
+  // Load expense reports (mock data for now)
+  const loadExpenseReports = () => {
+    // Mock data for expense reports
+    const mockExpenseReports: ExpenseReport[] = [
+      {
+        id: 1,
+        date: new Date().toISOString(),
+        amount: '42.99',
+        category: 'Meals',
+        description: 'Lunch with client',
+        status: 'pending',
+      },
+      {
+        id: 2,
+        date: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+        amount: '145.00',
+        category: 'Transportation',
+        description: 'Uber to client office',
+        status: 'approved',
+      },
+    ];
+    
+    setExpenseReports(mockExpenseReports);
+  };
   
-  const pendingExpenses = [
-    {
-      id: 1,
-      description: 'Client Meeting',
-      date: '2025-04-02',
-      amount: '125.50',
-      category: 'Travel',
-      status: 'pending',
-      receiptUrl: 'https://images.unsplash.com/photo-1572666341285-c8cb9790ca0b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80'
-    }
-  ];
+  // Load payslips (mock data for now)
+  const loadPayslips = () => {
+    // Mock data for payslips
+    const mockPayslips: Payslip[] = [
+      {
+        id: 1,
+        employerId: 1,
+        payPeriodStart: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        payPeriodEnd: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        payDate: new Date().toISOString(),
+        grossAmount: '2500.00',
+        deductions: '650.00',
+        netAmount: '1850.00',
+        status: 'completed',
+        hoursWorked: '80',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        employerId: 1,
+        payPeriodStart: new Date(Date.now() - 86400000 * 28).toISOString(), // 4 weeks ago
+        payPeriodEnd: new Date(Date.now() - 86400000 * 15).toISOString(), // 15 days ago
+        payDate: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+        grossAmount: '2500.00',
+        deductions: '650.00',
+        netAmount: '1850.00',
+        status: 'completed',
+        hoursWorked: '80',
+        createdAt: new Date(Date.now() - 86400000 * 14).toISOString(), // 2 weeks ago
+      },
+    ];
+    
+    setPayslips(mockPayslips);
+  };
   
-  const approvedExpenses = [
-    {
-      id: 2,
-      description: 'Conference Registration',
-      date: '2025-03-10',
-      amount: '350.00',
-      category: 'Professional Development',
-      status: 'approved',
-      reimbursementDate: '2025-03-20'
-    },
-    {
-      id: 3,
-      description: 'Office Supplies',
-      date: '2025-03-05',
-      amount: '75.25',
-      category: 'Office Expenses',
-      status: 'approved',
-      reimbursementDate: '2025-03-15'
-    }
-  ];
+  // Load benefits (mock data for now)
+  const loadBenefits = () => {
+    // Mock data for benefits
+    const mockBenefits: Benefit[] = [
+      {
+        id: 1,
+        name: 'Health Insurance',
+        type: 'health',
+        description: 'Comprehensive health coverage',
+        status: 'active',
+        coverage: '80%',
+      },
+      {
+        id: 2,
+        name: '401k Retirement',
+        type: 'retirement',
+        description: 'Retirement savings plan',
+        status: 'active',
+        coverage: '5% employer match',
+      },
+      {
+        id: 3,
+        name: 'Dental Coverage',
+        type: 'health',
+        description: 'Dental insurance coverage',
+        status: 'active',
+        coverage: '70%',
+      },
+    ];
+    
+    setBenefits(mockBenefits);
+  };
   
-  const timeEntries = [
-    {
-      id: 1,
-      week: 'March 25-31, 2025',
-      status: 'submitted',
-      totalHours: 40,
-      overtimeHours: 0,
-      submissionDate: '2025-03-31'
-    },
-    {
-      id: 2,
-      week: 'March 18-24, 2025',
-      status: 'approved',
-      totalHours: 42,
-      overtimeHours: 2,
-      submissionDate: '2025-03-24',
-      approvalDate: '2025-03-25'
-    },
-    {
-      id: 3,
-      week: 'March 11-17, 2025',
-      status: 'approved',
-      totalHours: 40,
-      overtimeHours: 0,
-      submissionDate: '2025-03-17',
-      approvalDate: '2025-03-18'
-    }
-  ];
-  
-  // Handle refresh
-  const onRefresh = () => {
+  // Pull to refresh
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // In a real app, refetch data from API
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await loadWalletData();
+    setRefreshing(false);
+  }, []);
+  
+  // Navigate to transaction details
+  const goToTransactionDetails = (transaction: Transaction) => {
+    navigation.navigate('TransactionDetailsScreen' as never, { transactionId: transaction.id } as never);
   };
   
-  // Format currency
-  const formatCurrency = (amount: string) => {
-    return parseFloat(amount).toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    });
+  // Get card icon for transaction type
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'deposit':
+        return 'bank-transfer-in';
+      case 'withdrawal':
+        return 'bank-transfer-out';
+      case 'transfer':
+        return 'bank-transfer';
+      case 'payment':
+        return 'credit-card-outline';
+      case 'payment_received':
+        return 'cash-plus';
+      case 'expense_reimbursement':
+        return 'cash-refund';
+      case 'payroll':
+        return 'cash-multiple';
+      default:
+        return 'cash';
+    }
   };
   
-  // Format date
+  // Format date string
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
   };
   
-  // View payslip details
-  const viewPayslipDetails = (payslipId: number) => {
-    // @ts-ignore
-    navigation.navigate('PayslipDetails', { payslipId });
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return colors.warning;
+      case 'approved':
+      case 'completed':
+        return colors.success;
+      case 'rejected':
+      case 'failed':
+        return colors.error;
+      default:
+        return colors.primary;
+    }
   };
   
-  // View benefit details
-  const viewBenefitDetails = (benefitId: number) => {
-    // @ts-ignore
-    navigation.navigate('BenefitDetails', { benefitId });
+  // Render Tab Navigation
+  const renderTabNavigation = () => {
+    return (
+      <View style={styles.tabContainer}>
+        {['overview', 'hours', 'expenses', 'payroll', 'benefits'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              styles.tabButton,
+              activeTab === tab && { 
+                borderBottomWidth: 2,
+                borderBottomColor: walletColorSchemes.employee.primary
+              }
+            ]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text 
+              style={[
+                styles.tabLabel, 
+                activeTab === tab && { 
+                  color: walletColorSchemes.employee.primary,
+                  fontWeight: 'bold'
+                }
+              ]}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
   };
   
-  // Create expense report
-  const createExpenseReport = () => {
-    // @ts-ignore
-    navigation.navigate('CreateExpenseReport');
+  // Render Overview Tab
+  const renderOverviewTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        {/* Balance Card */}
+        <Card style={styles.walletCard}>
+          <Card.Content>
+            <Text style={styles.walletLabel}>Available Balance</Text>
+            <Text style={styles.walletBalance}>
+              {currentWallet ? formatCurrency(currentWallet.balance) : '$0.00'}
+            </Text>
+            
+            <View style={styles.walletActions}>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('RequestMoneyScreen' as never)}
+                style={[styles.actionButton, { backgroundColor: walletColorSchemes.employee.primary }]}
+                icon="cash-refund"
+              >
+                Request
+              </Button>
+              <Button 
+                mode="contained" 
+                onPress={() => navigation.navigate('SendMoneyScreen' as never)}
+                style={[styles.actionButton, { backgroundColor: walletColorSchemes.employee.secondary }]}
+                icon="send"
+              >
+                Send
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+        
+        {/* Recent Transactions */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('TransactionsScreen' as never)}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {transactions.length > 0 ? (
+          transactions.map((transaction) => (
+            <TouchableOpacity 
+              key={transaction.id}
+              onPress={() => goToTransactionDetails(transaction)}
+            >
+              <Card style={styles.transactionCard}>
+                <Card.Content style={styles.transactionContent}>
+                  <View style={styles.transactionIconContainer}>
+                    <Icon 
+                      name={getTransactionIcon(transaction.type)} 
+                      size={24} 
+                      color={walletColorSchemes.employee.primary}
+                    />
+                  </View>
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.transactionDescription}>
+                      {transaction.description}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      {formatDate(transaction.createdAt)}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionAmount}>
+                    <Text 
+                      style={[
+                        styles.amountText,
+                        {
+                          color: ['deposit', 'payment_received', 'expense_reimbursement', 'payroll'].includes(transaction.type)
+                            ? colors.success
+                            : colors.error
+                        }
+                      ]}
+                    >
+                      {['deposit', 'payment_received', 'expense_reimbursement', 'payroll'].includes(transaction.type) ? '+' : '-'}
+                      {formatCurrency(transaction.amount)}
+                    </Text>
+                    <Chip 
+                      style={{ 
+                        backgroundColor: getStatusColor(transaction.status) + '20', 
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(transaction.status),
+                        fontSize: 12
+                      }}>
+                        {transaction.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="cash" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No recent transactions</Text>
+            </Card.Content>
+          </Card>
+        )}
+        
+        {/* Time Entry Summary */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Time Entry Summary</Text>
+          <TouchableOpacity onPress={() => setActiveTab('hours')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <Card style={styles.summaryCard}>
+          <Card.Content>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Hours This Week</Text>
+                <Text style={styles.summaryValue}>{timeEntries.reduce((sum, entry) => sum + parseFloat(entry.hoursWorked), 0)} hrs</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Hours This Month</Text>
+                <Text style={styles.summaryValue}>78.5 hrs</Text>
+              </View>
+            </View>
+            <View style={styles.summaryProgress}>
+              <Text style={styles.progressLabel}>Weekly Goal (40 hrs)</Text>
+              <ProgressBar 
+                progress={timeEntries.reduce((sum, entry) => sum + parseFloat(entry.hoursWorked), 0) / 40} 
+                color={walletColorSchemes.employee.primary}
+                style={styles.progressBar}
+              />
+            </View>
+          </Card.Content>
+        </Card>
+        
+        {/* Expense Report Summary */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Expense Reports</Text>
+          <TouchableOpacity onPress={() => setActiveTab('expenses')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {expenseReports.length > 0 ? (
+          <Card style={styles.summaryCard}>
+            <Card.Content>
+              <View style={styles.expenseSummary}>
+                <View style={styles.expenseItem}>
+                  <Badge size={24} style={{ backgroundColor: colors.warning }}>
+                    {expenseReports.filter(report => report.status === 'pending').length}
+                  </Badge>
+                  <Text style={styles.expenseLabel}>Pending</Text>
+                </View>
+                <View style={styles.expenseItem}>
+                  <Badge size={24} style={{ backgroundColor: colors.success }}>
+                    {expenseReports.filter(report => report.status === 'approved').length}
+                  </Badge>
+                  <Text style={styles.expenseLabel}>Approved</Text>
+                </View>
+                <View style={styles.expenseItem}>
+                  <Badge size={24} style={{ backgroundColor: colors.error }}>
+                    {expenseReports.filter(report => report.status === 'rejected').length}
+                  </Badge>
+                  <Text style={styles.expenseLabel}>Rejected</Text>
+                </View>
+              </View>
+              
+              <Divider style={{ marginVertical: 10 }} />
+              
+              <Text style={styles.recentLabel}>Recent Reports</Text>
+              {expenseReports.slice(0, 2).map(report => (
+                <View key={report.id} style={styles.expenseRow}>
+                  <View>
+                    <Text style={styles.expenseDescription}>{report.description}</Text>
+                    <Text style={styles.expenseDate}>{formatDate(report.date)}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.expenseAmount}>{formatCurrency(report.amount)}</Text>
+                    <Chip 
+                      style={{ 
+                        backgroundColor: getStatusColor(report.status) + '20',
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(report.status),
+                        fontSize: 12
+                      }}>
+                        {report.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="receipt" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No expense reports</Text>
+            </Card.Content>
+          </Card>
+        )}
+      </View>
+    );
   };
   
-  // Submit time entry
-  const submitTimeEntry = () => {
-    // @ts-ignore
-    navigation.navigate('SubmitTimeEntry');
+  // Render Hours Tab
+  const renderHoursTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        <Card style={styles.summaryCard}>
+          <Card.Content>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Hours This Week</Text>
+                <Text style={styles.summaryValue}>{timeEntries.reduce((sum, entry) => sum + parseFloat(entry.hoursWorked), 0)} hrs</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Hours This Month</Text>
+                <Text style={styles.summaryValue}>78.5 hrs</Text>
+              </View>
+            </View>
+            <View style={styles.summaryProgress}>
+              <Text style={styles.progressLabel}>Weekly Goal (40 hrs)</Text>
+              <ProgressBar 
+                progress={timeEntries.reduce((sum, entry) => sum + parseFloat(entry.hoursWorked), 0) / 40} 
+                color={walletColorSchemes.employee.primary}
+                style={styles.progressBar}
+              />
+            </View>
+          </Card.Content>
+        </Card>
+        
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Time Entries</Text>
+        </View>
+        
+        {timeEntries.length > 0 ? (
+          timeEntries.map(entry => (
+            <Card key={entry.id} style={styles.entryCard}>
+              <Card.Content>
+                <View style={styles.entryRow}>
+                  <View>
+                    <Text style={styles.entryProject}>{entry.project}</Text>
+                    <Text style={styles.entryDate}>{formatDate(entry.date)}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.entryHours}>{entry.hoursWorked} hrs</Text>
+                    <Chip 
+                      style={{ 
+                        backgroundColor: getStatusColor(entry.status) + '20',
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(entry.status),
+                        fontSize: 12
+                      }}>
+                        {entry.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                </View>
+                {entry.notes && (
+                  <Text style={styles.entryNotes}>{entry.notes}</Text>
+                )}
+              </Card.Content>
+            </Card>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="clock-outline" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No time entries</Text>
+            </Card.Content>
+          </Card>
+        )}
+        
+        <Button 
+          mode="contained" 
+          onPress={() => navigation.navigate('SubmitTimeEntryScreen' as never)}
+          style={[styles.addButton, { backgroundColor: walletColorSchemes.employee.primary }]}
+          icon="plus"
+        >
+          Add Time Entry
+        </Button>
+      </View>
+    );
   };
   
-  // Request time off
-  const requestTimeOff = () => {
-    // @ts-ignore
-    navigation.navigate('RequestTimeOff');
+  // Render Expenses Tab
+  const renderExpensesTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        <Card style={styles.summaryCard}>
+          <Card.Content>
+            <View style={styles.expenseSummary}>
+              <View style={styles.expenseItem}>
+                <Badge size={24} style={{ backgroundColor: colors.warning }}>
+                  {expenseReports.filter(report => report.status === 'pending').length}
+                </Badge>
+                <Text style={styles.expenseLabel}>Pending</Text>
+              </View>
+              <View style={styles.expenseItem}>
+                <Badge size={24} style={{ backgroundColor: colors.success }}>
+                  {expenseReports.filter(report => report.status === 'approved').length}
+                </Badge>
+                <Text style={styles.expenseLabel}>Approved</Text>
+              </View>
+              <View style={styles.expenseItem}>
+                <Badge size={24} style={{ backgroundColor: colors.error }}>
+                  {expenseReports.filter(report => report.status === 'rejected').length}
+                </Badge>
+                <Text style={styles.expenseLabel}>Rejected</Text>
+              </View>
+            </View>
+            <Divider style={{ marginVertical: 10 }} />
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Expenses This Month</Text>
+                <Text style={styles.summaryValue}>
+                  {formatCurrency(
+                    expenseReports
+                      .reduce((sum, report) => sum + parseFloat(report.amount), 0)
+                      .toString()
+                  )}
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Pending Reimbursement</Text>
+                <Text style={styles.summaryValue}>
+                  {formatCurrency(
+                    expenseReports
+                      .filter(report => report.status === 'pending')
+                      .reduce((sum, report) => sum + parseFloat(report.amount), 0)
+                      .toString()
+                  )}
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+        
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Expense Reports</Text>
+        </View>
+        
+        {expenseReports.length > 0 ? (
+          expenseReports.map(report => (
+            <Card key={report.id} style={styles.entryCard}>
+              <Card.Content>
+                <View style={styles.entryRow}>
+                  <View>
+                    <Text style={styles.entryProject}>{report.description}</Text>
+                    <Text style={styles.entryDate}>{formatDate(report.date)}</Text>
+                    <Text style={styles.entryCategory}>{report.category}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.entryHours}>{formatCurrency(report.amount)}</Text>
+                    <Chip 
+                      style={{ 
+                        backgroundColor: getStatusColor(report.status) + '20',
+                        height: 24
+                      }}
+                    >
+                      <Text style={{ 
+                        color: getStatusColor(report.status),
+                        fontSize: 12
+                      }}>
+                        {report.status.toUpperCase()}
+                      </Text>
+                    </Chip>
+                  </View>
+                </View>
+                {report.receiptUrl && (
+                  <TouchableOpacity style={styles.receiptButton}>
+                    <Icon name="file-document-outline" size={16} color={walletColorSchemes.employee.primary} />
+                    <Text style={styles.receiptText}>View Receipt</Text>
+                  </TouchableOpacity>
+                )}
+              </Card.Content>
+            </Card>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="receipt" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No expense reports</Text>
+            </Card.Content>
+          </Card>
+        )}
+        
+        <Button 
+          mode="contained" 
+          onPress={() => navigation.navigate('CreateExpenseReportScreen' as never)}
+          style={[styles.addButton, { backgroundColor: walletColorSchemes.employee.primary }]}
+          icon="plus"
+        >
+          Create Expense Report
+        </Button>
+      </View>
+    );
   };
+  
+  // Render Payroll Tab
+  const renderPayrollTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        {payslips.length > 0 ? (
+          <>
+            <Card style={[styles.summaryCard, { marginBottom: 20 }]}>
+              <Card.Content>
+                <Text style={styles.payrollCardTitle}>Latest Payslip</Text>
+                <Text style={styles.payslipDate}>
+                  Pay Period: {formatDate(payslips[0].payPeriodStart)} - {formatDate(payslips[0].payPeriodEnd)}
+                </Text>
+                <Divider style={{ marginVertical: 10 }} />
+                <View style={styles.payslipRow}>
+                  <Text style={styles.payslipLabel}>Gross Pay:</Text>
+                  <Text style={styles.payslipValue}>{formatCurrency(payslips[0].grossAmount)}</Text>
+                </View>
+                <View style={styles.payslipRow}>
+                  <Text style={styles.payslipLabel}>Deductions:</Text>
+                  <Text style={styles.payslipValue}>-{formatCurrency(payslips[0].deductions)}</Text>
+                </View>
+                <Divider style={{ marginVertical: 10 }} />
+                <View style={styles.payslipRow}>
+                  <Text style={styles.payslipTotal}>Net Pay:</Text>
+                  <Text style={styles.payslipTotalValue}>{formatCurrency(payslips[0].netAmount)}</Text>
+                </View>
+                <Button
+                  mode="outlined"
+                  onPress={() => navigation.navigate('PayslipDetailsScreen' as never, { payslipId: payslips[0].id } as never)}
+                  style={styles.viewDetailsButton}
+                >
+                  View Details
+                </Button>
+              </Card.Content>
+            </Card>
+            
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Payment History</Text>
+            </View>
+            
+            {payslips.slice(1).map(payslip => (
+              <TouchableOpacity
+                key={payslip.id}
+                onPress={() => navigation.navigate('PayslipDetailsScreen' as never, { payslipId: payslip.id } as never)}
+              >
+                <Card style={styles.entryCard}>
+                  <Card.Content>
+                    <View style={styles.entryRow}>
+                      <View>
+                        <Text style={styles.entryProject}>
+                          {formatDate(payslip.payPeriodStart)} - {formatDate(payslip.payPeriodEnd)}
+                        </Text>
+                        <Text style={styles.entryDate}>Paid on {formatDate(payslip.payDate)}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.entryHours}>{formatCurrency(payslip.netAmount)}</Text>
+                        <Chip 
+                          style={{ 
+                            backgroundColor: getStatusColor(payslip.status) + '20',
+                            height: 24
+                          }}
+                        >
+                          <Text style={{ 
+                            color: getStatusColor(payslip.status),
+                            fontSize: 12
+                          }}>
+                            {payslip.status.toUpperCase()}
+                          </Text>
+                        </Chip>
+                      </View>
+                    </View>
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </>
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="cash-multiple" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No payslips available</Text>
+            </Card.Content>
+          </Card>
+        )}
+      </View>
+    );
+  };
+  
+  // Render Benefits Tab
+  const renderBenefitsTab = () => {
+    return (
+      <View style={styles.tabContent}>
+        {benefits.length > 0 ? (
+          <>
+            <Card style={styles.summaryCard}>
+              <Card.Content>
+                <Text style={styles.benefitsSummaryTitle}>Your Benefits Summary</Text>
+                <Divider style={{ marginVertical: 10 }} />
+                <View style={styles.benefitsGrid}>
+                  {benefits.map(benefit => (
+                    <TouchableOpacity
+                      key={benefit.id}
+                      style={styles.benefitItem}
+                      onPress={() => navigation.navigate('BenefitDetailsScreen' as never, { benefitId: benefit.id } as never)}
+                    >
+                      <View style={[
+                        styles.benefitIcon,
+                        { backgroundColor: getBenefitColor(benefit.type) }
+                      ]}>
+                        <Icon name={getBenefitIcon(benefit.type)} size={24} color="#fff" />
+                      </View>
+                      <Text style={styles.benefitName}>{benefit.name}</Text>
+                      <Chip 
+                        style={{ 
+                          backgroundColor: benefit.status === 'active' ? colors.success + '20' : colors.error + '20',
+                          height: 20,
+                          marginTop: 5
+                        }}
+                      >
+                        <Text style={{ 
+                          color: benefit.status === 'active' ? colors.success : colors.error,
+                          fontSize: 10
+                        }}>
+                          {benefit.status.toUpperCase()}
+                        </Text>
+                      </Chip>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Card.Content>
+            </Card>
+            
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Benefit Details</Text>
+            </View>
+            
+            {benefits.map(benefit => (
+              <TouchableOpacity
+                key={benefit.id}
+                onPress={() => navigation.navigate('BenefitDetailsScreen' as never, { benefitId: benefit.id } as never)}
+              >
+                <Card style={styles.entryCard}>
+                  <Card.Content>
+                    <View style={styles.benefitRow}>
+                      <View style={[
+                        styles.benefitRowIcon,
+                        { backgroundColor: getBenefitColor(benefit.type) }
+                      ]}>
+                        <Icon name={getBenefitIcon(benefit.type)} size={20} color="#fff" />
+                      </View>
+                      <View style={styles.benefitDetails}>
+                        <Text style={styles.benefitTitle}>{benefit.name}</Text>
+                        <Text style={styles.benefitDescription}>{benefit.description}</Text>
+                        {benefit.coverage && (
+                          <Text style={styles.benefitCoverage}>Coverage: {benefit.coverage}</Text>
+                        )}
+                      </View>
+                      <Chip 
+                        style={{ 
+                          backgroundColor: benefit.status === 'active' ? colors.success + '20' : colors.error + '20',
+                          height: 24
+                        }}
+                      >
+                        <Text style={{ 
+                          color: benefit.status === 'active' ? colors.success : colors.error,
+                          fontSize: 12
+                        }}>
+                          {benefit.status.toUpperCase()}
+                        </Text>
+                      </Chip>
+                    </View>
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </>
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content style={styles.emptyContent}>
+              <Icon name="shield-account" size={48} color={colors.textDisabled} />
+              <Text style={styles.emptyText}>No benefits available</Text>
+            </Card.Content>
+          </Card>
+        )}
+      </View>
+    );
+  };
+  
+  // Get benefit icon based on type
+  const getBenefitIcon = (type: string): string => {
+    switch (type) {
+      case 'health':
+        return 'hospital-box';
+      case 'retirement':
+        return 'piggy-bank';
+      case 'insurance':
+        return 'shield-account';
+      default:
+        return 'package-variant';
+    }
+  };
+  
+  // Get benefit color based on type
+  const getBenefitColor = (type: string): string => {
+    switch (type) {
+      case 'health':
+        return '#E74C3C';
+      case 'retirement':
+        return '#3498DB';
+      case 'insurance':
+        return '#9B59B6';
+      default:
+        return '#2ECC71';
+    }
+  };
+  
+  // Render the appropriate tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return renderOverviewTab();
+      case 'hours':
+        return renderHoursTab();
+      case 'expenses':
+        return renderExpensesTab();
+      case 'payroll':
+        return renderPayrollTab();
+      case 'benefits':
+        return renderBenefitsTab();
+      default:
+        return renderOverviewTab();
+    }
+  };
+  
+  // If loading and not refreshing
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={walletColorSchemes.employee.primary} />
+        <Text style={styles.loadingText}>Loading employee wallet...</Text>
+      </View>
+    );
+  }
   
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[walletColorSchemes.employee.primary]}
+          />
         }
       >
-        {/* Employee Profile */}
-        <View style={styles.profileContainer}>
-          <Avatar.Image 
-            source={{ uri: employeeInfo.avatar }} 
-            size={80} 
-            style={styles.profileAvatar}
-          />
-          <View style={styles.profileDetails}>
-            <Title style={styles.profileName}>{employeeInfo.name}</Title>
-            <Text style={styles.profilePosition}>{employeeInfo.position}</Text>
-            <View style={styles.companyInfo}>
-              <Avatar.Image 
-                source={{ uri: employeeInfo.companyLogo }}
-                size={24}
-                style={styles.companyLogo}
-              />
-              <Text style={styles.companyName}>{employeeInfo.company}</Text>
-            </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Hello,</Text>
+            <Text style={styles.name}>{currentWallet?.name || 'Employee'}</Text>
           </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('ProfileScreen' as never)}
+          >
+            <Avatar.Text 
+              size={40} 
+              label={(currentWallet?.name?.charAt(0) || 'E')} 
+              backgroundColor={walletColorSchemes.employee.primary}
+            />
+          </TouchableOpacity>
         </View>
         
-        {/* Wallet Balance */}
-        <Surface style={styles.balanceCard}>
-          <View style={styles.balanceHeader}>
-            <View>
-              <Text style={styles.balanceLabel}>Wallet Balance</Text>
-              <Text style={styles.balanceAmount}>{formatCurrency(employeeInfo.balance)}</Text>
-            </View>
-            
-            <View style={styles.nextPayInfo}>
-              <Text style={styles.nextPayLabel}>Next Pay</Text>
-              <Text style={styles.nextPayDate}>{formatDate(employeeInfo.nextPayDate)}</Text>
-              <Text style={styles.nextPayAmount}>{formatCurrency(employeeInfo.expectedPay)}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.quickActions}>
-            <Button 
-              mode="contained" 
-              icon="bank-transfer-out"
-              onPress={() => {}}
-              style={styles.transferButton}
-            >
-              Transfer to Bank
-            </Button>
-            
-            <Button 
-              mode="outlined" 
-              icon="history"
-              onPress={() => {}}
-              style={styles.historyButton}
-            >
-              Transaction History
-            </Button>
-          </View>
-        </Surface>
-        
         {/* Tab Navigation */}
-        <Card style={styles.tabsCard}>
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
-              onPress={() => setActiveTab('overview')}
-            >
-              <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>
-                Overview
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'payroll' && styles.activeTab]}
-              onPress={() => setActiveTab('payroll')}
-            >
-              <Text style={[styles.tabText, activeTab === 'payroll' && styles.activeTabText]}>
-                Payroll
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'benefits' && styles.activeTab]}
-              onPress={() => setActiveTab('benefits')}
-            >
-              <Text style={[styles.tabText, activeTab === 'benefits' && styles.activeTabText]}>
-                Benefits
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'expenses' && styles.activeTab]}
-              onPress={() => setActiveTab('expenses')}
-            >
-              <Text style={[styles.tabText, activeTab === 'expenses' && styles.activeTabText]}>
-                Expenses
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          <Card.Content>
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <>
-                <Title style={styles.sectionTitle}>Recent Transactions</Title>
-                
-                {transactions.map(transaction => (
-                  <Card key={transaction.id} style={styles.transactionCard}>
-                    <Card.Content>
-                      <View style={styles.transactionHeader}>
-                        <View style={styles.transactionInfo}>
-                          <Icon 
-                            name={
-                              transaction.type === 'payroll' 
-                                ? 'cash' 
-                                : transaction.type === 'bonus' 
-                                  ? 'gift' 
-                                  : transaction.type === 'expense_reimbursement'
-                                    ? 'receipt'
-                                    : 'bank-transfer-out'
-                            } 
-                            size={24} 
-                            color={
-                              transaction.type === 'withdrawal' 
-                                ? '#EF4444' 
-                                : '#F59E0B'
-                            }
-                            style={styles.transactionIcon}
-                          />
-                          <View>
-                            <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                            <Text style={styles.transactionDate}>{formatDate(transaction.date)}</Text>
-                          </View>
-                        </View>
-                        
-                        <Text 
-                          style={[
-                            styles.transactionAmount,
-                            { color: transaction.type === 'withdrawal' ? '#EF4444' : '#F59E0B' }
-                          ]}
-                        >
-                          {transaction.type === 'withdrawal' ? '-' : '+'}{formatCurrency(transaction.amount)}
-                        </Text>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <Button 
-                  mode="text" 
-                  icon="history"
-                  onPress={() => {}}
-                  style={styles.viewAllButton}
-                >
-                  View All Transactions
-                </Button>
-                
-                <Title style={styles.sectionTitle}>Time Entries</Title>
-                
-                {timeEntries.slice(0, 2).map(entry => (
-                  <Card key={entry.id} style={styles.timeEntryCard}>
-                    <Card.Content>
-                      <View style={styles.timeEntryHeader}>
-                        <View>
-                          <Text style={styles.timeEntryWeek}>{entry.week}</Text>
-                          <Text style={styles.timeEntryHours}>{entry.totalHours} hours</Text>
-                        </View>
-                        
-                        <Chip 
-                          style={[
-                            styles.statusChip,
-                            { 
-                              backgroundColor: entry.status === 'approved' 
-                                ? '#DCFCE7' 
-                                : '#FEF3C7' 
-                            }
-                          ]}
-                        >
-                          <Text 
-                            style={{ 
-                              color: entry.status === 'approved' 
-                                ? '#10B981' 
-                                : '#F59E0B'
-                            }}
-                          >
-                            {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
-                          </Text>
-                        </Chip>
-                      </View>
-                      
-                      <View style={styles.timeEntryFooter}>
-                        <Text style={styles.timeEntrySubmission}>
-                          Submitted: {formatDate(entry.submissionDate)}
-                        </Text>
-                        
-                        {entry.approvalDate && (
-                          <Text style={styles.timeEntryApproval}>
-                            Approved: {formatDate(entry.approvalDate)}
-                          </Text>
-                        )}
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <View style={styles.actionButtonsRow}>
-                  <Button 
-                    mode="outlined" 
-                    icon="clock-time-four"
-                    onPress={submitTimeEntry}
-                    style={styles.actionButton}
-                  >
-                    Submit Time
-                  </Button>
-                  
-                  <Button 
-                    mode="outlined" 
-                    icon="calendar-clock"
-                    onPress={requestTimeOff}
-                    style={styles.actionButton}
-                  >
-                    Request Time Off
-                  </Button>
-                </View>
-                
-                <Title style={styles.sectionTitle}>Pending Expenses</Title>
-                
-                {pendingExpenses.length > 0 ? (
-                  pendingExpenses.map(expense => (
-                    <Card key={expense.id} style={styles.expenseCard}>
-                      <Card.Content>
-                        <View style={styles.expenseHeader}>
-                          <View>
-                            <Text style={styles.expenseDescription}>{expense.description}</Text>
-                            <Text style={styles.expenseDate}>{formatDate(expense.date)}</Text>
-                          </View>
-                          
-                          <View style={styles.expenseAmountContainer}>
-                            <Text style={styles.expenseAmount}>{formatCurrency(expense.amount)}</Text>
-                            <Chip 
-                              style={[styles.statusChip, { backgroundColor: '#FEF3C7' }]}
-                            >
-                              <Text style={{ color: '#F59E0B' }}>Pending</Text>
-                            </Chip>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.expenseCategory}>
-                          <Text style={styles.expenseCategoryLabel}>Category:</Text>
-                          <Text style={styles.expenseCategoryValue}>{expense.category}</Text>
-                        </View>
-                      </Card.Content>
-                    </Card>
-                  ))
-                ) : (
-                  <Card style={styles.emptyStateCard}>
-                    <Card.Content style={styles.emptyStateContent}>
-                      <Icon name="check-circle" size={48} color="#9CA3AF" />
-                      <Text style={styles.emptyStateText}>No pending expenses</Text>
-                    </Card.Content>
-                  </Card>
-                )}
-                
-                <Button 
-                  mode="contained" 
-                  icon="receipt"
-                  onPress={createExpenseReport}
-                  style={styles.submitExpenseButton}
-                >
-                  Submit New Expense
-                </Button>
-              </>
-            )}
-            
-            {/* Payroll Tab */}
-            {activeTab === 'payroll' && (
-              <>
-                <Title style={styles.sectionTitle}>Upcoming Payroll</Title>
-                
-                <Card style={styles.upcomingPayrollCard}>
-                  <Card.Content>
-                    <View style={styles.upcomingPayrollHeader}>
-                      <Text style={styles.upcomingPayrollDate}>Expected on {formatDate(employeeInfo.nextPayDate)}</Text>
-                      <Text style={styles.upcomingPayrollAmount}>{formatCurrency(employeeInfo.expectedPay)}</Text>
-                    </View>
-                    
-                    <Divider style={styles.divider} />
-                    
-                    <View style={styles.payrollComponentsList}>
-                      <View style={styles.payrollComponentItem}>
-                        <Text style={styles.payrollComponentLabel}>Base Salary:</Text>
-                        <Text style={styles.payrollComponentValue}>{formatCurrency('5500.00')}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollComponentItem}>
-                        <Text style={styles.payrollComponentLabel}>Tax Withholding (estimate):</Text>
-                        <Text style={styles.payrollComponentValue}>-{formatCurrency('1100.00')}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollComponentItem}>
-                        <Text style={styles.payrollComponentLabel}>Benefits Deductions:</Text>
-                        <Text style={styles.payrollComponentValue}>-{formatCurrency('440.00')}</Text>
-                      </View>
-                      
-                      <View style={styles.payrollComponentItem}>
-                        <Text style={styles.payrollComponentLabel}>Retirement Contributions:</Text>
-                        <Text style={styles.payrollComponentValue}>-{formatCurrency('275.00')}</Text>
-                      </View>
-                    </View>
-                    
-                    <Divider style={styles.divider} />
-                    
-                    <View style={styles.payrollNetAmount}>
-                      <Text style={styles.payrollNetLabel}>Net Pay (estimate):</Text>
-                      <Text style={styles.payrollNetValue}>{formatCurrency('3685.00')}</Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-                
-                <Title style={styles.sectionTitle}>Recent Payslips</Title>
-                
-                {payslips.map(payslip => (
-                  <Card 
-                    key={payslip.id} 
-                    style={styles.payslipCard}
-                    onPress={() => viewPayslipDetails(payslip.id)}
-                  >
-                    <Card.Content>
-                      <View style={styles.payslipHeader}>
-                        <View>
-                          <Text style={styles.payslipPeriod}>{payslip.period}</Text>
-                          <Text style={styles.payslipDate}>{formatDate(payslip.date)}</Text>
-                        </View>
-                        
-                        <Chip style={styles.paidChip}>
-                          <Text style={{ color: '#10B981' }}>Paid</Text>
-                        </Chip>
-                      </View>
-                      
-                      <Divider style={styles.divider} />
-                      
-                      <View style={styles.payslipAmounts}>
-                        <View style={styles.payslipAmountItem}>
-                          <Text style={styles.payslipAmountLabel}>Gross Pay:</Text>
-                          <Text style={styles.payslipGrossAmount}>{formatCurrency(payslip.grossAmount)}</Text>
-                        </View>
-                        
-                        <View style={styles.payslipAmountItem}>
-                          <Text style={styles.payslipAmountLabel}>Taxes & Deductions:</Text>
-                          <Text style={styles.payslipDeductionsAmount}>-{formatCurrency(
-                            (parseFloat(payslip.taxes) + parseFloat(payslip.benefits)).toString()
-                          )}</Text>
-                        </View>
-                        
-                        <View style={styles.payslipAmountItem}>
-                          <Text style={styles.payslipAmountLabel}>Net Pay:</Text>
-                          <Text style={styles.payslipNetAmount}>{formatCurrency(payslip.netAmount)}</Text>
-                        </View>
-                      </View>
-                      
-                      <Button 
-                        mode="text" 
-                        icon="file-document-outline"
-                        onPress={() => viewPayslipDetails(payslip.id)}
-                        style={styles.viewDetailsButton}
-                      >
-                        View Details
-                      </Button>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <Button 
-                  mode="text" 
-                  icon="download"
-                  onPress={() => {}}
-                  style={styles.viewAllButton}
-                >
-                  Download All Payslips
-                </Button>
-                
-                <Title style={styles.sectionTitle}>YTD Summary</Title>
-                
-                <Card style={styles.ytdCard}>
-                  <Card.Content>
-                    <DataTable>
-                      <DataTable.Header>
-                        <DataTable.Title>Category</DataTable.Title>
-                        <DataTable.Title numeric>Amount</DataTable.Title>
-                      </DataTable.Header>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>Gross Earnings</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('16500.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>Federal Tax</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('2500.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>State Tax</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('800.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>Medicare</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('240.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>Social Security</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('950.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>401(k) Contributions</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('825.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row>
-                        <DataTable.Cell>Benefits Deductions</DataTable.Cell>
-                        <DataTable.Cell numeric>{formatCurrency('1320.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                      
-                      <DataTable.Row style={styles.netPayRow}>
-                        <DataTable.Cell>Net Pay</DataTable.Cell>
-                        <DataTable.Cell numeric style={styles.netPayCell}>{formatCurrency('9865.00')}</DataTable.Cell>
-                      </DataTable.Row>
-                    </DataTable>
-                  </Card.Content>
-                </Card>
-              </>
-            )}
-            
-            {/* Benefits Tab */}
-            {activeTab === 'benefits' && (
-              <>
-                <Title style={styles.sectionTitle}>My Benefits</Title>
-                
-                {benefits.map(benefit => (
-                  <Card 
-                    key={benefit.id} 
-                    style={styles.benefitCard}
-                    onPress={() => viewBenefitDetails(benefit.id)}
-                  >
-                    <Card.Content>
-                      <View style={styles.benefitHeader}>
-                        <View style={styles.benefitTitleRow}>
-                          <Icon name={benefit.icon} size={24} color="#F59E0B" style={styles.benefitIcon} />
-                          <View>
-                            <Text style={styles.benefitName}>{benefit.name}</Text>
-                            <Text style={styles.benefitProvider}>{benefit.provider}</Text>
-                          </View>
-                        </View>
-                        
-                        <Chip 
-                          style={[styles.statusChip, { backgroundColor: '#DCFCE7' }]}
-                        >
-                          <Text style={{ color: '#10B981' }}>Active</Text>
-                        </Chip>
-                      </View>
-                      
-                      <Divider style={styles.divider} />
-                      
-                      <View style={styles.benefitDetails}>
-                        <View style={styles.benefitDetailItem}>
-                          <Text style={styles.benefitDetailLabel}>Monthly Deduction:</Text>
-                          <Text style={styles.benefitDetailValue}>{formatCurrency(benefit.monthlyDeduction)}</Text>
-                        </View>
-                        
-                        {benefit.employerMatch && (
-                          <View style={styles.benefitDetailItem}>
-                            <Text style={styles.benefitDetailLabel}>Employer Match:</Text>
-                            <Text style={styles.benefitDetailValue}>{formatCurrency(benefit.employerMatch)}</Text>
-                          </View>
-                        )}
-                        
-                        {benefit.coverage && (
-                          <View style={styles.benefitDetailItem}>
-                            <Text style={styles.benefitDetailLabel}>Coverage:</Text>
-                            <Text style={styles.benefitDetailValue}>{benefit.coverage}</Text>
-                          </View>
-                        )}
-                      </View>
-                      
-                      <Button 
-                        mode="outlined" 
-                        icon="information-outline"
-                        onPress={() => viewBenefitDetails(benefit.id)}
-                        style={styles.viewDetailsButton}
-                      >
-                        View Details
-                      </Button>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <Button 
-                  mode="contained" 
-                  icon="plus"
-                  onPress={() => {}}
-                  style={styles.enrollButton}
-                >
-                  Enroll in Additional Benefits
-                </Button>
-                
-                <Title style={styles.sectionTitle}>Total Monthly Deductions</Title>
-                
-                <Card style={styles.deductionsCard}>
-                  <Card.Content>
-                    <Text style={styles.deductionsTotal}>
-                      {formatCurrency(
-                        benefits.reduce((total, benefit) => total + parseFloat(benefit.monthlyDeduction), 0).toString()
-                      )}
-                    </Text>
-                    <Text style={styles.deductionsSubtitle}>per month</Text>
-                    
-                    <Divider style={styles.divider} />
-                    
-                    <View style={styles.deductionsList}>
-                      {benefits.map(benefit => (
-                        <View key={benefit.id} style={styles.deductionItem}>
-                          <Text style={styles.deductionName}>{benefit.name}</Text>
-                          <Text style={styles.deductionAmount}>{formatCurrency(benefit.monthlyDeduction)}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </Card.Content>
-                </Card>
-              </>
-            )}
-            
-            {/* Expenses Tab */}
-            {activeTab === 'expenses' && (
-              <>
-                <Title style={styles.sectionTitle}>Pending Expense Reports</Title>
-                
-                {pendingExpenses.length > 0 ? (
-                  pendingExpenses.map(expense => (
-                    <Card key={expense.id} style={styles.expenseCardDetailed}>
-                      <Card.Content>
-                        <View style={styles.expenseHeader}>
-                          <View>
-                            <Text style={styles.expenseDescription}>{expense.description}</Text>
-                            <Text style={styles.expenseDate}>{formatDate(expense.date)}</Text>
-                          </View>
-                          
-                          <View style={styles.expenseAmountContainer}>
-                            <Text style={styles.expenseAmount}>{formatCurrency(expense.amount)}</Text>
-                            <Chip 
-                              style={[styles.statusChip, { backgroundColor: '#FEF3C7' }]}
-                            >
-                              <Text style={{ color: '#F59E0B' }}>Pending</Text>
-                            </Chip>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.expenseCategory}>
-                          <Text style={styles.expenseCategoryLabel}>Category:</Text>
-                          <Text style={styles.expenseCategoryValue}>{expense.category}</Text>
-                        </View>
-                        
-                        {expense.receiptUrl && (
-                          <View style={styles.receiptContainer}>
-                            <Text style={styles.receiptLabel}>Receipt:</Text>
-                            <Image 
-                              source={{ uri: expense.receiptUrl }}
-                              style={styles.receiptImage}
-                            />
-                          </View>
-                        )}
-                        
-                        <View style={styles.expenseActions}>
-                          <Button 
-                            mode="outlined" 
-                            icon="pencil"
-                            onPress={() => {}}
-                            style={styles.editExpenseButton}
-                          >
-                            Edit
-                          </Button>
-                          
-                          <Button 
-                            mode="outlined" 
-                            icon="delete"
-                            onPress={() => {}}
-                            style={styles.deleteExpenseButton}
-                          >
-                            Delete
-                          </Button>
-                        </View>
-                      </Card.Content>
-                    </Card>
-                  ))
-                ) : (
-                  <Card style={styles.emptyStateCard}>
-                    <Card.Content style={styles.emptyStateContent}>
-                      <Icon name="check-circle" size={48} color="#9CA3AF" />
-                      <Text style={styles.emptyStateText}>No pending expense reports</Text>
-                    </Card.Content>
-                  </Card>
-                )}
-                
-                <Button 
-                  mode="contained" 
-                  icon="receipt"
-                  onPress={createExpenseReport}
-                  style={styles.submitExpenseButton}
-                >
-                  Submit New Expense
-                </Button>
-                
-                <Title style={styles.sectionTitle}>Reimbursed Expenses</Title>
-                
-                {approvedExpenses.map(expense => (
-                  <Card key={expense.id} style={styles.expenseCard}>
-                    <Card.Content>
-                      <View style={styles.expenseHeader}>
-                        <View>
-                          <Text style={styles.expenseDescription}>{expense.description}</Text>
-                          <Text style={styles.expenseDate}>{formatDate(expense.date)}</Text>
-                        </View>
-                        
-                        <View style={styles.expenseAmountContainer}>
-                          <Text style={styles.expenseAmount}>{formatCurrency(expense.amount)}</Text>
-                          <Chip 
-                            style={[styles.statusChip, { backgroundColor: '#DCFCE7' }]}
-                          >
-                            <Text style={{ color: '#10B981' }}>Reimbursed</Text>
-                          </Chip>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.expenseFooter}>
-                        <Text style={styles.expenseCategoryValue}>{expense.category}</Text>
-                        <Text style={styles.reimbursementDate}>
-                          Reimbursed: {formatDate(expense.reimbursementDate)}
-                        </Text>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-                
-                <Button 
-                  mode="text" 
-                  icon="history"
-                  onPress={() => {}}
-                  style={styles.viewAllButton}
-                >
-                  View All Expenses
-                </Button>
-                
-                <Title style={styles.sectionTitle}>Expense Summary</Title>
-                
-                <Card style={styles.summaryCard}>
-                  <Card.Content>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Total Submitted (YTD):</Text>
-                      <Text style={styles.summaryValue}>{formatCurrency('550.75')}</Text>
-                    </View>
-                    
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Total Reimbursed:</Text>
-                      <Text style={styles.summaryValue}>{formatCurrency('425.25')}</Text>
-                    </View>
-                    
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Pending Reimbursement:</Text>
-                      <Text style={styles.summaryValue}>{formatCurrency('125.50')}</Text>
-                    </View>
-                    
-                    <Divider style={styles.divider} />
-                    
-                    <Text style={styles.categorySummaryTitle}>By Category:</Text>
-                    
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Travel:</Text>
-                      <Text style={styles.summaryValue}>{formatCurrency('125.50')}</Text>
-                    </View>
-                    
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Office Expenses:</Text>
-                      <Text style={styles.summaryValue}>{formatCurrency('75.25')}</Text>
-                    </View>
-                    
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Professional Development:</Text>
-                      <Text style={styles.summaryValue}>{formatCurrency('350.00')}</Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-              </>
-            )}
-          </Card.Content>
-        </Card>
+        {renderTabNavigation()}
+        
+        {/* Tab Content */}
+        {renderTabContent()}
       </ScrollView>
       
-      {/* FAB for quick actions */}
+      {/* FAB */}
       <FAB
-        style={styles.fab}
         icon="plus"
-        onPress={() => {}}
+        style={[styles.fab, { backgroundColor: walletColorSchemes.employee.primary }]}
+        onPress={() => {
+          switch (activeTab) {
+            case 'hours':
+              navigation.navigate('SubmitTimeEntryScreen' as never);
+              break;
+            case 'expenses':
+              navigation.navigate('CreateExpenseReportScreen' as never);
+              break;
+            default:
+              navigation.navigate('SendMoneyScreen' as never);
+              break;
+          }
+        }}
       />
     </SafeAreaView>
   );
@@ -961,509 +1037,372 @@ const EmployeeWalletScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
   },
-  profileContainer: {
-    padding: 16,
-    backgroundColor: '#F59E0B', // Amber for employee wallet
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  profileAvatar: {
-    backgroundColor: 'white',
-  },
-  profileDetails: {
-    marginLeft: 16,
-  },
-  profileName: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  profilePosition: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  loadingText: {
+    marginTop: spacing.md,
     fontSize: 16,
-    marginBottom: 4,
+    color: colors.textSecondary,
   },
-  companyInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  companyLogo: {
-    backgroundColor: 'white',
-    marginRight: 8,
-  },
-  companyName: {
-    color: 'white',
-    fontSize: 14,
-  },
-  balanceCard: {
-    margin: 16,
-    marginTop: -20,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'white',
-    elevation: 4,
-  },
-  balanceHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  balanceAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
-  },
-  nextPayInfo: {
-    alignItems: 'flex-end',
-  },
-  nextPayLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  nextPayDate: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  nextPayAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  transferButton: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: '#F59E0B', // Amber for employee wallet
-  },
-  historyButton: {
-    flex: 1,
-    marginLeft: 8,
-    borderColor: '#F59E0B', // Amber for employee wallet
-  },
-  tabsCard: {
-    margin: 16,
-    marginBottom: 80, // Space for FAB
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
     alignItems: 'center',
+    padding: spacing.md,
+    paddingBottom: spacing.md,
   },
-  activeTab: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#F59E0B', // Amber for employee wallet
+  greeting: {
+    fontSize: 16,
+    color: colors.textSecondary,
   },
-  tabText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  activeTabText: {
-    color: '#F59E0B', // Amber for employee wallet
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
+  name: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 24,
-    marginBottom: 16,
+    color: colors.text,
   },
-  transactionCard: {
-    marginBottom: 12,
+  profileButton: {
+    ...shadows.small,
   },
-  transactionHeader: {
+  tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.backgroundDark,
+    marginBottom: spacing.md,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  transactionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  transactionIcon: {
-    marginRight: 12,
-  },
-  transactionDescription: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  timeEntryCard: {
-    marginBottom: 12,
-  },
-  timeEntryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  timeEntryWeek: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  timeEntryHours: {
+  tabLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  statusChip: {
-    height: 24,
+  tabContent: {
+    padding: spacing.md,
+    paddingTop: 0,
   },
-  timeEntryFooter: {
+  walletCard: {
+    marginBottom: spacing.md,
+    ...shadows.medium,
+    backgroundColor: walletColorSchemes.employee.background,
+  },
+  walletLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  walletBalance: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginVertical: spacing.sm,
+  },
+  walletActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  timeEntrySubmission: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  timeEntryApproval: {
-    fontSize: 12,
-    color: '#10B981',
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: spacing.md,
   },
   actionButton: {
     flex: 1,
-    marginHorizontal: 4,
-    borderColor: '#F59E0B', // Amber for employee wallet
+    marginHorizontal: spacing.xs,
   },
-  expenseCard: {
-    marginBottom: 12,
-  },
-  expenseHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
-  expenseDescription: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: colors.text,
   },
-  expenseDate: {
+  seeAllText: {
+    color: walletColorSchemes.employee.primary,
+    fontWeight: '500',
+  },
+  transactionCard: {
+    marginBottom: spacing.sm,
+    ...shadows.small,
+  },
+  transactionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transactionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: walletColorSchemes.employee.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  transactionDetails: {
+    flex: 1,
+  },
+  transactionDescription: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  transactionDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
-  expenseAmountContainer: {
+  transactionAmount: {
     alignItems: 'flex-end',
   },
-  expenseAmount: {
-    fontSize: 16,
+  amountText: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
     marginBottom: 4,
-  },
-  expenseCategory: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  expenseCategoryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginRight: 4,
-  },
-  expenseCategoryValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  expenseFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  reimbursementDate: {
-    fontSize: 12,
-    color: '#10B981',
-  },
-  emptyStateCard: {
-    marginBottom: 24,
-  },
-  emptyStateContent: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  emptyStateText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  viewAllButton: {
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  submitExpenseButton: {
-    marginVertical: 16,
-    backgroundColor: '#F59E0B', // Amber for employee wallet
-  },
-  upcomingPayrollCard: {
-    marginBottom: 24,
-  },
-  upcomingPayrollHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  upcomingPayrollDate: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  upcomingPayrollAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
-  },
-  divider: {
-    marginVertical: 12,
-  },
-  payrollComponentsList: {
-    marginBottom: 12,
-  },
-  payrollComponentItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  payrollComponentLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  payrollComponentValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  payrollNetAmount: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  payrollNetLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  payrollNetValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
-  },
-  payslipCard: {
-    marginBottom: 16,
-  },
-  payslipHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  payslipPeriod: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  payslipDate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  paidChip: {
-    backgroundColor: '#DCFCE7',
-  },
-  payslipAmounts: {
-    marginVertical: 8,
-  },
-  payslipAmountItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  payslipAmountLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  payslipGrossAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  payslipDeductionsAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#EF4444',
-  },
-  payslipNetAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
-  },
-  viewDetailsButton: {
-    alignSelf: 'flex-end',
-  },
-  ytdCard: {
-    marginBottom: 24,
-  },
-  netPayRow: {
-    backgroundColor: '#F9FAFB',
-  },
-  netPayCell: {
-    color: '#F59E0B', // Amber for employee wallet
-    fontWeight: 'bold',
-  },
-  benefitCard: {
-    marginBottom: 16,
-  },
-  benefitHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  benefitTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  benefitIcon: {
-    marginRight: 12,
-  },
-  benefitName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  benefitProvider: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  benefitDetails: {
-    marginBottom: 12,
-  },
-  benefitDetailItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  benefitDetailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  benefitDetailValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  enrollButton: {
-    marginVertical: 16,
-    backgroundColor: '#F59E0B', // Amber for employee wallet
-  },
-  deductionsCard: {
-    marginBottom: 24,
-    backgroundColor: '#FEF3C7',
-  },
-  deductionsTotal: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#F59E0B', // Amber for employee wallet
-    textAlign: 'center',
-  },
-  deductionsSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  deductionsList: {
-    marginTop: 8,
-  },
-  deductionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  deductionName: {
-    fontSize: 14,
-  },
-  deductionAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  expenseCardDetailed: {
-    marginBottom: 16,
-  },
-  receiptContainer: {
-    marginVertical: 12,
-  },
-  receiptLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  receiptImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    resizeMode: 'cover',
-  },
-  expenseActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  editExpenseButton: {
-    flex: 1,
-    marginRight: 8,
-    borderColor: '#F59E0B', // Amber for employee wallet
-  },
-  deleteExpenseButton: {
-    flex: 1,
-    marginLeft: 8,
-    borderColor: '#EF4444',
   },
   summaryCard: {
-    marginBottom: 24,
+    marginBottom: spacing.md,
+    ...shadows.small,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+  },
+  summaryItem: {
+    flex: 1,
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
+    marginBottom: 4,
   },
   summaryValue: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: colors.text,
   },
-  categorySummaryTitle: {
+  summaryProgress: {
+    marginTop: spacing.md,
+  },
+  progressLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+  },
+  expenseSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: spacing.sm,
+  },
+  expenseItem: {
+    alignItems: 'center',
+  },
+  expenseLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  recentLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  expenseRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.backgroundDark,
+  },
+  expenseDescription: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  expenseDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  expenseAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  emptyCard: {
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  emptyText: {
+    marginTop: spacing.sm,
+    color: colors.textSecondary,
+  },
+  entryCard: {
+    marginBottom: spacing.sm,
+    ...shadows.small,
+  },
+  entryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  entryProject: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  entryDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  entryCategory: {
+    fontSize: 12,
+    color: walletColorSchemes.employee.primary,
+    marginTop: 2,
+  },
+  entryHours: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  entryNotes: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
+  },
+  receiptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  receiptText: {
+    fontSize: 12,
+    color: walletColorSchemes.employee.primary,
+    marginLeft: 4,
+  },
+  addButton: {
+    marginVertical: spacing.md,
   },
   fab: {
     position: 'absolute',
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: '#F59E0B', // Amber for employee wallet
+  },
+  payrollCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  payslipDate: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  payslipRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 4,
+  },
+  payslipLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  payslipValue: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  payslipTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  payslipTotalValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.success,
+  },
+  viewDetailsButton: {
+    marginTop: spacing.md,
+    borderColor: walletColorSchemes.employee.primary,
+  },
+  benefitsSummaryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  benefitsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
+  benefitItem: {
+    width: '48%',
+    padding: spacing.sm,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    backgroundColor: colors.backgroundDark,
+    borderRadius: borderRadius.md,
+  },
+  benefitIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  benefitName: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  benefitRowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  benefitDetails: {
+    flex: 1,
+  },
+  benefitTitle: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  benefitDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  benefitCoverage: {
+    fontSize: 12,
+    color: walletColorSchemes.employee.primary,
+    marginTop: 2,
   },
 });
 

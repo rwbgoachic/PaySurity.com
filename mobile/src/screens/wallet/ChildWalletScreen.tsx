@@ -1,749 +1,810 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, FlatList } from 'react-native';
-import { Card, Text, Title, Paragraph, Button, FAB, Divider, List, Avatar, Badge, useTheme, ProgressBar } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { Text, Card, Button, FAB, Avatar, Badge, ActivityIndicator, ProgressBar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import useWallet, { Transaction, WalletInfo, SavingsGoal, FundRequest } from '../../hooks/useWallet';
-import { colors, commonStyles, walletColorSchemes } from '../../utils/theme';
+import useWallet, { Transaction, SavingsGoal } from '../../hooks/useWallet';
+import { colors, commonStyles, spacing, walletColorSchemes } from '../../utils/theme';
 
 /**
- * ChildWalletScreen Component
- * Interface for children to manage their allowance, view balance, 
- * request money, and track savings goals
+ * ChildWalletScreen
+ * This screen displays the child wallet interface where children can:
+ * - View their wallet balance and recent transactions
+ * - Request money from parents
+ * - View and manage their savings goals
+ * - Complete chores and educational tasks to earn money
  */
 const ChildWalletScreen = () => {
-  const theme = useTheme();
   const navigation = useNavigation();
-  const { 
-    getWalletInfo, 
-    getTransactions, 
+  const {
+    currentWallet,
+    loading,
+    getWalletInfo,
+    getTransactions,
     getSavingsGoals,
-    requestFunds,
     formatCurrency,
-    handleError,
-    loading
+    requestFunds,
   } = useWallet();
   
-  // State management
-  const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<FundRequest[]>([]);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  const [tasks, setTasks] = useState([
+    { id: 1, name: 'Clean your room', reward: '5.00', status: 'pending', dueDate: '2025-04-10' },
+    { id: 2, name: 'Do your homework', reward: '3.00', status: 'pending', dueDate: '2025-04-08' },
+    { id: 3, name: 'Take out trash', reward: '2.00', status: 'completed', completedDate: '2025-04-05' },
+  ]);
+  const [rewards, setRewards] = useState([
+    { id: 1, name: 'Video game time (1 hour)', cost: '10.00', status: 'available' },
+    { id: 2, name: 'Movie night', cost: '20.00', status: 'available' },
+    { id: 3, name: 'New toy', cost: '30.00', status: 'locked', unlocksAt: '50.00' },
+  ]);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
   
-  // Load data on component mount
+  // Load wallet data on component mount
   useEffect(() => {
     loadWalletData();
   }, []);
   
-  // Function to load all wallet data
+  // Load all wallet data
   const loadWalletData = async () => {
     try {
-      setRefreshing(true);
-      
-      // Get wallet info
-      const walletInfo = await getWalletInfo();
-      setWallet(walletInfo);
-      
-      // Get transactions
+      await getWalletInfo();
       const transactionData = await getTransactions();
       setTransactions(transactionData);
-      setRecentTransactions(transactionData.slice(0, 5));
       
-      // Get savings goals
-      const savingsData = await getSavingsGoals();
-      setSavingsGoals(savingsData);
-      
-      // Get pending fund requests
-      const requests = await getPendingRequests();
-      setPendingRequests(requests);
-      
+      const savingsGoalData = await getSavingsGoals();
+      setSavingsGoals(savingsGoalData);
     } catch (error) {
-      handleError(error, 'Error loading wallet data');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-  
-  // Function to get pending fund requests
-  const getPendingRequests = async () => {
-    try {
-      // This would be an API call to get pending requests
-      // For now, return mock data that would come from the API
-      return [
-        {
-          id: 1001,
-          requesterId: wallet?.userId || 0,
-          requesteeId: wallet?.parentId || 0,
-          amount: '25.00',
-          reason: 'School supplies',
-          status: 'pending' as const,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
-    } catch (error) {
-      handleError(error, 'Error loading pending requests');
-      return [];
+      console.error('Error loading wallet data:', error);
     }
   };
   
   // Handle pull-to-refresh
-  const onRefresh = () => {
-    loadWalletData();
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadWalletData();
+    setRefreshing(false);
   };
   
-  // Transaction item renderer
-  const renderTransactionItem = ({ item }: { item: Transaction }) => {
-    const isPositive = ['deposit', 'transfer', 'allowance'].includes(item.type) && !item.fromWalletId;
-    
-    // Determine icon based on transaction type
-    let iconName = 'cash';
-    if (item.type === 'deposit') iconName = 'cash-plus';
-    else if (item.type === 'withdrawal') iconName = 'cash-minus';
-    else if (item.type === 'transfer') iconName = 'bank-transfer';
-    else if (item.type === 'payment') iconName = 'credit-card';
-    else if (item.type === 'allowance') iconName = 'hand-coin';
-    
+  // Get displayed transactions based on view all or limited
+  const getDisplayedTransactions = () => {
+    if (showAllTransactions) {
+      return transactions;
+    }
+    return transactions.slice(0, 3);
+  };
+  
+  // Navigate to transaction details
+  const goToTransactionDetails = (transaction: Transaction) => {
+    navigation.navigate('TransactionDetailsScreen' as never, { transactionId: transaction.id } as never);
+  };
+  
+  // Request money from parent
+  const handleRequestMoney = () => {
+    navigation.navigate('RequestMoneyScreen' as never);
+  };
+  
+  // Show loading indicator while data is being fetched
+  if (loading && !refreshing) {
     return (
-      <List.Item
-        title={item.description}
-        description={new Date(item.createdAt).toLocaleDateString()}
-        left={props => <List.Icon {...props} icon={iconName} color={isPositive ? colors.success : colors.error} />}
-        right={props => (
-          <Text 
-            style={[
-              styles.transactionAmount, 
-              { color: isPositive ? colors.success : colors.error }
-            ]}
-          >
-            {isPositive ? '+' : '-'}{formatCurrency(item.amount)}
-          </Text>
-        )}
-        onPress={() => navigation.navigate('TransactionDetails', { transactionId: item.id })}
-      />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={walletColorSchemes.child.primary} />
+        <Text style={styles.loadingText}>Loading your wallet...</Text>
+      </View>
     );
-  };
+  }
   
-  // Render savings goal item
-  const renderSavingsGoalItem = ({ item }: { item: SavingsGoal }) => {
-    const progress = parseFloat(item.currentAmount) / parseFloat(item.targetAmount);
-    
-    return (
-      <Card style={styles.goalCard}>
-        <Card.Content>
-          <Title>{item.name}</Title>
-          <View style={styles.goalProgress}>
-            <ProgressBar progress={progress} color={colors.tertiary} style={styles.progressBar} />
-            <Text style={styles.progressText}>
-              {formatCurrency(item.currentAmount)} / {formatCurrency(item.targetAmount)}
-            </Text>
-          </View>
-          <Text>Target Date: {new Date(item.deadline).toLocaleDateString()}</Text>
-          
-          <View style={styles.goalActions}>
-            <Button 
-              mode="contained"
-              style={[styles.goalButton, { backgroundColor: colors.tertiary }]}
-              onPress={() => navigation.navigate('SavingsGoalDetails', { goalId: item.id })}
-            >
-              Add Money
-            </Button>
-            <Button 
-              mode="outlined"
-              style={styles.goalButton}
-              onPress={() => navigation.navigate('SavingsGoalDetails', { goalId: item.id })}
-            >
-              Details
-            </Button>
-          </View>
-        </Card.Content>
-      </Card>
-    );
-  };
-  
-  // Request item renderer
-  const renderRequestItem = ({ item }: { item: FundRequest }) => {
-    return (
-      <Card style={styles.requestCard}>
-        <Card.Content>
-          <Title>{formatCurrency(item.amount)} - {item.reason}</Title>
-          <Paragraph>Requested on: {new Date(item.createdAt).toLocaleDateString()}</Paragraph>
-          <View style={styles.requestStatusContainer}>
-            <Badge style={{ backgroundColor: colors.warning }}>Pending</Badge>
-          </View>
-        </Card.Content>
-      </Card>
-    );
-  };
-  
-  // Create fund request
-  const createFundRequest = () => {
-    navigation.navigate('RequestMoney');
-  };
-  
-  // Get wallet balance display
-  const getBalanceDisplay = () => {
-    if (!wallet) return '$0.00';
-    return formatCurrency(wallet.balance);
-  };
-  
-  // Get allowance info
-  const getAllowanceInfo = () => {
-    if (!wallet || !wallet.allowance) return null;
-    
-    return {
-      amount: formatCurrency(wallet.allowance),
-      frequency: wallet.allowanceFrequency || 'weekly',
-      nextDate: wallet.nextAllowanceDate 
-        ? new Date(wallet.nextAllowanceDate).toLocaleDateString()
-        : 'Unknown'
-    };
-  };
-  
-  // Main overview tab content
-  const renderOverviewTab = () => {
-    const allowanceInfo = getAllowanceInfo();
-    
-    return (
-      <>
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Wallet Balance */}
         <Card style={styles.balanceCard}>
           <Card.Content>
-            <Paragraph style={styles.balanceLabel}>My Money</Paragraph>
-            <Title style={styles.balanceAmount}>{getBalanceDisplay()}</Title>
+            <Text style={styles.balanceLabel}>My Wallet Balance</Text>
+            <Text style={styles.balanceAmount}>{formatCurrency(currentWallet?.balance || '0')}</Text>
             
-            {allowanceInfo && (
-              <View style={styles.allowanceContainer}>
-                <Divider style={styles.divider} />
-                <Text style={styles.allowanceLabel}>My Allowance</Text>
-                <Text style={styles.allowanceAmount}>{allowanceInfo.amount}/{allowanceInfo.frequency}</Text>
-                <Text style={styles.nextAllowance}>Next allowance: {allowanceInfo.nextDate}</Text>
-              </View>
-            )}
-            
-            <View style={styles.balanceActions}>
-              <Button 
-                mode="contained" 
-                icon="cash-plus" 
-                onPress={createFundRequest}
-                style={[styles.actionButton, { backgroundColor: colors.tertiary }]}
+            <View style={styles.quickActions}>
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={handleRequestMoney}
               >
-                Request Money
-              </Button>
-              <Button 
-                mode="contained" 
-                icon="bank-transfer" 
-                onPress={() => navigation.navigate('SendMoney')}
-                style={[styles.actionButton, { backgroundColor: colors.tertiary }]}
+                <View style={styles.quickActionIconContainer}>
+                  <Icon name="cash-plus" size={24} color={walletColorSchemes.child.primary} />
+                </View>
+                <Text style={styles.quickActionText}>Request Money</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={() => navigation.navigate('ScanQRScreen' as never)}
               >
-                Send Money
-              </Button>
+                <View style={styles.quickActionIconContainer}>
+                  <Icon name="qrcode-scan" size={24} color={walletColorSchemes.child.primary} />
+                </View>
+                <Text style={styles.quickActionText}>Scan Code</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={() => navigation.navigate('AddSavingsGoalScreen' as never)}
+              >
+                <View style={styles.quickActionIconContainer}>
+                  <Icon name="piggy-bank" size={24} color={walletColorSchemes.child.primary} />
+                </View>
+                <Text style={styles.quickActionText}>Start Saving</Text>
+              </TouchableOpacity>
             </View>
           </Card.Content>
         </Card>
         
-        {pendingRequests.length > 0 && (
-          <Card style={styles.requestsCard}>
-            <Card.Title title="My Money Requests" />
-            <Card.Content>
-              <FlatList
-                data={pendingRequests}
-                renderItem={renderRequestItem}
-                keyExtractor={item => `request-${item.id}`}
-                scrollEnabled={false}
-              />
-            </Card.Content>
-          </Card>
-        )}
-        
-        {savingsGoals.length > 0 && (
-          <Card style={styles.goalsCard}>
-            <Card.Title 
-              title="My Savings Goals" 
-              right={(props) => (
-                <Button 
-                  {...props} 
-                  onPress={() => setActiveTab('goals')}
-                >
-                  See All
-                </Button>
-              )}
-            />
-            <Card.Content>
-              <FlatList
-                data={savingsGoals.slice(0, 2)}
-                renderItem={renderSavingsGoalItem}
-                keyExtractor={item => `goal-${item.id}`}
-                scrollEnabled={false}
-              />
-            </Card.Content>
-          </Card>
-        )}
-        
-        <Card style={styles.recentTransactionsCard}>
-          <Card.Title 
-            title="Recent Activity" 
-            right={(props) => (
-              <Button 
-                {...props} 
-                onPress={() => setActiveTab('transactions')}
-              >
-                See All
-              </Button>
-            )}
-          />
-          <Card.Content>
-            {recentTransactions.length === 0 ? (
-              <Paragraph>No recent activity</Paragraph>
-            ) : (
-              <FlatList
-                data={recentTransactions}
-                renderItem={renderTransactionItem}
-                keyExtractor={item => `transaction-${item.id}`}
-                scrollEnabled={false}
-              />
-            )}
-          </Card.Content>
-        </Card>
-      </>
-    );
-  };
-  
-  // Goals tab content
-  const renderGoalsTab = () => (
-    <>
-      <Card style={styles.goalsHeaderCard}>
-        <Card.Content>
-          <View style={styles.goalsHeaderContent}>
-            <Title>My Savings Goals</Title>
-            <Button 
-              mode="contained" 
-              icon="plus" 
-              onPress={() => navigation.navigate('AddSavingsGoal')}
-              style={{ backgroundColor: colors.tertiary }}
-            >
-              New Goal
-            </Button>
+        {/* My Savings Goals */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Savings Goals</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AddSavingsGoalScreen' as never)}>
+              <Icon name="target" size={24} color={walletColorSchemes.child.primary} />
+            </TouchableOpacity>
           </View>
-        </Card.Content>
-      </Card>
-      
-      {savingsGoals.length === 0 ? (
-        <Card style={styles.emptyGoalsCard}>
-          <Card.Content>
-            <Icon name="star-outline" size={64} color={colors.tertiary} style={styles.emptyIcon} />
-            <Text style={styles.emptyMessage}>No savings goals yet</Text>
+          
+          {savingsGoals.length === 0 ? (
+            <Card style={styles.emptyStateCard}>
+              <Card.Content style={styles.emptyStateContent}>
+                <Icon name="piggy-bank" size={48} color={colors.textSecondary} />
+                <Text style={styles.emptyStateText}>You don't have any savings goals yet!</Text>
+                <Button 
+                  mode="contained" 
+                  onPress={() => navigation.navigate('AddSavingsGoalScreen' as never)}
+                  style={styles.addButton}
+                  buttonColor={walletColorSchemes.child.primary}
+                >
+                  Start Saving for Something
+                </Button>
+              </Card.Content>
+            </Card>
+          ) : (
+            savingsGoals.map(goal => {
+              const progress = parseFloat(goal.currentAmount) / parseFloat(goal.targetAmount);
+              return (
+                <TouchableOpacity
+                  key={goal.id}
+                  onPress={() => navigation.navigate('SavingsGoalDetailsScreen' as never, { goalId: goal.id } as never)}
+                >
+                  <Card style={styles.savingsGoalCard}>
+                    <Card.Content>
+                      <View style={styles.savingsGoalHeader}>
+                        <Text style={styles.savingsGoalTitle}>{goal.name}</Text>
+                        <Text style={styles.savingsGoalAmount}>
+                          {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
+                        </Text>
+                      </View>
+                      
+                      <ProgressBar
+                        progress={progress}
+                        color={walletColorSchemes.child.primary}
+                        style={styles.progressBar}
+                      />
+                      
+                      <View style={styles.savingsGoalFooter}>
+                        <Text style={styles.savingsGoalDescription}>
+                          {goal.description}
+                        </Text>
+                        <Text style={styles.savingsGoalProgress}>
+                          {Math.round(progress * 100)}% Complete
+                        </Text>
+                      </View>
+                      
+                      {goal.dueDate && (
+                        <Text style={styles.savingsGoalDueDate}>
+                          Due: {formatDate(new Date(goal.dueDate))}
+                        </Text>
+                      )}
+                      
+                      <Button 
+                        mode="contained" 
+                        style={styles.contributionButton}
+                        buttonColor={walletColorSchemes.child.primary}
+                        onPress={() => navigation.navigate(
+                          'AddToSavingsGoalScreen' as never, 
+                          { goalId: goal.id } as never
+                        )}
+                      >
+                        Add to Savings
+                      </Button>
+                    </Card.Content>
+                  </Card>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+        
+        {/* My Tasks */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Tasks</Text>
+          </View>
+          
+          {tasks.filter(task => task.status === 'pending').length === 0 ? (
+            <Card style={styles.emptyStateCard}>
+              <Card.Content style={styles.emptyStateContent}>
+                <Icon name="checkbox-marked-circle-outline" size={48} color={colors.textSecondary} />
+                <Text style={styles.emptyStateText}>You've completed all your tasks!</Text>
+              </Card.Content>
+            </Card>
+          ) : (
+            tasks.filter(task => task.status === 'pending').map(task => (
+              <Card key={task.id} style={styles.taskCard}>
+                <Card.Content>
+                  <View style={styles.taskHeader}>
+                    <Text style={styles.taskTitle}>{task.name}</Text>
+                    <Text style={styles.taskReward}>+{formatCurrency(task.reward)}</Text>
+                  </View>
+                  
+                  <View style={styles.taskFooter}>
+                    <Text style={styles.taskDueDate}>Due: {formatDate(new Date(task.dueDate))}</Text>
+                    <Button 
+                      mode="contained" 
+                      compact 
+                      buttonColor={walletColorSchemes.child.secondary}
+                      onPress={() => {
+                        // Mark task as completed
+                        const updatedTasks = tasks.map(t => 
+                          t.id === task.id 
+                            ? { ...t, status: 'completed', completedDate: new Date().toISOString() } 
+                            : t
+                        );
+                        setTasks(updatedTasks);
+                      }}
+                    >
+                      Mark Done
+                    </Button>
+                  </View>
+                </Card.Content>
+              </Card>
+            ))
+          )}
+          
+          {tasks.filter(task => task.status === 'completed').length > 0 && (
+            <>
+              <View style={styles.subsectionHeader}>
+                <Text style={styles.subsectionTitle}>Completed Tasks</Text>
+              </View>
+              
+              {tasks.filter(task => task.status === 'completed').map(task => (
+                <Card key={task.id} style={styles.completedTaskCard}>
+                  <Card.Content>
+                    <View style={styles.taskHeader}>
+                      <View style={styles.taskTitleContainer}>
+                        <Icon name="check-circle" size={20} color={colors.success} style={styles.taskCheckIcon} />
+                        <Text style={styles.completedTaskTitle}>{task.name}</Text>
+                      </View>
+                      <Text style={styles.taskReward}>+{formatCurrency(task.reward)}</Text>
+                    </View>
+                    
+                    <Text style={styles.taskCompletedDate}>
+                      Completed: {formatDate(new Date(task.completedDate))}
+                    </Text>
+                  </Card.Content>
+                </Card>
+              ))}
+            </>
+          )}
+        </View>
+        
+        {/* Rewards */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Rewards</Text>
+          </View>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rewardsScrollView}>
+            {rewards.map(reward => (
+              <Card 
+                key={reward.id} 
+                style={[
+                  styles.rewardCard,
+                  reward.status === 'locked' && styles.lockedRewardCard
+                ]}
+              >
+                <Card.Content style={styles.rewardContent}>
+                  <View style={styles.rewardIconContainer}>
+                    <Icon 
+                      name={reward.status === 'locked' ? 'lock' : 'gift'} 
+                      size={28} 
+                      color={reward.status === 'locked' ? colors.textSecondary : walletColorSchemes.child.accent} 
+                    />
+                  </View>
+                  <Text style={styles.rewardTitle}>{reward.name}</Text>
+                  <Text style={styles.rewardCost}>{formatCurrency(reward.cost)}</Text>
+                  
+                  {reward.status === 'locked' ? (
+                    <Text style={styles.rewardLocked}>
+                      Unlocks at {formatCurrency(reward.unlocksAt)}
+                    </Text>
+                  ) : (
+                    <Button
+                      mode="contained"
+                      style={styles.rewardButton}
+                      buttonColor={walletColorSchemes.child.accent}
+                      disabled={parseFloat(currentWallet?.balance || '0') < parseFloat(reward.cost)}
+                      onPress={() => {
+                        // Handle redeeming reward
+                      }}
+                    >
+                      Redeem
+                    </Button>
+                  )}
+                </Card.Content>
+              </Card>
+            ))}
+          </ScrollView>
+        </View>
+        
+        {/* Recent Transactions */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <TouchableOpacity onPress={() => setShowAllTransactions(!showAllTransactions)}>
+              <Text style={styles.viewAllText}>
+                {showAllTransactions ? 'View Less' : 'View All'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {getDisplayedTransactions().length === 0 ? (
+            <Card style={styles.emptyStateCard}>
+              <Card.Content style={styles.emptyStateContent}>
+                <Icon name="cash-remove" size={48} color={colors.textSecondary} />
+                <Text style={styles.emptyStateText}>No transactions yet</Text>
+              </Card.Content>
+            </Card>
+          ) : (
+            getDisplayedTransactions().map(transaction => (
+              <TouchableOpacity
+                key={transaction.id}
+                onPress={() => goToTransactionDetails(transaction)}
+              >
+                <Card style={styles.transactionCard}>
+                  <Card.Content style={styles.transactionContent}>
+                    <View style={styles.transactionIconContainer}>
+                      <Icon 
+                        name={getTransactionIcon(transaction.type)}
+                        size={24} 
+                        color={getTransactionColor(transaction.type)} 
+                      />
+                    </View>
+                    
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionDescription}>
+                        {transaction.description}
+                      </Text>
+                      <Text style={styles.transactionDate}>
+                        {formatDate(new Date(transaction.createdAt))}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.transactionAmountContainer}>
+                      <Text 
+                        style={[
+                          styles.transactionAmount,
+                          transaction.type === 'deposit' || transaction.type === 'allowance' || transaction.type === 'payment_received'
+                            ? styles.incomingAmount
+                            : styles.outgoingAmount
+                        ]}
+                      >
+                        {transaction.type === 'deposit' || transaction.type === 'allowance' || transaction.type === 'payment_received'
+                          ? '+'
+                          : '-'} 
+                        {formatCurrency(transaction.amount)}
+                      </Text>
+                      {transaction.status === 'pending' && (
+                        <Badge style={styles.pendingBadge}>Pending</Badge>
+                      )}
+                    </View>
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            ))
+          )}
+          
+          {!showAllTransactions && transactions.length > 3 && (
             <Button 
-              mode="contained" 
-              icon="plus" 
-              onPress={() => navigation.navigate('AddSavingsGoal')}
-              style={[{ marginTop: 16, backgroundColor: colors.tertiary }]}
+              mode="text" 
+              onPress={() => setShowAllTransactions(true)}
+              style={styles.viewMoreButton}
+              textColor={walletColorSchemes.child.primary}
             >
-              Create My First Goal
+              View More Transactions
             </Button>
-          </Card.Content>
-        </Card>
-      ) : (
-        <FlatList
-          data={savingsGoals}
-          renderItem={renderSavingsGoalItem}
-          keyExtractor={item => `goal-${item.id}`}
-          scrollEnabled={false}
-        />
-      )}
-    </>
-  );
-  
-  // Transactions tab content
-  const renderTransactionsTab = () => (
-    <>
-      <Card style={styles.transactionsHeaderCard}>
-        <Card.Content>
-          <Title>My Activity</Title>
-          {/* Transaction filters would go here */}
-        </Card.Content>
-      </Card>
-      
-      {transactions.length === 0 ? (
-        <Card style={styles.emptyTransactionsCard}>
-          <Card.Content>
-            <Icon name="cash" size={64} color={colors.tertiary} style={styles.emptyIcon} />
-            <Text style={styles.emptyMessage}>No activity yet</Text>
-          </Card.Content>
-        </Card>
-      ) : (
-        <FlatList
-          data={transactions}
-          renderItem={renderTransactionItem}
-          keyExtractor={item => `transaction-${item.id}`}
-          scrollEnabled={false}
-        />
-      )}
-    </>
-  );
-  
-  // Learn tab content - educational content for kids
-  const renderLearnTab = () => (
-    <>
-      <Card style={styles.learnHeaderCard}>
-        <Card.Content>
-          <Title>Learn About Money</Title>
-        </Card.Content>
-      </Card>
-      
-      <Card style={styles.learnCard}>
-        <Card.Cover source={{ uri: 'https://placeimg.com/640/480/nature' }} />
-        <Card.Content>
-          <Title>Saving vs. Spending</Title>
-          <Paragraph>
-            Learn how to make good choices with your money and why saving is important.
-          </Paragraph>
-          <Button 
-            mode="contained" 
-            style={[styles.learnButton, { backgroundColor: colors.tertiary }]}
-            onPress={() => {/* Would navigate to educational content */}}
-          >
-            Start Learning
-          </Button>
-        </Card.Content>
-      </Card>
-      
-      <Card style={styles.learnCard}>
-        <Card.Cover source={{ uri: 'https://placeimg.com/640/480/animals' }} />
-        <Card.Content>
-          <Title>Money Quiz</Title>
-          <Paragraph>
-            Test your knowledge about money with this fun quiz!
-          </Paragraph>
-          <Button 
-            mode="contained" 
-            style={[styles.learnButton, { backgroundColor: colors.tertiary }]}
-            onPress={() => {/* Would navigate to quiz */}}
-          >
-            Start Quiz
-          </Button>
-        </Card.Content>
-      </Card>
-    </>
-  );
-  
-  // Render the currently active tab content
-  const renderActiveTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return renderOverviewTab();
-      case 'goals':
-        return renderGoalsTab();
-      case 'transactions':
-        return renderTransactionsTab();
-      case 'learn':
-        return renderLearnTab();
-      default:
-        return renderOverviewTab();
-    }
-  };
-  
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>My Wallet</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Avatar.Text 
-            size={40} 
-            label={wallet?.name?.substring(0, 1) || 'U'} 
-            style={styles.avatar}
-          />
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.tabBar}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'overview' && styles.activeTab]} 
-          onPress={() => setActiveTab('overview')}
-        >
-          <Icon 
-            name="view-dashboard" 
-            size={24} 
-            color={activeTab === 'overview' ? colors.tertiary : colors.textSecondary} 
-          />
-          <Text style={[
-            styles.tabText, 
-            activeTab === 'overview' && styles.activeTabText
-          ]}>Home</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'goals' && styles.activeTab]} 
-          onPress={() => setActiveTab('goals')}
-        >
-          <Icon 
-            name="star" 
-            size={24} 
-            color={activeTab === 'goals' ? colors.tertiary : colors.textSecondary} 
-          />
-          <Text style={[
-            styles.tabText, 
-            activeTab === 'goals' && styles.activeTabText
-          ]}>Goals</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'transactions' && styles.activeTab]} 
-          onPress={() => setActiveTab('transactions')}
-        >
-          <Icon 
-            name="bank-transfer" 
-            size={24} 
-            color={activeTab === 'transactions' ? colors.tertiary : colors.textSecondary} 
-          />
-          <Text style={[
-            styles.tabText, 
-            activeTab === 'transactions' && styles.activeTabText
-          ]}>Activity</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'learn' && styles.activeTab]} 
-          onPress={() => setActiveTab('learn')}
-        >
-          <Icon 
-            name="school" 
-            size={24} 
-            color={activeTab === 'learn' ? colors.tertiary : colors.textSecondary} 
-          />
-          <Text style={[
-            styles.tabText, 
-            activeTab === 'learn' && styles.activeTabText
-          ]}>Learn</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.tertiary]}
-          />
-        }
-      >
-        {renderActiveTabContent()}
+          )}
+        </View>
       </ScrollView>
       
       <FAB
-        style={[styles.fab, { backgroundColor: colors.tertiary }]}
-        icon="plus"
-        onPress={() => {
-          // Show action menu or navigate based on active tab
-          if (activeTab === 'goals') {
-            navigation.navigate('AddSavingsGoal');
-          } else {
-            createFundRequest();
-          }
-        }}
+        style={styles.fab}
+        icon="cash-plus"
+        color="#FFFFFF"
+        onPress={handleRequestMoney}
       />
     </SafeAreaView>
   );
 };
 
+// Helper functions
+const getTransactionIcon = (type: string) => {
+  switch (type) {
+    case 'deposit':
+      return 'bank-transfer-in';
+    case 'withdrawal':
+      return 'bank-transfer-out';
+    case 'transfer':
+      return 'bank-transfer';
+    case 'payment':
+      return 'credit-card-outline';
+    case 'payment_received':
+      return 'credit-card-check-outline';
+    case 'allowance':
+      return 'cash-clock';
+    default:
+      return 'cash';
+  }
+};
+
+const getTransactionColor = (type: string) => {
+  switch (type) {
+    case 'deposit':
+    case 'payment_received':
+    case 'allowance':
+      return colors.success;
+    case 'withdrawal':
+    case 'payment':
+      return colors.error;
+    case 'transfer':
+      return walletColorSchemes.child.primary;
+    default:
+      return colors.text;
+  }
+};
+
+const formatDate = (date: Date) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (date >= today) {
+    return `Today, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (date >= yesterday) {
+    return `Yesterday, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  } else {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: colors.tertiary,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFF',
-  },
-  avatar: {
-    backgroundColor: colors.tertiaryDark,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.tertiary,
-  },
-  tabText: {
-    fontSize: 12,
-    marginTop: 4,
-    color: colors.textSecondary,
-  },
-  activeTabText: {
-    color: colors.tertiary,
-    fontWeight: 'bold',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: walletColorSchemes.child.background,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 80, // Extra padding for FAB
+    padding: spacing.md,
+    paddingBottom: spacing.xxl,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    color: colors.textSecondary,
   },
   balanceCard: {
-    marginBottom: 16,
-    ...commonStyles.shadow,
+    marginBottom: spacing.md,
+    borderRadius: 12,
+    backgroundColor: walletColorSchemes.child.primary,
+    ...commonStyles.shadowHeavy,
   },
   balanceLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 16,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginBottom: 4,
   },
   balanceAmount: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    marginVertical: 8,
+    color: '#FFFFFF',
+    marginBottom: spacing.md,
   },
-  allowanceContainer: {
-    marginVertical: 12,
-  },
-  allowanceLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 8,
-  },
-  allowanceAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.tertiary,
-    marginVertical: 4,
-  },
-  nextAllowance: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  divider: {
-    marginVertical: 8,
-  },
-  balanceActions: {
+  quickActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
+    justifyContent: 'space-around',
+    marginTop: spacing.sm,
   },
-  actionButton: {
-    flex: 1,
-    marginHorizontal: 4,
+  quickActionButton: {
+    alignItems: 'center',
   },
-  requestsCard: {
-    marginBottom: 16,
-    ...commonStyles.shadow,
-  },
-  requestCard: {
+  quickActionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  requestStatusContainer: {
+  quickActionText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  sectionContainer: {
+    marginBottom: spacing.xl,
+  },
+  sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  goalsCard: {
-    marginBottom: 16,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: walletColorSchemes.child.primary,
+  },
+  emptyStateCard: {
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    marginVertical: spacing.sm,
     ...commonStyles.shadow,
   },
-  goalCard: {
-    marginBottom: 16,
+  emptyStateContent: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginVertical: spacing.md,
+    textAlign: 'center',
+  },
+  addButton: {
+    marginTop: spacing.md,
+  },
+  savingsGoalCard: {
+    marginBottom: spacing.md,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
     ...commonStyles.shadow,
   },
-  goalProgress: {
-    marginVertical: 12,
+  savingsGoalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  savingsGoalTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  savingsGoalAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: walletColorSchemes.child.primary,
   },
   progressBar: {
     height: 8,
     borderRadius: 4,
-    marginBottom: 4,
+    marginVertical: spacing.sm,
   },
-  progressText: {
+  savingsGoalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  savingsGoalDescription: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  savingsGoalProgress: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: walletColorSchemes.child.primary,
+  },
+  savingsGoalDueDate: {
     fontSize: 12,
     color: colors.textSecondary,
-    textAlign: 'right',
+    marginBottom: spacing.sm,
   },
-  goalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
+  contributionButton: {
+    marginTop: spacing.sm,
   },
-  goalButton: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  recentTransactionsCard: {
-    marginBottom: 16,
+  transactionCard: {
+    marginBottom: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
     ...commonStyles.shadow,
+  },
+  transactionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transactionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${walletColorSchemes.child.primary}10`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  transactionDetails: {
+    flex: 1,
+  },
+  transactionDescription: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  transactionAmountContainer: {
+    alignItems: 'flex-end',
   },
   transactionAmount: {
-    fontWeight: 'bold',
     fontSize: 16,
+    fontWeight: 'bold',
   },
-  goalsHeaderCard: {
-    marginBottom: 16,
+  incomingAmount: {
+    color: colors.success,
   },
-  goalsHeaderContent: {
+  outgoingAmount: {
+    color: colors.error,
+  },
+  pendingBadge: {
+    backgroundColor: colors.warning,
+    color: '#000000',
+    marginTop: 4,
+  },
+  viewMoreButton: {
+    marginTop: spacing.xs,
+  },
+  taskCard: {
+    marginBottom: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    ...commonStyles.shadow,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  taskReward: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.success,
+  },
+  taskFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  transactionsHeaderCard: {
-    marginBottom: 16,
+  taskDueDate: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
-  learnHeaderCard: {
-    marginBottom: 16,
+  subsectionHeader: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
-  learnCard: {
-    marginBottom: 16,
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  completedTaskCard: {
+    marginBottom: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    opacity: 0.8,
     ...commonStyles.shadow,
   },
-  learnButton: {
-    marginTop: 12,
-    alignSelf: 'flex-end',
-  },
-  emptyGoalsCard: {
-    padding: 24,
+  taskTitleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  emptyTransactionsCard: {
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+  taskCheckIcon: {
+    marginRight: spacing.xs,
   },
-  emptyIcon: {
-    marginBottom: 16,
-    alignSelf: 'center',
-  },
-  emptyMessage: {
+  completedTaskTitle: {
     fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  taskCompletedDate: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  rewardsScrollView: {
+    marginTop: spacing.sm,
+  },
+  rewardCard: {
+    width: 160,
+    marginRight: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    ...commonStyles.shadow,
+  },
+  lockedRewardCard: {
+    opacity: 0.7,
+  },
+  rewardContent: {
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  rewardIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: `${walletColorSchemes.child.accent}10`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  rewardTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  rewardCost: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: walletColorSchemes.child.accent,
+    marginBottom: spacing.sm,
+  },
+  rewardLocked: {
+    fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginVertical: 8,
+  },
+  rewardButton: {
+    width: '100%',
   },
   fab: {
     position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
+    right: spacing.lg,
+    bottom: spacing.lg,
+    backgroundColor: walletColorSchemes.child.primary,
   },
 });
 

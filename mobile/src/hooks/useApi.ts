@@ -1,164 +1,172 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import ApiService from '../services/api';
 
-// API base URL
-const API_BASE_URL = 'https://api.paysurity.com'; // This would be environment specific
-
-// Request method type
-type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-
-// Options for API calls
-interface RequestOptions {
-  headers?: Record<string, string>;
-  params?: Record<string, string>;
-  body?: any;
-  requiresAuth?: boolean; // Whether the endpoint requires auth
-  customApiUrl?: string; // For endpoints that don't use the default API base URL
+// Define API response interface
+export interface ApiResponse<T = any> {
+  data: T;
+  headers?: Headers;
 }
 
-// Hook for making API calls
-const useApi = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+// Custom hook for API calls with loading and error states
+export const useApi = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Helper function to get auth token
-  const getAuthToken = useCallback(async (): Promise<string | null> => {
-    try {
-      return await AsyncStorage.getItem('auth_token');
-    } catch (error) {
-      console.error('Error retrieving auth token', error);
-      return null;
-    }
-  }, []);
-
-  // Helper function to handle errors
-  const handleError = useCallback((error: any) => {
-    console.error('API Error:', error);
-    setError(error instanceof Error ? error : new Error(String(error)));
-    return error;
-  }, []);
-
-  // Generic request function
-  const request = useCallback(async <T>(
-    method: Method,
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<T> => {
-    const {
-      headers = {},
-      params = {},
-      body,
-      requiresAuth = true,
-      customApiUrl,
-    } = options;
-
+  // Wrapper for GET requests
+  const get = useCallback(async <T = any>(endpoint: string, params?: any): Promise<ApiResponse<T>> => {
     try {
       setLoading(true);
       setError(null);
-
-      // Build URL with query parameters
-      const url = new URL(
-        endpoint,
-        customApiUrl || API_BASE_URL
-      );
-
-      // Add query parameters
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          url.searchParams.append(key, value);
-        }
-      });
-
-      // Prepare headers
-      const requestHeaders: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...headers,
-      };
-
-      // Add auth token if required
-      if (requiresAuth) {
-        const token = await getAuthToken();
-        if (token) {
-          requestHeaders['Authorization'] = `Bearer ${token}`;
-        } else if (requiresAuth) {
-          throw new Error('Authentication required');
-        }
-      }
-
-      // Prepare request options
-      const requestOptions: RequestInit = {
-        method,
-        headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-      };
-
-      // Make request
-      const response = await fetch(url.toString(), requestOptions);
-
-      // Handle response
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage: string;
-        
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || `${response.status}: ${response.statusText}`;
-        } catch {
-          errorMessage = errorText || `${response.status}: ${response.statusText}`;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      // Parse response
-      if (response.status === 204) {
-        return {} as T; // No content
-      }
       
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json() as T;
-      }
+      const response = await ApiService.get(endpoint, params);
+      const data = await response.json();
       
-      return await response.text() as unknown as T;
-    } catch (error) {
-      return handleError(error) as any;
+      return {
+        data,
+        headers: response.headers,
+      };
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [getAuthToken, handleError]);
+  }, []);
 
-  // Convenience methods for different HTTP methods
-  const get = useCallback(<T>(endpoint: string, options?: RequestOptions) => {
-    return request<T>('GET', endpoint, options);
-  }, [request]);
+  // Wrapper for POST requests
+  const post = useCallback(async <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await ApiService.post(endpoint, data);
+      const responseData = await response.json();
+      
+      return {
+        data: responseData,
+        headers: response.headers,
+      };
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const post = useCallback(<T>(endpoint: string, body?: any, options?: RequestOptions) => {
-    return request<T>('POST', endpoint, { ...options, body });
-  }, [request]);
+  // Wrapper for PUT requests
+  const put = useCallback(async <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await ApiService.put(endpoint, data);
+      const responseData = await response.json();
+      
+      return {
+        data: responseData,
+        headers: response.headers,
+      };
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const put = useCallback(<T>(endpoint: string, body?: any, options?: RequestOptions) => {
-    return request<T>('PUT', endpoint, { ...options, body });
-  }, [request]);
+  // Wrapper for DELETE requests
+  const del = useCallback(async <T = any>(endpoint: string): Promise<ApiResponse<T>> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await ApiService.delete(endpoint);
+      const data = await response.json();
+      
+      return {
+        data,
+        headers: response.headers,
+      };
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const patch = useCallback(<T>(endpoint: string, body?: any, options?: RequestOptions) => {
-    return request<T>('PATCH', endpoint, { ...options, body });
-  }, [request]);
+  // Upload file method
+  const uploadFile = useCallback(async <T = any>(
+    endpoint: string, 
+    fileUri: string, 
+    formName: string = 'file',
+    mimeType: string = 'image/jpeg',
+    extraData?: Record<string, string>
+  ): Promise<ApiResponse<T>> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await ApiService.uploadFile(endpoint, fileUri, formName, mimeType, extraData);
+      const data = await response.json();
+      
+      return {
+        data,
+        headers: response.headers,
+      };
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during file upload');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const del = useCallback(<T>(endpoint: string, options?: RequestOptions) => {
-    return request<T>('DELETE', endpoint, options);
-  }, [request]);
+  // Set authentication token
+  const setAuthToken = useCallback(async (token: string): Promise<void> => {
+    try {
+      await ApiService.setAuthToken(token);
+    } catch (err: any) {
+      setError(err.message || 'Failed to set authentication token');
+      throw err;
+    }
+  }, []);
+
+  // Clear authentication token
+  const clearAuthToken = useCallback(async (): Promise<void> => {
+    try {
+      await ApiService.clearAuthToken();
+    } catch (err: any) {
+      setError(err.message || 'Failed to clear authentication token');
+      throw err;
+    }
+  }, []);
+
+  // Show API error as an alert
+  const showError = useCallback((message: string = 'An error occurred') => {
+    Alert.alert('Error', message);
+  }, []);
+
+  // Clear current error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return {
     loading,
     error,
-    request,
     get,
     post,
     put,
-    patch,
-    delete: del, // renamed to avoid conflict with JS keyword
+    delete: del,
+    uploadFile,
+    setAuthToken,
+    clearAuthToken,
+    showError,
+    clearError,
   };
 };
 
