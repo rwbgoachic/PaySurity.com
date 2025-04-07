@@ -14,6 +14,9 @@ import {
   employeeTaxProfiles, taxCalculations,
   // POS Tenant entities
   posTenants,
+  // Restaurant POS entities
+  restaurantTables, restaurantOrders, restaurantOrderItems, 
+  restaurantInventoryItems, restaurantInventoryTransactions,
   // Appointment scheduling
   demoRequests,
   // Analytics tracking
@@ -68,6 +71,13 @@ import {
   
   // POS Tenant types
   type PosTenant, type InsertPosTenant,
+  
+  // Restaurant POS types
+  type RestaurantTable, type InsertRestaurantTable,
+  type RestaurantOrder, type InsertRestaurantOrder,
+  type RestaurantOrderItem, type InsertRestaurantOrderItem,
+  type RestaurantInventoryItem, type InsertRestaurantInventoryItem,
+  type RestaurantInventoryTransaction, type InsertRestaurantInventoryTransaction,
   
   // Analytics tracking types
   type ClickEvent, type InsertClickEvent,
@@ -301,6 +311,43 @@ export interface IStorage {
   updateBusinessFinancingStatus(id: number, status: string): Promise<BusinessFinancing>;
   updateBusinessFinancingRepayment(id: number, amountPaid: string): Promise<BusinessFinancing>;
   
+  // Restaurant POS - Tables
+  getRestaurantTable(id: number): Promise<RestaurantTable | undefined>;
+  getRestaurantTablesByMerchantId(merchantId: number): Promise<RestaurantTable[]>;
+  createRestaurantTable(table: InsertRestaurantTable): Promise<RestaurantTable>;
+  updateRestaurantTableStatus(id: number, status: string, currentOrderId?: number): Promise<RestaurantTable>;
+  deleteRestaurantTable(id: number): Promise<void>;
+  
+  // Restaurant POS - Orders
+  getRestaurantOrder(id: number): Promise<RestaurantOrder | undefined>;
+  getRestaurantOrdersByMerchantId(merchantId: number): Promise<RestaurantOrder[]>;
+  getRestaurantOrdersByStatus(merchantId: number, status: string): Promise<RestaurantOrder[]>;
+  createRestaurantOrder(order: InsertRestaurantOrder): Promise<RestaurantOrder>;
+  updateRestaurantOrderStatus(id: number, status: string): Promise<RestaurantOrder>;
+  completeRestaurantOrder(id: number, paymentMethod: string, totalPaid: string): Promise<RestaurantOrder>;
+  deleteRestaurantOrder(id: number): Promise<void>;
+  
+  // Restaurant POS - Order Items
+  getRestaurantOrderItem(id: number): Promise<RestaurantOrderItem | undefined>;
+  getRestaurantOrderItemsByOrderId(orderId: number): Promise<RestaurantOrderItem[]>;
+  createRestaurantOrderItem(item: InsertRestaurantOrderItem): Promise<RestaurantOrderItem>;
+  updateRestaurantOrderItemQuantity(id: number, quantity: number): Promise<RestaurantOrderItem>;
+  deleteRestaurantOrderItem(id: number): Promise<void>;
+  
+  // Restaurant POS - Inventory
+  getRestaurantInventoryItem(id: number): Promise<RestaurantInventoryItem | undefined>;
+  getRestaurantInventoryItems(merchantId: number): Promise<RestaurantInventoryItem[]>;
+  createRestaurantInventoryItem(item: InsertRestaurantInventoryItem): Promise<RestaurantInventoryItem>;
+  updateRestaurantInventoryItem(id: number, data: Partial<InsertRestaurantInventoryItem>, merchantId: number): Promise<RestaurantInventoryItem>;
+  updateRestaurantInventoryStock(id: number, newStock: number): Promise<RestaurantInventoryItem>;
+  deleteRestaurantInventoryItem(id: number, merchantId: number): Promise<void>;
+  
+  // Restaurant POS - Inventory Transactions
+  getRestaurantInventoryTransaction(id: number): Promise<RestaurantInventoryTransaction | undefined>;
+  getRestaurantInventoryTransactions(merchantId: number): Promise<RestaurantInventoryTransaction[]>;
+  getRestaurantInventoryTransactionsByItemId(itemId: number): Promise<RestaurantInventoryTransaction[]>;
+  createRestaurantInventoryTransaction(transaction: InsertRestaurantInventoryTransaction): Promise<RestaurantInventoryTransaction>;
+  
   // Virtual Terminal operations
   getVirtualTerminal(id: number): Promise<VirtualTerminal | undefined>;
   getVirtualTerminalsByMerchantId(merchantId: number): Promise<VirtualTerminal[]>;
@@ -498,12 +545,56 @@ export interface IStorage {
   createMerchantTransaction(transaction: InsertMerchantTransaction): Promise<MerchantTransaction>;
   updateMerchantTransactionStatus(id: number, status: string): Promise<MerchantTransaction>;
   updateMerchantTransactionMetadata(id: number, metadata: any): Promise<MerchantTransaction>;
+
+  // Restaurant POS - Tables
+  getRestaurantTable(id: number): Promise<RestaurantTable | undefined>;
+  getRestaurantTablesByMerchantId(merchantId: number): Promise<RestaurantTable[]>;
+  createRestaurantTable(table: InsertRestaurantTable): Promise<RestaurantTable>;
+  updateRestaurantTableStatus(id: number, status: string, currentOrderId?: number): Promise<RestaurantTable>;
+  deleteRestaurantTable(id: number): Promise<void>;
+  
+  // Restaurant POS - Orders
+  getRestaurantOrder(id: number): Promise<RestaurantOrder | undefined>;
+  getRestaurantOrdersByMerchantId(merchantId: number): Promise<RestaurantOrder[]>;
+  getRestaurantOrdersByStatus(merchantId: number, status: string): Promise<RestaurantOrder[]>;
+  createRestaurantOrder(order: InsertRestaurantOrder): Promise<RestaurantOrder>;
+  updateRestaurantOrderStatus(id: number, status: string): Promise<RestaurantOrder>;
+  completeRestaurantOrder(id: number, paymentMethod: string, totalPaid: string): Promise<RestaurantOrder>;
+  deleteRestaurantOrder(id: number): Promise<void>;
+  
+  // Restaurant POS - Order Items
+  getRestaurantOrderItem(id: number): Promise<RestaurantOrderItem | undefined>;
+  getRestaurantOrderItemsByOrderId(orderId: number): Promise<RestaurantOrderItem[]>;
+  createRestaurantOrderItem(item: InsertRestaurantOrderItem): Promise<RestaurantOrderItem>;
+  updateRestaurantOrderItemQuantity(id: number, quantity: number): Promise<RestaurantOrderItem>;
+  deleteRestaurantOrderItem(id: number): Promise<void>;
+  
+  // Restaurant POS - Inventory
+  getRestaurantInventoryItem(id: number): Promise<RestaurantInventoryItem | undefined>;
+  getRestaurantInventoryItems(merchantId: number): Promise<RestaurantInventoryItem[]>;
+  createRestaurantInventoryItem(item: InsertRestaurantInventoryItem): Promise<RestaurantInventoryItem>;
+  updateRestaurantInventoryItem(id: number, data: Partial<InsertRestaurantInventoryItem>, merchantId: number): Promise<RestaurantInventoryItem>;
+  updateRestaurantInventoryStock(id: number, newStock: number): Promise<RestaurantInventoryItem>;
+  deleteRestaurantInventoryItem(id: number, merchantId: number): Promise<void>;
+  
+  // Restaurant POS - Inventory Transactions
+  getRestaurantInventoryTransaction(id: number): Promise<RestaurantInventoryTransaction | undefined>;
+  getRestaurantInventoryTransactions(merchantId: number): Promise<RestaurantInventoryTransaction[]>;
+  getRestaurantInventoryTransactionsByItemId(itemId: number): Promise<RestaurantInventoryTransaction[]>;
+  createRestaurantInventoryTransaction(transaction: InsertRestaurantInventoryTransaction): Promise<RestaurantInventoryTransaction>;
 }
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
   private pool: Pool;
   private _merchantApplications: MerchantApplication[] = [];
+  
+  // Restaurant POS tables for implementation
+  private restaurantTablesMap: Map<number, RestaurantTable> = new Map();
+  private restaurantOrdersMap: Map<number, RestaurantOrder> = new Map();
+  private restaurantOrderItemsMap: Map<number, RestaurantOrderItem> = new Map();
+  private restaurantInventoryItemsMap: Map<number, RestaurantInventoryItem> = new Map();
+  private restaurantInventoryTransactionsMap: Map<number, RestaurantInventoryTransaction> = new Map();
 
   constructor() {
     if (!process.env.DATABASE_URL) {
@@ -4350,6 +4441,456 @@ export class DatabaseStorage implements IStorage {
     }
     
     return this.getSavingsGoalsByUserId(childMember.userId);
+  }
+
+  // =========================================
+  // Restaurant POS - Tables Implementation
+  // =========================================
+  async getRestaurantTable(id: number): Promise<RestaurantTable | undefined> {
+    const [table] = await db.select().from(restaurantTables).where(eq(restaurantTables.id, id));
+    return table;
+  }
+
+  async getRestaurantTablesByMerchantId(merchantId: number): Promise<RestaurantTable[]> {
+    return await db.select()
+      .from(restaurantTables)
+      .where(eq(restaurantTables.merchantId, merchantId));
+  }
+
+  async createRestaurantTable(table: InsertRestaurantTable): Promise<RestaurantTable> {
+    const [newTable] = await db.insert(restaurantTables).values(table).returning();
+    return newTable;
+  }
+
+  async updateRestaurantTableStatus(id: number, status: string, currentOrderId?: number): Promise<RestaurantTable> {
+    const updateData: Partial<RestaurantTable> = {
+      status,
+    };
+    
+    if (currentOrderId !== undefined) {
+      updateData.currentOrderId = currentOrderId;
+    }
+    
+    const [updatedTable] = await db
+      .update(restaurantTables)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantTables.id, id))
+      .returning();
+    
+    if (!updatedTable) {
+      throw new Error(`Table with id ${id} not found`);
+    }
+    
+    return updatedTable;
+  }
+
+  async deleteRestaurantTable(id: number): Promise<void> {
+    await db.delete(restaurantTables).where(eq(restaurantTables.id, id));
+  }
+
+  // =========================================
+  // Restaurant POS - Orders Implementation
+  // =========================================
+  async getRestaurantOrder(id: number): Promise<RestaurantOrder | undefined> {
+    const [order] = await db.select().from(restaurantOrders).where(eq(restaurantOrders.id, id));
+    return order;
+  }
+
+  async getRestaurantOrdersByMerchantId(merchantId: number): Promise<RestaurantOrder[]> {
+    return await db.select()
+      .from(restaurantOrders)
+      .where(eq(restaurantOrders.merchantId, merchantId))
+      .orderBy(desc(restaurantOrders.createdAt));
+  }
+
+  async getRestaurantOrdersByStatus(merchantId: number, status: string): Promise<RestaurantOrder[]> {
+    return await db.select()
+      .from(restaurantOrders)
+      .where(and(
+        eq(restaurantOrders.merchantId, merchantId),
+        eq(restaurantOrders.status, status)
+      ))
+      .orderBy(desc(restaurantOrders.createdAt));
+  }
+
+  async createRestaurantOrder(order: InsertRestaurantOrder): Promise<RestaurantOrder> {
+    const [newOrder] = await db.insert(restaurantOrders).values(order).returning();
+    
+    // If the order is associated with a table, update the table status to occupied
+    if (newOrder.tableId) {
+      await this.updateRestaurantTableStatus(newOrder.tableId, "occupied", newOrder.id);
+    }
+    
+    return newOrder;
+  }
+
+  async updateRestaurantOrderStatus(id: number, status: string): Promise<RestaurantOrder> {
+    const [updatedOrder] = await db
+      .update(restaurantOrders)
+      .set({ 
+        status, 
+        updatedAt: new Date(),
+        ...(status === "completed" ? { completedAt: new Date() } : {})
+      })
+      .where(eq(restaurantOrders.id, id))
+      .returning();
+    
+    if (!updatedOrder) {
+      throw new Error(`Order with id ${id} not found`);
+    }
+    
+    // If the order status is completed or canceled and it has a table, update the table status
+    if ((status === "completed" || status === "canceled") && updatedOrder.tableId) {
+      await this.updateRestaurantTableStatus(updatedOrder.tableId, "available", null);
+    }
+    
+    return updatedOrder;
+  }
+
+  async completeRestaurantOrder(id: number, paymentMethod: string, totalPaid: string): Promise<RestaurantOrder> {
+    const [updatedOrder] = await db
+      .update(restaurantOrders)
+      .set({ 
+        status: "completed", 
+        paymentMethod,
+        paymentStatus: "paid",
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantOrders.id, id))
+      .returning();
+    
+    if (!updatedOrder) {
+      throw new Error(`Order with id ${id} not found`);
+    }
+    
+    // If the order has a table, update the table status to available
+    if (updatedOrder.tableId) {
+      await this.updateRestaurantTableStatus(updatedOrder.tableId, "available", null);
+    }
+    
+    return updatedOrder;
+  }
+
+  async deleteRestaurantOrder(id: number): Promise<void> {
+    // First get the order to check if it has a table
+    const order = await this.getRestaurantOrder(id);
+    
+    if (order && order.tableId) {
+      // Update the table status to available
+      await this.updateRestaurantTableStatus(order.tableId, "available", null);
+    }
+    
+    // Delete all order items associated with this order
+    await db.delete(restaurantOrderItems).where(eq(restaurantOrderItems.orderId, id));
+    
+    // Delete the order
+    await db.delete(restaurantOrders).where(eq(restaurantOrders.id, id));
+  }
+
+  // =========================================
+  // Restaurant POS - Order Items Implementation
+  // =========================================
+  async getRestaurantOrderItem(id: number): Promise<RestaurantOrderItem | undefined> {
+    const [item] = await db.select().from(restaurantOrderItems).where(eq(restaurantOrderItems.id, id));
+    return item;
+  }
+
+  async getRestaurantOrderItemsByOrderId(orderId: number): Promise<RestaurantOrderItem[]> {
+    return await db.select()
+      .from(restaurantOrderItems)
+      .where(eq(restaurantOrderItems.orderId, orderId));
+  }
+
+  async createRestaurantOrderItem(item: InsertRestaurantOrderItem): Promise<RestaurantOrderItem> {
+    const [newItem] = await db.insert(restaurantOrderItems).values(item).returning();
+    
+    // Update order total with the new item
+    const order = await this.getRestaurantOrder(newItem.orderId);
+    if (order) {
+      // Calculate new order subtotal
+      const orderItems = await this.getRestaurantOrderItemsByOrderId(order.id);
+      const subtotal = orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal.toString()), 0);
+      const tax = orderItems.reduce((sum, item) => sum + parseFloat(item.taxAmount.toString()), 0);
+      const discount = orderItems.reduce((sum, item) => sum + parseFloat(item.discountAmount?.toString() || "0"), 0);
+      const total = subtotal + tax - discount;
+      
+      // Update order totals
+      await db.update(restaurantOrders)
+        .set({ 
+          subtotal: subtotal.toString(),
+          taxAmount: tax.toString(),
+          discountAmount: discount.toString(),
+          total: total.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(restaurantOrders.id, order.id));
+    }
+    
+    return newItem;
+  }
+
+  async updateRestaurantOrderItemQuantity(id: number, quantity: number): Promise<RestaurantOrderItem> {
+    // First get the current item
+    const currentItem = await this.getRestaurantOrderItem(id);
+    if (!currentItem) {
+      throw new Error(`Order item with id ${id} not found`);
+    }
+    
+    // Calculate new amounts based on quantity change
+    const unitPrice = parseFloat(currentItem.price.toString());
+    const newSubtotal = unitPrice * quantity;
+    const taxRate = parseFloat(currentItem.taxAmount.toString()) / parseFloat(currentItem.subtotal.toString());
+    const newTaxAmount = newSubtotal * taxRate;
+    const newTotalAmount = newSubtotal + newTaxAmount;
+    
+    // Update the item
+    const [updatedItem] = await db
+      .update(restaurantOrderItems)
+      .set({ 
+        quantity,
+        subtotal: newSubtotal.toString(),
+        taxAmount: newTaxAmount.toString(),
+        totalAmount: newTotalAmount.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantOrderItems.id, id))
+      .returning();
+    
+    // Update the parent order totals
+    const order = await this.getRestaurantOrder(updatedItem.orderId);
+    if (order) {
+      const orderItems = await this.getRestaurantOrderItemsByOrderId(order.id);
+      const subtotal = orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal.toString()), 0);
+      const tax = orderItems.reduce((sum, item) => sum + parseFloat(item.taxAmount.toString()), 0);
+      const discount = orderItems.reduce((sum, item) => sum + parseFloat(item.discountAmount?.toString() || "0"), 0);
+      const total = subtotal + tax - discount;
+      
+      await db.update(restaurantOrders)
+        .set({ 
+          subtotal: subtotal.toString(),
+          taxAmount: tax.toString(),
+          discountAmount: discount.toString(),
+          total: total.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(restaurantOrders.id, order.id));
+    }
+    
+    return updatedItem;
+  }
+
+  async deleteRestaurantOrderItem(id: number): Promise<void> {
+    // First get the item to know which order to update
+    const item = await this.getRestaurantOrderItem(id);
+    if (!item) {
+      return; // Item doesn't exist, nothing to do
+    }
+    
+    const orderId = item.orderId;
+    
+    // Delete the item
+    await db.delete(restaurantOrderItems).where(eq(restaurantOrderItems.id, id));
+    
+    // Update the parent order totals
+    const order = await this.getRestaurantOrder(orderId);
+    if (order) {
+      const orderItems = await this.getRestaurantOrderItemsByOrderId(order.id);
+      const subtotal = orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal.toString()), 0);
+      const tax = orderItems.reduce((sum, item) => sum + parseFloat(item.taxAmount.toString()), 0);
+      const discount = orderItems.reduce((sum, item) => sum + parseFloat(item.discountAmount?.toString() || "0"), 0);
+      const total = subtotal + tax - discount;
+      
+      await db.update(restaurantOrders)
+        .set({ 
+          subtotal: subtotal.toString(),
+          taxAmount: tax.toString(),
+          discountAmount: discount.toString(),
+          total: total.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(restaurantOrders.id, order.id));
+    }
+  }
+
+  // =========================================
+  // Restaurant POS - Inventory Implementation
+  // =========================================
+  async getRestaurantInventoryItem(id: number): Promise<RestaurantInventoryItem | undefined> {
+    const [item] = await db.select().from(restaurantInventoryItems).where(eq(restaurantInventoryItems.id, id));
+    return item;
+  }
+
+  async getRestaurantInventoryItems(merchantId: number): Promise<RestaurantInventoryItem[]> {
+    return await db.select()
+      .from(restaurantInventoryItems)
+      .where(eq(restaurantInventoryItems.merchantId, merchantId))
+      .orderBy(asc(restaurantInventoryItems.name));
+  }
+
+  async createRestaurantInventoryItem(item: InsertRestaurantInventoryItem): Promise<RestaurantInventoryItem> {
+    // Calculate total value from currentStock and unitCost
+    const currentStock = parseFloat(item.currentStock.toString());
+    const unitCost = parseFloat(item.unitCost.toString());
+    const totalValue = (currentStock * unitCost).toString();
+    
+    const [newItem] = await db.insert(restaurantInventoryItems).values({
+      ...item,
+      totalValue,
+      lastUpdated: new Date()
+    }).returning();
+    
+    // Create initial inventory transaction
+    if (currentStock > 0) {
+      await this.createRestaurantInventoryTransaction({
+        merchantId: item.merchantId,
+        itemId: newItem.id,
+        itemName: newItem.name,
+        transactionType: "purchase",
+        quantity: item.currentStock.toString(),
+        unit: item.unit,
+        cost: (currentStock * unitCost).toString(),
+        supplierId: item.supplierId,
+        supplierName: item.supplierName,
+        userId: item.merchantId, // Using merchantId as userId if not specified
+        createdBy: "System"
+      });
+    }
+    
+    return newItem;
+  }
+
+  async updateRestaurantInventoryItem(id: number, data: Partial<InsertRestaurantInventoryItem>, merchantId: number): Promise<RestaurantInventoryItem> {
+    // Get current item
+    const currentItem = await this.getRestaurantInventoryItem(id);
+    if (!currentItem) {
+      throw new Error(`Inventory item with id ${id} not found`);
+    }
+    
+    // Verify merchant ownership
+    if (currentItem.merchantId !== merchantId) {
+      throw new Error("Unauthorized to modify this inventory item");
+    }
+    
+    // Calculate new total value if stock or cost changed
+    let totalValue = currentItem.totalValue;
+    if (data.currentStock !== undefined || data.unitCost !== undefined) {
+      const currentStock = data.currentStock !== undefined ? 
+        parseFloat(data.currentStock.toString()) : 
+        parseFloat(currentItem.currentStock.toString());
+      
+      const unitCost = data.unitCost !== undefined ? 
+        parseFloat(data.unitCost.toString()) : 
+        parseFloat(currentItem.unitCost.toString());
+      
+      totalValue = (currentStock * unitCost).toString();
+    }
+    
+    // Update the item
+    const [updatedItem] = await db
+      .update(restaurantInventoryItems)
+      .set({ 
+        ...data,
+        totalValue,
+        lastUpdated: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantInventoryItems.id, id))
+      .returning();
+    
+    return updatedItem;
+  }
+
+  async updateRestaurantInventoryStock(id: number, newStock: number): Promise<RestaurantInventoryItem> {
+    // Get current item
+    const currentItem = await this.getRestaurantInventoryItem(id);
+    if (!currentItem) {
+      throw new Error(`Inventory item with id ${id} not found`);
+    }
+    
+    // Calculate new total value
+    const unitCost = parseFloat(currentItem.unitCost.toString());
+    const totalValue = (newStock * unitCost).toString();
+    
+    // Calculate quantity change
+    const currentStock = parseFloat(currentItem.currentStock.toString());
+    const stockChange = newStock - currentStock;
+    
+    // Update the item
+    const [updatedItem] = await db
+      .update(restaurantInventoryItems)
+      .set({ 
+        currentStock: newStock.toString(),
+        totalValue,
+        lastUpdated: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantInventoryItems.id, id))
+      .returning();
+    
+    // Create an inventory transaction to record the adjustment
+    await this.createRestaurantInventoryTransaction({
+      merchantId: currentItem.merchantId,
+      itemId: id,
+      itemName: currentItem.name,
+      transactionType: stockChange > 0 ? "purchase" : "adjustment",
+      quantity: Math.abs(stockChange).toString(),
+      unit: currentItem.unit,
+      cost: (Math.abs(stockChange) * unitCost).toString(),
+      supplierId: currentItem.supplierId,
+      supplierName: currentItem.supplierName,
+      userId: currentItem.merchantId, // Using merchantId as userId if not specified
+      createdBy: "System",
+      notes: `Stock ${stockChange > 0 ? 'increase' : 'decrease'} adjustment`
+    });
+    
+    return updatedItem;
+  }
+
+  async deleteRestaurantInventoryItem(id: number, merchantId: number): Promise<void> {
+    // Get the item to verify merchant ownership
+    const item = await this.getRestaurantInventoryItem(id);
+    if (!item) {
+      return; // Item doesn't exist, nothing to do
+    }
+    
+    // Verify merchant ownership
+    if (item.merchantId !== merchantId) {
+      throw new Error("Unauthorized to delete this inventory item");
+    }
+    
+    // Delete the item
+    await db.delete(restaurantInventoryItems).where(eq(restaurantInventoryItems.id, id));
+  }
+
+  // =========================================
+  // Restaurant POS - Inventory Transactions Implementation
+  // =========================================
+  async getRestaurantInventoryTransaction(id: number): Promise<RestaurantInventoryTransaction | undefined> {
+    const [transaction] = await db.select().from(restaurantInventoryTransactions).where(eq(restaurantInventoryTransactions.id, id));
+    return transaction;
+  }
+
+  async getRestaurantInventoryTransactions(merchantId: number): Promise<RestaurantInventoryTransaction[]> {
+    return await db.select()
+      .from(restaurantInventoryTransactions)
+      .where(eq(restaurantInventoryTransactions.merchantId, merchantId))
+      .orderBy(desc(restaurantInventoryTransactions.createdAt));
+  }
+
+  async getRestaurantInventoryTransactionsByItemId(itemId: number): Promise<RestaurantInventoryTransaction[]> {
+    return await db.select()
+      .from(restaurantInventoryTransactions)
+      .where(eq(restaurantInventoryTransactions.itemId, itemId))
+      .orderBy(desc(restaurantInventoryTransactions.createdAt));
+  }
+
+  async createRestaurantInventoryTransaction(transaction: InsertRestaurantInventoryTransaction): Promise<RestaurantInventoryTransaction> {
+    const [newTransaction] = await db.insert(restaurantInventoryTransactions).values(transaction).returning();
+    return newTransaction;
   }
 }
 

@@ -27,7 +27,48 @@ import {
   insertSavingsGoalSchema,
   insertSpendingRequestSchema,
   insertSpendingRulesSchema,
+  
+  // Restaurant POS schemas
+  insertRestaurantTableSchema,
+  insertRestaurantOrderSchema,
+  insertRestaurantOrderItemSchema,
+  insertRestaurantInventoryItemSchema,
+  insertRestaurantInventoryTransactionSchema,
+  restaurantTableStatusEnum,
+  restaurantOrderStatusEnum,
 } from "@shared/schema";
+
+// Define extended WebSocket interface with channels support
+interface ExtendedWebSocket extends WebSocket {
+  channels?: string[];
+  userId?: number;
+  isAffiliate?: boolean;
+  affiliateId?: number;
+  isEmployer?: boolean;
+  isEmployee?: boolean;
+  lastActivity?: number;
+  employerId?: number;
+  walletId?: number;
+}
+
+// Helper function to broadcast messages to all connected WebSocket clients
+// that are subscribed to the specified channel
+function broadcast(channel: string, message: any) {
+  const wss = (global as any).wss;
+  if (!wss) return;
+  
+  wss.clients.forEach((client: WebSocket) => {
+    const extClient = client as ExtendedWebSocket;
+    if (extClient.readyState === WebSocket.OPEN && extClient.channels && extClient.channels.includes(channel)) {
+      extClient.send(JSON.stringify(message));
+    }
+  });
+}
+
+// Helper function for specialized employer notifications
+function notifyEmployer(employerId: number, message: any) {
+  broadcast(`employer-${employerId}`, message);
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Authentication Routes
@@ -1705,18 +1746,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // WebSocket for real-time notifications
   const httpServer = createServer(app);
-  
-  interface ExtendedWebSocket extends WebSocket {
-    userId?: number;
-    channels?: string[];
-    affiliateId?: number;
-    isAffiliate?: boolean;
-    isEmployer?: boolean;
-    isEmployee?: boolean;
-    employerId?: number;
-    walletId?: number;
-    lastActivity?: number;
-  }
 
   // Public Payment Processing API Endpoint for Helcim
   app.post('/api/payment-gateways/:id/helcim/payment', async (req, res) => {
@@ -1828,6 +1857,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Store WebSocket server in global scope for use in broadcast functions
+  (global as any).wss = wss;
   
   // Track active visitors for affiliates
   const activeVisitors: Record<string, number> = {};
@@ -2972,6 +3004,766 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing savings goal:", error);
       res.status(500).json({ error: "Failed to complete savings goal" });
+    }
+  });
+
+  // =========================================
+  // Restaurant POS API Routes
+  // =========================================
+  
+  // Restaurant Tables API
+  app.get("/api/restaurant/tables", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantId = req.user.id;
+      const tables = await storage.getRestaurantTablesByMerchantId(merchantId);
+      res.json(tables);
+    } catch (error) {
+      console.error("Error fetching restaurant tables:", error);
+      res.status(500).json({ error: "Failed to fetch restaurant tables" });
+    }
+  });
+  
+  app.post("/api/restaurant/tables", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const tableData = insertRestaurantTableSchema.parse({
+        ...req.body,
+        merchantId: req.user.id
+      });
+      
+      const table = await storage.createRestaurantTable(tableData);
+      res.status(201).json(table);
+    } catch (error) {
+      console.error("Error creating restaurant table:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid table data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create restaurant table" });
+    }
+  });
+  
+  app.patch("/api/restaurant/tables/:id/status", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const tableId = parseInt(req.params.id);
+      const table = await storage.getRestaurantTable(tableId);
+      
+      if (!table) {
+        return res.status(404).json({ error: "Table not found" });
+      }
+      
+      if (table.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { status, currentOrderId } = req.body;
+      
+      // Validate status
+      if (!Object.values(restaurantTableStatusEnum.enumValues).includes(status)) {
+        return res.status(400).json({ error: "Invalid table status" });
+      }
+      
+      const updatedTable = await storage.updateRestaurantTableStatus(tableId, status, currentOrderId);
+      
+      // Notify clients about table status change
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'table_status_changed',
+        data: updatedTable
+      });
+      
+      res.json(updatedTable);
+    } catch (error) {
+      console.error("Error updating restaurant table status:", error);
+      res.status(500).json({ error: "Failed to update restaurant table status" });
+    }
+  });
+  
+  app.delete("/api/restaurant/tables/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const tableId = parseInt(req.params.id);
+      const table = await storage.getRestaurantTable(tableId);
+      
+      if (!table) {
+        return res.status(404).json({ error: "Table not found" });
+      }
+      
+      if (table.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteRestaurantTable(tableId);
+      
+      // Notify clients about table deletion
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'table_deleted',
+        data: { id: tableId }
+      });
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting restaurant table:", error);
+      res.status(500).json({ error: "Failed to delete restaurant table" });
+    }
+  });
+  
+  // Restaurant Orders API
+  app.get("/api/restaurant/orders", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantId = req.user.id;
+      const { status } = req.query;
+      
+      let orders;
+      if (status && typeof status === 'string') {
+        // Validate status
+        if (!Object.values(restaurantOrderStatusEnum.enumValues).includes(status)) {
+          return res.status(400).json({ error: "Invalid order status" });
+        }
+        
+        orders = await storage.getRestaurantOrdersByStatus(merchantId, status);
+      } else {
+        orders = await storage.getRestaurantOrdersByMerchantId(merchantId);
+      }
+      
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching restaurant orders:", error);
+      res.status(500).json({ error: "Failed to fetch restaurant orders" });
+    }
+  });
+  
+  app.get("/api/restaurant/orders/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getRestaurantOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Get order items
+      const items = await storage.getRestaurantOrderItemsByOrderId(orderId);
+      
+      res.json({
+        ...order,
+        items
+      });
+    } catch (error) {
+      console.error("Error fetching restaurant order:", error);
+      res.status(500).json({ error: "Failed to fetch restaurant order" });
+    }
+  });
+  
+  app.post("/api/restaurant/orders", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantId = req.user.id;
+      const orderData = insertRestaurantOrderSchema.parse({
+        ...req.body,
+        merchantId,
+        orderNumber: `ORD-${Date.now().toString().slice(-6)}`
+      });
+      
+      const order = await storage.createRestaurantOrder(orderData);
+      
+      // If there are items in the request, add them to the order
+      if (req.body.items && Array.isArray(req.body.items)) {
+        for (const item of req.body.items) {
+          await storage.createRestaurantOrderItem({
+            ...item,
+            orderId: order.id
+          });
+        }
+      }
+      
+      // Get the complete order with items
+      const completeOrder = await storage.getRestaurantOrder(order.id);
+      const items = await storage.getRestaurantOrderItemsByOrderId(order.id);
+      
+      // Notify about new order
+      broadcast(`merchant-pos-${merchantId}`, {
+        type: 'order_created',
+        data: {
+          ...completeOrder,
+          items
+        }
+      });
+      
+      res.status(201).json({
+        ...completeOrder,
+        items
+      });
+    } catch (error) {
+      console.error("Error creating restaurant order:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid order data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create restaurant order" });
+    }
+  });
+  
+  app.patch("/api/restaurant/orders/:id/status", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getRestaurantOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { status } = req.body;
+      
+      // Validate status
+      if (!Object.values(restaurantOrderStatusEnum.enumValues).includes(status)) {
+        return res.status(400).json({ error: "Invalid order status" });
+      }
+      
+      const updatedOrder = await storage.updateRestaurantOrderStatus(orderId, status);
+      
+      // Notify about order status change
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_status_changed',
+        data: updatedOrder
+      });
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating restaurant order status:", error);
+      res.status(500).json({ error: "Failed to update restaurant order status" });
+    }
+  });
+  
+  app.post("/api/restaurant/orders/:id/complete", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getRestaurantOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { paymentMethod, totalPaid } = req.body;
+      
+      if (!paymentMethod) {
+        return res.status(400).json({ error: "Payment method is required" });
+      }
+      
+      const updatedOrder = await storage.completeRestaurantOrder(orderId, paymentMethod, totalPaid || order.total);
+      
+      // Notify about order completion
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_completed',
+        data: updatedOrder
+      });
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error completing restaurant order:", error);
+      res.status(500).json({ error: "Failed to complete restaurant order" });
+    }
+  });
+  
+  app.delete("/api/restaurant/orders/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getRestaurantOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteRestaurantOrder(orderId);
+      
+      // Notify about order deletion
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_deleted',
+        data: { id: orderId }
+      });
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting restaurant order:", error);
+      res.status(500).json({ error: "Failed to delete restaurant order" });
+    }
+  });
+  
+  // Restaurant Order Items API
+  app.post("/api/restaurant/orders/:orderId/items", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const order = await storage.getRestaurantOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const itemData = insertRestaurantOrderItemSchema.parse({
+        ...req.body,
+        orderId
+      });
+      
+      const item = await storage.createRestaurantOrderItem(itemData);
+      
+      // Get updated order
+      const updatedOrder = await storage.getRestaurantOrder(orderId);
+      
+      // Notify about item addition
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_item_added',
+        data: {
+          item,
+          order: updatedOrder
+        }
+      });
+      
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error adding order item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid order item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to add order item" });
+    }
+  });
+  
+  app.patch("/api/restaurant/order-items/:id/quantity", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getRestaurantOrderItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Order item not found" });
+      }
+      
+      const order = await storage.getRestaurantOrder(item.orderId);
+      
+      if (!order || order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { quantity } = req.body;
+      
+      if (typeof quantity !== 'number' || quantity < 0) {
+        return res.status(400).json({ error: "Invalid quantity" });
+      }
+      
+      // If quantity is 0, delete the item
+      if (quantity === 0) {
+        await storage.deleteRestaurantOrderItem(itemId);
+        
+        // Get updated order
+        const updatedOrder = await storage.getRestaurantOrder(item.orderId);
+        const updatedItems = await storage.getRestaurantOrderItemsByOrderId(item.orderId);
+        
+        // Notify about item removal
+        broadcast(`merchant-pos-${req.user.id}`, {
+          type: 'order_item_removed',
+          data: {
+            itemId,
+            order: updatedOrder,
+            items: updatedItems
+          }
+        });
+        
+        return res.status(200).json({ 
+          message: "Item removed",
+          order: updatedOrder,
+          items: updatedItems
+        });
+      }
+      
+      // Update item quantity
+      const updatedItem = await storage.updateRestaurantOrderItemQuantity(itemId, quantity);
+      
+      // Get updated order
+      const updatedOrder = await storage.getRestaurantOrder(item.orderId);
+      
+      // Notify about item update
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_item_updated',
+        data: {
+          item: updatedItem,
+          order: updatedOrder
+        }
+      });
+      
+      res.json({
+        item: updatedItem,
+        order: updatedOrder
+      });
+    } catch (error) {
+      console.error("Error updating order item quantity:", error);
+      res.status(500).json({ error: "Failed to update order item quantity" });
+    }
+  });
+  
+  app.delete("/api/restaurant/order-items/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getRestaurantOrderItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Order item not found" });
+      }
+      
+      const order = await storage.getRestaurantOrder(item.orderId);
+      
+      if (!order || order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const orderId = item.orderId;
+      
+      await storage.deleteRestaurantOrderItem(itemId);
+      
+      // Get updated order
+      const updatedOrder = await storage.getRestaurantOrder(orderId);
+      const updatedItems = await storage.getRestaurantOrderItemsByOrderId(orderId);
+      
+      // Notify about item removal
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_item_removed',
+        data: {
+          itemId,
+          order: updatedOrder,
+          items: updatedItems
+        }
+      });
+      
+      res.status(200).json({
+        message: "Item removed",
+        order: updatedOrder,
+        items: updatedItems
+      });
+    } catch (error) {
+      console.error("Error deleting order item:", error);
+      res.status(500).json({ error: "Failed to delete order item" });
+    }
+  });
+  
+  // Restaurant Inventory API
+  app.get("/api/restaurant/inventory", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantId = req.user.id;
+      const items = await storage.getRestaurantInventoryItems(merchantId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching inventory items:", error);
+      res.status(500).json({ error: "Failed to fetch inventory items" });
+    }
+  });
+  
+  app.get("/api/restaurant/inventory/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const itemId = parseInt(req.params.id);
+      const item = await storage.getRestaurantInventoryItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      if (item.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Get transaction history
+      const transactions = await storage.getRestaurantInventoryTransactionsByItemId(itemId);
+      
+      res.json({
+        ...item,
+        transactions
+      });
+    } catch (error) {
+      console.error("Error fetching inventory item:", error);
+      res.status(500).json({ error: "Failed to fetch inventory item" });
+    }
+  });
+  
+  app.post("/api/restaurant/inventory", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantId = req.user.id;
+      const itemData = insertRestaurantInventoryItemSchema.parse({
+        ...req.body,
+        merchantId
+      });
+      
+      const item = await storage.createRestaurantInventoryItem(itemData);
+      
+      // Notify about new inventory item
+      broadcast(`merchant-pos-${merchantId}`, {
+        type: 'inventory_item_created',
+        data: item
+      });
+      
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating inventory item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid inventory item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create inventory item" });
+    }
+  });
+  
+  app.patch("/api/restaurant/inventory/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const itemId = parseInt(req.params.id);
+      const merchantId = req.user.id;
+      const item = await storage.getRestaurantInventoryItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      if (item.merchantId !== merchantId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const updatedItem = await storage.updateRestaurantInventoryItem(itemId, req.body, merchantId);
+      
+      // Notify about inventory item update
+      broadcast(`merchant-pos-${merchantId}`, {
+        type: 'inventory_item_updated',
+        data: updatedItem
+      });
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating inventory item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid inventory item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update inventory item" });
+    }
+  });
+  
+  app.patch("/api/restaurant/inventory/:id/stock", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const itemId = parseInt(req.params.id);
+      const merchantId = req.user.id;
+      const item = await storage.getRestaurantInventoryItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      if (item.merchantId !== merchantId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { newStock } = req.body;
+      
+      if (typeof newStock !== 'number' || newStock < 0) {
+        return res.status(400).json({ error: "Invalid stock amount" });
+      }
+      
+      const updatedItem = await storage.updateRestaurantInventoryStock(itemId, newStock);
+      
+      // Get latest transactions
+      const transactions = await storage.getRestaurantInventoryTransactionsByItemId(itemId);
+      const latestTransaction = transactions[0];
+      
+      // Notify about inventory stock update
+      broadcast(`merchant-pos-${merchantId}`, {
+        type: 'inventory_stock_updated',
+        data: {
+          item: updatedItem,
+          transaction: latestTransaction
+        }
+      });
+      
+      res.json({
+        item: updatedItem,
+        transaction: latestTransaction
+      });
+    } catch (error) {
+      console.error("Error updating inventory stock:", error);
+      res.status(500).json({ error: "Failed to update inventory stock" });
+    }
+  });
+  
+  app.delete("/api/restaurant/inventory/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const itemId = parseInt(req.params.id);
+      const merchantId = req.user.id;
+      const item = await storage.getRestaurantInventoryItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      if (item.merchantId !== merchantId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteRestaurantInventoryItem(itemId, merchantId);
+      
+      // Notify about inventory item deletion
+      broadcast(`merchant-pos-${merchantId}`, {
+        type: 'inventory_item_deleted',
+        data: { id: itemId }
+      });
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting inventory item:", error);
+      res.status(500).json({ error: "Failed to delete inventory item" });
+    }
+  });
+  
+  app.post("/api/restaurant/inventory/transactions", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const merchantId = req.user.id;
+      const transactionData = insertRestaurantInventoryTransactionSchema.parse({
+        ...req.body,
+        merchantId,
+        userId: req.user.id,
+        createdBy: req.user.username
+      });
+      
+      // Validate that the item exists and belongs to the merchant
+      const item = await storage.getRestaurantInventoryItem(transactionData.itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      if (item.merchantId !== merchantId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const transaction = await storage.createRestaurantInventoryTransaction(transactionData);
+      
+      // Update item stock based on transaction type
+      const currentStock = parseFloat(item.currentStock.toString());
+      const transactionQuantity = parseFloat(transactionData.quantity.toString());
+      let newStock: number;
+      
+      if (transactionData.transactionType === "purchase") {
+        newStock = currentStock + transactionQuantity;
+      } else {
+        newStock = currentStock - transactionQuantity;
+      }
+      
+      // Ensure stock doesn't go below zero
+      if (newStock < 0) newStock = 0;
+      
+      const updatedItem = await storage.updateRestaurantInventoryStock(item.id, newStock);
+      
+      // Notify about new transaction and stock update
+      broadcast(`merchant-pos-${merchantId}`, {
+        type: 'inventory_transaction_created',
+        data: {
+          transaction,
+          item: updatedItem
+        }
+      });
+      
+      res.status(201).json({
+        transaction,
+        item: updatedItem
+      });
+    } catch (error) {
+      console.error("Error creating inventory transaction:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid transaction data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create inventory transaction" });
     }
   });
 
