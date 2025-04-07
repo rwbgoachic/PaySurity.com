@@ -142,6 +142,7 @@ function Router() {
       <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
+      <ProtectedRoute path="/merchant/pos/bistro/kitchen" component={() => import('./pages/merchant/pos/bistro/kitchen')} />
       
       {/* PaySurity ECom Ready Retail POS */}
       <ProtectedRoute path="/merchant/pos/retail" component={RetailPOSSystem} />

@@ -304,7 +304,7 @@ export default function KitchenDisplay() {
             {filteredOrders.map((order: Order) => (
               <Card 
                 key={order.id} 
-                className={`${
+                className={`kitchen-order-card ${
                   order.status === "placed" 
                     ? "border-blue-300 bg-blue-50" 
                     : order.status === "preparing" 
@@ -359,7 +359,7 @@ export default function KitchenDisplay() {
                       <div 
                         key={item.id} 
                         className={`
-                          flex items-start justify-between p-2 rounded-md
+                          flex items-start justify-between bistro-order-item
                           ${item.status === "pending" 
                             ? "bg-white" 
                             : item.status === "preparing" 
@@ -385,7 +385,7 @@ export default function KitchenDisplay() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 text-xs bg-background hover:bg-amber-100"
+                              className="h-8 min-w-[60px] text-xs bg-background hover:bg-amber-100 bistro-touch-target"
                               onClick={() => handleItemStatusChange(order.id, item.id, "preparing")}
                             >
                               Start
@@ -395,7 +395,7 @@ export default function KitchenDisplay() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 text-xs bg-amber-100 hover:bg-green-100"
+                              className="h-8 min-w-[60px] text-xs bg-amber-100 hover:bg-green-100 bistro-touch-target"
                               onClick={() => handleItemStatusChange(order.id, item.id, "ready")}
                             >
                               Ready
@@ -419,7 +419,7 @@ export default function KitchenDisplay() {
                 <CardFooter className="flex justify-between pt-2">
                   {order.status === "placed" ? (
                     <Button 
-                      className="w-full bg-amber-600 hover:bg-amber-700"
+                      className="w-full bg-amber-600 hover:bg-amber-700 h-10 bistro-touch-target"
                       onClick={() => handleStartCooking(order.id)}
                     >
                       <Timer className="h-4 w-4 mr-1" />
@@ -427,7 +427,7 @@ export default function KitchenDisplay() {
                     </Button>
                   ) : order.status === "preparing" ? (
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700" 
+                      className="w-full bg-green-600 hover:bg-green-700 h-10 bistro-touch-target" 
                       onClick={() => handleOrderReady(order.id)}
                     >
                       <Check className="h-4 w-4 mr-1" />
@@ -435,7 +435,7 @@ export default function KitchenDisplay() {
                     </Button>
                   ) : (
                     <Button
-                      className="w-full"
+                      className="w-full h-10 bistro-touch-target"
                       variant="outline"
                       disabled
                     >

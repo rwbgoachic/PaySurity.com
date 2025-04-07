@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced touch interface support */
+.bistro-touch-target {
+  touch-action: manipulation;
+}
+
+.bistro-order-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
 @layer base {
   :root {
     --animation-duration: 0.2s;
@@ -94,6 +107,28 @@
   
   .pos-content {
     @apply flex-1 overflow-y-auto overscroll-contain pb-safe;
+  }
+  
+  /* BistroBeast specific optimizations */
+  .bistro-touch-target {
+    @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
+  }
+  
+  .bistro-order-item {
+    @apply relative p-3 rounded-md border transition-all;
+  }
+  
+  .bistro-menu-item {
+    @apply px-4 py-3 rounded-md border cursor-pointer transition-all hover:bg-background/50;
+  }
+  
+  .bistro-table {
+    @apply cursor-pointer transition-all flex flex-col items-center justify-center p-2 border rounded-md;
+  }
+  
+  /* Kitchen display optimizations */
+  .kitchen-order-card {
+    @apply border shadow-sm transition-all hover:shadow-md;
   }
   
   /* Digital wallet specific styling */
