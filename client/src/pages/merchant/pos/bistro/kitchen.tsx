@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Timer, Check, ChefHat, ArrowLeftRight, Clock3, RefreshCw, ArrowLeft } from "lucide-react";
+import { Loader2, Timer, Check, ChefHat, ArrowLeftRight, Clock3, RefreshCw, ArrowLeft, Utensils, Clock, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 
 type OrderItem = {
@@ -315,17 +315,22 @@ export default function KitchenDisplay() {
       {/* Hidden audio element for notifications */}
       <audio ref={audioRef} src="/sounds/bell.mp3" />
       
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm py-2 px-4">
+      {/* Header with improved device adaptability */}
+      <header className="bg-white border-b shadow-sm py-2 px-3 sm:px-4 safe-top">
         <div className="flex items-center justify-between flex-wrap kitchen-display-header">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <Link href="/merchant/pos/bistro">
-              <Button variant="ghost" size="icon" className="bistro-touch-target h-10 w-10">
+              <Button variant="ghost" size="icon" className="bistro-touch-target h-11 w-11 rounded-md">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold text-primary">Kitchen Display</h1>
-            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-primary">Kitchen Display</h1>
+              <div className="sm:hidden text-xs text-muted-foreground -mt-1">
+                BistroBeast POS
+              </div>
+            </div>
+            <Badge variant="outline" className="hidden sm:flex bg-orange-50 text-orange-700 border-orange-200">
               BistroBeast
             </Badge>
           </div>
@@ -333,18 +338,19 @@ export default function KitchenDisplay() {
             <Button 
               variant="outline" 
               size="sm"
-              className="bistro-touch-target"
+              className="bistro-touch-target h-11 px-3 sm:px-4 rounded-md"
               onClick={() => refetchOrders()}
               disabled={isLoadingOrders}
+              aria-label="Refresh orders"
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingOrders ? "animate-spin" : ""}`} />
-              <span className="ml-1">Refresh</span>
+              <span className="ml-1 hidden xs:inline">Refresh</span>
             </Button>
             <Select 
               value={viewMode} 
               onValueChange={setViewMode}
             >
-              <SelectTrigger className="w-32 bistro-touch-target min-h-[44px]">
+              <SelectTrigger className="w-24 sm:w-32 bistro-touch-target min-h-[44px] h-11 rounded-md">
                 <SelectValue placeholder="View" />
               </SelectTrigger>
               <SelectContent>
@@ -357,16 +363,54 @@ export default function KitchenDisplay() {
       </header>
       
       {/* Main content */}
-      <main className="flex-1 p-4">
-        {/* Tabs for filtering orders */}
-        <Tabs defaultValue="all" value={visibleItems} onValueChange={setVisibleItems} className="mb-6 kitchen-tabs">
-          <TabsList className="w-full flex justify-between sm:justify-start bistro-touch-target">
-            <TabsTrigger value="all" className="flex-1 sm:flex-initial py-3 bistro-touch-target">All Orders</TabsTrigger>
-            <TabsTrigger value="pending" className="flex-1 sm:flex-initial py-3 bistro-touch-target">New</TabsTrigger>
-            <TabsTrigger value="preparing" className="flex-1 sm:flex-initial py-3 bistro-touch-target">Preparing</TabsTrigger>
-            <TabsTrigger value="ready" className="flex-1 sm:flex-initial py-3 bistro-touch-target">Ready</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <main className="flex-1 p-3 sm:p-4">
+        {/* Tabs for filtering orders with enhanced touch targets */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <Tabs defaultValue="all" value={visibleItems} onValueChange={setVisibleItems} className="kitchen-tabs">
+            <TabsList className="w-full grid grid-cols-4 p-1 h-auto rounded-lg bistro-touch-target">
+              <TabsTrigger 
+                value="all" 
+                className="py-3 rounded-md data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium bistro-touch-target"
+                aria-label="Show all orders"
+              >
+                <div className="flex flex-col items-center sm:flex-row sm:space-x-1.5">
+                  <Utensils className="h-4 w-4 mb-1 sm:mb-0" />
+                  <span>All</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="pending" 
+                className="py-3 rounded-md data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:font-medium bistro-touch-target"
+                aria-label="Show new orders"
+              >
+                <div className="flex flex-col items-center sm:flex-row sm:space-x-1.5">
+                  <Clock className="h-4 w-4 mb-1 sm:mb-0" />
+                  <span>New</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="preparing" 
+                className="py-3 rounded-md data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700 data-[state=active]:font-medium bistro-touch-target"
+                aria-label="Show preparing orders"
+              >
+                <div className="flex flex-col items-center sm:flex-row sm:space-x-1.5">
+                  <Timer className="h-4 w-4 mb-1 sm:mb-0" />
+                  <span>Cooking</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="ready" 
+                className="py-3 rounded-md data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:font-medium bistro-touch-target"
+                aria-label="Show ready orders"
+              >
+                <div className="flex flex-col items-center sm:flex-row sm:space-x-1.5">
+                  <CheckCircle className="h-4 w-4 mb-1 sm:mb-0" />
+                  <span>Ready</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         
         {isLoadingOrders ? (
           <div className="flex justify-center items-center h-64">
@@ -401,18 +445,18 @@ export default function KitchenDisplay() {
               <Card 
                 key={order.id}
                 id={`order-${order.id}`}
-                className={`kitchen-order-card ${
+                className={`kitchen-order-card rounded-xl ${
                   order.status === "placed" 
-                    ? "border-blue-300 bg-blue-50" 
+                    ? "border-blue-300 bg-blue-50/90" 
                     : order.status === "preparing" 
-                    ? "border-amber-300 bg-amber-50 kitchen-status-preparing" 
-                    : "border-green-300 bg-green-50 kitchen-status-ready"
-                } transition-all hover:shadow-md`}
+                    ? "border-amber-300 bg-amber-50/90 kitchen-status-preparing" 
+                    : "border-green-300 bg-green-50/90 kitchen-status-ready"
+                } transition-all shadow-sm hover:shadow-md`}
               >
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-2 pt-4 px-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="flex items-center text-lg">
+                      <CardTitle className="flex items-center text-lg sm:text-xl">
                         {order.orderNumber}
                         {order.tableName && (
                           <Badge variant="outline" className="ml-2 bg-background">
@@ -420,21 +464,21 @@ export default function KitchenDisplay() {
                           </Badge>
                         )}
                       </CardTitle>
-                      <CardDescription className="flex items-center mt-1">
-                        <Clock3 className="h-3 w-3 mr-1" />
-                        {formatTimeAgo(order.createdAt)}
+                      <CardDescription className="flex items-center mt-1 text-xs sm:text-sm">
+                        <Clock3 className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span>{formatTimeAgo(order.createdAt)}</span>
                         {order.serverName && (
-                          <span className="ml-2">• Server: {order.serverName}</span>
+                          <span className="ml-2 truncate">• Server: {order.serverName}</span>
                         )}
                       </CardDescription>
                     </div>
                     <Badge 
-                      className={`bistro-touch-target px-3 py-1 ${
+                      className={`bistro-touch-target px-3 py-1 rounded-md text-sm ${
                         order.status === "placed" 
-                          ? "kitchen-status-new" 
+                          ? "kitchen-status-new font-medium" 
                           : order.status === "preparing" 
-                          ? "kitchen-status-preparing" 
-                          : "kitchen-status-ready"
+                          ? "kitchen-status-preparing font-medium" 
+                          : "kitchen-status-ready font-medium"
                       }`}
                     >
                       {order.status === "placed" 
@@ -446,10 +490,10 @@ export default function KitchenDisplay() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4">
                   <div className={`
-                    space-y-2 
-                    ${order.items.length > 3 ? "max-h-64 overflow-y-auto pr-2" : ""}
+                    space-y-2.5 
+                    ${order.items.length > 3 ? "max-h-64 overflow-y-auto pr-2 scrollbar-thin" : ""}
                   `}>
                     {order.items.map((item: OrderItem) => (
                       <div 
@@ -465,9 +509,9 @@ export default function KitchenDisplay() {
                           } 
                         `}
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 pr-2">
                           <div className="flex items-center">
-                            <span className="font-medium">
+                            <span className="font-medium text-sm sm:text-base">
                               {item.quantity}x {item.name}
                             </span>
                           </div>
@@ -477,13 +521,14 @@ export default function KitchenDisplay() {
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-1 flex-shrink-0">
                           {item.status === "pending" && (
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 min-w-[60px] text-xs kitchen-button-item-start bistro-touch-target"
+                              className="h-8 min-w-[60px] text-xs kitchen-button-item-start bistro-touch-target rounded-md"
                               onClick={() => handleItemStatusChange(order.id, item.id, "preparing")}
+                              aria-label={`Start preparing ${item.name}`}
                             >
                               Start
                             </Button>
@@ -492,14 +537,17 @@ export default function KitchenDisplay() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 min-w-[60px] text-xs kitchen-button-item-ready bistro-touch-target"
+                              className="h-8 min-w-[60px] text-xs kitchen-button-item-ready bistro-touch-target rounded-md"
                               onClick={() => handleItemStatusChange(order.id, item.id, "ready")}
+                              aria-label={`Mark ${item.name} as ready`}
                             >
                               Ready
                             </Button>
                           )}
                           {item.status === "ready" && (
-                            <Check className="h-4 w-4 text-green-600" />
+                            <div className="flex items-center justify-center rounded-full w-6 h-6 bg-green-100 text-green-600">
+                              <Check className="h-4 w-4" />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -507,37 +555,40 @@ export default function KitchenDisplay() {
                   </div>
                   
                   {order.specialInstructions && (
-                    <div className="mt-3 p-2 bg-background rounded border border-border">
+                    <div className="mt-3 p-2.5 bg-background rounded-md border border-border">
                       <p className="text-xs font-medium mb-1">Special Instructions:</p>
                       <p className="text-xs">{order.specialInstructions}</p>
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="flex justify-between pt-2">
+                <CardFooter className="flex justify-between pt-2 px-4 pb-4">
                   {order.status === "placed" ? (
                     <Button 
-                      className="w-full kitchen-button-preparing h-10 bistro-touch-target"
+                      className="w-full kitchen-button-preparing h-11 bistro-touch-target rounded-md"
                       onClick={() => handleStartCooking(order.id)}
+                      aria-label="Start preparing order"
                     >
-                      <Timer className="h-4 w-4 mr-1" />
-                      Start Preparing
+                      <Timer className="h-4 w-4 mr-1.5" />
+                      <span className="font-medium">Start Preparing</span>
                     </Button>
                   ) : order.status === "preparing" ? (
                     <Button 
-                      className="w-full kitchen-button-ready h-10 bistro-touch-target" 
+                      className="w-full kitchen-button-ready h-11 bistro-touch-target rounded-md" 
                       onClick={() => handleOrderReady(order.id)}
+                      aria-label="Mark order as ready"
                     >
-                      <Check className="h-4 w-4 mr-1" />
-                      Mark Order Ready
+                      <Check className="h-4 w-4 mr-1.5" />
+                      <span className="font-medium">Mark Order Ready</span>
                     </Button>
                   ) : (
                     <Button
-                      className="w-full h-10 bistro-touch-target kitchen-button-served"
+                      className="w-full h-11 bistro-touch-target kitchen-button-served rounded-md"
                       variant="outline"
                       disabled
+                      aria-label="Order is ready to serve"
                     >
-                      <Check className="h-4 w-4 mr-1" />
-                      Ready to Serve
+                      <Check className="h-4 w-4 mr-1.5" />
+                      <span className="font-medium">Ready to Serve</span>
                     </Button>
                   )}
                 </CardFooter>
