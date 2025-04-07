@@ -4709,6 +4709,19 @@ export class DatabaseStorage implements IStorage {
     return newItem;
   }
 
+  async updateRestaurantOrderItemStatus(id: number, status: string): Promise<RestaurantOrderItem | undefined> {
+    const [updatedItem] = await db
+      .update(restaurantOrderItems)
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantOrderItems.id, id))
+      .returning();
+    
+    return updatedItem;
+  }
+
   async updateRestaurantOrderItemQuantity(id: number, quantity: number): Promise<RestaurantOrderItem> {
     // First get the current item
     const currentItem = await this.getRestaurantOrderItem(id);
@@ -5423,6 +5436,16 @@ export class DatabaseStorage implements IStorage {
         await this.updatePosOrderStatus(paymentData.orderId, 'completed');
       }
     }
+    
+    return payment;
+  }
+  
+  async updatePosPayment(id: number, updateData: Partial<PosPayment>): Promise<PosPayment | undefined> {
+    const [payment] = await db
+      .update(posPayments)
+      .set(updateData)
+      .where(eq(posPayments.id, id))
+      .returning();
     
     return payment;
   }

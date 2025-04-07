@@ -340,6 +340,17 @@ export default function BistroBeastPOS() {
                 <Package className="h-4 w-4" />
               </Link>
             </Button>
+            <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+              <Link href="/merchant/pos/bistro/kitchen">
+                <ChefHat className="h-4 w-4 mr-1" />
+                Kitchen Display
+              </Link>
+            </Button>
+            <Button variant="ghost" size="icon" asChild className="sm:hidden">
+              <Link href="/merchant/pos/bistro/kitchen">
+                <ChefHat className="h-4 w-4" />
+              </Link>
+            </Button>
             <Button variant="ghost" size="sm" className="hidden sm:flex">
               <Users className="h-4 w-4 mr-1" />
               Staff

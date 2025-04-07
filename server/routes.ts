@@ -3767,6 +3767,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get a specific payment by ID
+  app.get("/api/pos/payments/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const payment = await storage.getPosPayment(parseInt(id));
+      
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+      
+      res.json(payment);
+    } catch (error) {
+      console.error("Error fetching POS payment:", error);
+      res.status(500).json({ error: "Failed to fetch POS payment" });
+    }
+  });
+
   app.post("/api/pos/payments", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -3806,6 +3827,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid payment data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to create POS payment" });
+    }
+  });
+  
+  // Process a refund for a payment
+  app.post("/api/pos/payments/:id/refund", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { id } = req.params;
+      const { amount, reason, staffId } = req.body;
+      
+      // First, get the payment
+      const payment = await storage.getPosPayment(parseInt(id));
+      
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+      
+      // Check if already refunded
+      if (payment.status === "refunded") {
+        return res.status(400).json({ error: "Payment already refunded" });
+      }
+      
+      // Validate refund amount
+      const refundAmount = typeof amount === 'string' ? amount : payment.amount.toString();
+      
+      // Update the payment with refund information
+      const updatedPayment = await storage.updatePosPayment(parseInt(id), {
+        status: "refunded",
+        refundedAmount: refundAmount,
+        refundedAt: new Date(),
+        refundReason: reason || "Customer requested refund"
+      });
+      
+      // Get associated order
+      const order = await storage.getPosOrder(payment.orderId);
+      
+      // Notify clients about the refund
+      if (order) {
+        broadcast(`pos-location-${order.locationId}`, {
+          type: 'payment_refunded',
+          data: {
+            payment: updatedPayment,
+            order
+          }
+        });
+        
+        // Also notify specifically for the order
+        broadcast(`pos-order-${payment.orderId}`, {
+          type: 'payment_refunded',
+          data: updatedPayment
+        });
+      }
+      
+      res.json(updatedPayment);
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      res.status(500).json({ error: "Failed to process refund" });
     }
   });
   
@@ -4093,6 +4174,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating restaurant order status:", error);
       res.status(500).json({ error: "Failed to update restaurant order status" });
+    }
+  });
+  
+  // Restaurant Order Items Status API
+  app.patch("/api/restaurant/orders/:orderId/items/:itemId/status", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "merchant") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const itemId = parseInt(req.params.itemId);
+      const order = await storage.getRestaurantOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.merchantId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const item = await storage.getRestaurantOrderItem(itemId);
+      
+      if (!item || item.orderId !== orderId) {
+        return res.status(404).json({ error: "Order item not found" });
+      }
+      
+      const { status } = req.body;
+      
+      // Validate status
+      const validItemStatuses = ["pending", "preparing", "ready", "served"];
+      if (!validItemStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid item status" });
+      }
+      
+      const updatedItem = await storage.updateRestaurantOrderItemStatus(itemId, status);
+      
+      // Check if all items are in the same status to update the order status
+      const orderItems = await storage.getRestaurantOrderItemsByOrderId(orderId);
+      
+      // If all items are ready, update the order status to ready
+      if (status === "ready" && orderItems.every(item => item.status === "ready")) {
+        await storage.updateRestaurantOrderStatus(orderId, "ready");
+        
+        // Notify about order status change
+        broadcast(`merchant-pos-${req.user.id}`, {
+          type: 'order_status_changed',
+          data: {
+            ...order,
+            status: "ready"
+          }
+        });
+      }
+      
+      // If any item is preparing and order is in placed status, update to preparing
+      if (status === "preparing" && order.status === "placed") {
+        await storage.updateRestaurantOrderStatus(orderId, "preparing");
+        
+        // Notify about order status change
+        broadcast(`merchant-pos-${req.user.id}`, {
+          type: 'order_status_changed',
+          data: {
+            ...order,
+            status: "preparing"
+          }
+        });
+      }
+      
+      // Notify about item status change
+      broadcast(`merchant-pos-${req.user.id}`, {
+        type: 'order_item_status_changed',
+        data: {
+          orderId,
+          item: updatedItem
+        }
+      });
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating restaurant order item status:", error);
+      res.status(500).json({ error: "Failed to update order item status" });
     }
   });
   
