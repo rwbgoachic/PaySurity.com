@@ -37,6 +37,8 @@ interface TransactionsTableProps {
   viewAllLink?: string;
   transactions: Transaction[];
   isEmployer?: boolean;
+  isParent?: boolean;
+  isChild?: boolean;
   onExportCSV?: () => void;
   onExportExcel?: () => void;
 }
@@ -45,7 +47,9 @@ export default function TransactionsTable({
   title, 
   viewAllLink, 
   transactions, 
-  isEmployer = true,
+  isEmployer = false,
+  isParent = false,
+  isChild = false,
   onExportCSV,
   onExportExcel
 }: TransactionsTableProps) {
@@ -101,13 +105,13 @@ export default function TransactionsTable({
           <table className="min-w-full divide-y divide-neutral-200">
             <thead className="bg-neutral-50">
               <tr>
-                {isEmployer && (
+                {(isEmployer || isParent) && (
                   <>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                      User
+                      {isParent ? "Child" : "User"}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                      Department
+                      {isParent ? "Wallet Type" : "Department"}
                     </th>
                   </>
                 )}
@@ -127,9 +131,9 @@ export default function TransactionsTable({
                   Amount
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Expense Type
+                  {isChild ? "Spending Category" : "Expense Type"}
                 </th>
-                {!isEmployer && (
+                {(isChild || (!isEmployer && !isParent)) && (
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Actions
                   </th>

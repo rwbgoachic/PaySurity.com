@@ -30,6 +30,8 @@ import EmployeeFundRequests from "./pages/employee/fund-requests";
 import EmployeeSettings from "./pages/employee/settings";
 import EmployeeExpenseReports from "./pages/employee/expense-reports";
 import EmployeeExpenseReportDetail from "./pages/employee/expense-report-detail";
+import ParentDashboard from "./pages/parent/dashboard";
+import ChildDashboard from "./pages/child/dashboard";
 import MerchantDashboard from "./pages/merchant/dashboard";
 import MerchantOnboarding from "./pages/merchant/onboarding";
 import MerchantVerification from "./pages/merchant/verification";
@@ -119,6 +121,11 @@ function Router() {
       <ProtectedRoute path="/employee/settings" component={EmployeeSettings} />
       <ProtectedRoute path="/employee/expense-reports" component={EmployeeExpenseReports} />
       <ProtectedRoute path="/employee/expense-reports/:id" component={EmployeeExpenseReportDetail} />
+      
+      {/* Parent-Child Wallet System */}
+      <ProtectedRoute path="/parent/dashboard" component={ParentDashboard} />
+      <ProtectedRoute path="/child/dashboard" component={ChildDashboard} />
+      
       <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboard} />
       <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboarding} />
       <ProtectedRoute path="/merchant/verification" component={MerchantVerification} />

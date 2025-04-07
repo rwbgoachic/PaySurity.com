@@ -535,17 +535,28 @@ export const insertEducationalContentSchema = createInsertSchema(educationalCont
 });
 
 // Savings Goals
+
 export const savingsGoals = pgTable("savings_goals", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  walletId: integer("wallet_id").notNull(),
+  walletId: integer("wallet_id"),
   title: text("title").notNull(),
   description: text("description"),
   targetAmount: numeric("target_amount").notNull(),
   currentAmount: numeric("current_amount").notNull().default("0"),
   targetDate: date("target_date"),
   parentMatchPercentage: numeric("parent_match_percentage"), // For parent matching child savings
+  startDate: date("start_date").defaultNow(),
+  achievedDate: date("achieved_date"),
+  status: text("status", { 
+    enum: ["active", "paused", "achieved", "cancelled"] 
+  }).notNull().default("active"),
   isCompleted: boolean("is_completed").default(false),
+  imageUrl: text("image_url"), // For the goal item image
+  category: text("category"), // electronics, toys, experiences, education, etc.
+  autoContribute: boolean("auto_contribute").default(false),
+  autoContributeAmount: numeric("auto_contribute_amount"),
+  autoContributeFrequency: text("auto_contribute_frequency"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -559,7 +570,14 @@ export const insertSavingsGoalSchema = createInsertSchema(savingsGoals).pick({
   currentAmount: true,
   targetDate: true,
   parentMatchPercentage: true,
+  startDate: true,
+  status: true,
   isCompleted: true,
+  imageUrl: true,
+  category: true,
+  autoContribute: true,
+  autoContributeAmount: true,
+  autoContributeFrequency: true,
 });
 
 // Accounting Integrations
@@ -2312,3 +2330,166 @@ export const insertMerchantTransactionSchema = createInsertSchema(merchantTransa
 
 export type MerchantTransaction = typeof merchantTransactions.$inferSelect;
 export type InsertMerchantTransaction = z.infer<typeof insertMerchantTransactionSchema>;
+
+// Family Wallet System
+
+// Family group schema
+export const familyGroups = pgTable("family_groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  parentUserId: integer("parent_user_id").notNull(), // Main parent user
+  secondaryParentUserId: integer("secondary_parent_user_id"), // Optional second parent
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFamilyGroupSchema = createInsertSchema(familyGroups).pick({
+  name: true,
+  parentUserId: true,
+  secondaryParentUserId: true,
+});
+
+export type FamilyGroup = typeof familyGroups.$inferSelect;
+export type InsertFamilyGroup = typeof familyGroups.$inferInsert;
+
+// Family member schema (connects users to family groups)
+export const familyMembers = pgTable("family_members", {
+  id: serial("id").primaryKey(),
+  familyGroupId: integer("family_group_id").notNull(),
+  userId: integer("user_id").notNull(),
+  role: text("role", { enum: ["parent", "child", "guardian"] }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).pick({
+  familyGroupId: true,
+  userId: true,
+  role: true,
+  isActive: true,
+});
+
+export type FamilyMember = typeof familyMembers.$inferSelect;
+export type InsertFamilyMember = typeof familyMembers.$inferInsert;
+
+// Allowance schema
+export const allowanceTypeEnum = pgEnum("allowance_type", ["one_time", "recurring", "reward"]);
+export const allowanceFrequencyEnum = pgEnum("allowance_frequency", ["daily", "weekly", "biweekly", "monthly"]);
+
+export const allowances = pgTable("allowances", {
+  id: serial("id").primaryKey(),
+  childUserId: integer("child_user_id").notNull(),
+  parentUserId: integer("parent_user_id").notNull(),
+  amount: numeric("amount").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type", { enum: ["one_time", "recurring", "reward"] }).notNull(),
+  frequency: text("frequency", { enum: ["daily", "weekly", "biweekly", "monthly"] }),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  nextPaymentDate: date("next_payment_date"),
+  lastPaymentDate: date("last_payment_date"),
+  isActive: boolean("is_active").notNull().default(true),
+  hasConditions: boolean("has_conditions").default(false),
+  conditions: jsonb("conditions"), // JSON object with conditions like chores, grades, etc.
+  autoTransfer: boolean("auto_transfer").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAllowanceSchema = createInsertSchema(allowances).pick({
+  childUserId: true,
+  parentUserId: true,
+  amount: true,
+  title: true,
+  description: true,
+  type: true,
+  frequency: true,
+  startDate: true,
+  endDate: true,
+  isActive: true,
+  hasConditions: true,
+  conditions: true,
+  autoTransfer: true,
+});
+
+export type Allowance = typeof allowances.$inferSelect;
+export type InsertAllowance = typeof allowances.$inferInsert;
+
+// Child spending requests schema
+export const spendingRequestStatusEnum = pgEnum("spending_request_status", [
+  "pending",
+  "approved",
+  "rejected",
+  "canceled"
+]);
+
+export const spendingRequests = pgTable("spending_requests", {
+  id: serial("id").primaryKey(),
+  childUserId: integer("child_user_id").notNull(),
+  parentUserId: integer("parent_user_id").notNull(),
+  amount: numeric("amount").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  merchantName: text("merchant_name"),
+  urgency: text("urgency").default("normal"), // low, normal, high
+  status: text("status", { 
+    enum: ["pending", "approved", "rejected", "canceled"] 
+  }).notNull().default("pending"),
+  requestDate: timestamp("request_date").defaultNow(),
+  responseDate: timestamp("response_date"),
+  rejectionReason: text("rejection_reason"),
+  expirationDate: timestamp("expiration_date"),
+  imageUrl: text("image_url"), // For product image or screenshot
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSpendingRequestSchema = createInsertSchema(spendingRequests).pick({
+  childUserId: true,
+  parentUserId: true,
+  amount: true,
+  title: true,
+  description: true,
+  merchantName: true,
+  urgency: true,
+  status: true,
+  expirationDate: true,
+  imageUrl: true,
+});
+
+export type SpendingRequest = typeof spendingRequests.$inferSelect;
+export type InsertSpendingRequest = typeof spendingRequests.$inferInsert;
+
+// Chores/tasks schema for allowance conditions
+export const taskStatusEnum = pgEnum("task_status", [
+  "pending",
+  "in_progress",
+  "completed",
+  "verified",
+  "rejected"
+]);
+
+export const familyTasks = pgTable("family_tasks", {
+  id: serial("id").primaryKey(),
+  familyGroupId: integer("family_group_id").notNull(),
+  assignedToUserId: integer("assigned_to_user_id").notNull(),
+  assignedByUserId: integer("assigned_by_user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  rewardAmount: numeric("reward_amount"),
+  dueDate: timestamp("due_date"),
+  completionDate: timestamp("completion_date"),
+  verificationDate: timestamp("verification_date"),
+  verifiedByUserId: integer("verified_by_user_id"),
+  status: text("status", { 
+    enum: ["pending", "in_progress", "completed", "verified", "rejected"] 
+  }).notNull().default("pending"),
+  recurring: boolean("recurring").default(false),
+  recurrencePattern: text("recurrence_pattern"), // daily, weekly, etc.
+  priority: text("priority").default("medium"), // low, medium, high
+  imageUrl: text("image_url"), // For proof of completion
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
