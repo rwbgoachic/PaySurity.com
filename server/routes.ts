@@ -31,6 +31,18 @@ import {
   insertSpendingRequestSchema,
   insertSpendingRulesSchema,
   
+  // POS schemas
+  insertPosLocationSchema,
+  insertPosTableSchema,
+  insertPosAreaSchema,
+  insertPosCategorySchema,
+  insertPosMenuItemSchema,
+  insertPosOrderSchema,
+  insertPosOrderItemSchema,
+  insertPosInventoryItemSchema,
+  insertPosStaffSchema,
+  insertPosPaymentSchema,
+  
   // Restaurant POS schemas
   insertRestaurantTableSchema,
   insertRestaurantOrderSchema,
@@ -3927,7 +3939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.getPosOrder(paymentData.orderId);
       
       // If payment completed, notify clients
-      if (payment.status === "completed" && order) {
+      if (payment.status === "paid" && order) {
         broadcast(`pos-location-${order.locationId}`, {
           type: 'payment_completed',
           data: {

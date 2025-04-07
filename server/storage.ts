@@ -14,6 +14,10 @@ import {
   employeeTaxProfiles, taxCalculations,
   // POS Tenant entities
   posTenants,
+  // POS system entities
+  posLocations, posCategories, posInventoryItems, posMenuItems, 
+  posMenuItemModifiers, posTables, posAreas, posStaff, posOrders, 
+  posOrderItems, posPayments,
   // Restaurant POS entities
   restaurantTables, restaurantOrders, restaurantOrderItems, 
   restaurantInventoryItems, restaurantInventoryTransactions,
@@ -71,6 +75,19 @@ import {
   
   // POS Tenant types
   type PosTenant, type InsertPosTenant,
+  
+  // POS system types
+  type PosLocation, type InsertPosLocation,
+  type PosCategory, type InsertPosCategory,
+  type PosInventoryItem, type InsertPosInventoryItem,
+  type PosMenuItem, type InsertPosMenuItem,
+  type PosMenuItemModifier, type InsertPosMenuItemModifier,
+  type PosTable, type InsertPosTable,
+  type PosArea, type InsertPosArea,
+  type PosStaff, type InsertPosStaff,
+  type PosOrder, type InsertPosOrder,
+  type PosOrderItem, type InsertPosOrderItem,
+  type PosPayment, type InsertPosPayment,
   
   // Restaurant POS types
   type RestaurantTable, type InsertRestaurantTable,
@@ -5065,29 +5082,6 @@ export class DatabaseStorage implements IStorage {
     return order;
   }
   
-  // Order modification functions
-  async startModifyingOrder(orderId: number): Promise<RestaurantOrder> {
-    const now = new Date();
-    const [order] = await db
-      .update(restaurantOrders)
-      .set({
-        status: "modifying",
-        isBeingModified: true,
-        modificationStartTime: now,
-        modificationReminderSent: false,
-        modificationTimeoutSent: false,
-        updatedAt: now
-      })
-      .where(eq(restaurantOrders.id, orderId))
-      .returning();
-      
-    if (!order) {
-      throw new Error(`Order with id ${orderId} not found`);
-    }
-    
-    return order;
-  }
-  
   async finishModifyingOrder(orderId: number, wasModified: boolean = false): Promise<RestaurantOrder> {
     const now = new Date();
     const [order] = await db
@@ -5691,126 +5685,49 @@ export class DatabaseStorage implements IStorage {
     await db.delete(posInventoryItems).where(eq(posInventoryItems.id, id));
   }
   
-  // Order modification functions
-  async startModifyingOrder(orderId: number): Promise<RestaurantOrder> {
-    const now = new Date();
-    const [order] = await db
-      .update(restaurantOrders)
-      .set({
-        status: "modifying",
-        isBeingModified: true,
-        modificationStartTime: now,
-        modificationReminderSent: false,
-        modificationTimeoutSent: false,
-        updatedAt: now
-      })
-      .where(eq(restaurantOrders.id, orderId))
-      .returning();
-      
-    if (!order) {
-      throw new Error(`Order with id ${orderId} not found`);
-    }
-    
-    return order;
-  }
-  
-  async finishModifyingOrder(orderId: number, wasModified: boolean = false): Promise<RestaurantOrder> {
-    const now = new Date();
-    const [order] = await db
-      .update(restaurantOrders)
-      .set({
-        status: "placed", // Reset to placed status
-        isBeingModified: false,
-        updatedAt: now,
-        notes: wasModified ? 
-          "This order was modified by the customer" : 
-          "This order was confirmed by the customer without changes"
-      })
-      .where(eq(restaurantOrders.id, orderId))
-      .returning();
-      
-    if (!order) {
-      throw new Error(`Order with id ${orderId} not found`);
-    }
-    
-    return order;
-  }
-  
-  async cancelOrderDueToModificationTimeout(orderId: number): Promise<RestaurantOrder> {
-    const now = new Date();
-    const [order] = await db
-      .update(restaurantOrders)
-      .set({
-        status: "canceled",
-        isBeingModified: false,
-        updatedAt: now,
-        notes: "Order automatically canceled due to modification timeout"
-      })
-      .where(eq(restaurantOrders.id, orderId))
-      .returning();
-      
-    if (!order) {
-      throw new Error(`Order with id ${orderId} not found`);
-    }
-    
-    // If the order has a table, update the table status
-    if (order.tableId) {
-      await this.updateRestaurantTableStatus(order.tableId, "available", null);
-    }
-    
-    return order;
-  }
-  
-  async updateOrderModificationReminder(orderId: number, reminderSent: boolean): Promise<RestaurantOrder> {
-    const [order] = await db
-      .update(restaurantOrders)
-      .set({
-        modificationReminderSent: reminderSent,
-        lastSmsTimestamp: new Date(),
-        smsNotificationCount: db.sql`${restaurantOrders.smsNotificationCount} + 1`,
-        updatedAt: new Date()
-      })
-      .where(eq(restaurantOrders.id, orderId))
-      .returning();
-      
-    if (!order) {
-      throw new Error(`Order with id ${orderId} not found`);
-    }
-    
-    return order;
-  }
-  
-  async updateOrderModificationTimeout(orderId: number, timeoutSent: boolean): Promise<RestaurantOrder> {
-    const [order] = await db
-      .update(restaurantOrders)
-      .set({
-        modificationTimeoutSent: timeoutSent,
-        lastSmsTimestamp: new Date(),
-        smsNotificationCount: db.sql`${restaurantOrders.smsNotificationCount} + 1`,
-        updatedAt: new Date()
-      })
-      .where(eq(restaurantOrders.id, orderId))
-      .returning();
-      
-    if (!order) {
-      throw new Error(`Order with id ${orderId} not found`);
-    }
-    
-    return order;
-  }
-  
-  async getOrdersBeingModified(): Promise<RestaurantOrder[]> {
+  // The duplicated order modification functions were removed to fix TypeScript errors
+
+  /**
+   * Update a restaurant order status with additional fields
+   * @param orderId The order ID
+   * @param status The new status
+   * @param additionalFields Optional additional fields to update
+   * @returns The updated order
+   */
+  async updateRestaurantOrderStatus(
+    orderId: number, 
+    status: "draft" | "placed" | "preparing" | "ready" | "served" | "completed" | "canceled" | "modifying",
+    additionalFields: Partial<RestaurantOrder> = {}
+  ): Promise<RestaurantOrder> {
     try {
-      return await db
-        .select()
-        .from(restaurantOrders)
-        .where(eq(restaurantOrders.isBeingModified, true))
-        .orderBy(asc(restaurantOrders.modificationStartTime));
+      const updateData = {
+        status,
+        updatedAt: new Date(),
+        ...additionalFields
+      };
+      
+      // Conditionally set completedAt if status is completed
+      if (status === "completed") {
+        updateData.completedAt = new Date();
+      }
+      
+      const [updatedOrder] = await db
+        .update(restaurantOrders)
+        .set(updateData)
+        .where(eq(restaurantOrders.id, orderId))
+        .returning();
+        
+      if (!updatedOrder) {
+        throw new Error(`Order with id ${orderId} not found`);
+      }
+      
+      return updatedOrder;
     } catch (error) {
-      console.error("Error fetching orders being modified:", error);
-      return [];
+      console.error(`Error updating order ${orderId} status to ${status}:`, error);
+      throw error;
     }
   }
+  
 }
 
 export const storage = new DatabaseStorage();

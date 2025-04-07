@@ -102,11 +102,22 @@ export class SmsService {
     const success = await this.sendSms(order.customerPhone, message);
     
     if (success) {
-      // Update the order's SMS notification status - use the available method
-      await storage.updateRestaurantOrder(order.id, { 
-        smsNotificationSent: true,
-        updatedAt: new Date()
-      });
+      // Log the SMS notification success
+      console.log(`SMS notification sent successfully for order #${order.orderNumber}`);
+      
+      try {
+        // Try to update the order status in the database
+        // We'll check if the method is available and use it
+        if (typeof storage.updateRestaurantOrderStatus === 'function') {
+          await storage.updateRestaurantOrderStatus(order.id, status, { 
+            smsNotificationSent: true 
+          });
+        } else {
+          console.log('Restaurant order update method not available, notification status not persisted');
+        }
+      } catch (error) {
+        console.error('Error updating order notification status:', error);
+      }
     }
     
     return success;
