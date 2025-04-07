@@ -5,14 +5,51 @@
 /* Enhanced touch interface support */
 .bistro-touch-target {
   touch-action: manipulation;
+  min-height: 44px; /* iOS recommended minimum */
+  min-width: 44px; /* iOS recommended minimum */
+  user-select: none; /* Prevent text selection during taps */
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS */
 }
 
+/* Bistro kitchen display specific styles */
 .bistro-order-item {
-  padding: 10px;
-  margin-bottom: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
   border-radius: 8px;
   border: 1px solid rgba(0,0,0,0.05);
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.bistro-order-item:active {
+  transform: scale(0.98);
+}
+
+.kitchen-order-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kitchen-order-card:active {
+  transform: scale(0.99);
+}
+
+/* Responsive adjustments for touch devices */
+@media (max-width: 640px) {
+  .bistro-touch-target {
+    min-height: 48px; /* Larger for smaller screens */
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  .kitchen-display-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .kitchen-display-header > div:last-child {
+    margin-top: 8px;
+    width: 100%;
+  }
 }
 
 @layer base {
@@ -126,9 +163,105 @@
     @apply cursor-pointer transition-all flex flex-col items-center justify-center p-2 border rounded-md;
   }
   
-  /* Kitchen display optimizations */
+  /* Kitchen display optimizations with enhanced visual feedback */
   .kitchen-order-card {
-    @apply border shadow-sm transition-all hover:shadow-md;
+    @apply border shadow-sm hover:shadow-md;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Kitchen status indicators with improved contrast and animation */
+  .kitchen-status-new {
+    @apply bg-blue-100 text-blue-800 font-medium;
+  }
+  
+  .kitchen-status-preparing {
+    @apply bg-amber-100 text-amber-800 font-medium border border-amber-200;
+    animation: preparing-pulse 2s infinite;
+  }
+  
+  .kitchen-status-ready {
+    @apply bg-green-100 text-green-800 font-medium border border-green-200;
+    animation: ready-appear 0.5s ease-out;
+  }
+  
+  /* Kitchen button styles for improved visibility in kitchen environments */
+  .kitchen-button-preparing {
+    @apply bg-amber-600 hover:bg-amber-700 text-white border-amber-700 transition-all;
+    transform-origin: center;
+  }
+  .kitchen-button-preparing:active {
+    @apply bg-amber-800;
+    transform: scale(0.97);
+  }
+
+  .kitchen-button-ready {
+    @apply bg-green-600 hover:bg-green-700 text-white border-green-700 transition-all;
+    transform-origin: center;
+  }
+  .kitchen-button-ready:active {
+    @apply bg-green-800;
+    transform: scale(0.97);
+  }
+
+  .kitchen-button-served {
+    @apply bg-blue-50 border-blue-200 text-blue-800;
+  }
+
+  .kitchen-button-item-start {
+    @apply bg-background hover:bg-amber-100 border-amber-200 transition-all;
+    transform-origin: center;
+  }
+  .kitchen-button-item-start:active {
+    @apply bg-amber-200;
+    transform: scale(0.97);
+  }
+
+  .kitchen-button-item-ready {
+    @apply bg-amber-100 hover:bg-green-100 border-amber-300 transition-all;
+    transform-origin: center;
+  }
+  .kitchen-button-item-ready:active {
+    @apply bg-green-200;
+    transform: scale(0.97);
+  }
+  
+  /* Larger touch areas for kitchen tabs with better active state */
+  .kitchen-tabs .bistro-touch-target {
+    @apply min-h-[50px] min-w-[90px] text-base;
+  }
+  
+  /* Kitchen animation keyframes */
+  @keyframes preparing-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  
+  @keyframes ready-appear {
+    0% {
+      opacity: 0.7;
+      transform: scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  /* Enhanced touch feedback on mobile devices */
+  @media (hover: none) {
+    .kitchen-order-card:active {
+      @apply shadow-md;
+      transform: scale(0.98);
+    }
+    
+    .bistro-order-item:active {
+      transform: scale(0.97);
+      @apply bg-gray-50;
+    }
   }
   
   /* Digital wallet specific styling */

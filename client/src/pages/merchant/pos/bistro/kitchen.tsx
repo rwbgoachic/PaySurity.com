@@ -178,18 +178,111 @@ export default function KitchenDisplay() {
     updateOrderStatusMutation.mutate({ orderId, status: newStatus });
   };
   
-  // Handle item status update
+  // Handle item status update with enhanced visual feedback
   const handleItemStatusChange = (orderId: number, itemId: number, newStatus: string) => {
+    // Find both the parent order element and the specific item element
+    const orderElement = document.getElementById(`order-${orderId}`);
+    const itemElement = document.getElementById(`item-${orderId}-${itemId}`);
+    
+    // Provide item-specific visual feedback
+    if (itemElement) {
+      // Add a highlight effect to the specific item being updated
+      itemElement.classList.add('animate-pulse');
+      itemElement.style.transform = 'scale(0.98)';
+      
+      // Apply appropriate status class immediately for better UX
+      if (newStatus === "preparing") {
+        itemElement.classList.remove('bg-white');
+        itemElement.classList.add('kitchen-status-preparing');
+      } else if (newStatus === "ready") {
+        itemElement.classList.remove('kitchen-status-preparing');
+        itemElement.classList.add('kitchen-status-ready');
+      }
+      
+      // Remove animation after a short delay
+      setTimeout(() => {
+        itemElement.classList.remove('animate-pulse');
+        itemElement.style.transform = '';
+      }, 500);
+    }
+    
+    // Also provide subtle feedback on the parent order card
+    if (orderElement) {
+      orderElement.classList.add('shadow-md');
+      setTimeout(() => {
+        orderElement.classList.remove('shadow-md');
+      }, 500);
+    }
+    
+    // Update the item status in the database
     updateOrderItemStatusMutation.mutate({ orderId, itemId, status: newStatus });
   };
   
-  // Handle start cooking action
+  // Handle start cooking action with enhanced visual feedback
   const handleStartCooking = (orderId: number) => {
+    // Show immediate visual feedback
+    const orderElement = document.getElementById(`order-${orderId}`);
+    if (orderElement) {
+      // Add visual feedback animation
+      orderElement.classList.add('animate-pulse');
+      
+      // Add a scaling effect for touch feedback
+      orderElement.style.transform = 'scale(0.98)';
+      
+      // Immediately apply the new status styling for better UX
+      orderElement.classList.remove('border-blue-300', 'bg-blue-50');
+      orderElement.classList.add('border-amber-300', 'bg-amber-50', 'kitchen-status-preparing');
+      
+      // Find the status badge inside this order card and update it
+      const statusBadge = orderElement.querySelector('.kitchen-status-new');
+      if (statusBadge) {
+        statusBadge.classList.remove('kitchen-status-new');
+        statusBadge.classList.add('kitchen-status-preparing');
+        statusBadge.textContent = 'Preparing';
+      }
+      
+      // Reset animations after a short delay
+      setTimeout(() => {
+        orderElement.classList.remove('animate-pulse');
+        orderElement.style.transform = '';
+      }, 300);
+    }
+    
+    // Update the order status in the database
     updateOrderStatusMutation.mutate({ orderId, status: "preparing" });
   };
   
-  // Handle order ready action
+  // Handle order ready action with enhanced visual feedback
   const handleOrderReady = (orderId: number) => {
+    // Show immediate visual feedback
+    const orderElement = document.getElementById(`order-${orderId}`);
+    if (orderElement) {
+      // Add visual feedback animation
+      orderElement.classList.add('animate-pulse');
+      
+      // Add a scaling effect for touch feedback
+      orderElement.style.transform = 'scale(0.98)';
+      
+      // Immediately apply the new status styling for better UX
+      orderElement.classList.remove('border-amber-300', 'bg-amber-50', 'kitchen-status-preparing');
+      orderElement.classList.add('border-green-300', 'bg-green-50', 'kitchen-status-ready');
+      
+      // Find the status badge inside this order card and update it
+      const statusBadge = orderElement.querySelector('.kitchen-status-preparing');
+      if (statusBadge) {
+        statusBadge.classList.remove('kitchen-status-preparing');
+        statusBadge.classList.add('kitchen-status-ready');
+        statusBadge.textContent = 'Ready';
+      }
+      
+      // Reset animations after a short delay
+      setTimeout(() => {
+        orderElement.classList.remove('animate-pulse');
+        orderElement.style.transform = '';
+      }, 300);
+    }
+    
+    // Update the order status in the database
     updateOrderStatusMutation.mutate({ orderId, status: "ready" });
   };
   
@@ -224,10 +317,10 @@ export default function KitchenDisplay() {
       
       {/* Header */}
       <header className="bg-white border-b shadow-sm py-2 px-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap kitchen-display-header">
           <div className="flex items-center space-x-4">
             <Link href="/merchant/pos/bistro">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="bistro-touch-target h-10 w-10">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
@@ -236,26 +329,27 @@ export default function KitchenDisplay() {
               BistroBeast
             </Badge>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <Button 
               variant="outline" 
-              size="sm" 
+              size="sm"
+              className="bistro-touch-target"
               onClick={() => refetchOrders()}
               disabled={isLoadingOrders}
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingOrders ? "animate-spin" : ""}`} />
-              Refresh
+              <span className="ml-1">Refresh</span>
             </Button>
             <Select 
               value={viewMode} 
               onValueChange={setViewMode}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32 bistro-touch-target min-h-[44px]">
                 <SelectValue placeholder="View" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="grid">Grid View</SelectItem>
-                <SelectItem value="list">List View</SelectItem>
+                <SelectItem value="grid" className="bistro-touch-target min-h-[44px]">Grid View</SelectItem>
+                <SelectItem value="list" className="bistro-touch-target min-h-[44px]">List View</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -265,12 +359,12 @@ export default function KitchenDisplay() {
       {/* Main content */}
       <main className="flex-1 p-4">
         {/* Tabs for filtering orders */}
-        <Tabs defaultValue="all" value={visibleItems} onValueChange={setVisibleItems} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="all">All Orders</TabsTrigger>
-            <TabsTrigger value="pending">New</TabsTrigger>
-            <TabsTrigger value="preparing">Preparing</TabsTrigger>
-            <TabsTrigger value="ready">Ready to Serve</TabsTrigger>
+        <Tabs defaultValue="all" value={visibleItems} onValueChange={setVisibleItems} className="mb-6 kitchen-tabs">
+          <TabsList className="w-full flex justify-between sm:justify-start bistro-touch-target">
+            <TabsTrigger value="all" className="flex-1 sm:flex-initial py-3 bistro-touch-target">All Orders</TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1 sm:flex-initial py-3 bistro-touch-target">New</TabsTrigger>
+            <TabsTrigger value="preparing" className="flex-1 sm:flex-initial py-3 bistro-touch-target">Preparing</TabsTrigger>
+            <TabsTrigger value="ready" className="flex-1 sm:flex-initial py-3 bistro-touch-target">Ready</TabsTrigger>
           </TabsList>
         </Tabs>
         
@@ -290,10 +384,12 @@ export default function KitchenDisplay() {
             </p>
             <Button 
               variant="outline" 
+              size="lg"
+              className="bistro-touch-target h-12 min-w-[120px]"
               onClick={() => refetchOrders()}
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
+              <RefreshCw className="h-5 w-5 mr-2" />
+              <span>Refresh</span>
             </Button>
           </div>
         ) : (
@@ -303,13 +399,14 @@ export default function KitchenDisplay() {
           }>
             {filteredOrders.map((order: Order) => (
               <Card 
-                key={order.id} 
+                key={order.id}
+                id={`order-${order.id}`}
                 className={`kitchen-order-card ${
                   order.status === "placed" 
                     ? "border-blue-300 bg-blue-50" 
                     : order.status === "preparing" 
-                    ? "border-amber-300 bg-amber-50" 
-                    : "border-green-300 bg-green-50"
+                    ? "border-amber-300 bg-amber-50 kitchen-status-preparing" 
+                    : "border-green-300 bg-green-50 kitchen-status-ready"
                 } transition-all hover:shadow-md`}
               >
                 <CardHeader className="pb-2">
@@ -332,14 +429,13 @@ export default function KitchenDisplay() {
                       </CardDescription>
                     </div>
                     <Badge 
-                      className={`
-                        ${order.status === "placed" 
-                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200" 
+                      className={`bistro-touch-target px-3 py-1 ${
+                        order.status === "placed" 
+                          ? "kitchen-status-new" 
                           : order.status === "preparing" 
-                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200" 
-                          : "bg-green-100 text-green-800 hover:bg-green-200"
-                        }
-                      `}
+                          ? "kitchen-status-preparing" 
+                          : "kitchen-status-ready"
+                      }`}
                     >
                       {order.status === "placed" 
                         ? "New Order" 
@@ -357,14 +453,15 @@ export default function KitchenDisplay() {
                   `}>
                     {order.items.map((item: OrderItem) => (
                       <div 
-                        key={item.id} 
+                        key={item.id}
+                        id={`item-${order.id}-${item.id}`}
                         className={`
                           flex items-start justify-between bistro-order-item
                           ${item.status === "pending" 
                             ? "bg-white" 
                             : item.status === "preparing" 
-                            ? "bg-amber-100" 
-                            : "bg-green-100"
+                            ? "kitchen-status-preparing" 
+                            : "kitchen-status-ready"
                           } 
                         `}
                       >
@@ -385,7 +482,7 @@ export default function KitchenDisplay() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 min-w-[60px] text-xs bg-background hover:bg-amber-100 bistro-touch-target"
+                              className="h-8 min-w-[60px] text-xs kitchen-button-item-start bistro-touch-target"
                               onClick={() => handleItemStatusChange(order.id, item.id, "preparing")}
                             >
                               Start
@@ -395,7 +492,7 @@ export default function KitchenDisplay() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 min-w-[60px] text-xs bg-amber-100 hover:bg-green-100 bistro-touch-target"
+                              className="h-8 min-w-[60px] text-xs kitchen-button-item-ready bistro-touch-target"
                               onClick={() => handleItemStatusChange(order.id, item.id, "ready")}
                             >
                               Ready
@@ -419,7 +516,7 @@ export default function KitchenDisplay() {
                 <CardFooter className="flex justify-between pt-2">
                   {order.status === "placed" ? (
                     <Button 
-                      className="w-full bg-amber-600 hover:bg-amber-700 h-10 bistro-touch-target"
+                      className="w-full kitchen-button-preparing h-10 bistro-touch-target"
                       onClick={() => handleStartCooking(order.id)}
                     >
                       <Timer className="h-4 w-4 mr-1" />
@@ -427,7 +524,7 @@ export default function KitchenDisplay() {
                     </Button>
                   ) : order.status === "preparing" ? (
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 h-10 bistro-touch-target" 
+                      className="w-full kitchen-button-ready h-10 bistro-touch-target" 
                       onClick={() => handleOrderReady(order.id)}
                     >
                       <Check className="h-4 w-4 mr-1" />
@@ -435,7 +532,7 @@ export default function KitchenDisplay() {
                     </Button>
                   ) : (
                     <Button
-                      className="w-full h-10 bistro-touch-target"
+                      className="w-full h-10 bistro-touch-target kitchen-button-served"
                       variant="outline"
                       disabled
                     >

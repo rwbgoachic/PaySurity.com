@@ -43,6 +43,7 @@ import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
 import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
 import BistroBeastStaff from "./pages/merchant/pos/bistro/staff";
 import BistroBeastTransactions from "./pages/merchant/pos/bistro/transactions";
+import BistroBeastKitchen from "./pages/merchant/pos/bistro/kitchen";
 import RetailPOSSystem from "./pages/merchant/pos/retail/index";
 import RetailInventoryPage from "./pages/merchant/pos/retail/inventory";
 import ApplicationsManagement from "./pages/merchant/applications-management";
@@ -142,7 +143,7 @@ function Router() {
       <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
-      <ProtectedRoute path="/merchant/pos/bistro/kitchen" component={() => import('./pages/merchant/pos/bistro/kitchen')} />
+      <ProtectedRoute path="/merchant/pos/bistro/kitchen" component={BistroBeastKitchen} />
       
       {/* PaySurity ECom Ready Retail POS */}
       <ProtectedRoute path="/merchant/pos/retail" component={RetailPOSSystem} />

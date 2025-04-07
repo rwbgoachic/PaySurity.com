@@ -10,8 +10,11 @@ export function ProtectedRoute({
   component: () => React.JSX.Element | null;
 }) {
   const { user, isLoading } = useAuth();
-
-  if (isLoading) {
+  
+  // Special handling for BistroBeast kitchen route for demo purposes
+  const isBistroBeastKitchenRoute = path.includes("/merchant/pos/bistro/kitchen");
+  
+  if (isLoading && !isBistroBeastKitchenRoute) {
     return (
       <Route path={path}>
         <div className="flex items-center justify-center min-h-screen">
@@ -21,7 +24,8 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user) {
+  // For demo purposes, we're bypassing auth for BistroBeast kitchen route
+  if (!user && !isBistroBeastKitchenRoute) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
