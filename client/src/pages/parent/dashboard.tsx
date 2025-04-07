@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChildAccountsOverview, { ChildAccount } from "@/components/parent/child-accounts-overview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AllowanceSettings, AllowanceModal } from "@/components/modals/allowance-modal";
-import { SpendingRules, SpendingRulesModal } from "@/components/modals/spending-rules-modal";
+import SpendingRulesModal, { SpendingRules } from "@/components/modals/spending-rules-modal";
 import { SavingsGoal } from "@/components/child/savings-goals-display";
 import { Button } from "@/components/ui/button";
 import { PiggyBank, DollarSign, CreditCard, Bell, Plus, Clock } from "lucide-react";
