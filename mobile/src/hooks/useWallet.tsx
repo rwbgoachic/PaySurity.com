@@ -1,6 +1,32 @@
 import React, { createContext, useState, useEffect, useCallback, useContext, ReactNode } from 'react';
 import useApi from './useApi';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Browser localStorage adapter for web environment
+const AsyncStorage = {
+  setItem: (key: string, value: string): Promise<void> => {
+    try {
+      localStorage.setItem(key, value);
+      return Promise.resolve();
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  },
+  getItem: (key: string): Promise<string | null> => {
+    try {
+      const value = localStorage.getItem(key);
+      return Promise.resolve(value);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  },
+  removeItem: (key: string): Promise<void> => {
+    try {
+      localStorage.removeItem(key);
+      return Promise.resolve();
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+};
 
 // Account entity
 export interface Account {
@@ -264,11 +290,6 @@ interface WalletContextState {
   getSavingsGoalsByAccountId: (accountId: number) => SavingsGoal[];
   clearWalletError: () => void;
   
-  // Parent wallet functions
-  addChild: (childData: Omit<Child, 'id' | 'accountId'>) => Promise<Child | null>;
-  updateChildAllowance: (childId: number, amount: number, frequency: Child['allowanceFrequency']) => Promise<boolean>;
-  addTaskForChild: (childId: number, taskData: Omit<Task, 'id'>) => Promise<Task | null>;
-  
   // Family wallet system functions
   getFamilyGroups: () => Promise<FamilyGroup[]>;
   createFamilyGroup: (groupData: Omit<FamilyGroup, 'id' | 'createdAt' | 'updatedAt'>) => Promise<FamilyGroup | null>;
@@ -280,6 +301,11 @@ interface WalletContextState {
   createSpendingRequest: (request: Omit<SpendingRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>) => Promise<SpendingRequest | null>;
   approveSpendingRequest: (requestId: number) => Promise<boolean>;
   rejectSpendingRequest: (requestId: number, notes?: string) => Promise<boolean>;
+  
+  // Parent wallet functions
+  addChild: (childData: Omit<Child, 'id' | 'accountId'>) => Promise<Child | null>;
+  updateChildAllowance: (childId: number, amount: number, frequency: Child['allowanceFrequency']) => Promise<boolean>;
+  addTaskForChild: (childId: number, taskData: Omit<Task, 'id'>) => Promise<Task | null>;
   
   // Employer wallet functions
   addEmployee: (employeeData: Omit<Employee, 'id' | 'accountId' | 'status'>) => Promise<Employee | null>;
@@ -366,35 +392,35 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
         setCurrentUser(userData);
         
         // Determine user roles based on user data
-        const roles: string[] = [];
+        const userRolesList: string[] = [];
         
         // Check if parent role
         const childrenData = await api.get<Child[]>('/api/wallet/children');
         if (childrenData && childrenData.length > 0) {
-          roles.push('parent');
+          userRolesList.push('parent');
           setChildAccounts(childrenData);
         }
         
         // Check if child role
         const parentData = await api.get<{ isChild: boolean }>('/api/wallet/is-child');
         if (parentData && parentData.isChild) {
-          roles.push('child');
+          userRolesList.push('child');
         }
         
         // Check if employer role
         const employeesData = await api.get<Employee[]>('/api/wallet/employees');
         if (employeesData && employeesData.length > 0) {
-          roles.push('employer');
+          userRolesList.push('employer');
           setEmployees(employeesData);
         }
         
         // Check if employee role
         const employerData = await api.get<{ isEmployee: boolean }>('/api/wallet/is-employee');
         if (employerData && employerData.isEmployee) {
-          roles.push('employee');
+          userRolesList.push('employee');
         }
         
-        setUserRoles(roles);
+        setUserRoles(userRolesList);
       }
       
       // Load accounts
@@ -422,7 +448,7 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
       }
       
       // Load tasks (if parent or child)
-      if (roles.includes('parent') || roles.includes('child')) {
+      if (userRoles.includes('parent') || userRoles.includes('child')) {
         const tasksData = await api.get<Task[]>('/api/wallet/tasks');
         if (tasksData) {
           setTasks(tasksData);
@@ -430,7 +456,7 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
       }
       
       // Load employer/employee data
-      if (roles.includes('employer') || roles.includes('employee')) {
+      if (userRoles.includes('employer') || userRoles.includes('employee')) {
         // Load payrolls
         const payrollsData = await api.get<Payroll[]>('/api/wallet/payrolls');
         if (payrollsData) {
@@ -465,6 +491,43 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
         const timeOffRequestsData = await api.get<RequestTimeOff[]>('/api/wallet/time-off-requests');
         if (timeOffRequestsData) {
           setTimeOffRequests(timeOffRequestsData);
+        }
+      }
+      
+      // Load family wallet system data if parent or child
+      if (userRoles.includes('parent') || userRoles.includes('child')) {
+        // Load family groups
+        const familyGroupsData = await api.get<FamilyGroup[]>('/api/wallet/family-groups');
+        if (familyGroupsData) {
+          setFamilyGroups(familyGroupsData);
+          
+          // Load family members for each group
+          const allMembers: FamilyMember[] = [];
+          for (const group of familyGroupsData) {
+            const membersData = await api.get<FamilyMember[]>(`/api/wallet/family-groups/${group.id}/members`);
+            if (membersData) {
+              allMembers.push(...membersData);
+            }
+          }
+          setFamilyMembers(allMembers);
+        }
+        
+        // Load spending rules if parent
+        if (userRoles.includes('parent') && childAccounts.length > 0) {
+          const allRules: SpendingRules[] = [];
+          for (const child of childAccounts) {
+            const rulesData = await api.get<SpendingRules>(`/api/wallet/children/${child.id}/spending-rules`);
+            if (rulesData) {
+              allRules.push(rulesData);
+            }
+          }
+          setSpendingRules(allRules);
+        }
+        
+        // Load spending requests
+        const spendingRequestsData = await api.get<SpendingRequest[]>('/api/wallet/spending-requests');
+        if (spendingRequestsData) {
+          setSpendingRequests(spendingRequestsData);
         }
       }
       
@@ -505,6 +568,224 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
     
     checkDataRefresh();
   }, [loadWalletData]);
+  
+  // Family wallet system functions
+  const getFamilyGroups = useCallback(async (): Promise<FamilyGroup[]> => {
+    try {
+      const groups = await api.get<FamilyGroup[]>('/api/wallet/family-groups');
+      
+      if (groups) {
+        setFamilyGroups(groups);
+      }
+      
+      return groups || [];
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get family groups');
+      return [];
+    }
+  }, [api]);
+  
+  const createFamilyGroup = useCallback(async (
+    groupData: Omit<FamilyGroup, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<FamilyGroup | null> => {
+    try {
+      const newGroup = await api.post<FamilyGroup>('/api/wallet/family-groups', groupData);
+      
+      if (newGroup) {
+        setFamilyGroups(prev => [...prev, newGroup]);
+      }
+      
+      return newGroup;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create family group');
+      return null;
+    }
+  }, [api]);
+  
+  const getFamilyMembers = useCallback(async (groupId: number): Promise<FamilyMember[]> => {
+    try {
+      const members = await api.get<FamilyMember[]>(`/api/wallet/family-groups/${groupId}/members`);
+      
+      if (members) {
+        // Update the cached family members
+        setFamilyMembers(prev => {
+          // Filter out any existing members for this group
+          const filteredMembers = prev.filter(m => m.familyGroupId !== groupId);
+          // Add the new members
+          return [...filteredMembers, ...members];
+        });
+      }
+      
+      return members || [];
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get family members');
+      return [];
+    }
+  }, [api]);
+  
+  const addFamilyMember = useCallback(async (
+    member: Omit<FamilyMember, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<FamilyMember | null> => {
+    try {
+      const newMember = await api.post<FamilyMember>(`/api/wallet/family-groups/${member.familyGroupId}/members`, member);
+      
+      if (newMember) {
+        setFamilyMembers(prev => [...prev, newMember]);
+      }
+      
+      return newMember;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add family member');
+      return null;
+    }
+  }, [api]);
+  
+  const getSpendingRules = useCallback(async (childId: number): Promise<SpendingRules | null> => {
+    try {
+      const rules = await api.get<SpendingRules>(`/api/wallet/children/${childId}/spending-rules`);
+      
+      if (rules) {
+        // Update the cached spending rules
+        setSpendingRules(prev => {
+          // Check if we already have rules for this child
+          const existingIndex = prev.findIndex(r => r.childId === childId);
+          
+          if (existingIndex >= 0) {
+            // Replace existing rules
+            const updatedRules = [...prev];
+            updatedRules[existingIndex] = rules;
+            return updatedRules;
+          } else {
+            // Add new rules
+            return [...prev, rules];
+          }
+        });
+      }
+      
+      return rules;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get spending rules');
+      return null;
+    }
+  }, [api]);
+  
+  const updateSpendingRules = useCallback(async (
+    childId: number, 
+    rules: Partial<Omit<SpendingRules, 'id' | 'childId' | 'createdAt' | 'updatedAt'>>
+  ): Promise<SpendingRules | null> => {
+    try {
+      const updatedRules = await api.patch<SpendingRules>(`/api/wallet/children/${childId}/spending-rules`, rules);
+      
+      if (updatedRules) {
+        setSpendingRules(prev => {
+          return prev.map(rule => 
+            rule.childId === childId ? updatedRules : rule
+          );
+        });
+      }
+      
+      return updatedRules;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update spending rules');
+      return null;
+    }
+  }, [api]);
+  
+  const getSpendingRequests = useCallback(async (childId?: number): Promise<SpendingRequest[]> => {
+    try {
+      let url = '/api/wallet/spending-requests';
+      if (childId) {
+        url = `/api/wallet/children/${childId}/spending-requests`;
+      }
+      
+      const requests = await api.get<SpendingRequest[]>(url);
+      
+      if (requests) {
+        setSpendingRequests(requests);
+      }
+      
+      return requests || [];
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get spending requests');
+      return [];
+    }
+  }, [api]);
+  
+  const createSpendingRequest = useCallback(async (
+    request: Omit<SpendingRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>
+  ): Promise<SpendingRequest | null> => {
+    try {
+      const newRequest = await api.post<SpendingRequest>('/api/wallet/spending-requests', request);
+      
+      if (newRequest) {
+        setSpendingRequests(prev => [...prev, newRequest]);
+      }
+      
+      return newRequest;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create spending request');
+      return null;
+    }
+  }, [api]);
+  
+  const approveSpendingRequest = useCallback(async (requestId: number): Promise<boolean> => {
+    try {
+      const result = await api.patch<{
+        success: boolean, 
+        request: SpendingRequest,
+        transaction?: Transaction,
+        account?: Account
+      }>(`/api/wallet/spending-requests/${requestId}/approve`, {});
+      
+      if (result && result.success) {
+        // Update the spending request
+        setSpendingRequests(prev => 
+          prev.map(req => req.id === requestId ? result.request : req)
+        );
+        
+        // If a transaction was created, update transactions and accounts
+        if (result.transaction && result.account) {
+          setTransactions(prev => [...prev, result.transaction!]);
+          setAccounts(prev => 
+            prev.map(acc => acc.id === result.account!.id ? result.account! : acc)
+          );
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve spending request');
+      return false;
+    }
+  }, [api]);
+  
+  const rejectSpendingRequest = useCallback(async (
+    requestId: number, 
+    notes?: string
+  ): Promise<boolean> => {
+    try {
+      const result = await api.patch<{
+        success: boolean, 
+        request: SpendingRequest
+      }>(`/api/wallet/spending-requests/${requestId}/reject`, { notes });
+      
+      if (result && result.success) {
+        // Update the spending request
+        setSpendingRequests(prev => 
+          prev.map(req => req.id === requestId ? result.request : req)
+        );
+        
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reject spending request');
+      return false;
+    }
+  }, [api]);
   
   // Parent wallet functions
   const addChild = useCallback(async (childData: Omit<Child, 'id' | 'accountId'>): Promise<Child | null> => {
@@ -839,7 +1120,7 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
         ));
         
         if (result.transaction && result.account) {
-          setTransactions(prev => [...prev, result.transaction]);
+          setTransactions(prev => [...prev, result.transaction!]);
           setAccounts(prev => prev.map(account => 
             account.id === result.account!.id 
               ? result.account! 
@@ -942,6 +1223,18 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
     getTransactionsByAccountId,
     getSavingsGoalsByAccountId,
     clearWalletError,
+    
+    // Family wallet system functions
+    getFamilyGroups,
+    createFamilyGroup,
+    getFamilyMembers,
+    addFamilyMember,
+    getSpendingRules,
+    updateSpendingRules,
+    getSpendingRequests,
+    createSpendingRequest,
+    approveSpendingRequest,
+    rejectSpendingRequest,
     
     // Parent wallet functions
     addChild,
