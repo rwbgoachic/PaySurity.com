@@ -1,220 +1,211 @@
-import { Platform, Dimensions } from 'react-native';
+import { StyleSheet, Dimensions, Platform } from 'react-native';
 
-// Get screen dimensions
-const { width, height } = Dimensions.get('window');
-
-// Platform specific values
-const isIOS = Platform.OS === 'ios';
-
-// Color Palettes
-const primaryPalette = {
-  50: '#F0F7FF',
-  100: '#E0EFFF',
-  200: '#C0DFFF',
-  300: '#80BFFF',
-  400: '#4099FF',
-  500: '#0073E6',
-  600: '#0059B3',
-  700: '#004080',
-  800: '#00264D',
-  900: '#001226',
-};
-
-const grayPalette = {
-  50: '#F9FAFB',
-  100: '#F3F4F6',
-  200: '#E5E7EB',
-  300: '#D1D5DB',
-  400: '#9CA3AF',
-  500: '#6B7280',
-  600: '#4B5563',
-  700: '#374151',
-  800: '#1F2937',
-  900: '#111827',
-};
-
-// Core colors
-const colors = {
-  // Brand Colors
-  primary: primaryPalette[500],
-  primaryLight: primaryPalette[300],
-  primaryDark: primaryPalette[700],
-  secondary: '#FF9900',
-  secondaryLight: '#FFCC80',
-  secondaryDark: '#F57C00',
+/**
+ * Base color palette
+ */
+export const colors = {
+  // Primary color variations
+  primary: '#007AFF',
+  primaryLight: '#66B3FF',
+  primaryDark: '#0055B3',
+  primaryGradient: ['#007AFF', '#0055B3'],
   
-  // Text Colors
-  textDark: grayPalette[900],
-  textMedium: grayPalette[700],
-  textMuted: grayPalette[500],
-  textLight: grayPalette[300],
+  // Secondary color variations
+  secondary: '#5856D6',
+  secondaryLight: '#9593E3',
+  secondaryDark: '#3A39A0',
+  secondaryGradient: ['#5856D6', '#3A39A0'],
   
-  // UI Colors
-  backgroundPrimary: '#FFFFFF',
-  backgroundSecondary: grayPalette[50],
-  backgroundTertiary: grayPalette[100],
-  border: grayPalette[200],
-  borderDark: grayPalette[300],
+  // Status colors
+  success: '#34C759',
+  warning: '#FFCC00',
+  danger: '#FF3B30',
+  info: '#5AC8FA',
   
-  // State Colors
-  success: '#10B981',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  info: '#3B82F6',
-  
-  // Additional Colors
+  // Grayscale
   white: '#FFFFFF',
+  gray1: '#F7F7F7',
+  gray2: '#E5E5EA',
+  gray3: '#D1D1D6',
+  gray4: '#C7C7CC',
+  gray5: '#AEAEB2',
+  gray6: '#8E8E93',
+  gray7: '#636366',
+  gray8: '#48484A',
+  gray9: '#3A3A3C',
+  gray10: '#2C2C2E',
+  gray11: '#1C1C1E',
   black: '#000000',
   
-  // Gradient Base Colors
-  gradientStart: '#0073E6',
-  gradientEnd: '#00C6FF',
+  // Semantic colors
+  text: '#000000',
+  textLight: '#8E8E93',
+  background: '#FFFFFF',
+  card: '#FFFFFF',
+  border: '#E5E5EA',
+  notification: '#FF3B30',
+  disabled: '#C7C7CC',
+  placeholder: '#C7C7CC',
   
-  // Additional Gray Palette
-  gray50: grayPalette[50],
-  gray100: grayPalette[100],
-  gray200: grayPalette[200],
-  gray300: grayPalette[300],
-  gray400: grayPalette[400],
-  gray500: grayPalette[500],
-  gray600: grayPalette[600],
-  gray700: grayPalette[700],
-  gray800: grayPalette[800],
-  gray900: grayPalette[900],
+  // Brand colors for 3rd party services
+  stripe: '#6772E5',
+  plaid: '#00CA8E',
+  helcim: '#003057',
+  venmo: '#3D95CE',
+  paypal: '#0070E0',
+  zelle: '#6D1ED4',
+  apple: '#000000',
 };
 
-// Wallet color schemes based on account type
-const walletColorSchemes = {
-  personal: {
-    primary: colors.primary,
-    secondary: colors.gradientEnd,
-    background: colors.backgroundPrimary,
-    accent: '#3B82F6',
+/**
+ * Dark theme color palette
+ */
+export const darkColors = {
+  // Primary color variations (adjust for dark theme)
+  primary: '#0A84FF',
+  primaryLight: '#66B3FF',
+  primaryDark: '#0055B3',
+  primaryGradient: ['#0A84FF', '#0055B3'],
+  
+  // Secondary color variations
+  secondary: '#5E5CE6',
+  secondaryLight: '#9593E3',
+  secondaryDark: '#3A39A0',
+  secondaryGradient: ['#5E5CE6', '#3A39A0'],
+  
+  // Status colors (adjusted for dark theme)
+  success: '#30D158',
+  warning: '#FFD60A',
+  danger: '#FF453A',
+  info: '#64D2FF',
+  
+  // Grayscale (inverted for dark theme)
+  white: '#000000',
+  gray1: '#1C1C1E',
+  gray2: '#2C2C2E',
+  gray3: '#3A3A3C',
+  gray4: '#48484A',
+  gray5: '#636366',
+  gray6: '#8E8E93',
+  gray7: '#AEAEB2',
+  gray8: '#C7C7CC',
+  gray9: '#D1D1D6',
+  gray10: '#E5E5EA',
+  gray11: '#F7F7F7',
+  black: '#FFFFFF',
+  
+  // Semantic colors (adjusted for dark theme)
+  text: '#FFFFFF',
+  textLight: '#8E8E93',
+  background: '#000000',
+  card: '#1C1C1E',
+  border: '#38383A',
+  notification: '#FF453A',
+  disabled: '#636366',
+  placeholder: '#636366',
+  
+  // Brand colors remain the same in dark mode
+  stripe: '#6772E5',
+  plaid: '#00CA8E',
+  helcim: '#003057',
+  venmo: '#3D95CE',
+  paypal: '#0070E0',
+  zelle: '#6D1ED4',
+  apple: '#FFFFFF', // Inverted for dark mode
+};
+
+/**
+ * Typography settings
+ */
+export const typography = {
+  // Font families
+  fontFamily: {
+    regular: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    medium: Platform.OS === 'ios' ? 'System' : 'Roboto-Medium',
+    bold: Platform.OS === 'ios' ? 'System' : 'Roboto-Bold',
+    light: Platform.OS === 'ios' ? 'System' : 'Roboto-Light',
   },
-  family: {
-    primary: '#8B5CF6',
-    secondary: '#C4B5FD',
-    background: '#F5F3FF',
-    accent: '#7C3AED',
+  
+  // Font sizes
+  fontSize: {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18,
+    xl: 20,
+    xxl: 24,
+    xxxl: 32,
+    display: 40,
   },
-  business: {
-    primary: '#2563EB',
-    secondary: '#93C5FD',
-    background: '#EFF6FF',
-    accent: '#1D4ED8',
-  },
-  child: {
-    primary: '#EC4899',
-    secondary: '#FBCFE8',
-    background: '#FCE7F3',
-    accent: '#DB2777',
-  },
-  employee: {
-    primary: '#10B981',
-    secondary: '#6EE7B7',
-    background: '#ECFDF5',
-    accent: '#059669',
-  },
-};
-
-// Spacing
-const baseSpacing = 4;
-const spacing = {
-  '0': 0,
-  '0.5': baseSpacing / 2,
-  '1': baseSpacing,
-  '2': baseSpacing * 2,
-  '3': baseSpacing * 3,
-  '4': baseSpacing * 4,
-  '5': baseSpacing * 5,
-  '6': baseSpacing * 6,
-  '8': baseSpacing * 8,
-  '10': baseSpacing * 10,
-  '12': baseSpacing * 12,
-  '14': baseSpacing * 14,
-  '16': baseSpacing * 16,
-  '20': baseSpacing * 20,
-  '24': baseSpacing * 24,
-  '28': baseSpacing * 28,
-  '32': baseSpacing * 32,
-  '36': baseSpacing * 36,
-  '40': baseSpacing * 40,
-  '48': baseSpacing * 48,
-  '56': baseSpacing * 56,
-  '64': baseSpacing * 64,
-  '72': baseSpacing * 72,
-  '80': baseSpacing * 80,
-  '96': baseSpacing * 96,
-};
-
-// Typography
-const fontFamily = {
-  sans: isIOS ? 'System' : 'Roboto',
-  serif: isIOS ? 'Georgia' : 'serif',
-  mono: isIOS ? 'Courier' : 'monospace',
-};
-
-const fontSize = {
-  xs: 12,
-  sm: 14,
-  base: 16,
-  lg: 18,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 30,
-  '4xl': 36,
-  '5xl': 48,
-  '6xl': 60,
-};
-
-const fontWeight = {
-  hairline: '100',
-  thin: '200',
-  light: '300',
-  normal: '400',
-  medium: '500',
-  semibold: '600',
-  bold: '700',
-  extrabold: '800',
-  black: '900',
-};
-
-const typography = {
-  fontFamily,
-  fontSize,
-  fontWeight,
+  
+  // Line heights
   lineHeight: {
-    none: 1,
-    tight: 1.25,
-    snug: 1.375,
-    normal: 1.5,
-    relaxed: 1.625,
-    loose: 2,
+    xs: 16,
+    sm: 20,
+    md: 24,
+    lg: 28,
+    xl: 32,
+    xxl: 36,
+    xxxl: 40,
+    display: 48,
   },
-  letterSpacing: {
-    tighter: -0.8,
-    tight: -0.4,
-    normal: 0,
-    wide: 0.4,
-    wider: 0.8,
-    widest: 1.6,
+  
+  // Font weights (using strings for cross-platform compatibility)
+  fontWeight: {
+    thin: '100',
+    light: '300',
+    regular: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+    black: '900',
   },
 };
 
-// Border radius
-const borderRadius = {
+/**
+ * Spacing sizes
+ */
+export const spacing = {
+  0: 0,
+  1: 4,
+  2: 8,
+  3: 12,
+  4: 16,
+  5: 20,
+  6: 24,
+  7: 28,
+  8: 32,
+  9: 36,
+  10: 40,
+  11: 44,
+  12: 48,
+  16: 64,
+  20: 80,
+  24: 96,
+  screen: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+};
+
+/**
+ * Border radius sizes
+ */
+export const borderRadius = {
   none: 0,
-  sm: 2,
-  md: 4,
-  lg: 8,
-  xl: 12,
-  '2xl': 16,
-  '3xl': 24,
-  full: 9999,
+  xs: 2,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  xxl: 24,
+  round: 9999,
 };
 
-// Shadows
-const shadows = {
+/**
+ * Shadow presets
+ */
+export const shadows = {
   none: {
     shadowColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
@@ -239,155 +230,250 @@ const shadows = {
   md: {
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
   },
   lg: {
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   xl: {
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  '2xl': {
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 14,
-    elevation: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
   },
 };
 
-// Common styles for reuse
-const commonStyles = {
+/**
+ * z-index values
+ */
+export const zIndex = {
+  base: 0,
+  card: 10,
+  header: 20,
+  modal: 30,
+  toast: 40,
+  tooltip: 50,
+  dropdown: 60,
+  overlay: 70,
+  popover: 80,
+  drawer: 90,
+  alert: 100,
+};
+
+/**
+ * Common styles for reuse
+ */
+export const commonStyles = StyleSheet.create({
+  // Flex layouts
+  flex1: {
+    flex: 1,
+  },
+  flexGrow1: {
+    flexGrow: 1,
+  },
+  flexRow: {
+    flexDirection: 'row',
+  },
+  flexColumn: {
+    flexDirection: 'column',
+  },
+  flexCenter: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flexRowCenter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flexColumnCenter: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flexRowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  flexWrap: {
+    flexWrap: 'wrap',
+  },
+  
+  // Padding & Margins
+  padding1: { padding: spacing[1] },
+  padding2: { padding: spacing[2] },
+  padding3: { padding: spacing[3] },
+  padding4: { padding: spacing[4] },
+  
+  paddingHorizontal1: { paddingHorizontal: spacing[1] },
+  paddingHorizontal2: { paddingHorizontal: spacing[2] },
+  paddingHorizontal3: { paddingHorizontal: spacing[3] },
+  paddingHorizontal4: { paddingHorizontal: spacing[4] },
+  
+  paddingVertical1: { paddingVertical: spacing[1] },
+  paddingVertical2: { paddingVertical: spacing[2] },
+  paddingVertical3: { paddingVertical: spacing[3] },
+  paddingVertical4: { paddingVertical: spacing[4] },
+  
+  margin1: { margin: spacing[1] },
+  margin2: { margin: spacing[2] },
+  margin3: { margin: spacing[3] },
+  margin4: { margin: spacing[4] },
+  
+  marginHorizontal1: { marginHorizontal: spacing[1] },
+  marginHorizontal2: { marginHorizontal: spacing[2] },
+  marginHorizontal3: { marginHorizontal: spacing[3] },
+  marginHorizontal4: { marginHorizontal: spacing[4] },
+  
+  marginVertical1: { marginVertical: spacing[1] },
+  marginVertical2: { marginVertical: spacing[2] },
+  marginVertical3: { marginVertical: spacing[3] },
+  marginVertical4: { marginVertical: spacing[4] },
+  
+  // Typography
+  textCenter: {
+    textAlign: 'center',
+  },
+  textRight: {
+    textAlign: 'right',
+  },
+  textLeft: {
+    textAlign: 'left',
+  },
+  
+  // Screen layouts
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  container: {
+    flex: 1,
+    padding: spacing[4],
+    backgroundColor: colors.background,
+  },
+  screenContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  sectionContainer: {
+    marginVertical: spacing[4],
+  },
+  
+  // Card styles
   card: {
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
     padding: spacing[4],
     ...shadows.md,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: spacing[3],
   },
-  cardTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.textDark,
-  },
-  cardContent: {
-    marginVertical: spacing[2],
-  },
   cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
     marginTop: spacing[3],
   },
-  section: {
-    marginBottom: spacing[8],
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  
+  // Form elements
+  formGroup: {
     marginBottom: spacing[4],
   },
-  sectionTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textDark,
+  formLabel: {
+    marginBottom: spacing[2],
   },
-  input: {
-    height: 48,
+  formInput: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[3],
-    fontSize: fontSize.base,
-    color: colors.textDark,
-    backgroundColor: colors.backgroundPrimary,
+    paddingVertical: spacing[3],
+    fontSize: typography.fontSize.md,
   },
+  
+  // Button styles
   button: {
-    primary: {
-      backgroundColor: colors.primary,
-      borderRadius: borderRadius.md,
-      paddingVertical: spacing[3],
-      paddingHorizontal: spacing[4],
-      minWidth: 120,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    secondary: {
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.primary,
-      borderRadius: borderRadius.md,
-      paddingVertical: spacing[3],
-      paddingHorizontal: spacing[4],
-      minWidth: 120,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    backgroundColor: colors.primary,
+    ...shadows.sm,
   },
   buttonText: {
-    primary: {
-      fontSize: fontSize.base,
-      fontWeight: fontWeight.medium,
-      color: colors.white,
-    },
-    secondary: {
-      fontSize: fontSize.base,
-      fontWeight: fontWeight.medium,
-      color: colors.primary,
-    },
+    color: colors.white,
+    textAlign: 'center',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
   },
-  containerPadding: {
-    paddingHorizontal: spacing[4],
+  
+  // List styles
+  listItem: {
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  
+  // Utility
   divider: {
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing[4],
   },
-};
+  shadow: {
+    ...shadows.md,
+  },
+});
 
-// Define responsive dimensions
-const responsive = {
-  isSmallDevice: width < 375,
-  screen: {
-    width,
-    height,
+/**
+ * Color schemes for different wallet types
+ */
+export const walletColorSchemes = {
+  parent: {
+    primary: colors.primary,
+    secondary: colors.secondary,
+    accent: colors.success,
+    gradient: colors.primaryGradient,
+    backgroundGradient: ['#F0F8FF', '#FFFFFF'],
+  },
+  child: {
+    primary: '#8A2BE2', // BlueViolet
+    secondary: '#9370DB', // MediumPurple
+    accent: '#BA55D3', // MediumOrchid
+    gradient: ['#8A2BE2', '#9370DB'],
+    backgroundGradient: ['#F5F0FF', '#FFFFFF'],
+  },
+  employer: {
+    primary: '#006064', // Dark Cyan
+    secondary: '#00ACC1', // Cyan
+    accent: '#26C6DA', // Light Cyan
+    gradient: ['#006064', '#00ACC1'],
+    backgroundGradient: ['#E0F7FA', '#FFFFFF'],
+  },
+  employee: {
+    primary: '#1B5E20', // Dark Green
+    secondary: '#43A047', // Green
+    accent: '#66BB6A', // Light Green
+    gradient: ['#1B5E20', '#43A047'],
+    backgroundGradient: ['#E8F5E9', '#FFFFFF'],
+  },
+  personal: {
+    primary: '#C2185B', // Dark Pink
+    secondary: '#E91E63', // Pink
+    accent: '#EC407A', // Light Pink
+    gradient: ['#C2185B', '#E91E63'],
+    backgroundGradient: ['#FCE4EC', '#FFFFFF'],
+  },
+  business: {
+    primary: '#004D40', // Dark Teal
+    secondary: '#00796B', // Teal
+    accent: '#009688', // Light Teal
+    gradient: ['#004D40', '#00796B'],
+    backgroundGradient: ['#E0F2F1', '#FFFFFF'],
   },
 };
-
-// Export the theme
-const theme = {
-  colors,
-  walletColorSchemes,
-  spacing,
-  typography,
-  borderRadius,
-  shadows,
-  commonStyles,
-  responsive,
-};
-
-export default theme;

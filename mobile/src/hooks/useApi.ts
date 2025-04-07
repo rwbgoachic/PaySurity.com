@@ -1,220 +1,315 @@
 import { useState, useCallback } from 'react';
-import api, { ApiOptions, ApiError } from '../services/api';
+import { ApiService, ApiOptions, ApiError } from '../services/api';
 
 /**
- * Hook for making API requests with loading and error states
+ * Hook for making API requests with loading and error state management
  */
 export default function useApi() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const apiService = new ApiService();
 
   /**
-   * Generic request handler with loading and error states
+   * Clear error state
    */
-  const request = useCallback(async <T>(
-    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    endpoint: string,
-    data?: any,
-    options?: ApiOptions
-  ): Promise<T | null> => {
-    setIsLoading(true);
+  const clearError = useCallback(() => {
     setError(null);
-    
-    try {
-      let result: T;
-      
-      switch (method) {
-        case 'GET':
-          result = await api.get<T>(endpoint, options);
-          break;
-        case 'POST':
-          result = await api.post<T>(endpoint, data, options);
-          break;
-        case 'PUT':
-          result = await api.put<T>(endpoint, data, options);
-          break;
-        case 'PATCH':
-          result = await api.patch<T>(endpoint, data, options);
-          break;
-        case 'DELETE':
-          result = await api.del<T>(endpoint, options);
-          break;
-        default:
-          throw new Error(`Invalid method: ${method}`);
-      }
-      
-      return result;
-    } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.data?.message || apiError.message || 'An error occurred';
-      
-      setError(errorMessage);
-      console.error(`API Error (${endpoint}):`, errorMessage);
-      
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
   }, []);
+
+  /**
+   * Generic request handler for API calls
+   */
+  const request = useCallback(
+    async <T>(
+      requestFn: () => Promise<T>,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response: T = await requestFn();
+        
+        if (onSuccess) {
+          onSuccess(response);
+        }
+        
+        return response;
+      } catch (err) {
+        const apiError = err as ApiError;
+        setError(apiError);
+        
+        if (onError) {
+          onError(apiError);
+        }
+        
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   /**
    * GET request
    */
-  const get = useCallback(<T>(endpoint: string, options?: ApiOptions): Promise<T | null> => {
-    return request<T>('GET', endpoint, undefined, options);
-  }, [request]);
+  const get = useCallback(
+    <T>(
+      endpoint: string,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      return request<T>(
+        () => apiService.get<T>(endpoint, options),
+        options,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
    * POST request
    */
-  const post = useCallback(<T>(endpoint: string, data: any, options?: ApiOptions): Promise<T | null> => {
-    return request<T>('POST', endpoint, data, options);
-  }, [request]);
+  const post = useCallback(
+    <T>(
+      endpoint: string,
+      data?: any,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      return request<T>(
+        () => apiService.post<T>(endpoint, data, options),
+        options,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
    * PUT request
    */
-  const put = useCallback(<T>(endpoint: string, data: any, options?: ApiOptions): Promise<T | null> => {
-    return request<T>('PUT', endpoint, data, options);
-  }, [request]);
+  const put = useCallback(
+    <T>(
+      endpoint: string,
+      data: any,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      return request<T>(
+        () => apiService.put<T>(endpoint, data, options),
+        options,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
    * PATCH request
    */
-  const patch = useCallback(<T>(endpoint: string, data: any, options?: ApiOptions): Promise<T | null> => {
-    return request<T>('PATCH', endpoint, data, options);
-  }, [request]);
+  const patch = useCallback(
+    <T>(
+      endpoint: string,
+      data: any,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      return request<T>(
+        () => apiService.patch<T>(endpoint, data, options),
+        options,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
    * DELETE request
    */
-  const del = useCallback(<T>(endpoint: string, options?: ApiOptions): Promise<T | null> => {
-    return request<T>('DELETE', endpoint, undefined, options);
-  }, [request]);
+  const del = useCallback(
+    <T>(
+      endpoint: string,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      return request<T>(
+        () => apiService.del<T>(endpoint, options),
+        options,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
    * Upload file request
    */
-  const uploadFile = useCallback(async <T>(
-    endpoint: string,
-    file: { uri: string; name: string; type: string },
-    fieldName: string = 'file',
-    additionalData?: Record<string, any>,
-    options?: ApiOptions
-  ): Promise<T | null> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const result = await api.uploadFile<T>(endpoint, file, fieldName, additionalData, options);
-      return result;
-    } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.data?.message || apiError.message || 'Upload failed';
-      
-      setError(errorMessage);
-      console.error(`Upload Error (${endpoint}):`, errorMessage);
-      
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const uploadFile = useCallback(
+    <T>(
+      endpoint: string,
+      file: any,
+      fieldName: string,
+      options?: ApiOptions,
+      onSuccess?: (data: T) => void,
+      onError?: (error: Error) => void
+    ): Promise<T | null> => {
+      return request<T>(
+        () => apiService.uploadFile<T>(endpoint, file, fieldName, options),
+        options,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
-   * Login request
+   * Login user
    */
-  const login = useCallback(async (
-    username: string,
-    password: string
-  ): Promise<{ user: any } | null> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const response = await api.login(username, password);
-      return { user: response.user };
-    } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.data?.message || apiError.message || 'Login failed';
-      
-      setError(errorMessage);
-      console.error('Login Error:', errorMessage);
-      
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const login = useCallback(
+    async (username: string, password: string, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.login(username, password),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
-   * Register request
+   * Register user
    */
-  const register = useCallback(async (
-    userData: {
-      username: string;
-      password: string;
-      email: string;
-      firstName: string;
-      lastName: string;
-      [key: string]: any;
-    }
-  ): Promise<{ user: any } | null> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const response = await api.register(userData);
-      return { user: response.user };
-    } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.data?.message || apiError.message || 'Registration failed';
-      
-      setError(errorMessage);
-      console.error('Registration Error:', errorMessage);
-      
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const register = useCallback(
+    async (userData: any, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.register(userData),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
-   * Logout request
+   * Logout user
    */
-  const logout = useCallback(async (): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await api.logout();
-      return true;
-    } catch (err) {
-      const apiError = err as ApiError;
-      const errorMessage = apiError.data?.message || apiError.message || 'Logout failed';
-      
-      setError(errorMessage);
-      console.error('Logout Error:', errorMessage);
-      
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const logout = useCallback(
+    async (onSuccess?: () => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.logout(),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
 
   /**
-   * Clear any previous errors
+   * Check if user is authenticated
    */
-  const clearError = useCallback((): void => {
-    setError(null);
-  }, []);
-  
-  // Return the API methods and state
+  const isAuthenticated = useCallback(() => {
+    return apiService.isAuthenticated();
+  }, [apiService]);
+
+  /**
+   * Process payment using Helcim
+   */
+  const processPayment = useCallback(
+    async (paymentData: any, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.processPayment(paymentData),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
+
+  /**
+   * Create Helcim customer
+   */
+  const createHelcimCustomer = useCallback(
+    async (customerData: any, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.createHelcimCustomer(customerData),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
+
+  /**
+   * Get Helcim customer details
+   */
+  const getHelcimCustomer = useCallback(
+    async (customerId: string, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.getHelcimCustomer(customerId),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
+
+  /**
+   * Save card to Helcim Vault
+   */
+  const saveCardToHelcimVault = useCallback(
+    async (cardData: any, customerId: string, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.saveCardToHelcimVault(cardData, customerId),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
+
+  /**
+   * Process ACH direct deposit
+   */
+  const processACHDirectDeposit = useCallback(
+    async (achData: any, onSuccess?: (data: any) => void, onError?: (error: Error) => void) => {
+      return request(
+        () => apiService.processACHDirectDeposit(achData),
+        undefined,
+        onSuccess,
+        onError
+      );
+    },
+    [request, apiService]
+  );
+
   return {
     isLoading,
     error,
     clearError,
-    request,
+    isAuthenticated,
     get,
     post,
     put,
@@ -224,5 +319,10 @@ export default function useApi() {
     login,
     register,
     logout,
+    processPayment,
+    createHelcimCustomer,
+    getHelcimCustomer,
+    saveCardToHelcimVault,
+    processACHDirectDeposit,
   };
 }

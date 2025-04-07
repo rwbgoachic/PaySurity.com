@@ -1,204 +1,192 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text, Button } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useWallet } from '../../hooks/useWallet';
-import theme from '../../utils/theme';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-// Import our role-specific wallet screens
+import { useWallet } from '../../hooks/useWallet';
+import { colors, commonStyles } from '../../utils/theme';
 import ParentWalletScreen from './ParentWalletScreen';
 import ChildWalletScreen from './ChildWalletScreen';
 import EmployerWalletScreen from './EmployerWalletScreen';
 import EmployeeWalletScreen from './EmployeeWalletScreen';
+import PersonalWalletScreen from './PersonalWalletScreen';
+import BusinessWalletScreen from './BusinessWalletScreen';
+
+type WalletStackParamList = {
+  WalletRouter: undefined;
+  ParentWallet: undefined;
+  ChildWallet: undefined;
+  EmployerWallet: undefined;
+  EmployeeWallet: undefined;
+  PersonalWallet: undefined;
+  BusinessWallet: undefined;
+  WalletSelection: undefined;
+};
+
+type WalletRouterScreenProps = {
+  navigation: StackNavigationProp<WalletStackParamList, 'WalletRouter'>;
+};
 
 /**
- * The WalletRouterScreen serves as the entry point to wallet functionality
- * It routes users to their appropriate wallet interface based on their role
+ * WalletRouterScreen serves as the entry point to wallet functionality
+ * and routes users to their appropriate wallet interface based on their role
  */
-const WalletRouterScreen: React.FC = () => {
-  const { 
-    currentUser, 
-    isLoading, 
-    error, 
-    refreshWalletData 
-  } = useWallet();
-  
-  const navigation = useNavigation();
-  const [refreshing, setRefreshing] = useState(false);
-  
-  // Handle pull-to-refresh
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refreshWalletData();
-    } finally {
-      setRefreshing(false);
+const WalletRouterScreen: React.FC<WalletRouterScreenProps> = ({ navigation }) => {
+  const { isLoading, error, currentUser, userRoles, loadWalletData } = useWallet();
+  const [selectedWalletType, setSelectedWalletType] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadWalletData();
+  }, [loadWalletData]);
+
+  // Handle automatic role-based routing
+  useEffect(() => {
+    if (!isLoading && currentUser && userRoles.length > 0) {
+      // If user has only one role, route them directly to the appropriate wallet
+      if (userRoles.length === 1) {
+        setSelectedWalletType(userRoles[0]);
+      }
     }
-  }, [refreshWalletData]);
-  
-  // Display loading state
-  if (isLoading && !refreshing) {
+  }, [isLoading, currentUser, userRoles]);
+
+  // Handle selected wallet type change
+  useEffect(() => {
+    if (selectedWalletType) {
+      switch (selectedWalletType) {
+        case 'parent':
+          navigation.navigate('ParentWallet');
+          break;
+        case 'child':
+          navigation.navigate('ChildWallet');
+          break;
+        case 'employer':
+          navigation.navigate('EmployerWallet');
+          break;
+        case 'employee':
+          navigation.navigate('EmployeeWallet');
+          break;
+        case 'personal':
+          navigation.navigate('PersonalWallet');
+          break;
+        case 'business':
+          navigation.navigate('BusinessWallet');
+          break;
+        default:
+          break;
+      }
+    }
+  }, [selectedWalletType, navigation]);
+
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading your wallet...</Text>
+      <SafeAreaView style={commonStyles.safeArea}>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading your wallet...</Text>
+        </View>
       </SafeAreaView>
     );
   }
-  
-  // Display error state
+
   if (error) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Icon 
-          name="alert-circle-outline" 
-          size={64} 
-          color={theme.colors.error} 
-        />
-        <Text style={styles.errorTitle}>Something went wrong</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
-        <Button 
-          mode="contained" 
-          onPress={refreshWalletData}
-          style={styles.retryButton}
-        >
-          Retry
-        </Button>
-      </SafeAreaView>
-    );
-  }
-  
-  // Display no user state
-  if (!currentUser) {
-    return (
-      <SafeAreaView style={styles.noUserContainer}>
-        <Icon 
-          name="account-alert-outline" 
-          size={64} 
-          color={theme.colors.warning} 
-        />
-        <Text style={styles.noUserTitle}>Account Required</Text>
-        <Text style={styles.noUserMessage}>
-          Please log in or create an account to access your digital wallet.
-        </Text>
-        <View style={styles.buttonContainer}>
+      <SafeAreaView style={commonStyles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.errorText}>Error: {error.message}</Text>
           <Button 
             mode="contained" 
-            onPress={() => navigation.navigate('Login' as never)}
-            style={styles.loginButton}
+            onPress={() => loadWalletData()}
+            style={styles.retryButton}
           >
-            Log In
-          </Button>
-          <Button 
-            mode="outlined" 
-            onPress={() => navigation.navigate('Signup' as never)}
-            style={styles.signupButton}
-          >
-            Sign Up
+            Try Again
           </Button>
         </View>
       </SafeAreaView>
     );
   }
-  
-  // Route to the appropriate wallet screen based on user role
-  const renderWalletByRole = () => {
-    switch (currentUser.role) {
-      case 'parent':
-        return <ParentWalletScreen onRefresh={onRefresh} refreshing={refreshing} />;
-        
-      case 'child':
-        return <ChildWalletScreen onRefresh={onRefresh} refreshing={refreshing} />;
-        
-      case 'employer':
-        return <EmployerWalletScreen onRefresh={onRefresh} refreshing={refreshing} />;
-        
-      case 'employee':
-        return <EmployeeWalletScreen onRefresh={onRefresh} refreshing={refreshing} />;
-        
-      default:
-        // Fallback to parent wallet if role is not recognized
-        return <ParentWalletScreen onRefresh={onRefresh} refreshing={refreshing} />;
-    }
-  };
-  
-  return renderWalletByRole();
+
+  if (!currentUser) {
+    return (
+      <SafeAreaView style={commonStyles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.messageText}>Please log in to access your wallet.</Text>
+          <Button 
+            mode="contained" 
+            onPress={() => navigation.navigate('Login' as any)}
+            style={styles.actionButton}
+          >
+            Go to Login
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (userRoles.length === 0) {
+    return (
+      <SafeAreaView style={commonStyles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.messageText}>You don't have any wallet accounts yet.</Text>
+          <Button 
+            mode="contained" 
+            onPress={() => navigation.navigate('CreateWallet' as any)}
+            style={styles.actionButton}
+          >
+            Create a Wallet
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // If user has multiple roles, show wallet selection screen
+  if (userRoles.length > 1 && !selectedWalletType) {
+    navigation.navigate('WalletSelection');
+    return null;
+  }
+
+  // This should not be reached if navigation works correctly, but provide a fallback
+  return (
+    <SafeAreaView style={commonStyles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.messageText}>Preparing your wallet...</Text>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.backgroundPrimary,
+    padding: 16,
   },
   loadingText: {
-    marginTop: theme.spacing[4],
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textMuted,
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.textLight,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.backgroundPrimary,
-    paddingHorizontal: theme.spacing[6],
-  },
-  errorTitle: {
-    marginTop: theme.spacing[4],
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold as any,
-    color: theme.colors.textDark,
+  errorText: {
+    fontSize: 16,
+    color: colors.danger,
     textAlign: 'center',
+    marginBottom: 16,
   },
-  errorMessage: {
-    marginTop: theme.spacing[2],
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textMuted,
+  messageText: {
+    fontSize: 18,
+    color: colors.text,
     textAlign: 'center',
-    marginBottom: theme.spacing[6],
+    marginBottom: 24,
   },
   retryButton: {
-    minWidth: 150,
-    backgroundColor: theme.colors.primary,
+    marginTop: 16,
+    backgroundColor: colors.primary,
   },
-  noUserContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.backgroundPrimary,
-    paddingHorizontal: theme.spacing[6],
-  },
-  noUserTitle: {
-    marginTop: theme.spacing[4],
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold as any,
-    color: theme.colors.textDark,
-    textAlign: 'center',
-  },
-  noUserMessage: {
-    marginTop: theme.spacing[2],
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginBottom: theme.spacing[6],
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  loginButton: {
-    minWidth: 120,
-    marginRight: theme.spacing[2],
-    backgroundColor: theme.colors.primary,
-  },
-  signupButton: {
-    minWidth: 120,
-    marginLeft: theme.spacing[2],
-    borderColor: theme.colors.primary,
+  actionButton: {
+    backgroundColor: colors.primary,
   },
 });
 

@@ -1,1329 +1,917 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useContext, ReactNode } from 'react';
 import useApi from './useApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Transaction type definition
-export interface Transaction {
+// Account entity
+export interface Account {
   id: number;
-  userId: number;
-  amount: number;
-  description: string;
-  category: string;
-  date: string;
-  type: 'deposit' | 'withdrawal' | 'transfer' | 'payment' | 'allowance' | 'payment_received';
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  reference: string;
-  fromAccountId?: number;
-  toAccountId?: number;
-  metadata?: Record<string, any>;
-  paymentMethod?: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-// Wallet account type definition
-export interface WalletAccount {
-  id: number;
-  userId: number;
+  type: string;
   name: string;
-  type: 'primary' | 'savings' | 'checking' | 'business' | 'child' | 'employee';
   balance: number;
   currency: string;
-  isDefault: boolean;
-  status: 'active' | 'frozen' | 'closed';
-  createdAt: string;
-  updatedAt: string;
+  lastUpdated: string;
 }
 
-// Card type definition
-export interface Card {
+// Transaction entity
+export interface Transaction {
   id: number;
-  userId: number;
-  cardNumber: string; // Last 4 digits only for security
-  cardType: string;
-  expiryDate: string;
-  isDefault: boolean;
-  status: 'active' | 'blocked' | 'expired';
-  cardholderName: string;
-  billingAddress?: BillingAddress;
+  accountId: number;
+  amount: number;
+  type: 'deposit' | 'withdrawal' | 'transfer' | 'payment' | 'refund';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  description: string;
+  category?: string;
+  merchant?: string;
+  date: string;
 }
 
-// Payment method type definition
-export interface PaymentMethod {
+// Contact entity
+export interface Contact {
   id: number;
-  userId: number;
-  type: 'card' | 'bank_account' | 'wallet';
   name: string;
-  isDefault: boolean;
-  status: 'active' | 'inactive';
-  details: {
-    last4?: string;
-    brand?: string;
-    expMonth?: number;
-    expYear?: number;
-    bankName?: string;
-    accountType?: string;
-  };
-}
-
-// Billing address type definition
-export interface BillingAddress {
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-}
-
-// Wallet user type definition
-export interface WalletUser {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: 'parent' | 'child' | 'employer' | 'employee';
-  status: 'active' | 'pending' | 'suspended';
-  profilePicture?: string;
-  preferredCurrency: string;
+  email?: string;
   phone?: string;
-  createdAt: string;
-  settings: {
-    notifications: boolean;
-    twoFactorEnabled: boolean;
-    autoPayEnabled: boolean;
-  };
+  relationship?: string;
+  avatarUrl?: string;
 }
 
-// Child account type definition
-export interface ChildAccount {
+// Child entity
+export interface Child {
   id: number;
-  userId: number;
-  childId: number;
-  childName: string;
-  status: 'active' | 'pending' | 'suspended';
-  allowance: {
-    amount: number;
-    frequency: 'weekly' | 'biweekly' | 'monthly';
-    nextDate: string;
-  };
-  spendingLimits: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-  };
-  balance: number;
+  name: string;
+  age?: number;
+  avatarUrl?: string;
+  accountId: number;
+  allowance?: number;
+  allowanceFrequency?: 'weekly' | 'biweekly' | 'monthly';
+  allowanceNextDate?: string;
 }
 
-// Employee account type definition
-export interface EmployeeAccount {
+// Employee entity
+export interface Employee {
   id: number;
-  userId: number;
-  employeeId: number;
-  employeeName: string;
-  status: 'active' | 'pending' | 'suspended';
-  department: string;
-  position: string;
-  employmentType: 'full-time' | 'part-time' | 'contract';
-  payrollInfo: {
-    salary: number;
-    payFrequency: 'weekly' | 'biweekly' | 'monthly';
-    nextPayday: string;
-  };
-  balance: number;
+  name: string;
+  position?: string;
+  department?: string;
+  employeeId?: string;
+  avatarUrl?: string;
+  status: 'active' | 'pending' | 'suspended' | 'terminated';
+  hireDate?: string;
+  accountId: number;
 }
 
-// Savings goal type definition
+// Savings goal entity
 export interface SavingsGoal {
   id: number;
-  userId: number;
   name: string;
-  targetAmount: number;
-  currentAmount: number;
-  targetDate: string;
-  createdAt: string;
-  status: 'active' | 'completed' | 'cancelled';
-  category: string;
-  description?: string;
+  target: number;
+  current: number;
+  currency: string;
+  deadline?: string;
+  category?: string;
+  accountId: number;
 }
 
-// Recurring payment type definition
-export interface RecurringPayment {
-  id: number;
-  userId: number;
-  name: string;
-  amount: number;
-  frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'annually';
-  nextDate: string;
-  status: 'active' | 'paused' | 'cancelled';
-  paymentMethod: string;
-  category: string;
-  recipientName: string;
-  recipientAccount: string;
-}
-
-// Task type definition
+// Task entity (for parent-child wallet)
 export interface Task {
   id: number;
   name: string;
   reward: string;
-  status: 'pending' | 'completed' | 'approved' | 'rejected';
+  status: 'pending' | 'completed' | 'expired';
   dueDate?: string;
   completedDate?: string;
 }
 
-// Payroll entry type definition
-export interface PayrollEntry {
+// Payroll entity
+export interface Payroll {
   id: number;
-  userId: number;
-  employerId: number;
   employeeId: number;
-  payPeriodStart: string;
-  payPeriodEnd: string;
+  employeeName: string;
+  periodStart: string;
+  periodEnd: string;
   payDate: string;
-  hoursWorked: number;
-  regularPay: number;
-  overtimePay: number;
-  bonuses: number;
-  commissions: number;
+  status: 'draft' | 'pending' | 'processed' | 'failed';
   grossAmount: number;
-  taxWithholdings: number;
-  otherWithholdings: number;
   netAmount: number;
-  status: 'pending' | 'processed' | 'cancelled';
-  notes: string;
+  taxes: number;
+  deductions: number;
+  currency: string;
 }
 
-// Wallet context data interface
-interface WalletContextData {
-  // User and Account Information
-  currentUser: WalletUser | null;
-  accounts: WalletAccount[];
-  selectedAccount: WalletAccount | null;
-  cards: Card[];
-  paymentMethods: PaymentMethod[];
-  
-  // Parental Controls and Child Management
-  childAccounts: ChildAccount[];
-  childTasks: Record<number, Task[]>;
-  childTransactions: Record<number, Transaction[]>;
-  
-  // Employer and Employee Management
-  employeeAccounts: EmployeeAccount[];
-  payrollEntries: PayrollEntry[];
-  employeeTransactions: Record<number, Transaction[]>;
-  
-  // Transaction and Financial Data
-  transactions: Transaction[];
-  pendingTransactions: Transaction[];
-  recurringPayments: RecurringPayment[];
-  savingsGoals: SavingsGoal[];
-  
-  // Loading and Error States
+// Payslip entity
+export interface Payslip {
+  id: number;
+  employeeId: number;
+  payrollId: number;
+  date: string;
+  amount: number;
+  status: 'pending' | 'available' | 'disbursed';
+  downloadUrl?: string;
+}
+
+// Benefit entity
+export interface Benefit {
+  id: number;
+  name: string;
+  description?: string;
+  status: 'active' | 'inactive' | 'pending';
+  enrollmentDate?: string;
+  coverageStart?: string;
+  coverageEnd?: string;
+  cost?: number;
+  employerContribution?: number;
+  employeeContribution?: number;
+}
+
+// Time entry entity
+export interface TimeEntry {
+  id: number;
+  employeeId: number;
+  date: string;
+  hoursWorked: number;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+}
+
+// Expense report entity
+export interface ExpenseReport {
+  id: number;
+  employeeId: number;
+  date: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'reimbursed';
+  totalAmount: number;
+  currency: string;
+  purpose?: string;
+  approverName?: string;
+  reimbursementDate?: string;
+}
+
+// Time off request entity
+export interface RequestTimeOff {
+  id: number;
+  employeeId: number;
+  type: 'vacation' | 'sick' | 'personal' | 'other';
+  startDate: string;
+  endDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+  approverName?: string;
+}
+
+// User profile entity
+export interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  avatarUrl?: string;
+  preferences?: {
+    notifications?: boolean;
+    darkMode?: boolean;
+    language?: string;
+    currency?: string;
+  };
+}
+
+// Wallet context state interface
+interface WalletContextState {
   isLoading: boolean;
   error: string | null;
-  
-  // Account Selection
-  selectAccount: (accountId: number) => void;
-  
-  // Transaction Operations
-  sendMoney: (recipientId: number, amount: number, description: string) => Promise<boolean>;
-  requestMoney: (fromUserId: number, amount: number, description: string) => Promise<boolean>;
-  depositFunds: (amount: number, method: string, description: string) => Promise<boolean>;
-  withdrawFunds: (amount: number, method: string, description: string) => Promise<boolean>;
-  
-  // Card Management
-  addCard: (cardDetails: Omit<Card, 'id' | 'userId'>) => Promise<boolean>;
-  removeCard: (cardId: number) => Promise<boolean>;
-  updateCardStatus: (cardId: number, status: Card['status']) => Promise<boolean>;
-  
-  // Child Account Management
-  addChildAccount: (childDetails: Omit<ChildAccount, 'id' | 'userId'>) => Promise<boolean>;
-  updateChildAllowance: (childId: number, allowance: ChildAccount['allowance']) => Promise<boolean>;
-  updateChildSpendingLimits: (childId: number, limits: ChildAccount['spendingLimits']) => Promise<boolean>;
-  assignTaskToChild: (childId: number, task: Omit<Task, 'id'>) => Promise<boolean>;
-  approveChildTask: (childId: number, taskId: number) => Promise<boolean>;
-  
-  // Employee Account Management
-  addEmployeeAccount: (employeeDetails: Omit<EmployeeAccount, 'id' | 'userId'>) => Promise<boolean>;
-  processPayroll: (payrollDetails: Omit<PayrollEntry, 'id'>) => Promise<boolean>;
-  updateEmployeeStatus: (employeeId: number, status: EmployeeAccount['status']) => Promise<boolean>;
-  
-  // Savings Goals
-  addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'currentAmount'>) => Promise<boolean>;
-  updateSavingsGoal: (goalId: number, amount: number) => Promise<boolean>;
-  completeSavingsGoal: (goalId: number) => Promise<boolean>;
-  
-  // Recurring Payments
-  addRecurringPayment: (payment: Omit<RecurringPayment, 'id' | 'userId'>) => Promise<boolean>;
-  updateRecurringPaymentStatus: (paymentId: number, status: RecurringPayment['status']) => Promise<boolean>;
-  deleteRecurringPayment: (paymentId: number) => Promise<boolean>;
-  
-  // Reload Data
+  currentUser: UserProfile | null;
+  userRoles: string[];
+  accounts: Account[];
+  transactions: Transaction[];
+  contacts: Contact[];
+  children: Child[];
+  employees: Employee[];
+  savingsGoals: SavingsGoal[];
+  tasks: Task[];
+  payrolls: Payroll[];
+  payslips: Payslip[];
+  benefits: Benefit[];
+  timeEntries: TimeEntry[];
+  expenseReports: ExpenseReport[];
+  timeOffRequests: RequestTimeOff[];
+  loadWalletData: () => Promise<void>;
   refreshWalletData: () => Promise<void>;
+  getAccountById: (id: number) => Account | undefined;
+  getTransactionsByAccountId: (accountId: number) => Transaction[];
+  getSavingsGoalsByAccountId: (accountId: number) => SavingsGoal[];
+  clearWalletError: () => void;
+  
+  // Parent wallet functions
+  addChild: (childData: Omit<Child, 'id' | 'accountId'>) => Promise<Child | null>;
+  updateChildAllowance: (childId: number, amount: number, frequency: Child['allowanceFrequency']) => Promise<boolean>;
+  addTaskForChild: (childId: number, taskData: Omit<Task, 'id'>) => Promise<Task | null>;
+  
+  // Employer wallet functions
+  addEmployee: (employeeData: Omit<Employee, 'id' | 'accountId' | 'status'>) => Promise<Employee | null>;
+  runPayroll: (payrollData: Omit<Payroll, 'id' | 'status'>) => Promise<Payroll | null>;
+  approveTimeEntry: (timeEntryId: number) => Promise<boolean>;
+  approveExpenseReport: (expenseReportId: number) => Promise<boolean>;
+  approveTimeOffRequest: (requestId: number) => Promise<boolean>;
+  
+  // Common wallet functions
+  createSavingsGoal: (goalData: Omit<SavingsGoal, 'id'>) => Promise<SavingsGoal | null>;
+  updateSavingsGoal: (goalId: number, amount: number) => Promise<boolean>;
+  createAccount: (accountData: Omit<Account, 'id' | 'balance' | 'lastUpdated'>) => Promise<Account | null>;
+  transferMoney: (fromAccountId: number, toAccountId: number, amount: number, description?: string) => Promise<Transaction | null>;
+  makePayment: (fromAccountId: number, toMerchant: string, amount: number, category?: string, description?: string) => Promise<Transaction | null>;
+  
+  // Child wallet functions
+  completeTask: (taskId: number) => Promise<boolean>;
+  
+  // Employee wallet functions
+  submitTimeEntry: (timeEntryData: Omit<TimeEntry, 'id' | 'status'>) => Promise<TimeEntry | null>;
+  submitExpenseReport: (expenseData: Omit<ExpenseReport, 'id' | 'status' | 'approverName' | 'reimbursementDate'>) => Promise<ExpenseReport | null>;
+  requestTimeOff: (requestData: Omit<RequestTimeOff, 'id' | 'status' | 'approverName'>) => Promise<RequestTimeOff | null>;
 }
 
-// Create the context
-const WalletContext = createContext<WalletContextData | null>(null);
+// Create context
+export const WalletContext = createContext<WalletContextState | null>(null);
 
 // Provider component
-export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) => {
+  // State
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [childAccounts, setChildAccounts] = useState<Child[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [benefits, setBenefits] = useState<Benefit[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [expenseReports, setExpenseReports] = useState<ExpenseReport[]>([]);
+  const [timeOffRequests, setTimeOffRequests] = useState<RequestTimeOff[]>([]);
+  
   const api = useApi();
   
-  // State
-  const [currentUser, setCurrentUser] = useState<WalletUser | null>(null);
-  const [accounts, setAccounts] = useState<WalletAccount[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<WalletAccount | null>(null);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [childAccounts, setChildAccounts] = useState<ChildAccount[]>([]);
-  const [childTasks, setChildTasks] = useState<Record<number, Task[]>>({});
-  const [childTransactions, setChildTransactions] = useState<Record<number, Transaction[]>>({});
-  const [employeeAccounts, setEmployeeAccounts] = useState<EmployeeAccount[]>([]);
-  const [payrollEntries, setPayrollEntries] = useState<PayrollEntry[]>([]);
-  const [employeeTransactions, setEmployeeTransactions] = useState<Record<number, Transaction[]>>({});
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
-  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([]);
-  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  // Clear error
+  const clearWalletError = useCallback(() => {
+    setError(null);
+  }, []);
   
-  // Fetch account data
-  const fetchWalletData = useCallback(async () => {
+  // Helpers
+  const getAccountById = useCallback((id: number): Account | undefined => {
+    return accounts.find(account => account.id === id);
+  }, [accounts]);
+  
+  const getTransactionsByAccountId = useCallback((accountId: number): Transaction[] => {
+    return transactions.filter(transaction => transaction.accountId === accountId);
+  }, [transactions]);
+  
+  const getSavingsGoalsByAccountId = useCallback((accountId: number): SavingsGoal[] => {
+    return savingsGoals.filter(goal => goal.accountId === accountId);
+  }, [savingsGoals]);
+  
+  // Load wallet data
+  const loadWalletData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      // Fetch user data
-      const userData = await api.get<WalletUser>('/api/wallet/user');
-      
+      // Load user data
+      const userData = await api.get<UserProfile>('/api/wallet/user');
       if (userData) {
         setCurrentUser(userData);
         
-        // Fetch accounts
-        const accountsData = await api.get<WalletAccount[]>('/api/wallet/accounts');
-        if (accountsData) {
-          setAccounts(accountsData);
-          
-          // Set default selected account
-          const defaultAccount = accountsData.find(account => account.isDefault) || accountsData[0];
-          setSelectedAccount(defaultAccount);
+        // Determine user roles based on user data
+        const roles: string[] = [];
+        
+        // Check if parent role
+        const childrenData = await api.get<Child[]>('/api/wallet/children');
+        if (childrenData && childrenData.length > 0) {
+          roles.push('parent');
+          setChildAccounts(childrenData);
         }
         
-        // Fetch payment methods and cards
-        const cardsData = await api.get<Card[]>('/api/wallet/cards');
-        if (cardsData) setCards(cardsData);
-        
-        const paymentMethodsData = await api.get<PaymentMethod[]>('/api/wallet/payment-methods');
-        if (paymentMethodsData) setPaymentMethods(paymentMethodsData);
-        
-        // Fetch transactions
-        const transactionsData = await api.get<Transaction[]>('/api/wallet/transactions');
-        if (transactionsData) {
-          setTransactions(transactionsData);
-          setPendingTransactions(transactionsData.filter(t => t.status === 'pending'));
+        // Check if child role
+        const parentData = await api.get<{ isChild: boolean }>('/api/wallet/is-child');
+        if (parentData && parentData.isChild) {
+          roles.push('child');
         }
         
-        // Fetch recurring payments
-        const recurringPaymentsData = await api.get<RecurringPayment[]>('/api/wallet/recurring-payments');
-        if (recurringPaymentsData) setRecurringPayments(recurringPaymentsData);
+        // Check if employer role
+        const employeesData = await api.get<Employee[]>('/api/wallet/employees');
+        if (employeesData && employeesData.length > 0) {
+          roles.push('employer');
+          setEmployees(employeesData);
+        }
         
-        // Fetch savings goals
-        const savingsGoalsData = await api.get<SavingsGoal[]>('/api/wallet/savings-goals');
-        if (savingsGoalsData) setSavingsGoals(savingsGoalsData);
+        // Check if employee role
+        const employerData = await api.get<{ isEmployee: boolean }>('/api/wallet/is-employee');
+        if (employerData && employerData.isEmployee) {
+          roles.push('employee');
+        }
         
-        // Role-specific data
-        if (userData.role === 'parent' || userData.role === 'employer') {
-          // Fetch child accounts for parents
-          if (userData.role === 'parent') {
-            const childAccountsData = await api.get<ChildAccount[]>('/api/wallet/child-accounts');
-            if (childAccountsData) {
-              setChildAccounts(childAccountsData);
-              
-              // Fetch child-specific data
-              const tasksPromises = childAccountsData.map(async (child: ChildAccount) => {
-                const tasks = await api.get<Task[]>(`/api/wallet/child/${child.childId}/tasks`);
-                return { childId: child.childId, tasks: tasks || [] };
-              });
-              
-              const transactionsPromises = childAccountsData.map(async (child: ChildAccount) => {
-                const transactions = await api.get<Transaction[]>(`/api/wallet/child/${child.childId}/transactions`);
-                return { childId: child.childId, transactions: transactions || [] };
-              });
-              
-              const tasksResults = await Promise.all(tasksPromises);
-              const transactionsResults = await Promise.all(transactionsPromises);
-              
-              const tasksMap: Record<number, Task[]> = {};
-              const transactionsMap: Record<number, Transaction[]> = {};
-              
-              tasksResults.forEach(result => {
-                tasksMap[result.childId] = result.tasks;
-              });
-              
-              transactionsResults.forEach(result => {
-                transactionsMap[result.childId] = result.transactions;
-              });
-              
-              setChildTasks(tasksMap);
-              setChildTransactions(transactionsMap);
-            }
-          }
-          
-          // Fetch employee accounts for employers
-          if (userData.role === 'employer') {
-            const employeeAccountsData = await api.get<EmployeeAccount[]>('/api/wallet/employee-accounts');
-            if (employeeAccountsData) {
-              setEmployeeAccounts(employeeAccountsData);
-              
-              // Fetch payroll entries
-              const payrollData = await api.get<PayrollEntry[]>('/api/wallet/payroll');
-              if (payrollData) setPayrollEntries(payrollData);
-              
-              // Fetch employee-specific transactions
-              const transactionsPromises = employeeAccountsData.map(async (employee: EmployeeAccount) => {
-                const transactions = await api.get<Transaction[]>(`/api/wallet/employee/${employee.employeeId}/transactions`);
-                return { employeeId: employee.employeeId, transactions: transactions || [] };
-              });
-              
-              const transactionsResults = await Promise.all(transactionsPromises);
-              const transactionsMap: Record<number, Transaction[]> = {};
-              
-              transactionsResults.forEach(result => {
-                transactionsMap[result.employeeId] = result.transactions;
-              });
-              
-              setEmployeeTransactions(transactionsMap);
-            }
-          }
+        setUserRoles(roles);
+      }
+      
+      // Load accounts
+      const accountsData = await api.get<Account[]>('/api/wallet/accounts');
+      if (accountsData) {
+        setAccounts(accountsData);
+      }
+      
+      // Load transactions
+      const transactionsData = await api.get<Transaction[]>('/api/wallet/transactions');
+      if (transactionsData) {
+        setTransactions(transactionsData);
+      }
+      
+      // Load contacts
+      const contactsData = await api.get<Contact[]>('/api/wallet/contacts');
+      if (contactsData) {
+        setContacts(contactsData);
+      }
+      
+      // Load savings goals
+      const savingsGoalsData = await api.get<SavingsGoal[]>('/api/wallet/savings-goals');
+      if (savingsGoalsData) {
+        setSavingsGoals(savingsGoalsData);
+      }
+      
+      // Load tasks (if parent or child)
+      if (roles.includes('parent') || roles.includes('child')) {
+        const tasksData = await api.get<Task[]>('/api/wallet/tasks');
+        if (tasksData) {
+          setTasks(tasksData);
         }
       }
-    } catch (error) {
-      console.error('Error fetching wallet data:', error);
+      
+      // Load employer/employee data
+      if (roles.includes('employer') || roles.includes('employee')) {
+        // Load payrolls
+        const payrollsData = await api.get<Payroll[]>('/api/wallet/payrolls');
+        if (payrollsData) {
+          setPayrolls(payrollsData);
+        }
+        
+        // Load payslips
+        const payslipsData = await api.get<Payslip[]>('/api/wallet/payslips');
+        if (payslipsData) {
+          setPayslips(payslipsData);
+        }
+        
+        // Load benefits
+        const benefitsData = await api.get<Benefit[]>('/api/wallet/benefits');
+        if (benefitsData) {
+          setBenefits(benefitsData);
+        }
+        
+        // Load time entries
+        const timeEntriesData = await api.get<TimeEntry[]>('/api/wallet/time-entries');
+        if (timeEntriesData) {
+          setTimeEntries(timeEntriesData);
+        }
+        
+        // Load expense reports
+        const expenseReportsData = await api.get<ExpenseReport[]>('/api/wallet/expense-reports');
+        if (expenseReportsData) {
+          setExpenseReports(expenseReportsData);
+        }
+        
+        // Load time off requests
+        const timeOffRequestsData = await api.get<RequestTimeOff[]>('/api/wallet/time-off-requests');
+        if (timeOffRequestsData) {
+          setTimeOffRequests(timeOffRequestsData);
+        }
+      }
+      
+      // Cache wallet data
+      await AsyncStorage.setItem('wallet_data_timestamp', new Date().toISOString());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load wallet data');
+      console.error('Error loading wallet data:', err);
+    } finally {
+      setIsLoading(false);
     }
   }, [api]);
   
-  // Initial data fetch
+  // Refresh wallet data
+  const refreshWalletData = useCallback(async () => {
+    await loadWalletData();
+  }, [loadWalletData]);
+  
+  // Check if wallet data needs refreshing on mount
   useEffect(() => {
-    fetchWalletData();
-  }, [fetchWalletData]);
-  
-  // Select account
-  const selectAccount = useCallback((accountId: number) => {
-    const account = accounts.find(a => a.id === accountId);
-    if (account) {
-      setSelectedAccount(account);
-    }
-  }, [accounts]);
-  
-  // Transaction operations
-  const sendMoney = useCallback(async (recipientId: number, amount: number, description: string): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; transaction: Transaction }>('/api/wallet/send-money', {
-      recipientId,
-      amount,
-      description,
-      accountId: selectedAccount?.id,
-    });
-    
-    if (result?.success) {
-      // Update local data
-      setTransactions(prev => [result.transaction, ...prev]);
+    const checkDataRefresh = async () => {
+      const lastUpdated = await AsyncStorage.getItem('wallet_data_timestamp');
       
-      // Update selected account balance
-      if (selectedAccount) {
-        setSelectedAccount({
-          ...selectedAccount,
-          balance: selectedAccount.balance - amount,
-        });
-        
-        // Update accounts list
-        setAccounts(prev => prev.map(acc => 
-          acc.id === selectedAccount.id 
-            ? { ...acc, balance: acc.balance - amount } 
-            : acc
-        ));
+      // If no data or data is older than 1 hour, refresh
+      if (!lastUpdated) {
+        loadWalletData();
+        return;
       }
       
-      return true;
-    }
-    
-    return false;
-  }, [api, selectedAccount]);
-  
-  const requestMoney = useCallback(async (fromUserId: number, amount: number, description: string): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; transaction: Transaction }>('/api/wallet/request-money', {
-      fromUserId,
-      amount,
-      description,
-      accountId: selectedAccount?.id,
-    });
-    
-    if (result?.success) {
-      // Update pending transactions
-      setPendingTransactions(prev => [result.transaction, ...prev]);
+      const lastUpdatedDate = new Date(lastUpdated);
+      const currentDate = new Date();
+      const hourDiff = (currentDate.getTime() - lastUpdatedDate.getTime()) / (1000 * 60 * 60);
       
-      return true;
-    }
+      if (hourDiff > 1) {
+        loadWalletData();
+      }
+    };
     
-    return false;
-  }, [api, selectedAccount]);
+    checkDataRefresh();
+  }, [loadWalletData]);
   
-  const depositFunds = useCallback(async (amount: number, method: string, description: string): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; transaction: Transaction }>('/api/wallet/deposit', {
-      amount,
-      method,
-      description,
-      accountId: selectedAccount?.id,
-    });
-    
-    if (result?.success) {
-      // Update local data
-      setTransactions(prev => [result.transaction, ...prev]);
+  // Parent wallet functions
+  const addChild = useCallback(async (childData: Omit<Child, 'id' | 'accountId'>): Promise<Child | null> => {
+    try {
+      const newChild = await api.post<Child>('/api/wallet/children', childData);
       
-      // Update selected account balance
-      if (selectedAccount) {
-        setSelectedAccount({
-          ...selectedAccount,
-          balance: selectedAccount.balance + amount,
-        });
-        
-        // Update accounts list
-        setAccounts(prev => prev.map(acc => 
-          acc.id === selectedAccount.id 
-            ? { ...acc, balance: acc.balance + amount } 
-            : acc
-        ));
+      if (newChild && !userRoles.includes('parent')) {
+        setUserRoles(prev => [...prev, 'parent']);
       }
       
-      return true;
-    }
-    
-    return false;
-  }, [api, selectedAccount]);
-  
-  const withdrawFunds = useCallback(async (amount: number, method: string, description: string): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; transaction: Transaction }>('/api/wallet/withdraw', {
-      amount,
-      method,
-      description,
-      accountId: selectedAccount?.id,
-    });
-    
-    if (result?.success) {
-      // Update local data
-      setTransactions(prev => [result.transaction, ...prev]);
-      
-      // Update selected account balance
-      if (selectedAccount) {
-        setSelectedAccount({
-          ...selectedAccount,
-          balance: selectedAccount.balance - amount,
-        });
-        
-        // Update accounts list
-        setAccounts(prev => prev.map(acc => 
-          acc.id === selectedAccount.id 
-            ? { ...acc, balance: acc.balance - amount } 
-            : acc
-        ));
+      if (newChild) {
+        setChildAccounts(prev => [...prev, newChild]);
       }
       
-      return true;
+      return newChild;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add child');
+      return null;
     }
-    
-    return false;
-  }, [api, selectedAccount]);
+  }, [api, userRoles]);
   
-  // Card management
-  const addCard = useCallback(async (cardDetails: Omit<Card, 'id' | 'userId'>): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; card: Card }>('/api/wallet/cards', cardDetails);
-    
-    if (result?.success) {
-      setCards(prev => [...prev, result.card]);
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const removeCard = useCallback(async (cardId: number): Promise<boolean> => {
-    const result = await api.del<{ success: boolean }>(`/api/wallet/cards/${cardId}`);
-    
-    if (result?.success) {
-      setCards(prev => prev.filter(card => card.id !== cardId));
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const updateCardStatus = useCallback(async (cardId: number, status: Card['status']): Promise<boolean> => {
-    const result = await api.patch<{ success: boolean; card: Card }>(`/api/wallet/cards/${cardId}`, { status });
-    
-    if (result?.success) {
-      setCards(prev => prev.map(card => 
-        card.id === cardId ? result.card : card
-      ));
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  // Child account management
-  const addChildAccount = useCallback(async (childDetails: Omit<ChildAccount, 'id' | 'userId'>): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; childAccount: ChildAccount }>('/api/wallet/child-accounts', childDetails);
-    
-    if (result?.success) {
-      setChildAccounts(prev => [...prev, result.childAccount]);
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const updateChildAllowance = useCallback(async (childId: number, allowance: ChildAccount['allowance']): Promise<boolean> => {
-    const result = await api.patch<{ success: boolean; childAccount: ChildAccount }>(
-      `/api/wallet/child-accounts/${childId}/allowance`,
-      { allowance }
-    );
-    
-    if (result?.success) {
-      setChildAccounts(prev => prev.map(child => 
-        child.childId === childId ? result.childAccount : child
-      ));
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const updateChildSpendingLimits = useCallback(async (childId: number, limits: ChildAccount['spendingLimits']): Promise<boolean> => {
-    const result = await api.patch<{ success: boolean; childAccount: ChildAccount }>(
-      `/api/wallet/child-accounts/${childId}/spending-limits`,
-      { limits }
-    );
-    
-    if (result?.success) {
-      setChildAccounts(prev => prev.map(child => 
-        child.childId === childId ? result.childAccount : child
-      ));
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const assignTaskToChild = useCallback(async (childId: number, task: Omit<Task, 'id'>): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; task: Task }>(`/api/wallet/child/${childId}/tasks`, task);
-    
-    if (result?.success) {
-      setChildTasks(prev => ({
-        ...prev,
-        [childId]: [...(prev[childId] || []), result.task]
-      }));
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const approveChildTask = useCallback(async (childId: number, taskId: number): Promise<boolean> => {
-    const result = await api.post<{
-      success: boolean;
-      task: Task;
-      transaction?: Transaction;
-      childAccount?: ChildAccount;
-    }>(`/api/wallet/child/${childId}/tasks/${taskId}/approve`, {});
-    
-    if (result?.success) {
-      // Update task status
-      setChildTasks(prev => ({
-        ...prev,
-        [childId]: prev[childId].map(task => 
-          task.id === taskId ? result.task : task
-        )
-      }));
-      
-      // If a transaction was created, update child transactions
-      if (result.transaction) {
-        setChildTransactions(prev => ({
-          ...prev,
-          [childId]: [result.transaction!, ...(prev[childId] || [])]
-        }));
-      }
-      
-      // If child account balance was updated
-      if (result.childAccount) {
-        setChildAccounts(prev => prev.map(child => 
-          child.childId === childId ? result.childAccount! : child
-        ));
-      }
-      
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  // Employee account management
-  const addEmployeeAccount = useCallback(async (employeeDetails: Omit<EmployeeAccount, 'id' | 'userId'>): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; employeeAccount: EmployeeAccount }>(
-      '/api/wallet/employee-accounts',
-      employeeDetails
-    );
-    
-    if (result?.success) {
-      setEmployeeAccounts(prev => [...prev, result.employeeAccount]);
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const processPayroll = useCallback(async (payrollDetails: Omit<PayrollEntry, 'id'>): Promise<boolean> => {
-    const result = await api.post<{
-      success: boolean;
-      payrollEntry: PayrollEntry;
-      transactions: Transaction[];
-    }>('/api/wallet/process-payroll', payrollDetails);
-    
-    if (result?.success) {
-      // Update payroll entries
-      setPayrollEntries(prev => [...prev, result.payrollEntry]);
-      
-      // Update transactions for the affected employee
-      if (result.transactions.length > 0) {
-        const employeeId = result.payrollEntry.employeeId;
-        setEmployeeTransactions(prev => ({
-          ...prev,
-          [employeeId]: [...result.transactions, ...(prev[employeeId] || [])]
-        }));
-      }
-      
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  const updateEmployeeStatus = useCallback(async (employeeId: number, status: EmployeeAccount['status']): Promise<boolean> => {
-    const result = await api.patch<{ success: boolean; employeeAccount: EmployeeAccount }>(
-      `/api/wallet/employee-accounts/${employeeId}/status`,
-      { status }
-    );
-    
-    if (result?.success) {
-      setEmployeeAccounts(prev => prev.map(employee => 
-        employee.employeeId === employeeId ? result.employeeAccount : employee
-      ));
-      return true;
-    }
-    
-    return false;
-  }, [api]);
-  
-  // Savings goals
-  const addSavingsGoal = useCallback(async (
-    goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'currentAmount'>
+  const updateChildAllowance = useCallback(async (
+    childId: number, 
+    amount: number, 
+    frequency: Child['allowanceFrequency']
   ): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; savingsGoal: SavingsGoal }>(
-      '/api/wallet/savings-goals',
-      { ...goal, currentAmount: 0 }
-    );
-    
-    if (result?.success) {
-      setSavingsGoals(prev => [...prev, result.savingsGoal]);
-      return true;
+    try {
+      const updated = await api.patch<{ success: boolean }>(`/api/wallet/children/${childId}/allowance`, {
+        amount,
+        frequency
+      });
+      
+      if (updated && updated.success) {
+        setChildAccounts(prev => prev.map(child => 
+          child.id === childId 
+            ? { ...child, allowance: amount, allowanceFrequency: frequency } 
+            : child
+        ));
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update allowance');
+      return false;
     }
-    
-    return false;
   }, [api]);
   
-  const updateSavingsGoal = useCallback(async (goalId: number, amount: number): Promise<boolean> => {
-    const result = await api.post<{
-      success: boolean;
-      savingsGoal: SavingsGoal;
-      transaction?: Transaction;
-    }>(`/api/wallet/savings-goals/${goalId}/contribute`, { amount });
-    
-    if (result?.success) {
-      // Update savings goal
-      setSavingsGoals(prev => prev.map(goal => 
-        goal.id === goalId ? result.savingsGoal : goal
-      ));
+  const addTaskForChild = useCallback(async (
+    childId: number, 
+    taskData: Omit<Task, 'id'>
+  ): Promise<Task | null> => {
+    try {
+      const newTask = await api.post<Task>(`/api/wallet/children/${childId}/tasks`, taskData);
       
-      // If a transaction was created (funds transferred from account to goal)
-      if (result.transaction) {
-        setTransactions(prev => [result.transaction!, ...prev]);
+      if (newTask) {
+        setTasks(prev => [...prev, newTask]);
+      }
+      
+      return newTask;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add task');
+      return null;
+    }
+  }, [api]);
+  
+  // Employer wallet functions
+  const addEmployee = useCallback(async (
+    employeeData: Omit<Employee, 'id' | 'accountId' | 'status'>
+  ): Promise<Employee | null> => {
+    try {
+      const newEmployee = await api.post<Employee>('/api/wallet/employees', {
+        ...employeeData,
+        status: 'pending'
+      });
+      
+      if (newEmployee && !userRoles.includes('employer')) {
+        setUserRoles(prev => [...prev, 'employer']);
+      }
+      
+      if (newEmployee) {
+        setEmployees(prev => [...prev, newEmployee]);
+      }
+      
+      return newEmployee;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add employee');
+      return null;
+    }
+  }, [api, userRoles]);
+  
+  const runPayroll = useCallback(async (
+    payrollData: Omit<Payroll, 'id' | 'status'>
+  ): Promise<Payroll | null> => {
+    try {
+      const newPayroll = await api.post<Payroll>('/api/wallet/payrolls', {
+        ...payrollData,
+        status: 'draft'
+      });
+      
+      if (newPayroll) {
+        setPayrolls(prev => [...prev, newPayroll]);
+      }
+      
+      return newPayroll;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to run payroll');
+      return null;
+    }
+  }, [api]);
+  
+  const approveTimeEntry = useCallback(async (timeEntryId: number): Promise<boolean> => {
+    try {
+      const result = await api.patch<{ success: boolean }>(`/api/wallet/time-entries/${timeEntryId}/approve`, {});
+      
+      if (result && result.success) {
+        setTimeEntries(prev => prev.map(entry => 
+          entry.id === timeEntryId 
+            ? { ...entry, status: 'approved' } 
+            : entry
+        ));
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve time entry');
+      return false;
+    }
+  }, [api]);
+  
+  const approveExpenseReport = useCallback(async (expenseReportId: number): Promise<boolean> => {
+    try {
+      const result = await api.patch<{ success: boolean }>(`/api/wallet/expense-reports/${expenseReportId}/approve`, {});
+      
+      if (result && result.success) {
+        setExpenseReports(prev => prev.map(report => 
+          report.id === expenseReportId 
+            ? { ...report, status: 'approved' } 
+            : report
+        ));
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve expense report');
+      return false;
+    }
+  }, [api]);
+  
+  const approveTimeOffRequest = useCallback(async (requestId: number): Promise<boolean> => {
+    try {
+      const result = await api.patch<{ success: boolean }>(`/api/wallet/time-off-requests/${requestId}/approve`, {});
+      
+      if (result && result.success) {
+        setTimeOffRequests(prev => prev.map(request => 
+          request.id === requestId 
+            ? { ...request, status: 'approved' } 
+            : request
+        ));
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve time off request');
+      return false;
+    }
+  }, [api]);
+  
+  // Common wallet functions
+  const createSavingsGoal = useCallback(async (
+    goalData: Omit<SavingsGoal, 'id'>
+  ): Promise<SavingsGoal | null> => {
+    try {
+      const newGoal = await api.post<SavingsGoal>('/api/wallet/savings-goals', goalData);
+      
+      if (newGoal) {
+        setSavingsGoals(prev => [...prev, newGoal]);
+      }
+      
+      return newGoal;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create savings goal');
+      return null;
+    }
+  }, [api]);
+  
+  const updateSavingsGoal = useCallback(async (
+    goalId: number, 
+    amount: number
+  ): Promise<boolean> => {
+    try {
+      const result = await api.patch<{ success: boolean, current: number }>(`/api/wallet/savings-goals/${goalId}`, {
+        amount
+      });
+      
+      if (result && result.success) {
+        setSavingsGoals(prev => prev.map(goal => 
+          goal.id === goalId 
+            ? { ...goal, current: result.current } 
+            : goal
+        ));
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update savings goal');
+      return false;
+    }
+  }, [api]);
+  
+  const createAccount = useCallback(async (
+    accountData: Omit<Account, 'id' | 'balance' | 'lastUpdated'>
+  ): Promise<Account | null> => {
+    try {
+      const newAccount = await api.post<Account>('/api/wallet/accounts', {
+        ...accountData,
+        balance: 0,
+        lastUpdated: new Date().toISOString()
+      });
+      
+      if (newAccount) {
+        setAccounts(prev => [...prev, newAccount]);
+      }
+      
+      return newAccount;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create account');
+      return null;
+    }
+  }, [api]);
+  
+  const transferMoney = useCallback(async (
+    fromAccountId: number, 
+    toAccountId: number, 
+    amount: number, 
+    description?: string
+  ): Promise<Transaction | null> => {
+    try {
+      const transaction = await api.post<{
+        transaction: Transaction,
+        fromAccount: Account,
+        toAccount: Account
+      }>('/api/wallet/transfer', {
+        fromAccountId,
+        toAccountId,
+        amount,
+        description: description || 'Transfer'
+      });
+      
+      if (transaction) {
+        setTransactions(prev => [...prev, transaction.transaction]);
         
-        // Update selected account balance
-        if (selectedAccount) {
-          setSelectedAccount({
-            ...selectedAccount,
-            balance: selectedAccount.balance - amount,
-          });
-          
-          // Update accounts list
-          setAccounts(prev => prev.map(acc => 
-            acc.id === selectedAccount.id 
-              ? { ...acc, balance: acc.balance - amount } 
-              : acc
+        // Update account balances
+        setAccounts(prev => prev.map(account => {
+          if (account.id === fromAccountId) {
+            return transaction.fromAccount;
+          }
+          if (account.id === toAccountId) {
+            return transaction.toAccount;
+          }
+          return account;
+        }));
+        
+        return transaction.transaction;
+      }
+      
+      return null;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to transfer money');
+      return null;
+    }
+  }, [api]);
+  
+  const makePayment = useCallback(async (
+    fromAccountId: number, 
+    toMerchant: string, 
+    amount: number, 
+    category?: string, 
+    description?: string
+  ): Promise<Transaction | null> => {
+    try {
+      const result = await api.post<{
+        transaction: Transaction,
+        fromAccount: Account
+      }>('/api/wallet/payment', {
+        fromAccountId,
+        toMerchant,
+        amount,
+        category,
+        description: description || `Payment to ${toMerchant}`
+      });
+      
+      if (result) {
+        setTransactions(prev => [...prev, result.transaction]);
+        
+        // Update account balance
+        setAccounts(prev => prev.map(account => 
+          account.id === fromAccountId 
+            ? result.fromAccount 
+            : account
+        ));
+        
+        return result.transaction;
+      }
+      
+      return null;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to make payment');
+      return null;
+    }
+  }, [api]);
+  
+  // Child wallet functions
+  const completeTask = useCallback(async (taskId: number): Promise<boolean> => {
+    try {
+      const result = await api.patch<{
+        success: boolean,
+        task: Task,
+        transaction?: Transaction,
+        account?: Account
+      }>(`/api/wallet/tasks/${taskId}/complete`, {});
+      
+      if (result && result.success) {
+        setTasks(prev => prev.map(task => 
+          task.id === taskId 
+            ? result.task 
+            : task
+        ));
+        
+        if (result.transaction && result.account) {
+          setTransactions(prev => [...prev, result.transaction]);
+          setAccounts(prev => prev.map(account => 
+            account.id === result.account!.id 
+              ? result.account! 
+              : account
           ));
         }
+        
+        return true;
       }
       
-      return true;
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete task');
+      return false;
     }
-    
-    return false;
-  }, [api, selectedAccount]);
-  
-  const completeSavingsGoal = useCallback(async (goalId: number): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; savingsGoal: SavingsGoal }>(
-      `/api/wallet/savings-goals/${goalId}/complete`,
-      {}
-    );
-    
-    if (result?.success) {
-      setSavingsGoals(prev => prev.map(goal => 
-        goal.id === goalId ? result.savingsGoal : goal
-      ));
-      return true;
-    }
-    
-    return false;
   }, [api]);
   
-  // Recurring payments
-  const addRecurringPayment = useCallback(async (payment: Omit<RecurringPayment, 'id' | 'userId'>): Promise<boolean> => {
-    const result = await api.post<{ success: boolean; recurringPayment: RecurringPayment }>(
-      '/api/wallet/recurring-payments',
-      payment
-    );
-    
-    if (result?.success) {
-      setRecurringPayments(prev => [...prev, result.recurringPayment]);
-      return true;
+  // Employee wallet functions
+  const submitTimeEntry = useCallback(async (
+    timeEntryData: Omit<TimeEntry, 'id' | 'status'>
+  ): Promise<TimeEntry | null> => {
+    try {
+      const newTimeEntry = await api.post<TimeEntry>('/api/wallet/time-entries', {
+        ...timeEntryData,
+        status: 'pending'
+      });
+      
+      if (newTimeEntry) {
+        setTimeEntries(prev => [...prev, newTimeEntry]);
+      }
+      
+      return newTimeEntry;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit time entry');
+      return null;
     }
-    
-    return false;
   }, [api]);
   
-  const updateRecurringPaymentStatus = useCallback(async (
-    paymentId: number, 
-    status: RecurringPayment['status']
-  ): Promise<boolean> => {
-    const result = await api.patch<{ success: boolean; recurringPayment: RecurringPayment }>(
-      `/api/wallet/recurring-payments/${paymentId}/status`,
-      { status }
-    );
-    
-    if (result?.success) {
-      setRecurringPayments(prev => prev.map(payment => 
-        payment.id === paymentId ? result.recurringPayment : payment
-      ));
-      return true;
+  const submitExpenseReport = useCallback(async (
+    expenseData: Omit<ExpenseReport, 'id' | 'status' | 'approverName' | 'reimbursementDate'>
+  ): Promise<ExpenseReport | null> => {
+    try {
+      const newExpense = await api.post<ExpenseReport>('/api/wallet/expense-reports', {
+        ...expenseData,
+        status: 'submitted'
+      });
+      
+      if (newExpense) {
+        setExpenseReports(prev => [...prev, newExpense]);
+      }
+      
+      return newExpense;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit expense report');
+      return null;
     }
-    
-    return false;
   }, [api]);
   
-  const deleteRecurringPayment = useCallback(async (paymentId: number): Promise<boolean> => {
-    const result = await api.del<{ success: boolean }>(`/api/wallet/recurring-payments/${paymentId}`);
-    
-    if (result?.success) {
-      setRecurringPayments(prev => prev.filter(payment => payment.id !== paymentId));
-      return true;
+  const requestTimeOff = useCallback(async (
+    requestData: Omit<RequestTimeOff, 'id' | 'status' | 'approverName'>
+  ): Promise<RequestTimeOff | null> => {
+    try {
+      const newRequest = await api.post<RequestTimeOff>('/api/wallet/time-off-requests', {
+        ...requestData,
+        status: 'pending'
+      });
+      
+      if (newRequest) {
+        setTimeOffRequests(prev => [...prev, newRequest]);
+      }
+      
+      return newRequest;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to request time off');
+      return null;
     }
-    
-    return false;
   }, [api]);
   
-  // Provide the context value
-  const value: WalletContextData = {
-    // State
+  const contextValue: WalletContextState = {
+    isLoading,
+    error,
     currentUser,
+    userRoles,
     accounts,
-    selectedAccount,
-    cards,
-    paymentMethods,
-    childAccounts,
-    childTasks,
-    childTransactions,
-    employeeAccounts,
-    payrollEntries,
-    employeeTransactions,
     transactions,
-    pendingTransactions,
-    recurringPayments,
+    contacts,
+    children: childAccounts,
+    employees,
     savingsGoals,
-    isLoading: api.isLoading,
-    error: api.error,
+    tasks,
+    payrolls,
+    payslips,
+    benefits,
+    timeEntries,
+    expenseReports,
+    timeOffRequests,
+    loadWalletData,
+    refreshWalletData,
+    getAccountById,
+    getTransactionsByAccountId,
+    getSavingsGoalsByAccountId,
+    clearWalletError,
     
-    // Actions
-    selectAccount,
-    sendMoney,
-    requestMoney,
-    depositFunds,
-    withdrawFunds,
-    addCard,
-    removeCard,
-    updateCardStatus,
-    addChildAccount,
+    // Parent wallet functions
+    addChild,
     updateChildAllowance,
-    updateChildSpendingLimits,
-    assignTaskToChild,
-    approveChildTask,
-    addEmployeeAccount,
-    processPayroll,
-    updateEmployeeStatus,
-    addSavingsGoal,
+    addTaskForChild,
+    
+    // Employer wallet functions
+    addEmployee,
+    runPayroll,
+    approveTimeEntry,
+    approveExpenseReport,
+    approveTimeOffRequest,
+    
+    // Common wallet functions
+    createSavingsGoal,
     updateSavingsGoal,
-    completeSavingsGoal,
-    addRecurringPayment,
-    updateRecurringPaymentStatus,
-    deleteRecurringPayment,
-    refreshWalletData: fetchWalletData,
+    createAccount,
+    transferMoney,
+    makePayment,
+    
+    // Child wallet functions
+    completeTask,
+    
+    // Employee wallet functions
+    submitTimeEntry,
+    submitExpenseReport,
+    requestTimeOff,
   };
   
   return (
-    <WalletContext.Provider value={value}>
+    <WalletContext.Provider value={contextValue}>
       {children}
     </WalletContext.Provider>
   );
 };
 
-// Hook to use wallet context
-export const useWallet = (): WalletContextData => {
+// Custom hook
+export const useWallet = () => {
   const context = useContext(WalletContext);
+  
   if (!context) {
     throw new Error('useWallet must be used within a WalletProvider');
   }
+  
   return context;
-};
-
-// Utility function to generate mock data for development
-export const generateMockWalletData = (userId: number = 1, role: WalletUser['role'] = 'parent'): WalletContextData => {
-  // Generate a mock user
-  const user: WalletUser = {
-    id: userId,
-    email: 'user@example.com',
-    firstName: 'Test',
-    lastName: 'User',
-    role: role,
-    status: 'active',
-    preferredCurrency: 'USD',
-    createdAt: new Date().toISOString(),
-    settings: {
-      notifications: true,
-      twoFactorEnabled: false,
-      autoPayEnabled: true,
-    },
-  };
-  
-  // Generate mock accounts
-  const accounts: WalletAccount[] = [
-    {
-      id: 1,
-      userId: userId,
-      name: 'Primary Account',
-      type: 'primary',
-      balance: 4325.75,
-      currency: 'USD',
-      isDefault: true,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      userId: userId,
-      name: 'Savings Account',
-      type: 'savings',
-      balance: 8750.50,
-      currency: 'USD',
-      isDefault: false,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
-  
-  // Generate mock transactions
-  const transactions: Transaction[] = [
-    {
-      id: 1,
-      userId: userId,
-      amount: 125.50,
-      description: 'Grocery shopping',
-      category: 'Food',
-      date: new Date().toISOString(),
-      type: 'payment',
-      status: 'completed',
-      reference: 'TX12345678',
-      fromAccountId: 1,
-      direction: 'outgoing',
-    },
-    {
-      id: 2,
-      userId: userId,
-      amount: 2500.00,
-      description: 'Salary',
-      category: 'Income',
-      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      type: 'deposit',
-      status: 'completed',
-      reference: 'TX87654321',
-      toAccountId: 1,
-      direction: 'incoming',
-    },
-    {
-      id: 3,
-      userId: userId,
-      amount: 500.00,
-      description: 'Transfer to savings',
-      category: 'Transfer',
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      type: 'transfer',
-      status: 'completed',
-      reference: 'TX11223344',
-      fromAccountId: 1,
-      toAccountId: 2,
-      direction: 'outgoing',
-    }
-  ];
-  
-  // Role-specific mock data
-  let childAccounts: ChildAccount[] = [];
-  let childTasks: Record<number, Task[]> = {};
-  let childTransactions: Record<number, Transaction[]> = {};
-  let employeeAccounts: EmployeeAccount[] = [];
-  let payrollEntries: PayrollEntry[] = [];
-  let employeeTransactions: Record<number, Transaction[]> = {};
-  
-  if (role === 'parent') {
-    childAccounts = [
-      {
-        id: 1,
-        userId: userId,
-        childId: 100,
-        childName: 'Emma',
-        status: 'active',
-        allowance: {
-          amount: 25.00,
-          frequency: 'weekly',
-          nextDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        spendingLimits: {
-          daily: 10.00,
-          weekly: 50.00,
-          monthly: 150.00,
-        },
-        balance: 45.75,
-      },
-      {
-        id: 2,
-        userId: userId,
-        childId: 101,
-        childName: 'Liam',
-        status: 'active',
-        allowance: {
-          amount: 20.00,
-          frequency: 'weekly',
-          nextDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        spendingLimits: {
-          daily: 8.00,
-          weekly: 40.00,
-          monthly: 120.00,
-        },
-        balance: 62.25,
-      }
-    ];
-    
-    childTasks = {
-      100: [
-        {
-          id: 1,
-          name: 'Clean room',
-          reward: '$5.00',
-          status: 'pending',
-          dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 2,
-          name: 'Homework',
-          reward: '$3.00',
-          status: 'completed',
-          completedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        }
-      ],
-      101: [
-        {
-          id: 3,
-          name: 'Take out trash',
-          reward: '$2.00',
-          status: 'pending',
-          dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-        }
-      ]
-    };
-    
-    childTransactions = {
-      100: [
-        {
-          id: 101,
-          userId: 100,
-          amount: 5.00,
-          description: 'Weekly allowance',
-          category: 'Allowance',
-          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          type: 'allowance',
-          status: 'completed',
-          reference: 'TX-CHILD-001',
-          direction: 'incoming',
-        }
-      ],
-      101: [
-        {
-          id: 102,
-          userId: 101,
-          amount: 5.00,
-          description: 'Weekly allowance',
-          category: 'Allowance',
-          date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-          type: 'allowance',
-          status: 'completed',
-          reference: 'TX-CHILD-002',
-          direction: 'incoming',
-        }
-      ]
-    };
-  } else if (role === 'employer') {
-    employeeAccounts = [
-      {
-        id: 1,
-        userId: userId,
-        employeeId: 201,
-        employeeName: 'John Smith',
-        status: 'active',
-        department: 'Engineering',
-        position: 'Software Developer',
-        employmentType: 'full-time',
-        payrollInfo: {
-          salary: 75000,
-          payFrequency: 'biweekly',
-          nextPayday: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        balance: 0,
-      },
-      {
-        id: 2,
-        userId: userId,
-        employeeId: 202,
-        employeeName: 'Sarah Johnson',
-        status: 'active',
-        department: 'Marketing',
-        position: 'Marketing Manager',
-        employmentType: 'full-time',
-        payrollInfo: {
-          salary: 85000,
-          payFrequency: 'biweekly',
-          nextPayday: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        balance: 0,
-      }
-    ];
-    
-    payrollEntries = [
-      {
-        id: 1,
-        userId: userId,
-        employerId: userId,
-        employeeId: 201,
-        payPeriodStart: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        payPeriodEnd: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(),
-        payDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        hoursWorked: 80,
-        regularPay: 2884.62,
-        overtimePay: 0,
-        bonuses: 0,
-        commissions: 0,
-        grossAmount: 2884.62,
-        taxWithholdings: 721.15,
-        otherWithholdings: 288.46,
-        netAmount: 1875.01,
-        status: 'processed',
-        notes: '',
-      }
-    ];
-    
-    employeeTransactions = {
-      201: [
-        {
-          id: 201,
-          userId: 201,
-          amount: 1875.01,
-          description: 'Payroll',
-          category: 'Income',
-          date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          type: 'deposit',
-          status: 'completed',
-          reference: 'PR-001',
-          direction: 'incoming',
-        }
-      ],
-      202: []
-    };
-  }
-  
-  // Generate mock cards
-  const cards: Card[] = [
-    {
-      id: 1,
-      userId: userId,
-      cardNumber: '****4321',
-      cardType: 'Visa',
-      expiryDate: '12/25',
-      isDefault: true,
-      status: 'active',
-      cardholderName: 'TEST USER',
-      billingAddress: {
-        street: '123 Main St',
-        city: 'Anytown',
-        state: 'NY',
-        postalCode: '10001',
-        country: 'US',
-      },
-    }
-  ];
-  
-  // Generate mock payment methods
-  const paymentMethods: PaymentMethod[] = [
-    {
-      id: 1,
-      userId: userId,
-      type: 'card',
-      name: 'Visa ending in 4321',
-      isDefault: true,
-      status: 'active',
-      details: {
-        last4: '4321',
-        brand: 'visa',
-        expMonth: 12,
-        expYear: 25,
-      },
-    },
-    {
-      id: 2,
-      userId: userId,
-      type: 'bank_account',
-      name: 'Chase Checking',
-      isDefault: false,
-      status: 'active',
-      details: {
-        last4: '6789',
-        bankName: 'Chase',
-        accountType: 'checking',
-      },
-    }
-  ];
-  
-  // Generate mock recurring payments
-  const recurringPayments: RecurringPayment[] = [
-    {
-      id: 1,
-      userId: userId,
-      name: 'Netflix Subscription',
-      amount: 15.99,
-      frequency: 'monthly',
-      nextDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'active',
-      paymentMethod: 'Visa ending in 4321',
-      category: 'Entertainment',
-      recipientName: 'Netflix, Inc.',
-      recipientAccount: 'PAYEE-NETFLIX',
-    },
-    {
-      id: 2,
-      userId: userId,
-      name: 'Gym Membership',
-      amount: 45.00,
-      frequency: 'monthly',
-      nextDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'active',
-      paymentMethod: 'Chase Checking',
-      category: 'Health',
-      recipientName: 'Fitness Center',
-      recipientAccount: 'PAYEE-FITNESS',
-    }
-  ];
-  
-  // Generate mock savings goals
-  const savingsGoals: SavingsGoal[] = [
-    {
-      id: 1,
-      userId: userId,
-      name: 'Vacation Fund',
-      targetAmount: 2000.00,
-      currentAmount: 750.00,
-      targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'active',
-      category: 'Travel',
-      description: 'Saving for summer vacation',
-    },
-    {
-      id: 2,
-      userId: userId,
-      name: 'Emergency Fund',
-      targetAmount: 10000.00,
-      currentAmount: 5000.00,
-      targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'active',
-      category: 'Emergency',
-      description: '6 months of expenses',
-    }
-  ];
-  
-  // Return the mock data
-  return {
-    currentUser: user,
-    accounts,
-    selectedAccount: accounts[0],
-    cards,
-    paymentMethods,
-    childAccounts,
-    childTasks,
-    childTransactions,
-    employeeAccounts,
-    payrollEntries,
-    employeeTransactions,
-    transactions,
-    pendingTransactions: [],
-    recurringPayments,
-    savingsGoals,
-    isLoading: false,
-    error: null,
-    
-    // Mock implementations of actions
-    selectAccount: () => {},
-    sendMoney: async () => true,
-    requestMoney: async () => true,
-    depositFunds: async () => true,
-    withdrawFunds: async () => true,
-    addCard: async () => true,
-    removeCard: async () => true,
-    updateCardStatus: async () => true,
-    addChildAccount: async () => true,
-    updateChildAllowance: async () => true,
-    updateChildSpendingLimits: async () => true,
-    assignTaskToChild: async () => true,
-    approveChildTask: async () => true,
-    addEmployeeAccount: async () => true,
-    processPayroll: async () => true,
-    updateEmployeeStatus: async () => true,
-    addSavingsGoal: async () => true,
-    updateSavingsGoal: async () => true,
-    completeSavingsGoal: async () => true,
-    addRecurringPayment: async () => true,
-    updateRecurringPaymentStatus: async () => true,
-    deleteRecurringPayment: async () => true,
-    refreshWalletData: async () => {},
-  };
 };
