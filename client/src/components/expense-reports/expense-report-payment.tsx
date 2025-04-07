@@ -85,7 +85,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
       toast({
         title: "Payment successful",
         description: "The expense report has been marked as paid.",
-        variant: "success",
+        variant: "default",
       });
       onSuccess();
     },
@@ -141,8 +141,8 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
                   <span className="font-medium text-lg">
                     {new Intl.NumberFormat('en-US', {
                       style: 'currency',
-                      currency: 'USD',
-                    }).format(parseFloat(report.amount))}
+                      currency: report.currency || 'USD',
+                    }).format(parseFloat(report.totalAmount))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

@@ -213,6 +213,7 @@ export interface IStorage {
   createExpenseReport(expenseReport: InsertExpenseReport): Promise<ExpenseReport>;
   updateExpenseReportStatus(id: number, status: string, reviewedBy?: number, reviewedAt?: Date, rejectionReason?: string): Promise<ExpenseReport>;
   updateExpenseReportTotalAmount(id: number, totalAmount: string): Promise<ExpenseReport>;
+  updateExpenseReportPayment(id: number, status: string, reviewedBy: number, paymentDate: Date, paymentMethod: string, paymentReference?: string, notes?: string): Promise<ExpenseReport>;
   
   // Expense Line Items operations
   getExpenseLineItem(id: number): Promise<ExpenseLineItem | undefined>;
@@ -1713,6 +1714,33 @@ export class DatabaseStorage implements IStorage {
       .update(expenseReports)
       .set({
         totalAmount,
+        updatedAt: new Date()
+      })
+      .where(eq(expenseReports.id, id))
+      .returning();
+    return updatedReport;
+  }
+  
+  async updateExpenseReportPayment(
+    id: number,
+    status: string,
+    reviewedBy: number,
+    paymentDate: Date,
+    paymentMethod: string,
+    paymentReference?: string,
+    notes?: string
+  ): Promise<ExpenseReport> {
+    const [updatedReport] = await db
+      .update(expenseReports)
+      .set({
+        status,
+        reviewedBy,
+        reviewDate: new Date(),
+        approvalDate: new Date(), // Consider the approval part of the payment process
+        paymentDate,
+        paymentMethod,
+        paymentReference: paymentReference || null,
+        notes: notes || null,
         updatedAt: new Date()
       })
       .where(eq(expenseReports.id, id))

@@ -27,7 +27,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 // Define the filter schema with Zod
@@ -41,12 +40,6 @@ export const filterSchema = z.object({
 });
 
 export type ExpenseReportFilterOptions = z.infer<typeof filterSchema>;
-
-// Define a custom DateRange type for internal component use
-type DateRangeValue = {
-  from?: Date;
-  to?: Date;
-};
 
 interface ExpenseReportFiltersProps {
   reports: ExpenseReport[];
@@ -62,7 +55,8 @@ export function ExpenseReportFilters({
   // State for filters
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<DateRangeValue>({});
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [minAmount, setMinAmount] = useState<string>("");
   const [maxAmount, setMaxAmount] = useState<string>("");
   const [filterCount, setFilterCount] = useState(0);
@@ -97,11 +91,11 @@ export function ExpenseReportFilters({
     let count = 0;
     if (search) count++;
     if (status) count++;
-    if (dateRange.from || dateRange.to) count++;
+    if (startDate || endDate) count++;
     if (minAmount || maxAmount) count++;
     
     setFilterCount(count);
-  }, [search, status, dateRange, minAmount, maxAmount]);
+  }, [search, status, startDate, endDate, minAmount, maxAmount]);
 
   // Apply filters
   const applyFilters = (data: ExpenseReportFilterOptions) => {
@@ -120,8 +114,8 @@ export function ExpenseReportFilters({
     applyFilters({
       search,
       status,
-      startDate: dateRange.from,
-      endDate: dateRange.to,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
       minAmount: minAmount ? parseFloat(minAmount) : undefined,
       maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
     });
@@ -131,32 +125,28 @@ export function ExpenseReportFilters({
   const clearFilters = () => {
     setSearch("");
     setStatus(undefined);
-    setDateRange({});
+    setStartDate("");
+    setEndDate("");
     setMinAmount("");
     setMaxAmount("");
     
     applyFilters({});
   };
 
-  // Handle date range change
-  const handleDateRangeChange = (value: any) => {
-    setDateRange(value || {});
-  };
-
-  // Format the date range for display
-  const formatDateRange = (range: DateRangeValue): string => {
-    if (!range || (!range.from && !range.to)) return "Select date range";
+  // Format date for display
+  const formatDateRange = (): string => {
+    if (!startDate && !endDate) return "Select date range";
     
-    if (range.from && range.to) {
-      return `${format(range.from, "MMM d, yyyy")} - ${format(range.to, "MMM d, yyyy")}`;
+    if (startDate && endDate) {
+      return `${format(new Date(startDate), "MMM d, yyyy")} - ${format(new Date(endDate), "MMM d, yyyy")}`;
     }
     
-    if (range.from) {
-      return `From ${format(range.from, "MMM d, yyyy")}`;
+    if (startDate) {
+      return `From ${format(new Date(startDate), "MMM d, yyyy")}`;
     }
     
-    if (range.to) {
-      return `Until ${format(range.to, "MMM d, yyyy")}`;
+    if (endDate) {
+      return `Until ${format(new Date(endDate), "MMM d, yyyy")}`;
     }
     
     return "Select date range";
@@ -218,29 +208,24 @@ export function ExpenseReportFilters({
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Date Range</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !dateRange.from && !dateRange.to && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formatDateRange(dateRange)}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="center">
-                        <Calendar
-                          mode="range"
-                          selected={dateRange}
-                          onSelect={handleDateRangeChange}
-                          defaultMonth={dateRange.from}
-                          numberOfMonths={2}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-muted-foreground">From</label>
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
                         />
-                      </PopoverContent>
-                    </Popover>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">To</label>
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -304,8 +289,8 @@ export function ExpenseReportFilters({
                   applyFilters({
                     ...{
                       search,
-                      startDate: dateRange.from,
-                      endDate: dateRange.to,
+                      startDate: startDate ? new Date(startDate) : undefined,
+                      endDate: endDate ? new Date(endDate) : undefined,
                       minAmount: minAmount ? parseFloat(minAmount) : undefined,
                       maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
                     },
@@ -317,15 +302,16 @@ export function ExpenseReportFilters({
               </Button>
             </Badge>
           )}
-          {(dateRange.from || dateRange.to) && (
+          {(startDate || endDate) && (
             <Badge variant="secondary" className="flex items-center gap-1">
-              Date: {formatDateRange(dateRange)}
+              Date: {formatDateRange()}
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
                 onClick={() => {
-                  setDateRange({});
+                  setStartDate("");
+                  setEndDate("");
                   applyFilters({
                     ...{
                       search,
@@ -356,8 +342,8 @@ export function ExpenseReportFilters({
                     ...{
                       search,
                       status,
-                      startDate: dateRange.from,
-                      endDate: dateRange.to,
+                      startDate: startDate ? new Date(startDate) : undefined,
+                      endDate: endDate ? new Date(endDate) : undefined,
                     },
                     minAmount: undefined,
                     maxAmount: undefined,

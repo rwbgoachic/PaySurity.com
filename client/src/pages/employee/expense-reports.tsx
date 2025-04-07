@@ -1,7 +1,7 @@
 import { useExpenseReports } from "@/hooks/use-expense-reports";
 import { ExpenseReportCard } from "@/components/expense-reports/expense-report-card";
 import { ExpenseReportSummary } from "@/components/expense-reports/expense-report-summary";
-import { ExpenseReportFilters, ExpenseReportFilterOptions } from "@/components/expense-reports/expense-report-filters";
+import { ExpenseReportFilters, ExpenseReportFilterOptions } from "@/components/expense-reports/expense-report-filters-simple";
 import { CreateExpenseReportForm } from "@/components/expense-reports/create-expense-report-form";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, RefreshCw } from "lucide-react";
@@ -32,8 +32,8 @@ export default function EmployeeExpenseReportsPage() {
     let result = [...expenseReports];
     
     // Apply status filter
-    if (filters.status && filters.status.length > 0) {
-      result = result.filter(report => filters.status?.includes(report.status));
+    if (filters.status) {
+      result = result.filter(report => report.status === filters.status);
     } else if (activeTab === "draft") {
       result = result.filter(report => report.status === "draft");
     } else if (activeTab === "pending") {
@@ -52,16 +52,16 @@ export default function EmployeeExpenseReportsPage() {
     }
     
     // Apply date range filter
-    if (filters.dateRange && (filters.dateRange.from || filters.dateRange.to)) {
+    if (filters.startDate || filters.endDate) {
       result = result.filter(report => {
-        const reportDate = new Date(report.submissionDate || report.createdAt);
+        const reportDate = new Date(report.submissionDate || report.createdAt || '');
         
-        if (filters.dateRange?.from && reportDate < filters.dateRange.from) {
+        if (filters.startDate && reportDate < filters.startDate) {
           return false;
         }
         
-        if (filters.dateRange?.to) {
-          const endDate = new Date(filters.dateRange.to);
+        if (filters.endDate) {
+          const endDate = new Date(filters.endDate);
           endDate.setHours(23, 59, 59, 999); // End of day
           if (reportDate > endDate) {
             return false;
@@ -73,11 +73,19 @@ export default function EmployeeExpenseReportsPage() {
     }
     
     // Apply amount range filter
-    if (filters.amountRange) {
-      const [min, max] = filters.amountRange;
+    if (filters.minAmount !== undefined || filters.maxAmount !== undefined) {
       result = result.filter(report => {
         const amount = parseFloat(report.totalAmount);
-        return amount >= min && amount <= max;
+        
+        if (filters.minAmount !== undefined && amount < filters.minAmount) {
+          return false;
+        }
+        
+        if (filters.maxAmount !== undefined && amount > filters.maxAmount) {
+          return false;
+        }
+        
+        return true;
       });
     }
     

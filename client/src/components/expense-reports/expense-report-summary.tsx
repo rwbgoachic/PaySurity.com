@@ -30,7 +30,7 @@ export function ExpenseReportSummary({ reports, view }: ExpenseReportSummaryProp
     const totalReports = reports.length;
     
     // Convert string amounts to numbers and calculate totals
-    const amounts = reports.map((report) => parseFloat(report.amount));
+    const amounts = reports.map((report) => parseFloat(report.totalAmount));
     const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
     
     // Status counts
@@ -48,19 +48,19 @@ export function ExpenseReportSummary({ reports, view }: ExpenseReportSummaryProp
     const pendingCount = statusCounts.submitted + statusCounts.under_review;
     const pendingAmount = reports
       .filter((r) => r.status === "submitted" || r.status === "under_review")
-      .reduce((sum, report) => sum + parseFloat(report.amount), 0);
+      .reduce((sum, report) => sum + parseFloat(report.totalAmount), 0);
     
     const approvedAmount = reports
       .filter((r) => r.status === "approved")
-      .reduce((sum, report) => sum + parseFloat(report.amount), 0);
+      .reduce((sum, report) => sum + parseFloat(report.totalAmount), 0);
     
     const paidAmount = reports
       .filter((r) => r.status === "paid")
-      .reduce((sum, report) => sum + parseFloat(report.amount), 0);
+      .reduce((sum, report) => sum + parseFloat(report.totalAmount), 0);
     
     const rejectedAmount = reports
       .filter((r) => r.status === "rejected")
-      .reduce((sum, report) => sum + parseFloat(report.amount), 0);
+      .reduce((sum, report) => sum + parseFloat(report.totalAmount), 0);
     
     // Calculate percentages (avoid division by zero)
     const pendingPercentage = totalReports > 0 ? (pendingCount / totalReports) * 100 : 0;

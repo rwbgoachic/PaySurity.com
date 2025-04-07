@@ -386,6 +386,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post("/api/expense-reports/:id/pay", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const reportId = parseInt(req.params.id);
+      const report = await storage.getExpenseReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Expense report not found" });
+      }
+      
+      // Only employers can mark reports as paid
+      if (report.employerId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden: Only employers can process payments" });
+      }
+      
+      // Only approved reports can be paid
+      if (report.status !== "approved") {
+        return res.status(400).json({ error: "Only approved reports can be paid" });
+      }
+      
+      const { paymentMethod, referenceNumber, notes, sendReceipt } = req.body;
+      
+      const updatedReport = await storage.updateExpenseReportPayment(
+        reportId,
+        "paid",
+        req.user.id,
+        new Date(),
+        paymentMethod,
+        referenceNumber,
+        notes
+      );
+      
+      // Notify employee about payment
+      broadcast(`user-${report.userId}`, {
+        type: 'expense_report_paid',
+        data: updatedReport
+      });
+      
+      // Optionally send email receipt
+      if (sendReceipt) {
+        // Add email sending logic here when implemented
+        console.log(`Payment receipt would be sent to employee ${report.userId}`);
+      }
+      
+      return res.json(updatedReport);
+    } catch (error) {
+      console.error("Error processing expense report payment:", error);
+      return res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
   app.patch("/api/expense-reports/:id/status", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Unauthorized" });

@@ -1,8 +1,15 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FileUp, Trash2, Image, Loader2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Loader2, X, Upload, FileImage, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ReceiptUploadProps {
@@ -23,147 +30,164 @@ export function ReceiptUpload({
   error,
 }: ReceiptUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const displayUrl = previewUrl || existingImageUrl;
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      validateAndProcessFile(file);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      validateAndProcessFile(file);
+    }
+  };
 
   const validateAndProcessFile = (file: File) => {
-    // Check file type
+    // Check if file is an image
     if (!file.type.startsWith("image/")) {
-      console.error("File must be an image");
+      alert("Please upload an image file (JPEG, PNG, etc.)");
       return;
     }
 
-    // Check file size (< 5MB)
+    // Check file size (limit to 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      console.error("File size must be less than 5MB");
+      alert("File size exceeds 5MB limit. Please upload a smaller file.");
       return;
     }
 
     onFileSelected(file);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      validateAndProcessFile(files[0]);
-    }
-    // Reset the input so the same file can be selected again
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      validateAndProcessFile(files[0]);
-    }
-  };
-
-  const handleClick = () => {
-    if (inputRef.current) {
-      inputRef.current.click();
-    }
-  };
-
-  // Determine if we have an image to show (either existing or preview)
-  const hasImage = existingImageUrl || previewUrl;
 
   return (
     <div className="w-full">
       <Input
-        ref={inputRef}
         type="file"
         accept="image/*"
         className="hidden"
+        ref={fileInputRef}
         onChange={handleFileChange}
         disabled={isLoading}
       />
 
-      {!hasImage ? (
-        <Card
+      {!displayUrl ? (
+        <div
           className={cn(
-            "border-2 border-dashed p-0 cursor-pointer hover:border-primary/50 transition-colors",
-            isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
+            "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors",
+            isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/20",
             isLoading && "opacity-50 cursor-not-allowed"
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={isLoading ? undefined : handleClick}
+          onClick={handleButtonClick}
         >
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            {isLoading ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center py-4">
               <Loader2 className="h-10 w-10 text-muted-foreground animate-spin mb-4" />
-            ) : (
-              <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
-            )}
-            <div className="space-y-2">
-              <h3 className="font-medium text-lg">Upload Receipt</h3>
-              <p className="text-sm text-muted-foreground">
-                Drag and drop your receipt image here, or click to browse
+              <p className="text-sm text-muted-foreground">Uploading receipt...</p>
+            </div>
+          ) : (
+            <>
+              <Upload className="h-10 w-10 text-muted-foreground mb-4" />
+              <h3 className="font-medium text-base mb-1">Upload Receipt</h3>
+              <p className="text-sm text-muted-foreground text-center mb-4">
+                Drag & drop a receipt image or click to browse
               </p>
               <p className="text-xs text-muted-foreground">
-                JPG, PNG, or GIF up to 5MB
+                Supports: JPEG, PNG, GIF (Max 5MB)
               </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="relative group">
-          <Card className="overflow-hidden border-0">
-            <CardContent className="p-0 relative">
-              <div className="relative aspect-video bg-muted">
-                <img
-                  src={previewUrl || existingImageUrl || ''}
-                  alt="Receipt"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleClick}
-                      disabled={isLoading}
-                    >
-                      <Image className="h-4 w-4 mr-2" />
-                      Replace
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      onClick={onRemoveFile}
-                      disabled={isLoading}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remove
-                    </Button>
-                  </div>
+              {error && (
+                <div className="mt-4 flex items-center text-destructive gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-xs">{error}</span>
                 </div>
-                {isLoading && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-white animate-spin" />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </>
+          )}
         </div>
-      )}
-
-      {error && (
-        <p className="text-sm text-destructive mt-2">{error}</p>
+      ) : (
+        <Card className="overflow-hidden">
+          <CardHeader className="p-4 pb-0">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-base">Receipt Image</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onRemoveFile}
+                disabled={isLoading}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <CardDescription>
+              {existingImageUrl ? "Saved receipt" : "Preview (not yet saved)"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-2">
+            <div className="relative rounded-md overflow-hidden border aspect-[4/3] flex items-center justify-center bg-muted">
+              {isLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                  <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
+                </div>
+              ) : displayUrl ? (
+                <img
+                  src={displayUrl}
+                  alt="Receipt"
+                  className="object-contain w-full h-full"
+                />
+              ) : (
+                <div className="flex flex-col items-center text-muted-foreground">
+                  <FileImage className="h-10 w-10 mb-2" />
+                  <span className="text-sm">No image available</span>
+                </div>
+              )}
+            </div>
+            {error && (
+              <div className="mt-2 flex items-center text-destructive gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-xs">{error}</span>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="p-4 pt-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={handleButtonClick}
+              disabled={isLoading}
+            >
+              Replace Image
+            </Button>
+          </CardFooter>
+        </Card>
       )}
     </div>
   );
