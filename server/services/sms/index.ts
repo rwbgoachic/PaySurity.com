@@ -44,6 +44,19 @@ export class SmsService {
   }
   
   /**
+   * Retrieve recent SMS messages sent by the mock provider (testing only)
+   * @param count Number of recent messages to retrieve
+   * @returns Array of recent messages or empty array if not in test mode
+   */
+  public getRecentTestMessages(count: number = 10): Array<{to: string, message: string, timestamp: Date}> {
+    const mockProvider = this.factory.getMockProvider();
+    if (mockProvider && typeof mockProvider.getRecentMessages === 'function') {
+      return mockProvider.getRecentMessages(count);
+    }
+    return [];
+  }
+  
+  /**
    * Send an order status notification
    * @param order The order to send notification for
    * @param status The status of the order
@@ -140,4 +153,13 @@ export async function sendOrderStatusSms(
 
 export function getEstimatedPrepTime(order: RestaurantOrder | any): number {
   return smsService.getEstimatedPrepTime(order);
+}
+
+/**
+ * Retrieve recent SMS messages sent by the mock provider (testing only)
+ * @param count Number of recent messages to retrieve
+ * @returns Array of recent messages or empty array if not in test mode
+ */
+export function getRecentTestMessages(count: number = 10): Array<{to: string, message: string, timestamp: Date}> {
+  return smsService.getRecentTestMessages(count);
 }

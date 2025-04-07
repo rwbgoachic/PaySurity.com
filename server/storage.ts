@@ -5155,11 +5155,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getOrdersBeingModified(): Promise<RestaurantOrder[]> {
-    return await db
-      .select()
-      .from(restaurantOrders)
-      .where(eq(restaurantOrders.isBeingModified, true))
-      .orderBy(asc(restaurantOrders.modificationStartTime));
+    try {
+      return await db
+        .select()
+        .from(restaurantOrders)
+        .where(eq(restaurantOrders.isBeingModified, true))
+        .orderBy(asc(restaurantOrders.modificationStartTime));
+    } catch (error) {
+      console.error("Error fetching orders being modified:", error);
+      return [];
+    }
   }
 
   // =========================================
@@ -5776,11 +5781,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getOrdersBeingModified(): Promise<RestaurantOrder[]> {
-    return await db
-      .select()
-      .from(restaurantOrders)
-      .where(eq(restaurantOrders.isBeingModified, true))
-      .orderBy(asc(restaurantOrders.modificationStartTime));
+    try {
+      return await db
+        .select()
+        .from(restaurantOrders)
+        .where(eq(restaurantOrders.isBeingModified, true))
+        .orderBy(asc(restaurantOrders.modificationStartTime));
+    } catch (error) {
+      console.error("Error fetching orders being modified:", error);
+      return [];
+    }
   }
 }
 

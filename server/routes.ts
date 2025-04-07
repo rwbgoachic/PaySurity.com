@@ -1769,6 +1769,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Import and use directly from the module to avoid circular dependencies
+      const { SmsService } = require("./services/sms");
+      const smsService = new SmsService();
       const availableProviders = smsService.getAvailableProviders();
 
       res.json({
@@ -1794,6 +1797,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Import and use directly from the module to avoid circular dependencies
+      const { SmsService } = require("./services/sms");
+      const smsService = new SmsService();
       const success = smsService.setProvider(provider);
 
       if (success) {
@@ -1822,21 +1828,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Import and use directly from the module to avoid circular dependencies
+      const { SmsService } = require("./services/sms");
+      const smsService = new SmsService();
       smsService.sendSms(phoneNumber, message)
-        .then(success => {
+        .then((success: boolean) => {
           if (success) {
             res.json({ success: true });
           } else {
             res.status(400).json({ error: "Failed to send SMS" });
           }
         })
-        .catch(error => {
+        .catch((error: Error) => {
           throw error;
         });
     } catch (error: any) {
       console.error("Error sending test SMS:", error);
       res.status(500).json({ error: error.message });
     }
+  });
+  
+  // API endpoint to retrieve test SMS messages for development/debugging
+  app.get("/api/admin/test-sms/logs", (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    
+    const count = req.query.count ? parseInt(req.query.count as string) : 10;
+    
+    // Import function directly from the module to avoid circular dependencies
+    const { getRecentTestMessages } = require("./services/sms");
+    const logs = getRecentTestMessages(count);
+    
+    res.json({ 
+      logs,
+      provider: "mock",
+      count: logs.length,
+      note: "These are test messages sent via the mock SMS provider and won't appear when using an actual SMS provider."
+    });
   });
 
   const httpServer = createServer(app);
@@ -4199,7 +4228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the order
-      const order = await storage.getRestaurantOrderById(orderId);
+      const order = await storage.getRestaurantOrder(orderId);
       
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
@@ -4207,7 +4236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate the QR code
       const baseUrl = `${req.protocol}://${req.get('host')}`;
-      const qrCodeData = await generateOrderModificationQrCode(orderId, baseUrl);
+      // Use the imported function directly
+      const qrCodeData = await generateOrderModificationUrl(orderId, baseUrl);
       
       res.json(qrCodeData);
     } catch (error: any) {

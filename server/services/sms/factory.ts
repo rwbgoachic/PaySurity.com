@@ -87,4 +87,13 @@ export class SmsProviderFactory {
     
     return available;
   }
+  
+  /**
+   * Get the mock provider instance if available
+   * @returns Mock provider instance or null
+   */
+  public getMockProvider(): any | null {
+    const provider = this.getProvider('mock');
+    return provider && provider.getName().includes('Mock') ? provider : null;
+  }
 }

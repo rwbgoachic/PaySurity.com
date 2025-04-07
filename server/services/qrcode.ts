@@ -72,16 +72,31 @@ export async function generateOrderQRCode(
 }
 
 /**
- * Generate a URL for order modification
- * @param baseUrl Base URL of the application
+ * Generate a URL and QR code for order modification
  * @param orderId Order ID
- * @param token Modification token
- * @returns Order modification URL
+ * @param baseUrl Base URL of the application 
+ * @returns Promise resolving to object with URL, token and QR code data URL
  */
-export function generateOrderModificationUrl(
-  baseUrl: string,
+export async function generateOrderModificationUrl(
   orderId: number,
-  token: string
-): string {
-  return `${baseUrl}/order/modify?orderId=${orderId}&token=${token}`;
+  baseUrl: string
+): Promise<{ url: string; token: string; qrCode: string }> {
+  // Generate a random token for this modification
+  const token = generateModificationToken();
+  
+  // Create the URL
+  const url = `${baseUrl}/order-modify/${token}`;
+  
+  // Generate QR code
+  const qrCode = await generateQRCode(url, {
+    errorCorrectionLevel: 'H',
+    margin: 2,
+    width: 250,
+    color: {
+      dark: '#000000',
+      light: '#ffffff'
+    }
+  });
+  
+  return { url, token, qrCode };
 }
