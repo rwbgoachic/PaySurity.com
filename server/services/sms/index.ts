@@ -102,8 +102,11 @@ export class SmsService {
     const success = await this.sendSms(order.customerPhone, message);
     
     if (success) {
-      // Update the order's SMS notification status
-      await storage.updateOrderSmsStatus(order.id, true);
+      // Update the order's SMS notification status - use the available method
+      await storage.updateRestaurantOrder(order.id, { 
+        smsNotificationSent: true,
+        updatedAt: new Date()
+      });
     }
     
     return success;

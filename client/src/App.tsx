@@ -158,10 +158,14 @@ function Router() {
       <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
       <ProtectedRoute path="/admin/project-dependencies" component={ProjectDependenciesPage} />
       
-      {/* Catch-all route */}
+      {/* Customer-facing routes */}
+      <Route path="/order-modify/:token" component={React.lazy(() => import("./pages/customer/order-modify"))} />
+      
+      {/* Admin routes */}
+      <Route path="/admin/sms-settings" component={React.lazy(() => import("./pages/admin/sms-settings"))} />
+      
+      {/* Catch-all route - must be last */}
       <Route component={NotFound} />
-          <Route path="/order-modify/:token" component={React.lazy(() => import("./pages/customer/order-modify"))} />
-          <Route path="/admin/sms-settings" component={React.lazy(() => import("./pages/admin/sms-settings"))} />
     </Switch>
   );
 }

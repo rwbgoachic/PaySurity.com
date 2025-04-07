@@ -56,12 +56,19 @@ export class SmsProviderFactory {
     }
     
     // If requested provider is not available or configured, try others
-    for (const [providerName, providerInstance] of this.providers.entries()) {
-      if (providerInstance.isConfigured()) {
+    // Using forEach to avoid downlevelIteration issues
+    let foundProvider = false;
+    this.providers.forEach((providerInstance, providerName) => {
+      // Only set the first configured provider we find
+      if (!foundProvider && providerInstance.isConfigured()) {
         this.activeProvider = providerInstance;
         console.log(`Falling back to SMS provider: ${providerInstance.getName()}`);
-        return true;
+        foundProvider = true;
       }
+    });
+    
+    if (foundProvider) {
+      return true;
     }
     
     // If no configured providers, default to mock

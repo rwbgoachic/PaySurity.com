@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
-import { useNavigate } from "wouter";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Clock, MessageSquare, RefreshCw } from "lucide-react";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
 interface SMSProvider {
@@ -108,9 +109,22 @@ const PROVIDERS: SMSProvider[] = [
   },
 ];
 
+interface TestMessage {
+  to: string;
+  message: string;
+  timestamp: Date;
+}
+
+interface TestMessageLogsResponse {
+  logs: TestMessage[];
+  provider: string;
+  count: number;
+  note: string;
+}
+
 export default function SmsSettingsPage() {
   const { user } = useAuth();
-  const [, navigate] = useNavigate();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [testPhone, setTestPhone] = useState<string>("");
@@ -120,6 +134,9 @@ export default function SmsSettingsPage() {
     success?: boolean;
     error?: string;
   } | null>(null);
+  
+  // For test message logs
+  const [refreshLogs, setRefreshLogs] = useState<number>(0);
 
   // If user is not admin, redirect to home
   useEffect(() => {
@@ -140,6 +157,24 @@ export default function SmsSettingsPage() {
       const response = await apiRequest("GET", "/api/admin/sms-providers");
       if (!response.ok) {
         throw new Error("Failed to fetch SMS provider settings");
+      }
+      return response.json();
+    },
+    enabled: !!user && user.role === "admin",
+  });
+  
+  // Get test message logs for the mock provider
+  const { 
+    data: messageLogs, 
+    isLoading: isLoadingLogs,
+    error: logsError,
+    refetch: refetchLogs 
+  } = useQuery<TestMessageLogsResponse>({
+    queryKey: ["/api/admin/test-sms/logs", refreshLogs],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/test-sms/logs");
+      if (!response.ok) {
+        throw new Error("Failed to fetch SMS message logs");
       }
       return response.json();
     },
@@ -289,9 +324,10 @@ export default function SmsSettingsPage() {
       )}
 
       <Tabs defaultValue="providers" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+        <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
           <TabsTrigger value="providers">SMS Providers</TabsTrigger>
           <TabsTrigger value="test">Test SMS</TabsTrigger>
+          <TabsTrigger value="logs">Message Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="providers" className="space-y-6">
@@ -479,6 +515,96 @@ export default function SmsSettingsPage() {
               </AlertDescription>
             </Alert>
           )}
+        </TabsContent>
+        
+        <TabsContent value="logs" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>Message Logs</CardTitle>
+                <CardDescription>
+                  View history of test messages sent through the system
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setRefreshLogs(prev => prev + 1);
+                  refetchLogs();
+                  toast({
+                    title: "Refreshing logs",
+                    description: "Getting the latest message logs",
+                  });
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLogs ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : logsError ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Error Loading Logs</AlertTitle>
+                  <AlertDescription>
+                    {logsError instanceof Error 
+                      ? logsError.message 
+                      : "Failed to load message logs"}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  {messageLogs?.logs && messageLogs.logs.length > 0 ? (
+                    <div className="space-y-1">
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Provider: <span className="font-medium">{messageLogs.provider}</span>
+                        {messageLogs.note && (
+                          <p className="text-xs italic mt-1">{messageLogs.note}</p>
+                        )}
+                      </div>
+                      <div className="border rounded-md">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-32">Timestamp</TableHead>
+                              <TableHead className="w-32">Phone Number</TableHead>
+                              <TableHead>Message</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {messageLogs.logs.map((log, i) => (
+                              <TableRow key={i}>
+                                <TableCell className="text-xs">
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {log.to}
+                                </TableCell>
+                                <TableCell>
+                                  <p className="text-sm">{log.message}</p>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground opacity-20" />
+                      <p className="mt-2 text-muted-foreground">No message logs found</p>
+                      <p className="text-xs text-muted-foreground mt-1">Send a test message to see logs here</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
