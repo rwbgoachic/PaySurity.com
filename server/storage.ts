@@ -20,6 +20,9 @@ import {
   clickEvents,
   // HubSpot integration entities
   hubspotTokens,
+  // Family wallet system entities
+  familyGroups, familyMembers, allowances, spendingRules, 
+  familyTasks, spendingRequests,
   
   // Core types
   type User, type InsertUser, 
@@ -73,7 +76,15 @@ import {
   type DemoRequest, type InsertDemoRequest,
   
   // HubSpot integration types
-  type HubspotToken, type InsertHubspotToken
+  type HubspotToken, type InsertHubspotToken,
+  
+  // Family wallet system types
+  type FamilyGroup, type InsertFamilyGroup,
+  type FamilyMember, type InsertFamilyMember,
+  type Allowance, type InsertAllowance,
+  type SpendingRules, type InsertSpendingRules,
+  type FamilyTask, type InsertFamilyTask,
+  type SpendingRequest, type InsertSpendingRequest
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
@@ -378,6 +389,50 @@ export interface IStorage {
   getDemoRequestsByDateRange(startDate: Date, endDate: Date): Promise<DemoRequest[]>;
   updateDemoRequestStatus(id: number, status: string): Promise<DemoRequest>;
   processDemoRequest(id: number, processedBy: number): Promise<DemoRequest>;
+  
+  // Family Group operations
+  createFamilyGroup(familyGroup: InsertFamilyGroup): Promise<FamilyGroup>;
+  getFamilyGroup(id: number): Promise<FamilyGroup | undefined>;
+  getFamilyGroupsByParentId(parentId: number): Promise<FamilyGroup[]>;
+  updateFamilyGroup(id: number, data: Partial<InsertFamilyGroup>): Promise<FamilyGroup>;
+  
+  // Family Member operations
+  createFamilyMember(familyMember: InsertFamilyMember): Promise<FamilyMember>;
+  getFamilyMember(id: number): Promise<FamilyMember | undefined>;
+  getFamilyMemberByUserId(userId: number): Promise<FamilyMember | undefined>;
+  getFamilyMembersByGroupId(groupId: number): Promise<FamilyMember[]>;
+  getFamilyMembersByParentId(parentId: number): Promise<FamilyMember[]>;
+  getFamilyMemberIdsByGroupIds(groupIds: number[]): Promise<number[]>;
+  updateFamilyMember(id: number, data: Partial<InsertFamilyMember>): Promise<FamilyMember>;
+  
+  // Allowance operations
+  createAllowance(allowance: InsertAllowance): Promise<Allowance>;
+  getAllowance(id: number): Promise<Allowance | undefined>;
+  getAllowanceByChildId(childId: number): Promise<Allowance[]>;
+  updateAllowance(id: number, data: Partial<InsertAllowance>): Promise<Allowance>;
+  
+  // Spending Rules operations
+  createSpendingRules(spendingRules: InsertSpendingRules): Promise<SpendingRules>;
+  getSpendingRules(id: number): Promise<SpendingRules | undefined>;
+  getSpendingRulesByChildId(childId: number): Promise<SpendingRules | undefined>;
+  updateSpendingRules(id: number, data: Partial<InsertSpendingRules>): Promise<SpendingRules>;
+  
+  // Family Task operations
+  createFamilyTask(familyTask: InsertFamilyTask): Promise<FamilyTask>;
+  getFamilyTask(id: number): Promise<FamilyTask | undefined>;
+  getFamilyTasksByAssignedToUserId(userId: number): Promise<FamilyTask[]>;
+  getFamilyTasksByFamilyGroupId(familyGroupId: number): Promise<FamilyTask[]>;
+  updateFamilyTask(id: number, data: Partial<InsertFamilyTask>): Promise<FamilyTask>;
+  
+  // Spending Request operations
+  createSpendingRequest(spendingRequest: InsertSpendingRequest): Promise<SpendingRequest>;
+  getSpendingRequest(id: number): Promise<SpendingRequest | undefined>;
+  getSpendingRequestsByChildId(childId: number): Promise<SpendingRequest[]>;
+  getSpendingRequestsByChildrenIds(childrenIds: number[]): Promise<SpendingRequest[]>;
+  updateSpendingRequestStatus(id: number, status: string, notes?: string): Promise<SpendingRequest>;
+  
+  // Enhanced Savings Goals operations for parent-child
+  getSavingsGoalsByChildId(childId: number): Promise<SavingsGoal[]>;
   
   // Tax Calculation System operations
   // Federal Tax Brackets
@@ -4041,6 +4096,260 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error updating merchant transaction ${id} metadata:`, error);
       throw new Error("Failed to update merchant transaction metadata");
     }
+  }
+  // Family Group operations
+  async createFamilyGroup(familyGroup: InsertFamilyGroup): Promise<FamilyGroup> {
+    const [newGroup] = await db.insert(familyGroups).values(familyGroup).returning();
+    return newGroup;
+  }
+
+  async getFamilyGroup(id: number): Promise<FamilyGroup | undefined> {
+    const [group] = await db.select().from(familyGroups).where(eq(familyGroups.id, id));
+    return group;
+  }
+
+  async getFamilyGroupsByParentId(parentId: number): Promise<FamilyGroup[]> {
+    return db
+      .select()
+      .from(familyGroups)
+      .where(
+        or(
+          eq(familyGroups.parentUserId, parentId),
+          eq(familyGroups.secondaryParentUserId, parentId)
+        )
+      );
+  }
+
+  async updateFamilyGroup(id: number, data: Partial<InsertFamilyGroup>): Promise<FamilyGroup> {
+    const [updated] = await db
+      .update(familyGroups)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(familyGroups.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Family Member operations
+  async createFamilyMember(familyMember: InsertFamilyMember): Promise<FamilyMember> {
+    const [newMember] = await db.insert(familyMembers).values(familyMember).returning();
+    return newMember;
+  }
+
+  async getFamilyMember(id: number): Promise<FamilyMember | undefined> {
+    const [member] = await db.select().from(familyMembers).where(eq(familyMembers.id, id));
+    return member;
+  }
+
+  async getFamilyMemberByUserId(userId: number): Promise<FamilyMember | undefined> {
+    const [member] = await db.select().from(familyMembers).where(eq(familyMembers.userId, userId));
+    return member;
+  }
+
+  async getFamilyMembersByGroupId(groupId: number): Promise<FamilyMember[]> {
+    return db
+      .select()
+      .from(familyMembers)
+      .where(eq(familyMembers.familyGroupId, groupId));
+  }
+
+  async getFamilyMembersByParentId(parentId: number): Promise<FamilyMember[]> {
+    // Get all groups where user is a parent
+    const groups = await this.getFamilyGroupsByParentId(parentId);
+    if (!groups.length) return [];
+
+    const groupIds = groups.map(g => g.id);
+    
+    // Get all family members in these groups
+    return db
+      .select()
+      .from(familyMembers)
+      .where(
+        and(
+          eq(familyMembers.isActive, true),
+          eq(familyMembers.role, 'child'),
+          inArray(familyMembers.familyGroupId, groupIds)
+        )
+      );
+  }
+
+  async getFamilyMemberIdsByGroupIds(groupIds: number[]): Promise<number[]> {
+    const members = await db
+      .select()
+      .from(familyMembers)
+      .where(
+        and(
+          eq(familyMembers.isActive, true),
+          eq(familyMembers.role, 'child'),
+          inArray(familyMembers.familyGroupId, groupIds)
+        )
+      );
+    return members.map(m => m.id);
+  }
+
+  async updateFamilyMember(id: number, data: Partial<InsertFamilyMember>): Promise<FamilyMember> {
+    const [updated] = await db
+      .update(familyMembers)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(familyMembers.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Allowance operations
+  async createAllowance(allowance: InsertAllowance): Promise<Allowance> {
+    const [newAllowance] = await db.insert(allowances).values(allowance).returning();
+    return newAllowance;
+  }
+
+  async getAllowance(id: number): Promise<Allowance | undefined> {
+    const [allowance] = await db.select().from(allowances).where(eq(allowances.id, id));
+    return allowance;
+  }
+
+  async getAllowanceByChildId(childId: number): Promise<Allowance[]> {
+    return db
+      .select()
+      .from(allowances)
+      .where(
+        and(
+          eq(allowances.childUserId, childId),
+          eq(allowances.isActive, true)
+        )
+      );
+  }
+
+  async updateAllowance(id: number, data: Partial<InsertAllowance>): Promise<Allowance> {
+    const [updated] = await db
+      .update(allowances)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(allowances.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Spending Rules operations
+  async createSpendingRules(spendingRules: InsertSpendingRules): Promise<SpendingRules> {
+    const [rules] = await db.insert(spendingRules).values(spendingRules).returning();
+    return rules;
+  }
+
+  async getSpendingRules(id: number): Promise<SpendingRules | undefined> {
+    const [rules] = await db.select().from(spendingRules).where(eq(spendingRules.id, id));
+    return rules;
+  }
+
+  async getSpendingRulesByChildId(childId: number): Promise<SpendingRules | undefined> {
+    const [rules] = await db.select().from(spendingRules).where(eq(spendingRules.childId, childId));
+    return rules;
+  }
+
+  async updateSpendingRules(id: number, data: Partial<InsertSpendingRules>): Promise<SpendingRules> {
+    const [updated] = await db
+      .update(spendingRules)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(spendingRules.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Family Task operations
+  async createFamilyTask(familyTask: InsertFamilyTask): Promise<FamilyTask> {
+    const [task] = await db.insert(familyTasks).values(familyTask).returning();
+    return task;
+  }
+
+  async getFamilyTask(id: number): Promise<FamilyTask | undefined> {
+    const [task] = await db.select().from(familyTasks).where(eq(familyTasks.id, id));
+    return task;
+  }
+
+  async getFamilyTasksByAssignedToUserId(userId: number): Promise<FamilyTask[]> {
+    return db
+      .select()
+      .from(familyTasks)
+      .where(eq(familyTasks.assignedToUserId, userId));
+  }
+
+  async getFamilyTasksByFamilyGroupId(familyGroupId: number): Promise<FamilyTask[]> {
+    return db
+      .select()
+      .from(familyTasks)
+      .where(eq(familyTasks.familyGroupId, familyGroupId));
+  }
+
+  async updateFamilyTask(id: number, data: Partial<InsertFamilyTask>): Promise<FamilyTask> {
+    const [updated] = await db
+      .update(familyTasks)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(familyTasks.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Spending Request operations
+  async createSpendingRequest(spendingRequest: InsertSpendingRequest): Promise<SpendingRequest> {
+    const [request] = await db.insert(spendingRequests).values(spendingRequest).returning();
+    return request;
+  }
+
+  async getSpendingRequest(id: number): Promise<SpendingRequest | undefined> {
+    const [request] = await db.select().from(spendingRequests).where(eq(spendingRequests.id, id));
+    return request;
+  }
+
+  async getSpendingRequestsByChildId(childId: number): Promise<SpendingRequest[]> {
+    return db
+      .select()
+      .from(spendingRequests)
+      .where(eq(spendingRequests.childId, childId))
+      .orderBy(desc(spendingRequests.createdAt));
+  }
+
+  async getSpendingRequestsByChildrenIds(childrenIds: number[]): Promise<SpendingRequest[]> {
+    return db
+      .select()
+      .from(spendingRequests)
+      .where(inArray(spendingRequests.childId, childrenIds))
+      .orderBy(desc(spendingRequests.createdAt));
+  }
+
+  async updateSpendingRequestStatus(id: number, status: string, notes?: string): Promise<SpendingRequest> {
+    const [updated] = await db
+      .update(spendingRequests)
+      .set({
+        status,
+        notes: notes || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(spendingRequests.id, id))
+      .returning();
+    return updated;
+  }
+  
+  // Enhanced Savings Goals operations for parent-child
+  async getSavingsGoalsByChildId(childId: number): Promise<SavingsGoal[]> {
+    // Get the user id for the child member
+    const childMember = await this.getFamilyMember(childId);
+    if (!childMember) {
+      return [];
+    }
+    
+    return this.getSavingsGoalsByUserId(childMember.userId);
   }
 }
 

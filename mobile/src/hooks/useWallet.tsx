@@ -47,6 +47,61 @@ export interface Child {
   allowanceNextDate?: string;
 }
 
+// Family Group entity
+export interface FamilyGroup {
+  id: number;
+  name: string;
+  parentUserId: number;
+  secondaryParentUserId?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Family Member entity
+export interface FamilyMember {
+  id: number;
+  familyGroupId: number;
+  userId: number;
+  role: 'parent' | 'child' | 'guardian';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Spending Rules entity
+export interface SpendingRules {
+  id: number;
+  childId: number;
+  dailyLimit: string;
+  weeklyLimit: string;
+  monthlyLimit: string;
+  perTransactionLimit: string;
+  blockedCategories: string[];
+  blockedMerchants: string[];
+  requireApprovalAmount: string;
+  requireApprovalForAll: boolean;
+  allowOnlinePurchases: boolean;
+  allowInStorePurchases: boolean;
+  allowWithdrawals: boolean;
+  withdrawalLimit: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Spending Request entity
+export interface SpendingRequest {
+  id: number;
+  childId: number;
+  amount: string;
+  merchantName: string;
+  category: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Employee entity
 export interface Employee {
   id: number;
@@ -214,6 +269,18 @@ interface WalletContextState {
   updateChildAllowance: (childId: number, amount: number, frequency: Child['allowanceFrequency']) => Promise<boolean>;
   addTaskForChild: (childId: number, taskData: Omit<Task, 'id'>) => Promise<Task | null>;
   
+  // Family wallet system functions
+  getFamilyGroups: () => Promise<FamilyGroup[]>;
+  createFamilyGroup: (groupData: Omit<FamilyGroup, 'id' | 'createdAt' | 'updatedAt'>) => Promise<FamilyGroup | null>;
+  getFamilyMembers: (groupId: number) => Promise<FamilyMember[]>;
+  addFamilyMember: (member: Omit<FamilyMember, 'id' | 'createdAt' | 'updatedAt'>) => Promise<FamilyMember | null>;
+  getSpendingRules: (childId: number) => Promise<SpendingRules | null>;
+  updateSpendingRules: (childId: number, rules: Partial<Omit<SpendingRules, 'id' | 'childId' | 'createdAt' | 'updatedAt'>>) => Promise<SpendingRules | null>;
+  getSpendingRequests: (childId?: number) => Promise<SpendingRequest[]>;
+  createSpendingRequest: (request: Omit<SpendingRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>) => Promise<SpendingRequest | null>;
+  approveSpendingRequest: (requestId: number) => Promise<boolean>;
+  rejectSpendingRequest: (requestId: number, notes?: string) => Promise<boolean>;
+  
   // Employer wallet functions
   addEmployee: (employeeData: Omit<Employee, 'id' | 'accountId' | 'status'>) => Promise<Employee | null>;
   runPayroll: (payrollData: Omit<Payroll, 'id' | 'status'>) => Promise<Payroll | null>;
@@ -260,6 +327,12 @@ export const WalletProvider: React.FC<{children: ReactNode}> = ({ children }) =>
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [expenseReports, setExpenseReports] = useState<ExpenseReport[]>([]);
   const [timeOffRequests, setTimeOffRequests] = useState<RequestTimeOff[]>([]);
+  
+  // Family wallet system state
+  const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [spendingRules, setSpendingRules] = useState<SpendingRules[]>([]);
+  const [spendingRequests, setSpendingRequests] = useState<SpendingRequest[]>([]);
   
   const api = useApi();
   

@@ -21,6 +21,11 @@ import {
   insertHelcimIntegrationSchema,
   insertExpenseReportSchema,
   insertExpenseLineItemSchema,
+  insertFamilyGroupSchema,
+  insertFamilyMemberSchema,
+  insertAllowanceSchema,
+  insertSavingsGoalSchema,
+  insertSpendingRequestSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -2140,6 +2145,824 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   };
+
+  // Helper function to notify a parent about child wallet activities
+  const notifyParent = (parentId: number, data: any) => {
+    console.log(`Notifying parent (ID: ${parentId}) about:`, data.type);
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.userId === parentId
+      ) {
+        extClient.send(JSON.stringify({
+          ...data,
+          timestamp: new Date().toISOString(),
+          priority: data.type.includes('request') ? 'high' : 'normal'
+        }));
+      }
+    });
+  };
+
+  // Helper function to notify a child about wallet activities
+  const notifyChild = (childId: number, data: any) => {
+    console.log(`Notifying child (ID: ${childId}) about:`, data.type);
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.userId === childId
+      ) {
+        extClient.send(JSON.stringify({
+          ...data,
+          timestamp: new Date().toISOString(),
+          priority: data.type.includes('allowance') || data.type.includes('approved') ? 'high' : 'normal'
+        }));
+      }
+    });
+  };
+
+  // PARENT-CHILD WALLET SYSTEM APIs
+  
+  // Family Group APIs
+  app.post("/api/family-groups", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const familyGroupData = insertFamilyGroupSchema.parse({
+        ...req.body,
+        parentId: req.user.id,
+      });
+      
+      const familyGroup = await storage.createFamilyGroup(familyGroupData);
+      res.status(201).json(familyGroup);
+    } catch (error) {
+      console.error("Error creating family group:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid family group data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create family group" });
+    }
+  });
+  
+  app.get("/api/family-groups", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const familyGroups = await storage.getFamilyGroupsByParentId(req.user.id);
+      res.json(familyGroups);
+    } catch (error) {
+      console.error("Error fetching family groups:", error);
+      res.status(500).json({ error: "Failed to fetch family groups" });
+    }
+  });
+  
+  app.get("/api/family-groups/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const groupId = parseInt(req.params.id);
+      const familyGroup = await storage.getFamilyGroup(groupId);
+      
+      if (!familyGroup) {
+        return res.status(404).json({ error: "Family group not found" });
+      }
+      
+      if (familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const familyMembers = await storage.getFamilyMembersByGroupId(groupId);
+      
+      res.json({
+        ...familyGroup,
+        members: familyMembers
+      });
+    } catch (error) {
+      console.error("Error fetching family group:", error);
+      res.status(500).json({ error: "Failed to fetch family group" });
+    }
+  });
+  
+  // Family Member (Child Account) APIs
+  app.post("/api/family-members", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Verify the family group belongs to the user
+      const familyGroup = await storage.getFamilyGroup(req.body.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Invalid family group" });
+      }
+      
+      const familyMemberData = insertFamilyMemberSchema.parse(req.body);
+      
+      // Create child account with its wallet
+      const familyMember = await storage.createFamilyMember(familyMemberData);
+      
+      // Create wallet for child
+      const walletData = insertWalletSchema.parse({
+        name: `${familyMember.name}'s Wallet`,
+        type: "child",
+        currency: "USD",
+        balance: "0.00",
+        userId: familyMember.userId,
+        childId: familyMember.id
+      });
+      
+      const wallet = await storage.createWallet(walletData);
+      
+      res.status(201).json({
+        ...familyMember,
+        wallet
+      });
+    } catch (error) {
+      console.error("Error creating family member:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid family member data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create family member" });
+    }
+  });
+  
+  app.get("/api/family-members", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const familyMembers = await storage.getFamilyMembersByParentId(req.user.id);
+      res.json(familyMembers);
+    } catch (error) {
+      console.error("Error fetching family members:", error);
+      res.status(500).json({ error: "Failed to fetch family members" });
+    }
+  });
+  
+  app.get("/api/family-members/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const memberId = parseInt(req.params.id);
+      const familyMember = await storage.getFamilyMember(memberId);
+      
+      if (!familyMember) {
+        return res.status(404).json({ error: "Family member not found" });
+      }
+      
+      // Check if user is the parent
+      const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        // Check if user is the child account
+        if (familyMember.userId !== req.user.id) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+      }
+      
+      res.json(familyMember);
+    } catch (error) {
+      console.error("Error fetching family member:", error);
+      res.status(500).json({ error: "Failed to fetch family member" });
+    }
+  });
+  
+  // Allowance APIs
+  app.post("/api/allowances", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Verify the child account belongs to the parent
+      const childId = req.body.childId;
+      const familyMember = await storage.getFamilyMember(childId);
+      
+      if (!familyMember) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const allowanceData = insertAllowanceSchema.parse({
+        ...req.body,
+        parentId: req.user.id
+      });
+      
+      const allowance = await storage.createAllowance(allowanceData);
+      
+      // Notify the child about the allowance setup
+      notifyChild(familyMember.userId, {
+        type: 'allowance_created',
+        data: allowance
+      });
+      
+      res.status(201).json(allowance);
+    } catch (error) {
+      console.error("Error creating allowance:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid allowance data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create allowance" });
+    }
+  });
+  
+  app.get("/api/children/:childId/allowance", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const childId = parseInt(req.params.childId);
+      const familyMember = await storage.getFamilyMember(childId);
+      
+      if (!familyMember) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      // Check if user is the parent or the child
+      const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
+      const isParent = familyGroup && familyGroup.parentId === req.user.id;
+      const isChild = familyMember.userId === req.user.id;
+      
+      if (!isParent && !isChild) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const allowance = await storage.getAllowanceByChildId(childId);
+      
+      if (!allowance) {
+        return res.status(404).json({ error: "Allowance not found" });
+      }
+      
+      res.json(allowance);
+    } catch (error) {
+      console.error("Error fetching allowance:", error);
+      res.status(500).json({ error: "Failed to fetch allowance" });
+    }
+  });
+  
+  app.patch("/api/allowances/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const allowanceId = parseInt(req.params.id);
+      const allowance = await storage.getAllowance(allowanceId);
+      
+      if (!allowance) {
+        return res.status(404).json({ error: "Allowance not found" });
+      }
+      
+      if (allowance.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const updatedAllowance = await storage.updateAllowance(allowanceId, req.body);
+      
+      // Get the child's user ID to send notification
+      const familyMember = await storage.getFamilyMember(allowance.childId);
+      if (familyMember) {
+        notifyChild(familyMember.userId, {
+          type: 'allowance_updated',
+          data: updatedAllowance
+        });
+      }
+      
+      res.json(updatedAllowance);
+    } catch (error) {
+      console.error("Error updating allowance:", error);
+      res.status(500).json({ error: "Failed to update allowance" });
+    }
+  });
+  
+  // Spending Rules APIs
+  app.post("/api/children/:childId/spending-rules", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const childId = parseInt(req.params.childId);
+      const familyMember = await storage.getFamilyMember(childId);
+      
+      if (!familyMember) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const spendingRules = await storage.createSpendingRules(childId, req.body);
+      
+      // Notify the child about spending rules update
+      notifyChild(familyMember.userId, {
+        type: 'spending_rules_updated',
+        data: spendingRules
+      });
+      
+      res.status(201).json(spendingRules);
+    } catch (error) {
+      console.error("Error creating spending rules:", error);
+      res.status(500).json({ error: "Failed to create spending rules" });
+    }
+  });
+  
+  app.get("/api/children/:childId/spending-rules", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const childId = parseInt(req.params.childId);
+      const familyMember = await storage.getFamilyMember(childId);
+      
+      if (!familyMember) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      // Check if user is the parent or the child
+      const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
+      const isParent = familyGroup && familyGroup.parentId === req.user.id;
+      const isChild = familyMember.userId === req.user.id;
+      
+      if (!isParent && !isChild) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const spendingRules = await storage.getSpendingRulesByChildId(childId);
+      
+      if (!spendingRules) {
+        return res.status(404).json({ error: "Spending rules not found" });
+      }
+      
+      res.json(spendingRules);
+    } catch (error) {
+      console.error("Error fetching spending rules:", error);
+      res.status(500).json({ error: "Failed to fetch spending rules" });
+    }
+  });
+  
+  app.patch("/api/children/:childId/spending-rules", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const childId = parseInt(req.params.childId);
+      const familyMember = await storage.getFamilyMember(childId);
+      
+      if (!familyMember) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      const familyGroup = await storage.getFamilyGroup(familyMember.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const updatedRules = await storage.updateSpendingRules(childId, req.body);
+      
+      // Notify the child about spending rules update
+      notifyChild(familyMember.userId, {
+        type: 'spending_rules_updated',
+        data: updatedRules
+      });
+      
+      res.json(updatedRules);
+    } catch (error) {
+      console.error("Error updating spending rules:", error);
+      res.status(500).json({ error: "Failed to update spending rules" });
+    }
+  });
+  
+  // Spending Requests APIs
+  app.post("/api/spending-requests", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Verify this is a child account
+      const childAccount = await storage.getFamilyMemberByUserId(req.user.id);
+      
+      if (!childAccount) {
+        return res.status(403).json({ error: "Only child accounts can create spending requests" });
+      }
+      
+      const spendingRequestData = insertSpendingRequestSchema.parse({
+        ...req.body,
+        childId: childAccount.id,
+        status: "pending",
+        requestDate: new Date().toISOString()
+      });
+      
+      const spendingRequest = await storage.createSpendingRequest(spendingRequestData);
+      
+      // Get parent info to send notification
+      const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+      if (familyGroup) {
+        notifyParent(familyGroup.parentId, {
+          type: 'new_spending_request',
+          data: {
+            ...spendingRequest,
+            childName: childAccount.name
+          }
+        });
+      }
+      
+      res.status(201).json(spendingRequest);
+    } catch (error) {
+      console.error("Error creating spending request:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid spending request data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create spending request" });
+    }
+  });
+  
+  app.get("/api/spending-requests", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // For parent: get all requests from their children
+      // For child: get all their requests
+      const childAccount = await storage.getFamilyMemberByUserId(req.user.id);
+      
+      let spendingRequests;
+      
+      if (childAccount) {
+        // This is a child account, get their requests
+        spendingRequests = await storage.getSpendingRequestsByChildId(childAccount.id);
+      } else {
+        // Assume this is a parent, get requests from all their children
+        const familyGroups = await storage.getFamilyGroupsByParentId(req.user.id);
+        if (!familyGroups || familyGroups.length === 0) {
+          return res.json([]);
+        }
+        
+        const familyGroupIds = familyGroups.map(group => group.id);
+        const childrenIds = await storage.getFamilyMemberIdsByGroupIds(familyGroupIds);
+        
+        if (childrenIds.length === 0) {
+          return res.json([]);
+        }
+        
+        spendingRequests = await storage.getSpendingRequestsByChildrenIds(childrenIds);
+      }
+      
+      res.json(spendingRequests);
+    } catch (error) {
+      console.error("Error fetching spending requests:", error);
+      res.status(500).json({ error: "Failed to fetch spending requests" });
+    }
+  });
+  
+  app.patch("/api/spending-requests/:id/approve", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const requestId = parseInt(req.params.id);
+      const spendingRequest = await storage.getSpendingRequest(requestId);
+      
+      if (!spendingRequest) {
+        return res.status(404).json({ error: "Spending request not found" });
+      }
+      
+      // Verify user is the parent of this child
+      const childAccount = await storage.getFamilyMember(spendingRequest.childId);
+      if (!childAccount) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { parentNote } = req.body;
+      
+      const approvedRequest = await storage.updateSpendingRequestStatus(
+        requestId, 
+        "approved", 
+        new Date().toISOString(),
+        parentNote
+      );
+      
+      // Notify the child about approval
+      notifyChild(childAccount.userId, {
+        type: 'spending_request_approved',
+        data: approvedRequest
+      });
+      
+      res.json(approvedRequest);
+    } catch (error) {
+      console.error("Error approving spending request:", error);
+      res.status(500).json({ error: "Failed to approve spending request" });
+    }
+  });
+  
+  app.patch("/api/spending-requests/:id/reject", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const requestId = parseInt(req.params.id);
+      const spendingRequest = await storage.getSpendingRequest(requestId);
+      
+      if (!spendingRequest) {
+        return res.status(404).json({ error: "Spending request not found" });
+      }
+      
+      // Verify user is the parent of this child
+      const childAccount = await storage.getFamilyMember(spendingRequest.childId);
+      if (!childAccount) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+      if (!familyGroup || familyGroup.parentId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { parentNote } = req.body;
+      
+      const rejectedRequest = await storage.updateSpendingRequestStatus(
+        requestId, 
+        "rejected", 
+        new Date().toISOString(),
+        parentNote
+      );
+      
+      // Notify the child about rejection
+      notifyChild(childAccount.userId, {
+        type: 'spending_request_rejected',
+        data: rejectedRequest
+      });
+      
+      res.json(rejectedRequest);
+    } catch (error) {
+      console.error("Error rejecting spending request:", error);
+      res.status(500).json({ error: "Failed to reject spending request" });
+    }
+  });
+  
+  // Savings Goals APIs
+  app.post("/api/savings-goals", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Determine if this is a child or parent
+      const childAccount = await storage.getFamilyMemberByUserId(req.user.id);
+      
+      let savingsGoalData;
+      
+      if (childAccount) {
+        // Child is creating their own goal
+        savingsGoalData = insertSavingsGoalSchema.parse({
+          ...req.body,
+          childId: childAccount.id,
+          creatorType: "child",
+          createdAt: new Date().toISOString(),
+          isCompleted: false
+        });
+      } else if (req.body.childId) {
+        // Parent is creating a goal for child
+        const targetChild = await storage.getFamilyMember(req.body.childId);
+        
+        if (!targetChild) {
+          return res.status(404).json({ error: "Child account not found" });
+        }
+        
+        const familyGroup = await storage.getFamilyGroup(targetChild.familyGroupId);
+        if (!familyGroup || familyGroup.parentId !== req.user.id) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+        
+        savingsGoalData = insertSavingsGoalSchema.parse({
+          ...req.body,
+          creatorType: "parent",
+          createdAt: new Date().toISOString(),
+          isCompleted: false
+        });
+      } else {
+        return res.status(400).json({ error: "Invalid request. Missing childId" });
+      }
+      
+      const savingsGoal = await storage.createSavingsGoal(savingsGoalData);
+      
+      // If parent created goal, notify child
+      if (savingsGoalData.creatorType === "parent") {
+        const childAccount = await storage.getFamilyMember(savingsGoalData.childId);
+        if (childAccount) {
+          notifyChild(childAccount.userId, {
+            type: 'savings_goal_created_by_parent',
+            data: savingsGoal
+          });
+        }
+      }
+      
+      // If child created goal with parent contribution, notify parent
+      if (
+        savingsGoalData.creatorType === "child" && 
+        savingsGoalData.parentContribution && 
+        savingsGoalData.parentContribution > 0
+      ) {
+        const childAccount = await storage.getFamilyMember(savingsGoalData.childId);
+        if (childAccount) {
+          const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+          if (familyGroup) {
+            notifyParent(familyGroup.parentId, {
+              type: 'savings_goal_contribution_request',
+              data: {
+                ...savingsGoal,
+                childName: childAccount.name
+              }
+            });
+          }
+        }
+      }
+      
+      res.status(201).json(savingsGoal);
+    } catch (error) {
+      console.error("Error creating savings goal:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid savings goal data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create savings goal" });
+    }
+  });
+  
+  app.get("/api/children/:childId/savings-goals", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const childId = parseInt(req.params.childId);
+      const childAccount = await storage.getFamilyMember(childId);
+      
+      if (!childAccount) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      // Check if user is the parent or the child
+      const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+      const isParent = familyGroup && familyGroup.parentId === req.user.id;
+      const isChild = childAccount.userId === req.user.id;
+      
+      if (!isParent && !isChild) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const savingsGoals = await storage.getSavingsGoalsByChildId(childId);
+      res.json(savingsGoals);
+    } catch (error) {
+      console.error("Error fetching savings goals:", error);
+      res.status(500).json({ error: "Failed to fetch savings goals" });
+    }
+  });
+  
+  app.patch("/api/savings-goals/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const goalId = parseInt(req.params.id);
+      const savingsGoal = await storage.getSavingsGoal(goalId);
+      
+      if (!savingsGoal) {
+        return res.status(404).json({ error: "Savings goal not found" });
+      }
+      
+      const childAccount = await storage.getFamilyMember(savingsGoal.childId);
+      if (!childAccount) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      // Check if user is the parent or the child
+      const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+      const isParent = familyGroup && familyGroup.parentId === req.user.id;
+      const isChild = childAccount.userId === req.user.id;
+      
+      if (!isParent && !isChild) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Some updates might only be allowed by parent or child
+      const updates = { ...req.body };
+      
+      // Only parents can approve parent contributions
+      if (!isParent && updates.hasOwnProperty('parentContributionApproved')) {
+        delete updates.parentContributionApproved;
+      }
+      
+      const updatedGoal = await storage.updateSavingsGoal(goalId, updates);
+      
+      // Send notification to the other party about updates
+      if (isParent) {
+        notifyChild(childAccount.userId, {
+          type: updates.parentContributionApproved ? 'savings_goal_contribution_approved' : 'savings_goal_updated_by_parent',
+          data: updatedGoal
+        });
+      } else if (isChild) {
+        notifyParent(familyGroup.parentId, {
+          type: 'savings_goal_updated_by_child',
+          data: {
+            ...updatedGoal,
+            childName: childAccount.name
+          }
+        });
+      }
+      
+      res.json(updatedGoal);
+    } catch (error) {
+      console.error("Error updating savings goal:", error);
+      res.status(500).json({ error: "Failed to update savings goal" });
+    }
+  });
+  
+  app.patch("/api/savings-goals/:id/complete", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const goalId = parseInt(req.params.id);
+      const savingsGoal = await storage.getSavingsGoal(goalId);
+      
+      if (!savingsGoal) {
+        return res.status(404).json({ error: "Savings goal not found" });
+      }
+      
+      const childAccount = await storage.getFamilyMember(savingsGoal.childId);
+      if (!childAccount) {
+        return res.status(404).json({ error: "Child account not found" });
+      }
+      
+      // Check if user is the parent or the child
+      const familyGroup = await storage.getFamilyGroup(childAccount.familyGroupId);
+      const isParent = familyGroup && familyGroup.parentId === req.user.id;
+      const isChild = childAccount.userId === req.user.id;
+      
+      if (!isParent && !isChild) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { completionNote } = req.body;
+      
+      const completedGoal = await storage.completeSavingsGoal(
+        goalId, 
+        new Date().toISOString(), 
+        req.user.id, 
+        completionNote
+      );
+      
+      // Send notification to the other party about completion
+      if (isParent) {
+        notifyChild(childAccount.userId, {
+          type: 'savings_goal_completed_by_parent',
+          data: completedGoal
+        });
+      } else if (isChild) {
+        notifyParent(familyGroup.parentId, {
+          type: 'savings_goal_completed_by_child',
+          data: {
+            ...completedGoal,
+            childName: childAccount.name
+          }
+        });
+      }
+      
+      res.json(completedGoal);
+    } catch (error) {
+      console.error("Error completing savings goal:", error);
+      res.status(500).json({ error: "Failed to complete savings goal" });
+    }
+  });
 
   return httpServer;
 }

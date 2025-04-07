@@ -2493,3 +2493,60 @@ export const familyTasks = pgTable("family_tasks", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const insertFamilyTaskSchema = createInsertSchema(familyTasks).pick({
+  familyGroupId: true,
+  assignedToUserId: true,
+  assignedByUserId: true,
+  title: true,
+  description: true,
+  rewardAmount: true,
+  dueDate: true,
+  status: true,
+  recurring: true,
+  recurrencePattern: true,
+  priority: true,
+  imageUrl: true,
+});
+
+export type FamilyTask = typeof familyTasks.$inferSelect;
+export type InsertFamilyTask = typeof familyTasks.$inferInsert;
+
+// Spending rules schema for child accounts
+export const spendingRules = pgTable("spending_rules", {
+  id: serial("id").primaryKey(),
+  childId: integer("child_id").notNull(), // References family_members.id
+  dailyLimit: numeric("daily_limit"),
+  weeklyLimit: numeric("weekly_limit"),
+  monthlyLimit: numeric("monthly_limit"),
+  perTransactionLimit: numeric("per_transaction_limit"),
+  blockedCategories: text("blocked_categories").array(), // Array of category names
+  blockedMerchants: text("blocked_merchants").array(), // Array of merchant names
+  requireApprovalAmount: numeric("require_approval_amount"), // Transactions above this amount require approval
+  requireApprovalForAll: boolean("require_approval_for_all").default(false),
+  allowOnlinePurchases: boolean("allow_online_purchases").default(true),
+  allowInStorePurchases: boolean("allow_in_store_purchases").default(true),
+  allowWithdrawals: boolean("allow_withdrawals").default(false),
+  withdrawalLimit: numeric("withdrawal_limit"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSpendingRulesSchema = createInsertSchema(spendingRules).pick({
+  childId: true,
+  dailyLimit: true,
+  weeklyLimit: true,
+  monthlyLimit: true,
+  perTransactionLimit: true,
+  blockedCategories: true,
+  blockedMerchants: true,
+  requireApprovalAmount: true,
+  requireApprovalForAll: true,
+  allowOnlinePurchases: true,
+  allowInStorePurchases: true,
+  allowWithdrawals: true,
+  withdrawalLimit: true,
+});
+
+export type SpendingRules = typeof spendingRules.$inferSelect;
+export type InsertSpendingRules = typeof spendingRules.$inferInsert;
