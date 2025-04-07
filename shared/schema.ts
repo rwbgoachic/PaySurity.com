@@ -2924,7 +2924,7 @@ export type InsertRestaurantTable = z.infer<typeof insertRestaurantTableSchema>;
 
 // Restaurant orders
 export const restaurantOrderStatusEnum = pgEnum("restaurant_order_status", [
-  "draft", "placed", "preparing", "ready", "served", "completed", "canceled"
+  "draft", "placed", "preparing", "ready", "served", "completed", "canceled", "modifying"
 ]);
 
 export const restaurantOrders = pgTable("restaurant_orders", {
@@ -2933,7 +2933,7 @@ export const restaurantOrders = pgTable("restaurant_orders", {
   orderNumber: text("order_number").notNull(),
   tableId: integer("table_id"),
   serverId: integer("server_id").notNull(), // Employee who took the order
-  status: text("status", { enum: ["draft", "placed", "preparing", "ready", "served", "completed", "canceled"] }).notNull().default("draft"),
+  status: text("status", { enum: ["draft", "placed", "preparing", "ready", "served", "completed", "canceled", "modifying"] }).notNull().default("draft"),
   customerCount: integer("customer_count").default(1),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
@@ -2959,6 +2959,10 @@ export const restaurantOrders = pgTable("restaurant_orders", {
   lastSmsTimestamp: timestamp("last_sms_timestamp"),
   modificationToken: text("modification_token"), // Token for order modification link
   modificationTokenExpiry: timestamp("modification_token_expiry"),
+  isBeingModified: boolean("is_being_modified").default(false),
+  modificationStartTime: timestamp("modification_start_time"),
+  modificationReminderSent: boolean("modification_reminder_sent").default(false),
+  modificationTimeoutSent: boolean("modification_timeout_sent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -2971,7 +2975,10 @@ export const insertRestaurantOrderSchema = createInsertSchema(restaurantOrders).
   completedAt: true,
   lastSmsTimestamp: true,
   modificationTokenExpiry: true,
-  actualPrepTime: true
+  actualPrepTime: true,
+  modificationStartTime: true,
+  modificationReminderSent: true,
+  modificationTimeoutSent: true
 });
 
 export type RestaurantOrder = typeof restaurantOrders.$inferSelect;
