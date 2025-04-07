@@ -39,10 +39,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { CreditCard, Banknote, Wallet, DollarSign, RefreshCw, CheckCircle2 } from "lucide-react";
 
-interface ExpenseReportPaymentProps {
+export interface ExpenseReportPaymentProps {
   report: ExpenseReport;
-  onSuccess: () => void;
-  onCancel: () => void;
+  onProcessPayment?: (reportId: number, paymentMethod: string, referenceNumber?: string) => void;
+  isProcessing?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 type PaymentMethod = "bank_transfer" | "card" | "wallet" | "cash";
@@ -58,7 +60,13 @@ const paymentFormSchema = z.object({
 
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
 
-export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseReportPaymentProps) {
+export function ExpenseReportPayment({ 
+  report, 
+  onSuccess, 
+  onCancel, 
+  onProcessPayment,
+  isProcessing
+}: ExpenseReportPaymentProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -72,6 +80,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
     },
   });
 
+  // Use either the direct onProcessPayment function or the mutation
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentFormValues) => {
       const res = await apiRequest("POST", `/api/expense-reports/${report.id}/pay`, {
@@ -87,7 +96,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
         description: "The expense report has been marked as paid.",
         variant: "default",
       });
-      onSuccess();
+      if (onSuccess) onSuccess();
     },
     onError: (error: Error) => {
       toast({
@@ -98,9 +107,15 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
     },
   });
 
-  const onSubmit = (data: PaymentFormValues) => {
-    setIsLoading(true);
-    paymentMutation.mutate(data);
+  const handleSubmit = (data: PaymentFormValues) => {
+    if (onProcessPayment) {
+      // Use the provided onProcessPayment callback
+      onProcessPayment(report.id, data.paymentMethod, data.referenceNumber);
+    } else {
+      // Use the mutation
+      setIsLoading(true);
+      paymentMutation.mutate(data);
+    }
   };
 
   const getPaymentMethodIcon = (method: PaymentMethod) => {
@@ -118,6 +133,12 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
     }
   };
 
+  // Determine the loading state - use either the component's local state or the provided isProcessing prop
+  const loading = isProcessing || isLoading;
+  
+  // Default empty function for optional callbacks
+  const handleCancel = onCancel || (() => {});
+  
   return (
     <Card className="w-full">
       <CardHeader>
@@ -175,7 +196,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
           <Separator />
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="paymentMethod"
@@ -185,7 +206,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      disabled={isLoading}
+                      disabled={loading}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -237,7 +258,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
                       <Input
                         placeholder="Enter reference number (optional)"
                         {...field}
-                        disabled={isLoading}
+                        disabled={loading}
                       />
                     </FormControl>
                     <FormDescription>
@@ -259,7 +280,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
                         placeholder="Enter any additional notes about this payment"
                         className="resize-none"
                         {...field}
-                        disabled={isLoading}
+                        disabled={loading}
                       />
                     </FormControl>
                     <FormMessage />
@@ -276,7 +297,7 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={isLoading}
+                        disabled={loading}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
@@ -293,15 +314,15 @@ export function ExpenseReportPayment({ report, onSuccess, onCancel }: ExpenseRep
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button variant="outline" onClick={handleCancel} disabled={loading}>
           Cancel
         </Button>
         <Button
-          onClick={form.handleSubmit(onSubmit)}
-          disabled={isLoading}
+          onClick={form.handleSubmit(handleSubmit)}
+          disabled={loading}
           className="ml-2"
         >
-          {isLoading ? (
+          {loading ? (
             <>
               <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
               Processing

@@ -1,45 +1,23 @@
-import { useState, useEffect, useMemo } from "react";
-import { z } from "zod";
-import { ExpenseReport } from "@shared/schema";
-import { CalendarIcon, Search, Filter, X } from "lucide-react";
-import { format } from "date-fns";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon, Filter } from "lucide-react";
+import { ExpenseReport } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
-// Define the filter schema with Zod
-export const filterSchema = z.object({
-  status: z.string().optional(),
-  search: z.string().optional(),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
-  minAmount: z.number().optional(),
-  maxAmount: z.number().optional(),
-});
-
-export type ExpenseReportFilterOptions = z.infer<typeof filterSchema>;
+export interface ExpenseReportFilterOptions {
+  search?: string;
+  status?: string;
+  startDate?: Date;
+  endDate?: Date;
+  minAmount?: number;
+  maxAmount?: number;
+}
 
 interface ExpenseReportFiltersProps {
   reports: ExpenseReport[];
@@ -52,316 +30,301 @@ export function ExpenseReportFilters({
   onFilterChange,
   view,
 }: ExpenseReportFiltersProps) {
-  // State for filters
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string | undefined>(undefined);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [minAmount, setMinAmount] = useState<string>("");
-  const [maxAmount, setMaxAmount] = useState<string>("");
-  const [filterCount, setFilterCount] = useState(0);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [filters, setFilters] = useState<ExpenseReportFilterOptions>({});
 
-  // Available status options depending on view (employee/employer)
-  const statusOptions = useMemo(() => {
-    if (view === "employee") {
-      return [
-        { value: "draft", label: "Draft" },
-        { value: "submitted", label: "Submitted" },
-        { value: "under_review", label: "Under Review" },
-        { value: "approved", label: "Approved" },
-        { value: "rejected", label: "Rejected" },
-        { value: "paid", label: "Paid" },
-        { value: "canceled", label: "Canceled" },
-      ];
-    } else {
-      return [
-        { value: "submitted", label: "Pending Approval" },
-        { value: "under_review", label: "Under Review" },
-        { value: "approved", label: "Approved (Unpaid)" },
-        { value: "rejected", label: "Rejected" },
-        { value: "paid", label: "Paid" },
-        { value: "canceled", label: "Canceled" },
-      ];
-    }
-  }, [view]);
+  // Calculate some statistics from reports for the filter ranges
+  const stats = {
+    minAmount: Math.min(...reports.map(r => parseFloat(r.totalAmount))),
+    maxAmount: Math.max(...reports.map(r => parseFloat(r.totalAmount))),
+    earliestDate: reports.length > 0 ? new Date(Math.min(...reports.map(r => new Date(r.submissionDate || r.createdAt || '').getTime()))) : new Date(),
+    latestDate: reports.length > 0 ? new Date(Math.max(...reports.map(r => new Date(r.submissionDate || r.createdAt || '').getTime()))) : new Date(),
+  };
 
-  // Update filter count when filters change
+  // Set of status values based on view
+  const employeeStatuses = [
+    { value: "draft", label: "Draft" },
+    { value: "submitted", label: "Submitted" },
+    { value: "under_review", label: "Under Review" },
+    { value: "approved", label: "Approved" },
+    { value: "rejected", label: "Rejected" },
+    { value: "paid", label: "Paid" },
+    { value: "canceled", label: "Canceled" },
+  ];
+
+  const employerStatuses = [
+    { value: "submitted", label: "Submitted" },
+    { value: "under_review", label: "Under Review" },
+    { value: "approved", label: "Approved" },
+    { value: "rejected", label: "Rejected" },
+    { value: "paid", label: "Paid" },
+    { value: "canceled", label: "Canceled" },
+  ];
+
+  const statusOptions = view === "employee" ? employeeStatuses : employerStatuses;
+
+  // Update parent component's filters when local filters change
   useEffect(() => {
-    let count = 0;
-    if (search) count++;
-    if (status) count++;
-    if (startDate || endDate) count++;
-    if (minAmount || maxAmount) count++;
-    
-    setFilterCount(count);
-  }, [search, status, startDate, endDate, minAmount, maxAmount]);
+    onFilterChange(filters);
+  }, [filters, onFilterChange]);
 
-  // Apply filters
-  const applyFilters = (data: ExpenseReportFilterOptions) => {
-    onFilterChange({
-      search: data.search ? data.search.toLowerCase() : undefined,
-      status: data.status,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      minAmount: data.minAmount,
-      maxAmount: data.maxAmount,
+  // Handle filter changes
+  const handleFilterChange = (name: keyof ExpenseReportFilterOptions, value: any) => {
+    setFilters(prev => {
+      // Handle clearing a filter if value is empty
+      if (value === "" || value === null || value === undefined) {
+        const newFilters = { ...prev };
+        delete newFilters[name];
+        return newFilters;
+      }
+      return { ...prev, [name]: value };
     });
-  };
-
-  // Handle search input
-  const handleSearch = () => {
-    applyFilters({
-      search,
-      status,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-      minAmount: minAmount ? parseFloat(minAmount) : undefined,
-      maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
-    });
-  };
-
-  // Handle clearing all filters
-  const clearFilters = () => {
-    setSearch("");
-    setStatus(undefined);
-    setStartDate("");
-    setEndDate("");
-    setMinAmount("");
-    setMaxAmount("");
-    
-    applyFilters({});
   };
 
   // Format date for display
-  const formatDateRange = (): string => {
-    if (!startDate && !endDate) return "Select date range";
-    
-    if (startDate && endDate) {
-      return `${format(new Date(startDate), "MMM d, yyyy")} - ${format(new Date(endDate), "MMM d, yyyy")}`;
-    }
-    
-    if (startDate) {
-      return `From ${format(new Date(startDate), "MMM d, yyyy")}`;
-    }
-    
-    if (endDate) {
-      return `Until ${format(new Date(endDate), "MMM d, yyyy")}`;
-    }
-    
-    return "Select date range";
+  const formatDate = (date?: Date) => {
+    if (!date) return "";
+    return format(date, "PPP");
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="rounded-md border p-4">
+      <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+        {/* Search input */}
+        <div className="flex-1">
+          <Label htmlFor="search" className="text-xs text-gray-500">
+            Search Reports
+          </Label>
           <Input
-            type="search"
-            placeholder="Search reports by title, description or ID..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            id="search"
+            placeholder="Search by title or description"
+            value={filters.search || ""}
+            onChange={(e) => handleFilterChange("search", e.target.value)}
+            className="mt-1"
           />
         </div>
 
-        <div className="flex space-x-2">
-          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+        {/* Status filter */}
+        <div className="flex-1">
+          <Label htmlFor="status" className="text-xs text-gray-500">
+            Status
+          </Label>
+          <Select
+            value={filters.status || ""}
+            onValueChange={(value) => handleFilterChange("status", value)}
+          >
+            <SelectTrigger id="status" className="mt-1">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Statuses</SelectItem>
+              {statusOptions.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Advanced filters button */}
+        <div className="mt-auto">
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="whitespace-nowrap">
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
-                {filterCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterCount}
-                  </Badge>
-                )}
+              <Button
+                variant="outline"
+                className="w-full md:w-auto gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Advanced Filters
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full" align="end">
-              <Card className="border-0 shadow-none">
-                <CardHeader className="px-0 pt-0">
-                  <CardTitle className="text-lg">Filter Reports</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 px-0">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All statuses</SelectItem>
-                        <SelectGroup>
-                          <SelectLabel>Filter by status</SelectLabel>
-                          {statusOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date Range</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-xs text-muted-foreground">From</label>
-                        <Input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                        />
+            <PopoverContent className="w-full p-4 md:w-[500px]" align="end">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Date Range</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="startDate" className="text-xs text-gray-500">
+                        Start Date
+                      </Label>
+                      <div className="flex items-center mt-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              id="startDate"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !filters.startDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filters.startDate ? formatDate(filters.startDate) : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={filters.startDate}
+                              onSelect={(date) => handleFilterChange("startDate", date)}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">To</label>
-                        <Input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                        />
+                    </div>
+                    <div>
+                      <Label htmlFor="endDate" className="text-xs text-gray-500">
+                        End Date
+                      </Label>
+                      <div className="flex items-center mt-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              id="endDate"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !filters.endDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filters.endDate ? formatDate(filters.endDate) : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={filters.endDate}
+                              onSelect={(date) => handleFilterChange("endDate", date)}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Amount Range ($)</label>
-                    <div className="flex items-center space-x-2">
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium">Amount Range</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="minAmount" className="text-xs text-gray-500">
+                        Min Amount
+                      </Label>
                       <Input
+                        id="minAmount"
                         type="number"
-                        placeholder="Min"
-                        value={minAmount}
-                        onChange={(e) => setMinAmount(e.target.value)}
-                        className="w-full"
+                        min={0}
+                        step="0.01"
+                        placeholder={`${stats.minAmount.toFixed(2)}`}
+                        value={filters.minAmount || ""}
+                        onChange={(e) => {
+                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          handleFilterChange("minAmount", value);
+                        }}
+                        className="mt-1"
                       />
-                      <span className="text-muted-foreground">to</span>
+                    </div>
+                    <div>
+                      <Label htmlFor="maxAmount" className="text-xs text-gray-500">
+                        Max Amount
+                      </Label>
                       <Input
+                        id="maxAmount"
                         type="number"
-                        placeholder="Max"
-                        value={maxAmount}
-                        onChange={(e) => setMaxAmount(e.target.value)}
-                        className="w-full"
+                        min={0}
+                        step="0.01"
+                        placeholder={`${stats.maxAmount.toFixed(2)}`}
+                        value={filters.maxAmount || ""}
+                        onChange={(e) => {
+                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          handleFilterChange("maxAmount", value);
+                        }}
+                        className="mt-1"
                       />
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between px-0 pb-0">
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    <X className="mr-2 h-4 w-4" /> Clear
-                  </Button>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
                   <Button
-                    size="sm"
+                    variant="outline"
                     onClick={() => {
-                      handleSearch();
-                      setFiltersOpen(false);
+                      setFilters({});
+                      setIsOpen(false);
                     }}
                   >
-                    Apply Filters
+                    Reset
                   </Button>
-                </CardFooter>
-              </Card>
+                  <Button onClick={() => setIsOpen(false)}>Apply Filters</Button>
+                </div>
+              </div>
             </PopoverContent>
           </Popover>
-
-          <Button onClick={handleSearch}>
-            <Search className="h-4 w-4" />
-            <span className="ml-2 sr-only sm:not-sr-only">Search</span>
-          </Button>
         </div>
       </div>
 
-      {filterCount > 0 && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm text-muted-foreground">Active filters:</span>
-          {status && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Status: {statusOptions.find(s => s.value === status)?.label}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 ml-1"
-                onClick={() => {
-                  setStatus(undefined);
-                  applyFilters({
-                    ...{
-                      search,
-                      startDate: startDate ? new Date(startDate) : undefined,
-                      endDate: endDate ? new Date(endDate) : undefined,
-                      minAmount: minAmount ? parseFloat(minAmount) : undefined,
-                      maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
-                    },
-                    status: undefined,
-                  });
-                }}
+      {/* Active filters display */}
+      {Object.keys(filters).length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {Object.entries(filters).map(([key, value]) => {
+            if (!value) return null;
+            
+            let displayValue = "";
+            let displayKey = "";
+            
+            switch (key) {
+              case "search":
+                displayKey = "Search";
+                displayValue = value as string;
+                break;
+              case "status":
+                displayKey = "Status";
+                displayValue = statusOptions.find(s => s.value === value)?.label || value as string;
+                break;
+              case "startDate":
+                displayKey = "From";
+                displayValue = formatDate(value as Date);
+                break;
+              case "endDate":
+                displayKey = "To";
+                displayValue = formatDate(value as Date);
+                break;
+              case "minAmount":
+                displayKey = "Min $";
+                displayValue = `$${(value as number).toFixed(2)}`;
+                break;
+              case "maxAmount":
+                displayKey = "Max $";
+                displayValue = `$${(value as number).toFixed(2)}`;
+                break;
+            }
+            
+            return (
+              <div
+                key={key}
+                className="rounded-full bg-gray-100 px-3 py-1 text-sm flex items-center"
               >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
+                <span className="font-semibold mr-1">{displayKey}:</span> {displayValue}
+                <button
+                  onClick={() => handleFilterChange(key as keyof ExpenseReportFilterOptions, undefined)}
+                  className="ml-2 text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+          
+          {Object.keys(filters).length > 0 && (
+            <button
+              onClick={() => setFilters({})}
+              className="rounded-full bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
+            >
+              Clear All Filters
+            </button>
           )}
-          {(startDate || endDate) && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Date: {formatDateRange()}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 ml-1"
-                onClick={() => {
-                  setStartDate("");
-                  setEndDate("");
-                  applyFilters({
-                    ...{
-                      search,
-                      status,
-                      minAmount: minAmount ? parseFloat(minAmount) : undefined,
-                      maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
-                    },
-                    startDate: undefined,
-                    endDate: undefined,
-                  });
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          )}
-          {(minAmount || maxAmount) && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Amount: {minAmount || "0"} - {maxAmount || "∞"}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 ml-1"
-                onClick={() => {
-                  setMinAmount("");
-                  setMaxAmount("");
-                  applyFilters({
-                    ...{
-                      search,
-                      status,
-                      startDate: startDate ? new Date(startDate) : undefined,
-                      endDate: endDate ? new Date(endDate) : undefined,
-                    },
-                    minAmount: undefined,
-                    maxAmount: undefined,
-                  });
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          )}
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto p-0 text-muted-foreground"
-            onClick={clearFilters}
-          >
-            Clear all
-          </Button>
         </div>
       )}
     </div>

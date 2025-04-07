@@ -138,11 +138,53 @@ export function useEmployerExpenseReports() {
     },
   });
 
+  // Payment processing mutation
+  const processPaymentMutation = useMutation({
+    mutationFn: async ({
+      id,
+      paymentMethod,
+      paymentReference,
+    }: {
+      id: number;
+      paymentMethod: string;
+      paymentReference?: string;
+    }) => {
+      const res = await apiRequest("POST", `/api/expense-reports/${id}/pay`, {
+        paymentMethod,
+        referenceNumber: paymentReference,
+        paymentDate: new Date().toISOString(),
+        sendReceipt: true,
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to process payment");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Payment Successful",
+        description: `Payment for expense report #${variables.id} has been processed`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/employer/expense-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-reports', variables.id] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to process payment",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     expenseReports,
     isLoading,
     error,
     updateExpenseReportStatus: updateExpenseReportStatusMutation.mutate,
     isUpdating: updateExpenseReportStatusMutation.isPending,
+    processPayment: processPaymentMutation.mutate,
+    isProcessingPayment: processPaymentMutation.isPending,
   };
 }
