@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, numeric, timestamp, pgEnum, date, jsonb, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, numeric, timestamp, pgEnum, date, jsonb, varchar, decimal } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -38,6 +38,7 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
   role: text("role", { enum: ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate"] }).notNull().default("executive"),
+  avatar: text("avatar"),
   department: text("department"),
   organizationId: integer("organization_id"),
   dateOfBirth: date("date_of_birth"),
@@ -65,6 +66,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   lastName: true,
   email: true,
   role: true,
+  avatar: true,
   department: true,
   organizationId: true,
   dateOfBirth: true,
@@ -2550,3 +2552,502 @@ export const insertSpendingRulesSchema = createInsertSchema(spendingRules).pick(
 
 export type SpendingRules = typeof spendingRules.$inferSelect;
 export type InsertSpendingRules = typeof spendingRules.$inferInsert;
+
+// ========================================================================
+// PaySurity ECom Ready - Retail POS System
+// ========================================================================
+
+// Product category enum
+export const productCategoryTypeEnum = pgEnum("product_category_type", [
+  "clothing", "electronics", "home_goods", "beauty", "accessories", "books", "toys", "sports", "grocery", "other"
+]);
+
+// Product categories
+export const retailCategories = pgTable("retail_categories", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentCategoryId: integer("parent_category_id"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRetailCategorySchema = createInsertSchema(retailCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RetailCategory = typeof retailCategories.$inferSelect;
+export type InsertRetailCategory = z.infer<typeof insertRetailCategorySchema>;
+
+// Products
+export const retailProducts = pgTable("retail_products", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  sku: text("sku").notNull(),
+  barcode: text("barcode"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  comparePrice: decimal("compare_price", { precision: 10, scale: 2 }),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  taxable: boolean("taxable").default(true),
+  inStock: integer("in_stock").default(0),
+  lowStockThreshold: integer("low_stock_threshold"),
+  categoryId: integer("category_id"),
+  imageUrl: text("image_url"),
+  weight: decimal("weight", { precision: 10, scale: 2 }),
+  weightUnit: text("weight_unit").default("lb"),
+  dimensions: jsonb("dimensions"), // { length, width, height, unit }
+  hasVariants: boolean("has_variants").default(false),
+  variantOptions: jsonb("variant_options"), // Array of { name, values }
+  tags: text("tags"),
+  metadata: jsonb("metadata"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRetailProductSchema = createInsertSchema(retailProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RetailProduct = typeof retailProducts.$inferSelect;
+export type InsertRetailProduct = z.infer<typeof insertRetailProductSchema>;
+
+// Product variants
+export const retailProductVariants = pgTable("retail_product_variants", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull(),
+  title: text("title").notNull(),
+  sku: text("sku").notNull(),
+  barcode: text("barcode"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  comparePrice: decimal("compare_price", { precision: 10, scale: 2 }),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  inStock: integer("in_stock").default(0),
+  options: jsonb("options").notNull(), // Array of { name, value }
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRetailProductVariantSchema = createInsertSchema(retailProductVariants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RetailProductVariant = typeof retailProductVariants.$inferSelect;
+export type InsertRetailProductVariant = z.infer<typeof insertRetailProductVariantSchema>;
+
+// Customer schema for retail POS
+export const retailCustomers = pgTable("retail_customers", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country").default("USA"),
+  notes: text("notes"),
+  totalSpent: decimal("total_spent", { precision: 10, scale: 2 }).default("0"),
+  totalOrders: integer("total_orders").default(0),
+  loyaltyPoints: integer("loyalty_points").default(0),
+  birthDate: date("birth_date"),
+  lastOrderDate: timestamp("last_order_date"),
+  tags: text("tags"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRetailCustomerSchema = createInsertSchema(retailCustomers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RetailCustomer = typeof retailCustomers.$inferSelect;
+export type InsertRetailCustomer = z.infer<typeof insertRetailCustomerSchema>;
+
+// Retail orders/sales
+export const retailOrderStatusEnum = pgEnum("retail_order_status", [
+  "draft", "completed", "refunded", "partially_refunded", "voided", "on_hold"
+]);
+
+export const retailOrders = pgTable("retail_orders", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  orderNumber: text("order_number").notNull(),
+  customerId: integer("customer_id"),
+  userId: integer("user_id").notNull(), // Employee who processed the order
+  status: text("status", { enum: ["draft", "completed", "refunded", "partially_refunded", "voided", "on_hold"] }).notNull().default("draft"),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  isOnline: boolean("is_online").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRetailOrderSchema = createInsertSchema(retailOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RetailOrder = typeof retailOrders.$inferSelect;
+export type InsertRetailOrder = z.infer<typeof insertRetailOrderSchema>;
+
+// Order items
+export const retailOrderItems = pgTable("retail_order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(),
+  productId: integer("product_id").notNull(),
+  variantId: integer("variant_id"),
+  name: text("name").notNull(),
+  sku: text("sku").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  options: jsonb("options"), // Variant options
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRetailOrderItemSchema = createInsertSchema(retailOrderItems).omit({
+  id: true,
+  createdAt: true
+});
+
+export type RetailOrderItem = typeof retailOrderItems.$inferSelect;
+export type InsertRetailOrderItem = z.infer<typeof insertRetailOrderItemSchema>;
+
+// Suppliers
+export const retailSuppliers = pgTable("retail_suppliers", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  contactName: text("contact_name"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country").default("USA"),
+  website: text("website"),
+  notes: text("notes"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRetailSupplierSchema = createInsertSchema(retailSuppliers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RetailSupplier = typeof retailSuppliers.$inferSelect;
+export type InsertRetailSupplier = z.infer<typeof insertRetailSupplierSchema>;
+
+// Inventory transactions
+export const retailInventoryTransactionTypeEnum = pgEnum("retail_inventory_transaction_type", [
+  "stock_in", "stock_out", "adjustment", "transfer", "sale", "return"
+]);
+
+export const retailInventoryTransactions = pgTable("retail_inventory_transactions", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  productId: integer("product_id").notNull(),
+  variantId: integer("variant_id"),
+  type: text("type", { enum: ["stock_in", "stock_out", "adjustment", "transfer", "sale", "return"] }).notNull(),
+  quantity: integer("quantity").notNull(),
+  reason: text("reason"),
+  notes: text("notes"),
+  orderId: integer("order_id"),
+  supplierId: integer("supplier_id"),
+  userId: integer("user_id").notNull(), // Employee who recorded the transaction
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRetailInventoryTransactionSchema = createInsertSchema(retailInventoryTransactions).omit({
+  id: true,
+  createdAt: true
+});
+
+export type RetailInventoryTransaction = typeof retailInventoryTransactions.$inferSelect;
+export type InsertRetailInventoryTransaction = z.infer<typeof insertRetailInventoryTransactionSchema>;
+
+// ========================================================================
+// BistroBeast - Restaurant POS System
+// ========================================================================
+
+// Menu categories for BistroBeast
+export const menuCategoryTypeEnum = pgEnum("menu_category_type", [
+  "appetizer", "main", "side", "dessert", "beverage", "alcohol", "combo", "special"
+]);
+
+export const menuCategories = pgTable("menu_categories", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type", { enum: ["appetizer", "main", "side", "dessert", "beverage", "alcohol", "combo", "special"] }),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  imageUrl: text("image_url"),
+  availableStartTime: text("available_start_time"), // Format: HH:MM
+  availableEndTime: text("available_end_time"), // Format: HH:MM
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMenuCategorySchema = createInsertSchema(menuCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type MenuCategory = typeof menuCategories.$inferSelect;
+export type InsertMenuCategory = z.infer<typeof insertMenuCategorySchema>;
+
+// Menu items (dishes/products)
+export const menuItems = pgTable("menu_items", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  categoryId: integer("category_id").notNull(),
+  imageUrl: text("image_url"),
+  calories: integer("calories"),
+  preparationTime: integer("preparation_time"), // In minutes
+  isVegetarian: boolean("is_vegetarian").default(false),
+  isVegan: boolean("is_vegan").default(false),
+  isGlutenFree: boolean("is_gluten_free").default(false),
+  spicyLevel: integer("spicy_level").default(0), // 0 = not spicy, 1-5 = spicy levels
+  allergens: text("allergens"), // Comma-separated list
+  ingredients: text("ingredients"), // Comma-separated list
+  isRecommended: boolean("is_recommended").default(false),
+  isFeatured: boolean("is_featured").default(false),
+  isActive: boolean("is_active").default(true),
+  hasModifiers: boolean("has_modifiers").default(false),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }),
+  isAlcoholic: boolean("is_alcoholic").default(false),
+  minAge: integer("min_age"), // For age-restricted items
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMenuItemSchema = createInsertSchema(menuItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type MenuItem = typeof menuItems.$inferSelect;
+export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
+
+// Menu item modifiers (like extra cheese, toppings, etc.)
+export const menuItemModifiers = pgTable("menu_item_modifiers", {
+  id: serial("id").primaryKey(),
+  menuItemId: integer("menu_item_id").notNull(),
+  name: text("name").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  isDefault: boolean("is_default").default(false),
+  isRequired: boolean("is_required").default(false),
+  maxSelections: integer("max_selections").default(1),
+  minSelections: integer("min_selections").default(0),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMenuItemModifierSchema = createInsertSchema(menuItemModifiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type MenuItemModifier = typeof menuItemModifiers.$inferSelect;
+export type InsertMenuItemModifier = z.infer<typeof insertMenuItemModifierSchema>;
+
+// Restaurant tables
+export const restaurantTableStatusEnum = pgEnum("restaurant_table_status", [
+  "available", "occupied", "reserved", "maintenance"
+]);
+
+export const restaurantTables = pgTable("restaurant_tables", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  capacity: integer("capacity").notNull(),
+  status: text("status", { enum: ["available", "occupied", "reserved", "maintenance"] }).notNull().default("available"),
+  locationId: integer("location_id"), // If restaurant has multiple locations
+  currentOrderId: integer("current_order_id"), // If table is occupied
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRestaurantTableSchema = createInsertSchema(restaurantTables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type RestaurantTable = typeof restaurantTables.$inferSelect;
+export type InsertRestaurantTable = z.infer<typeof insertRestaurantTableSchema>;
+
+// Restaurant orders
+export const restaurantOrderStatusEnum = pgEnum("restaurant_order_status", [
+  "draft", "placed", "preparing", "ready", "served", "completed", "canceled"
+]);
+
+export const restaurantOrders = pgTable("restaurant_orders", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  orderNumber: text("order_number").notNull(),
+  tableId: integer("table_id"),
+  serverId: integer("server_id").notNull(), // Employee who took the order
+  status: text("status", { enum: ["draft", "placed", "preparing", "ready", "served", "completed", "canceled"] }).notNull().default("draft"),
+  customerCount: integer("customer_count").default(1),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  tipAmount: decimal("tip_amount", { precision: 10, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method"),
+  paymentStatus: text("payment_status").default("pending"),
+  notes: text("notes"),
+  isDelivery: boolean("is_delivery").default(false),
+  isTakeout: boolean("is_takeout").default(false),
+  deliveryAddress: text("delivery_address"),
+  customerName: text("customer_name"),
+  customerPhone: text("customer_phone"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertRestaurantOrderSchema = createInsertSchema(restaurantOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true
+});
+
+export type RestaurantOrder = typeof restaurantOrders.$inferSelect;
+export type InsertRestaurantOrder = z.infer<typeof insertRestaurantOrderSchema>;
+
+// Order items
+export const restaurantOrderItems = pgTable("restaurant_order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(),
+  menuItemId: integer("menu_item_id").notNull(),
+  name: text("name").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull(),
+  notes: text("notes"),
+  modifiers: jsonb("modifiers"), // Array of selected modifiers
+  status: text("status").default("pending"), // pending, preparing, ready, served, canceled
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  sentToKitchenAt: timestamp("sent_to_kitchen_at"),
+  readyAt: timestamp("ready_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRestaurantOrderItemSchema = createInsertSchema(restaurantOrderItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentToKitchenAt: true,
+  readyAt: true
+});
+
+export type RestaurantOrderItem = typeof restaurantOrderItems.$inferSelect;
+export type InsertRestaurantOrderItem = z.infer<typeof insertRestaurantOrderItemSchema>;
+
+// Restaurant inventory items
+export const restaurantInventoryItems = pgTable("restaurant_inventory_items", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  name: text("name").notNull(),
+  sku: text("sku").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  currentStock: decimal("current_stock", { precision: 10, scale: 2 }).notNull(),
+  unit: text("unit").notNull(), // kg, g, L, ml, unit, etc.
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
+  totalValue: decimal("total_value", { precision: 10, scale: 2 }).notNull(),
+  minStockLevel: decimal("min_stock_level", { precision: 10, scale: 2 }),
+  supplierId: integer("supplier_id"),
+  supplierName: text("supplier_name"),
+  expiryDate: date("expiry_date"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRestaurantInventoryItemSchema = createInsertSchema(restaurantInventoryItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastUpdated: true
+});
+
+export type RestaurantInventoryItem = typeof restaurantInventoryItems.$inferSelect;
+export type InsertRestaurantInventoryItem = z.infer<typeof insertRestaurantInventoryItemSchema>;
+
+// Restaurant inventory transactions
+export const restaurantInventoryTransactions = pgTable("restaurant_inventory_transactions", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  itemId: integer("item_id").notNull(),
+  itemName: text("item_name").notNull(),
+  transactionType: text("transaction_type", { enum: ["purchase", "waste", "usage", "adjustment", "transfer"] }).notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unit: text("unit").notNull(),
+  notes: text("notes"),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  supplierId: integer("supplier_id"),
+  supplierName: text("supplier_name"),
+  userId: integer("user_id").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRestaurantInventoryTransactionSchema = createInsertSchema(restaurantInventoryTransactions).omit({
+  id: true,
+  createdAt: true
+});
+
+export type RestaurantInventoryTransaction = typeof restaurantInventoryTransactions.$inferSelect;
+export type InsertRestaurantInventoryTransaction = z.infer<typeof insertRestaurantInventoryTransactionSchema>;

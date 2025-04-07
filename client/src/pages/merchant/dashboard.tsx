@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
@@ -876,24 +877,114 @@ export default function MerchantDashboard() {
           
           {/* POS Tab */}
           <TabsContent value="pos" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* BistroBeast POS Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>BistroBeast</CardTitle>
+                  <CardDescription>
+                    Complete Restaurant Management System
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center py-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-primary mb-4">
+                      <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                      <line x1="6" y1="1" x2="6" y2="4"></line>
+                      <line x1="10" y1="1" x2="10" y2="4"></line>
+                      <line x1="14" y1="1" x2="14" y2="4"></line>
+                    </svg>
+                    <p className="text-sm text-muted-foreground text-center">
+                      A powerful restaurant POS system with table management, order tracking, 
+                      inventory management, and more
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                        Restaurant POS
+                      </Badge>
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Industry-Specific
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-2">
+                  <Button asChild className="w-full">
+                    <Link href="/merchant/pos/bistro">
+                      Launch BistroBeast
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild className="w-full">
+                    <Link href="/merchant/pos/bistro/inventory">
+                      Manage Inventory
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* PaySurity ECom Ready POS Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>PaySurity ECom Ready</CardTitle>
+                  <CardDescription>
+                    Retail POS &amp; E-Commerce System
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center py-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-primary mb-4">
+                      <circle cx="9" cy="21" r="1"></circle>
+                      <circle cx="20" cy="21" r="1"></circle>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Complete retail management system with inventory tracking, 
+                      customer profiles, and omnichannel capabilities
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        Retail POS
+                      </Badge>
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Omnichannel
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-2">
+                  <Button asChild className="w-full">
+                    <Link href="/merchant/pos/retail">
+                      Launch ECom Ready
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild className="w-full">
+                    <Link href="/merchant/pos/retail/inventory">
+                      Manage Inventory
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+            
             <Card>
               <CardHeader>
-                <CardTitle>Point of Sale Systems</CardTitle>
+                <CardTitle>More POS Solutions</CardTitle>
                 <CardDescription>
-                  Manage your point of sale systems and terminals
+                  Discover additional industry-specific point of sale solutions
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center py-6">
                 <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                <h3 className="mt-4 text-lg font-medium">POS Systems</h3>
+                <h3 className="mt-4 text-lg font-medium">POS Marketplace</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Set up and manage your point of sale systems
+                  Explore the full range of specialized POS solutions
                 </p>
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full">
                   <Link href="/merchant/pos-systems">
-                    Manage POS Systems
+                    Explore More POS Systems
                   </Link>
                 </Button>
               </CardFooter>

@@ -43,6 +43,8 @@ import BistroBeastPOS from "./pages/merchant/pos/bistro/index";
 import BistroBeastInventory from "./pages/merchant/pos/bistro/inventory";
 import BistroBeastStaff from "./pages/merchant/pos/bistro/staff";
 import BistroBeastTransactions from "./pages/merchant/pos/bistro/transactions";
+import RetailPOSSystem from "./pages/merchant/pos/retail/index";
+import RetailInventoryPage from "./pages/merchant/pos/retail/inventory";
 import ApplicationsManagement from "./pages/merchant/applications-management";
 import ApplicationDetail from "./pages/merchant/application-detail";
 import AffiliateDashboard from "./pages/merchant/affiliate-dashboard";
@@ -135,10 +137,15 @@ function Router() {
       <ProtectedRoute path="/merchant/payment-settings" component={PaymentSettings} />
       <ProtectedRoute path="/merchant/loyalty-programs" component={LoyaltyPrograms} />
       <ProtectedRoute path="/merchant/affiliate-dashboard" component={AffiliateDashboard} />
+      {/* BistroBeast Restaurant POS */}
       <ProtectedRoute path="/merchant/pos/bistro" component={BistroBeastPOS} />
       <ProtectedRoute path="/merchant/pos/bistro/inventory" component={BistroBeastInventory} />
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
+      
+      {/* PaySurity ECom Ready Retail POS */}
+      <ProtectedRoute path="/merchant/pos/retail" component={RetailPOSSystem} />
+      <ProtectedRoute path="/merchant/pos/retail/inventory" component={RetailInventoryPage} />
       <ProtectedRoute path="/merchant/applications-management" component={ApplicationsManagement} />
       <ProtectedRoute path="/merchant/applications/:id" component={ApplicationDetail} />
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />

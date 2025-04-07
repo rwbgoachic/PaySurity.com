@@ -1,100 +1,382 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
+  ArrowLeftRight,
+  BarChart,
+  ChevronDown,
+  Clock,
+  Coffee,
+  Download,
+  Edit,
+  FileText,
+  Filter,
+  Package,
   Plus,
   Search,
-  Filter,
-  Download,
-  Upload,
-  ArrowLeftRight,
-  AlertTriangle,
+  Settings,
+  Trash2,
   Truck,
-  RefreshCw,
-  ShoppingBag,
-  Check,
-  X,
+  Utensils,
+  AlertTriangle,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-export default function BistroBeastInventory() {
-  const [searchTerm, setSearchTerm] = useState("");
+// Mock data types
+type InventoryItem = {
+  id: number;
+  name: string;
+  sku: string;
+  currentStock: number;
+  unit: string;
+  unitCost: number;
+  totalValue: number;
+  minStockLevel: number;
+  categoryId: number;
+  categoryName: string;
+  lastUpdated: string;
+  expiryDate?: string;
+  supplierId?: number;
+  supplierName?: string;
+};
+
+type Category = {
+  id: number;
+  name: string;
+  itemCount: number;
+  description?: string;
+};
+
+type Supplier = {
+  id: number;
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  status: "active" | "inactive";
+};
+
+type InventoryTransaction = {
+  id: number;
+  date: string;
+  itemId: number;
+  itemName: string;
+  type: "purchase" | "waste" | "usage" | "adjustment" | "transfer";
+  quantity: number;
+  unit: string;
+  notes?: string;
+  createdBy: string;
+  cost?: number;
+  supplierId?: number;
+  supplierName?: string;
+};
+
+export default function RestaurantInventoryPage() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("inventory");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [stockFilter, setStockFilter] = useState<string | null>(null);
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
-  const [newItem, setNewItem] = useState({
-    name: "",
-    category: "",
-    unit: "ea",
-    price: "",
-    cost: "",
-    stock: "",
-    lowThreshold: "",
-  });
 
-  // Mock inventory data
-  const inventoryItems = [
-    { id: 1, name: "Beef - Ground", category: "Meat", unit: "lb", price: 5.99, cost: 3.50, stock: 45, lowThreshold: 10, status: "ok" },
-    { id: 2, name: "Chicken - Breast", category: "Meat", unit: "lb", price: 4.99, cost: 2.75, stock: 32, lowThreshold: 15, status: "ok" },
-    { id: 3, name: "Tomatoes", category: "Produce", unit: "lb", price: 2.99, cost: 1.20, stock: 18, lowThreshold: 10, status: "ok" },
-    { id: 4, name: "Lettuce - Iceberg", category: "Produce", unit: "ea", price: 1.99, cost: 0.89, stock: 12, lowThreshold: 5, status: "ok" },
-    { id: 5, name: "Potatoes - Russet", category: "Produce", unit: "lb", price: 1.49, cost: 0.59, stock: 50, lowThreshold: 15, status: "ok" },
-    { id: 6, name: "Flour - All Purpose", category: "Dry Goods", unit: "lb", price: 0.79, cost: 0.35, stock: 24, lowThreshold: 10, status: "ok" },
-    { id: 7, name: "Sugar - Granulated", category: "Dry Goods", unit: "lb", price: 0.89, cost: 0.42, stock: 18, lowThreshold: 8, status: "ok" },
-    { id: 8, name: "Olive Oil", category: "Oils", unit: "oz", price: 0.50, cost: 0.28, stock: 64, lowThreshold: 20, status: "ok" },
-    { id: 9, name: "Salt - Kosher", category: "Spices", unit: "oz", price: 0.15, cost: 0.07, stock: 32, lowThreshold: 10, status: "ok" },
-    { id: 10, name: "Pepper - Black", category: "Spices", unit: "oz", price: 0.25, cost: 0.12, stock: 24, lowThreshold: 8, status: "ok" },
-    { id: 11, name: "Garlic", category: "Produce", unit: "oz", price: 0.30, cost: 0.15, stock: 36, lowThreshold: 12, status: "ok" },
-    { id: 12, name: "Wine - Red", category: "Beverages", unit: "bottle", price: 12.99, cost: 7.50, stock: 8, lowThreshold: 5, status: "ok" },
-    { id: 13, name: "Wine - White", category: "Beverages", unit: "bottle", price: 11.99, cost: 6.75, stock: 6, lowThreshold: 5, status: "ok" },
-    { id: 14, name: "Beer - Craft IPA", category: "Beverages", unit: "bottle", price: 5.99, cost: 3.25, stock: 24, lowThreshold: 12, status: "ok" },
-    { id: 15, name: "Cheese - Mozzarella", category: "Dairy", unit: "lb", price: 4.99, cost: 2.75, stock: 10, lowThreshold: 5, status: "ok" },
-    { id: 16, name: "Cheese - Parmesan", category: "Dairy", unit: "oz", price: 0.75, cost: 0.45, stock: 24, lowThreshold: 8, status: "low" },
-    { id: 17, name: "Milk", category: "Dairy", unit: "gal", price: 3.49, cost: 2.10, stock: 3, lowThreshold: 4, status: "low" },
-    { id: 18, name: "Eggs", category: "Dairy", unit: "dozen", price: 2.99, cost: 1.75, stock: 8, lowThreshold: 5, status: "ok" },
-    { id: 19, name: "Bacon", category: "Meat", unit: "lb", price: 6.99, cost: 4.25, stock: 12, lowThreshold: 6, status: "ok" },
-    { id: 20, name: "Onions - Yellow", category: "Produce", unit: "lb", price: 1.29, cost: 0.60, stock: 1, lowThreshold: 5, status: "critical" },
+  // Mock data for demonstration
+  const categories: Category[] = [
+    { id: 1, name: "Proteins", itemCount: 12, description: "Meat, poultry, fish" },
+    { id: 2, name: "Produce", itemCount: 18, description: "Fruits and vegetables" },
+    { id: 3, name: "Dairy", itemCount: 8, description: "Milk, cheese, eggs" },
+    { id: 4, name: "Dry Goods", itemCount: 15, description: "Pasta, rice, grains" },
+    { id: 5, name: "Spices", itemCount: 22, description: "Herbs, spices, seasonings" },
+    { id: 6, name: "Beverages", itemCount: 10, description: "Non-alcoholic drinks" },
+    { id: 7, name: "Alcohol", itemCount: 14, description: "Wine, spirits, beer" },
+    { id: 8, name: "Desserts", itemCount: 7, description: "Sweet ingredients" },
   ];
 
-  // Filter items based on search term
-  const filteredItems = inventoryItems.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
+  const suppliers: Supplier[] = [
+    { id: 1, name: "Farm Fresh Foods", contactName: "John Smith", email: "john@farmfresh.com", phone: "555-123-4567", status: "active" },
+    { id: 2, name: "Premier Meats", contactName: "Sarah Johnson", email: "sarah@premiermeats.com", phone: "555-234-5678", status: "active" },
+    { id: 3, name: "Vineyard Suppliers", contactName: "Robert Davis", email: "robert@vineyardsuppliers.com", phone: "555-345-6789", status: "active" },
+    { id: 4, name: "Global Spice Traders", contactName: "Amanda Chen", email: "amanda@globalspice.com", phone: "555-456-7890", status: "inactive" },
+    { id: 5, name: "Ocean Catch Seafood", contactName: "Michael Lee", email: "michael@oceancatch.com", phone: "555-567-8901", status: "active" },
+  ];
+
+  const inventoryItems: InventoryItem[] = [
+    {
+      id: 1,
+      name: "Chicken Breast",
+      sku: "PROT-001",
+      currentStock: 18.5,
+      unit: "kg",
+      unitCost: 8.99,
+      totalValue: 166.32,
+      minStockLevel: 10,
+      categoryId: 1,
+      categoryName: "Proteins",
+      lastUpdated: "2023-07-15",
+      expiryDate: "2023-07-22",
+      supplierId: 2,
+      supplierName: "Premier Meats"
+    },
+    {
+      id: 2,
+      name: "Potatoes",
+      sku: "PROD-001",
+      currentStock: 45,
+      unit: "kg",
+      unitCost: 1.99,
+      totalValue: 89.55,
+      minStockLevel: 20,
+      categoryId: 2,
+      categoryName: "Produce",
+      lastUpdated: "2023-07-14",
+      expiryDate: "2023-08-01",
+      supplierId: 1,
+      supplierName: "Farm Fresh Foods"
+    },
+    {
+      id: 3,
+      name: "Whole Milk",
+      sku: "DAIRY-001",
+      currentStock: 24,
+      unit: "L",
+      unitCost: 2.49,
+      totalValue: 59.76,
+      minStockLevel: 12,
+      categoryId: 3,
+      categoryName: "Dairy",
+      lastUpdated: "2023-07-15",
+      expiryDate: "2023-07-20",
+      supplierId: 1,
+      supplierName: "Farm Fresh Foods"
+    },
+    {
+      id: 4,
+      name: "White Rice",
+      sku: "DRY-001",
+      currentStock: 40,
+      unit: "kg",
+      unitCost: 2.29,
+      totalValue: 91.60,
+      minStockLevel: 15,
+      categoryId: 4,
+      categoryName: "Dry Goods",
+      lastUpdated: "2023-07-10",
+      supplierId: 1,
+      supplierName: "Farm Fresh Foods"
+    },
+    {
+      id: 5,
+      name: "Black Pepper",
+      sku: "SPICE-001",
+      currentStock: 3.2,
+      unit: "kg",
+      unitCost: 12.99,
+      totalValue: 41.57,
+      minStockLevel: 1,
+      categoryId: 5,
+      categoryName: "Spices",
+      lastUpdated: "2023-07-12",
+      supplierId: 4,
+      supplierName: "Global Spice Traders"
+    },
+    {
+      id: 6,
+      name: "Organic Tomatoes",
+      sku: "PROD-002",
+      currentStock: 8.4,
+      unit: "kg",
+      unitCost: 3.99,
+      totalValue: 33.52,
+      minStockLevel: 5,
+      categoryId: 2,
+      categoryName: "Produce",
+      lastUpdated: "2023-07-15",
+      expiryDate: "2023-07-19",
+      supplierId: 1,
+      supplierName: "Farm Fresh Foods"
+    },
+    {
+      id: 7,
+      name: "Salmon Fillet",
+      sku: "PROT-002",
+      currentStock: 4.6,
+      unit: "kg",
+      unitCost: 22.99,
+      totalValue: 105.75,
+      minStockLevel: 3,
+      categoryId: 1,
+      categoryName: "Proteins",
+      lastUpdated: "2023-07-15",
+      expiryDate: "2023-07-18",
+      supplierId: 5,
+      supplierName: "Ocean Catch Seafood"
+    },
+    {
+      id: 8,
+      name: "Red Wine",
+      sku: "ALC-001",
+      currentStock: 18,
+      unit: "bottle",
+      unitCost: 14.99,
+      totalValue: 269.82,
+      minStockLevel: 10,
+      categoryId: 7,
+      categoryName: "Alcohol",
+      lastUpdated: "2023-07-08",
+      supplierId: 3,
+      supplierName: "Vineyard Suppliers"
+    },
+    {
+      id: 9,
+      name: "Honey",
+      sku: "SWEET-001",
+      currentStock: 1.8,
+      unit: "kg",
+      unitCost: 8.99,
+      totalValue: 16.18,
+      minStockLevel: 2,
+      categoryId: 8,
+      categoryName: "Desserts",
+      lastUpdated: "2023-07-13",
+      supplierId: 1,
+      supplierName: "Farm Fresh Foods"
+    }
+  ];
+
+  const transactions: InventoryTransaction[] = [
+    {
+      id: 1001,
+      date: "2023-07-15",
+      itemId: 1,
+      itemName: "Chicken Breast",
+      type: "purchase",
+      quantity: 10,
+      unit: "kg",
+      notes: "Weekly order",
+      createdBy: "John Manager",
+      cost: 89.90,
+      supplierId: 2,
+      supplierName: "Premier Meats"
+    },
+    {
+      id: 1002,
+      date: "2023-07-15",
+      itemId: 7,
+      itemName: "Salmon Fillet",
+      type: "purchase",
+      quantity: 5,
+      unit: "kg",
+      createdBy: "John Manager",
+      cost: 114.95,
+      supplierId: 5,
+      supplierName: "Ocean Catch Seafood"
+    },
+    {
+      id: 1003,
+      date: "2023-07-14",
+      itemId: 6,
+      itemName: "Organic Tomatoes",
+      type: "waste",
+      quantity: 1.2,
+      unit: "kg",
+      notes: "Spoiled",
+      createdBy: "Maria Chef"
+    },
+    {
+      id: 1004,
+      date: "2023-07-14",
+      itemId: 3,
+      itemName: "Whole Milk",
+      type: "usage",
+      quantity: 4,
+      unit: "L",
+      notes: "Used for sauce preparation",
+      createdBy: "Maria Chef"
+    },
+    {
+      id: 1005,
+      date: "2023-07-14",
+      itemId: 5,
+      itemName: "Black Pepper",
+      type: "adjustment",
+      quantity: 0.3,
+      unit: "kg",
+      notes: "Inventory correction",
+      createdBy: "John Manager"
+    }
+  ];
+
+  // Filter inventory items based on search query and filters
+  const filteredItems = inventoryItems.filter(item => {
+    const matchesSearch = searchQuery.trim() === "" || 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.sku.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = categoryFilter === null || 
+      item.categoryName === categoryFilter;
+    
+    const matchesStock = stockFilter === null || (
+      (stockFilter === "normal" && item.currentStock > item.minStockLevel) ||
+      (stockFilter === "low" && item.currentStock <= item.minStockLevel && item.currentStock > 0) ||
+      (stockFilter === "out" && item.currentStock === 0)
+    );
+    
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
+  // Get low stock items
+  const lowStockItems = inventoryItems.filter(
+    item => item.currentStock <= item.minStockLevel
   );
 
-  const handleAddItem = () => {
-    // This would typically make an API call to add the item
-    console.log("Adding new item:", newItem);
-    setShowAddItemDialog(false);
-    // Reset form
-    setNewItem({
-      name: "",
-      category: "",
-      unit: "ea",
-      price: "",
-      cost: "",
-      stock: "",
-      lowThreshold: "",
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ok':
-        return <Badge className="bg-green-100 text-green-800">Normal</Badge>;
-      case 'low':
-        return <Badge className="bg-yellow-100 text-yellow-800">Low</Badge>;
-      case 'critical':
-        return <Badge className="bg-red-100 text-red-800">Critical</Badge>;
-      default:
-        return <Badge className="bg-neutral-100 text-neutral-800">Unknown</Badge>;
-    }
-  };
+  // Get expiring soon items (within 3 days)
+  const today = new Date();
+  const threeDaysLater = new Date(today);
+  threeDaysLater.setDate(today.getDate() + 3);
+  
+  const expiringSoonItems = inventoryItems.filter(item => {
+    if (!item.expiryDate) return false;
+    const expiryDate = new Date(item.expiryDate);
+    return expiryDate <= threeDaysLater && expiryDate >= today;
+  });
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-50">
@@ -102,314 +384,508 @@ export default function BistroBeastInventory() {
       <header className="border-b bg-white">
         <div className="container mx-auto py-3 px-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold text-primary">BistroBeast Inventory</h1>
+            <h1 className="text-xl font-bold text-primary">BistroBeast - Inventory Management</h1>
+            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+              Restaurant Management
+            </Badge>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="sm">
-              <ArrowLeftRight className="h-4 w-4 mr-2" />
-              Back to POS
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/merchant/pos/bistro">
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Back to POS
+              </Link>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="flex-1 container mx-auto py-6 px-4">
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Inventory Management</h2>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Import
-              </Button>
+      {/* Content */}
+      <div className="container mx-auto p-4 md:p-6 flex-grow">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="flex items-center justify-between mb-6">
+            <TabsList>
+              <TabsTrigger value="inventory">
+                <Package className="h-4 w-4 mr-2" />
+                Inventory
+              </TabsTrigger>
+              <TabsTrigger value="categories">
+                <Coffee className="h-4 w-4 mr-2" />
+                Categories
+              </TabsTrigger>
+              <TabsTrigger value="suppliers">
+                <Truck className="h-4 w-4 mr-2" />
+                Suppliers
+              </TabsTrigger>
+              <TabsTrigger value="transactions">
+                <BarChart className="h-4 w-4 mr-2" />
+                Transactions
+              </TabsTrigger>
+            </TabsList>
+            <div>
               <Dialog open={showAddItemDialog} onOpenChange={setShowAddItemDialog}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button className="mr-2">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Item
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>Add New Inventory Item</DialogTitle>
                     <DialogDescription>
-                      Add a new item to your inventory. All fields are required.
+                      Enter the details of the new inventory item.
                     </DialogDescription>
                   </DialogHeader>
+                  {/* Form fields would go here in a real implementation */}
                   <div className="space-y-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Item Name</Label>
-                        <Input 
-                          id="name" 
-                          placeholder="e.g., Tomatoes" 
-                          value={newItem.name}
-                          onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                        />
+                      <div>
+                        <label className="text-sm font-medium">Name</label>
+                        <Input placeholder="Item name" />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Input 
-                          id="category" 
-                          placeholder="e.g., Produce" 
-                          value={newItem.category}
-                          onChange={(e) => setNewItem({...newItem, category: e.target.value})}
-                        />
+                      <div>
+                        <label className="text-sm font-medium">SKU</label>
+                        <Input placeholder="SKU" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="unit">Unit</Label>
-                        <Select
-                          value={newItem.unit}
-                          onValueChange={(value) => setNewItem({...newItem, unit: value})}
-                        >
+                      <div>
+                        <label className="text-sm font-medium">Current Stock</label>
+                        <Input type="number" min="0" step="0.1" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Unit</label>
+                        <Select>
                           <SelectTrigger>
                             <SelectValue placeholder="Select unit" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="ea">Each</SelectItem>
-                            <SelectItem value="lb">Pound</SelectItem>
-                            <SelectItem value="oz">Ounce</SelectItem>
-                            <SelectItem value="gal">Gallon</SelectItem>
+                            <SelectItem value="kg">Kilogram (kg)</SelectItem>
+                            <SelectItem value="g">Gram (g)</SelectItem>
+                            <SelectItem value="L">Liter (L)</SelectItem>
+                            <SelectItem value="ml">Milliliter (ml)</SelectItem>
+                            <SelectItem value="unit">Unit</SelectItem>
                             <SelectItem value="bottle">Bottle</SelectItem>
-                            <SelectItem value="dozen">Dozen</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="price">Sale Price ($)</Label>
-                        <Input 
-                          id="price" 
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          placeholder="0.00" 
-                          value={newItem.price}
-                          onChange={(e) => setNewItem({...newItem, price: e.target.value})}
-                        />
-                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="cost">Cost ($)</Label>
-                        <Input 
-                          id="cost" 
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          placeholder="0.00" 
-                          value={newItem.cost}
-                          onChange={(e) => setNewItem({...newItem, cost: e.target.value})}
-                        />
+                      <div>
+                        <label className="text-sm font-medium">Unit Cost ($)</label>
+                        <Input type="number" min="0" step="0.01" placeholder="0.00" />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="stock">Current Stock</Label>
-                        <Input 
-                          id="stock" 
-                          type="number" 
-                          min="0" 
-                          placeholder="0" 
-                          value={newItem.stock}
-                          onChange={(e) => setNewItem({...newItem, stock: e.target.value})}
-                        />
+                      <div>
+                        <label className="text-sm font-medium">Min Stock Level</label>
+                        <Input type="number" min="0" step="0.1" placeholder="0" />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lowThreshold">Low Stock Threshold</Label>
-                      <Input 
-                        id="lowThreshold" 
-                        type="number" 
-                        min="0" 
-                        placeholder="0" 
-                        value={newItem.lowThreshold}
-                        onChange={(e) => setNewItem({...newItem, lowThreshold: e.target.value})}
-                      />
-                      <p className="text-sm text-neutral-500">
-                        You'll be alerted when stock falls below this level
-                      </p>
+                    <div>
+                      <label className="text-sm font-medium">Category</label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map(category => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Supplier</label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select supplier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map(supplier => (
+                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Expiry Date</label>
+                      <Input type="date" />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowAddItemDialog(false)}>Cancel</Button>
-                    <Button onClick={handleAddItem}>Add Item</Button>
+                    <Button onClick={() => setShowAddItemDialog(false)}>Add Item</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
-
-          <div className="mb-6 flex justify-between items-center">
-            <div className="flex space-x-4 w-1/2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                <Input
-                  placeholder="Search items..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Switch id="auto-order" />
-                <Label htmlFor="auto-order">Auto order when low</Label>
-              </div>
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Update Stock
-              </Button>
-              <Button variant="outline" size="sm">
-                <Truck className="h-4 w-4 mr-2" />
-                Place Order
+              
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
               </Button>
             </div>
           </div>
 
-          <Tabs defaultValue="all">
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">All Items</TabsTrigger>
-              <TabsTrigger value="low">
-                Low Stock <Badge className="ml-2 bg-yellow-100 text-yellow-800">2</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="critical">
-                Critical <Badge className="ml-2 bg-red-100 text-red-800">1</Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all">
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Unit</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Threshold</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+          {/* Inventory Tab */}
+          <TabsContent value="inventory" className="space-y-4">
+            <Card>
+              <CardHeader className="py-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="relative flex-grow">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500" />
+                    <Input
+                      placeholder="Search inventory by name or SKU..."
+                      className="pl-9 max-w-lg"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={categoryFilter || ""}
+                      onValueChange={(value) => setCategoryFilter(value === "" ? null : value)}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Categories</SelectItem>
+                        {categories.map(category => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={stockFilter || ""}
+                      onValueChange={(value) => setStockFilter(value === "" ? null : value)}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Stock Levels" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Stock Levels</SelectItem>
+                        <SelectItem value="normal">Normal Stock</SelectItem>
+                        <SelectItem value="low">Low Stock</SelectItem>
+                        <SelectItem value="out">Out of Stock</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon">
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Stock</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">
+                          {item.name}
+                          {item.expiryDate && new Date(item.expiryDate) <= threeDaysLater && (
+                            <Badge variant="destructive" className="ml-2">Expires soon</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{item.sku}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end items-center">
+                            <span className={
+                              item.currentStock === 0 ? "text-red-600" :
+                              item.currentStock <= item.minStockLevel ? "text-amber-600" :
+                              "text-green-600"
+                            }>
+                              {item.currentStock} {item.unit}
+                            </span>
+                            {item.currentStock <= item.minStockLevel && item.currentStock > 0 && (
+                              <AlertTriangle className="h-4 w-4 ml-1 text-amber-500" />
+                            )}
+                            {item.currentStock === 0 && (
+                              <AlertTriangle className="h-4 w-4 ml-1 text-red-500" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">${item.unitCost.toFixed(2)}/{item.unit}</TableCell>
+                        <TableCell className="text-right">${item.totalValue.toFixed(2)}</TableCell>
+                        <TableCell>{item.categoryName}</TableCell>
+                        <TableCell>{item.supplierName || "—"}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Item
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Stock
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                                Record Usage
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Item
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredItems.map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">${item.cost.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{item.stock}</TableCell>
-                          <TableCell className="text-right">{item.lowThreshold}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <ShoppingBag className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <ArrowLeftRight className="h-4 w-4" />
-                              </Button>
+                    ))}
+                    {filteredItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="h-24 text-center">
+                          No inventory items match the current filters.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Alerts Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Low Stock Alerts */}
+              <Card>
+                <CardHeader className="py-4">
+                  <CardTitle className="flex items-center text-amber-700">
+                    <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                    Low Stock Alerts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {lowStockItems.length === 0 ? (
+                    <div className="text-center py-4 text-neutral-500">All items have sufficient stock levels.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {lowStockItems.map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-xs text-neutral-500">{item.sku} | {item.categoryName}</div>
+                          </div>
+                          <div className="text-amber-600 font-medium">
+                            {item.currentStock} / {item.minStockLevel} {item.unit}
+                          </div>
+                          <Button size="sm">Order</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Expiring Soon Alerts */}
+              <Card>
+                <CardHeader className="py-4">
+                  <CardTitle className="flex items-center text-red-700">
+                    <Clock className="h-5 w-5 mr-2 text-red-500" />
+                    Expiring Soon
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {expiringSoonItems.length === 0 ? (
+                    <div className="text-center py-4 text-neutral-500">No items expiring in the next 3 days.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {expiringSoonItems.map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-xs text-neutral-500">{item.sku} | {item.categoryName}</div>
+                          </div>
+                          <div className="text-red-600 font-medium">
+                            Expires: {new Date(item.expiryDate!).toLocaleDateString()}
+                          </div>
+                          <Button size="sm" variant="outline">Mark Used</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Categories Tab */}
+          <TabsContent value="categories">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory Categories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Items</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map(category => (
+                      <TableRow key={category.id}>
+                        <TableCell className="font-medium">{category.name}</TableCell>
+                        <TableCell>{category.description || "—"}</TableCell>
+                        <TableCell className="text-right">{category.itemCount}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-8 px-2">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Suppliers Tab */}
+          <TabsContent value="suppliers">
+            <Card>
+              <CardHeader>
+                <CardTitle>Suppliers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Supplier Name</TableHead>
+                      <TableHead>Contact Person</TableHead>
+                      <TableHead>Contact Info</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {suppliers.map(supplier => (
+                      <TableRow key={supplier.id}>
+                        <TableCell className="font-medium">{supplier.name}</TableCell>
+                        <TableCell>{supplier.contactName || "—"}</TableCell>
+                        <TableCell>
+                          {supplier.email && <div>{supplier.email}</div>}
+                          {supplier.phone && <div className="text-sm text-neutral-500">{supplier.phone}</div>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={supplier.status === "active" ? "outline" : "secondary"}>
+                            {supplier.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-8 px-2">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-primary">
+                            <Truck className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Transactions Tab */}
+          <TabsContent value="transactions">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead>Created By</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map(transaction => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>{transaction.date}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              transaction.type === "purchase" ? "outline" :
+                              transaction.type === "usage" ? "secondary" :
+                              transaction.type === "waste" ? "destructive" :
+                              "default"
+                            }
+                          >
+                            {transaction.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{transaction.itemName}</TableCell>
+                        <TableCell className="text-right">
+                          {transaction.quantity} {transaction.unit}
+                          {transaction.cost && (
+                            <div className="text-xs text-neutral-500">
+                              ${transaction.cost.toFixed(2)}
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="low">
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Unit</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Threshold</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {transaction.notes || "—"}
+                          {transaction.supplierName && (
+                            <div className="text-xs text-neutral-500">
+                              From: {transaction.supplierName}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{transaction.createdBy}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-8 px-2">
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredItems.filter(item => item.status === 'low').map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell className="text-right">{item.stock}</TableCell>
-                          <TableCell className="text-right">{item.lowThreshold}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm">
-                              <Truck className="h-4 w-4 mr-2" />
-                              Order
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="critical">
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Unit</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Threshold</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredItems.filter(item => item.status === 'critical').map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell className="text-right">{item.stock}</TableCell>
-                          <TableCell className="text-right">{item.lowThreshold}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>
-                            <Button size="sm">
-                              <AlertTriangle className="h-4 w-4 mr-2" />
-                              Urgent Order
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
