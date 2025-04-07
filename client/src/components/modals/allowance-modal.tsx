@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Repeat, Calendar, DollarSign, Clock, ArrowRight, Info } from "lucide-react";
+import { DollarSign, Calendar, Clock, Repeat, Gift, Sparkles, GiftIcon } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
-import { format, addDays, addWeeks, addMonths, parse, isValid } from "date-fns";
+import { format, addDays, addWeeks, addMonths, isBefore } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -15,20 +15,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Badge
+} from "@/components/ui/badge";
 
 export interface Allowance {
   id?: string;
-  childId: string;
+  title: string;
   amount: string;
-  frequency: "daily" | "weekly" | "biweekly" | "monthly";
-  startDate: Date;
-  endDate: Date | null;
-  description: string | null;
-  lastPaymentDate: Date | null;
-  nextPaymentDate: Date | null;
-  status: "active" | "paused" | "completed" | "cancelled";
-  autoTransfer: boolean;
+  type: 'recurring' | 'one_time' | 'reward';
+  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | null;
+  startDate: string;
+  endDate?: string | null;
+  lastPaymentDate?: string | null;
+  nextPaymentDate?: string | null;
+  description?: string | null;
+  childId?: string;
+  parentId?: string;
+  conditions?: string | null;
+  autoTransfer?: boolean | null;
 }
 
 interface ChildInfo {
@@ -53,54 +64,55 @@ export default function AllowanceModal({
 }: AllowanceModalProps) {
   const [allowance, setAllowance] = useState<Allowance>(() => {
     if (currentAllowance) {
-      return { 
-        ...currentAllowance,
-        startDate: currentAllowance.startDate ? new Date(currentAllowance.startDate) : new Date(),
-        endDate: currentAllowance.endDate ? new Date(currentAllowance.endDate) : null,
-        lastPaymentDate: currentAllowance.lastPaymentDate ? new Date(currentAllowance.lastPaymentDate) : null,
-        nextPaymentDate: currentAllowance.nextPaymentDate ? new Date(currentAllowance.nextPaymentDate) : null,
-      };
+      return { ...currentAllowance };
     }
     
-    // Default values for a new allowance
+    // Default values for new allowance
     const today = new Date();
     return {
-      childId: childInfo.id,
+      title: "",
       amount: "",
+      type: "recurring",
       frequency: "weekly",
-      startDate: today,
+      startDate: format(today, "yyyy-MM-dd"),
       endDate: null,
-      description: "",
-      lastPaymentDate: null,
-      nextPaymentDate: updateNextPaymentDate("weekly", today),
-      status: "active",
-      autoTransfer: true,
+      description: null,
+      conditions: null,
+      autoTransfer: true
     };
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [hasEndDate, setHasEndDate] = useState<boolean>(!!allowance.endDate);
-  
-  function updateNextPaymentDate(frequency: "daily" | "weekly" | "biweekly" | "monthly", startDate: Date) {
-    let nextDate: Date;
-    
-    switch (frequency) {
-      case "daily":
-        nextDate = addDays(startDate, 1);
-        break;
-      case "weekly":
-        nextDate = addWeeks(startDate, 1);
-        break;
-      case "biweekly":
-        nextDate = addWeeks(startDate, 2);
-        break;
-      case "monthly":
-        nextDate = addMonths(startDate, 1);
-        break;
+  const [hasConditions, setHasConditions] = useState<boolean>(!!allowance.conditions);
+  const [startDate, setStartDate] = useState<Date>(() => {
+    if (allowance.startDate) {
+      return new Date(allowance.startDate);
     }
+    return new Date();
+  });
+  
+  const [endDate, setEndDate] = useState<Date | undefined>(() => {
+    if (allowance.endDate) {
+      return new Date(allowance.endDate);
+    }
+    return undefined;
+  });
+  
+  const [activeTab, setActiveTab] = useState("details");
+  
+  const handleTextChange = (field: keyof Allowance, value: string) => {
+    setAllowance({
+      ...allowance,
+      [field]: value
+    });
     
-    return nextDate;
-  }
+    if (errors[field]) {
+      setErrors({
+        ...errors,
+        [field]: ""
+      });
+    }
+  };
   
   const handleAmountChange = (value: string) => {
     // Only allow numbers and up to 2 decimal places
@@ -119,90 +131,112 @@ export default function AllowanceModal({
     }
   };
   
-  const handleTextChange = (field: keyof Allowance, value: string) => {
+  const handleTypeChange = (value: 'recurring' | 'one_time' | 'reward') => {
     setAllowance({
       ...allowance,
-      [field]: value
+      type: value,
+      // Reset frequency if not recurring
+      frequency: value === 'recurring' ? (allowance.frequency || 'weekly') : null
     });
-    
-    if (errors[field]) {
-      setErrors({
-        ...errors,
-        [field]: ""
-      });
-    }
   };
   
-  const handleFrequencyChange = (value: "daily" | "weekly" | "biweekly" | "monthly") => {
-    const updatedAllowance = {
+  const handleFrequencyChange = (value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
+    setAllowance({
       ...allowance,
-      frequency: value,
-      nextPaymentDate: updateNextPaymentDate(value, allowance.startDate)
-    };
-    
-    setAllowance(updatedAllowance);
+      frequency: value
+    });
   };
   
   const handleStartDateChange = (date: Date | undefined) => {
-    if (!date) return;
-    
-    const updatedAllowance = {
-      ...allowance,
-      startDate: date,
-      nextPaymentDate: updateNextPaymentDate(allowance.frequency, date)
-    };
-    
-    setAllowance(updatedAllowance);
-    
-    if (errors.startDate) {
-      setErrors({
-        ...errors,
-        startDate: ""
+    if (date) {
+      setStartDate(date);
+      setAllowance({
+        ...allowance,
+        startDate: format(date, "yyyy-MM-dd"),
+        nextPaymentDate: format(getNextPaymentDate(date, allowance.frequency), "yyyy-MM-dd")
       });
+      
+      // Check if end date is before start date and reset if needed
+      if (endDate && isBefore(endDate, date)) {
+        setEndDate(undefined);
+        setAllowance({
+          ...allowance,
+          startDate: format(date, "yyyy-MM-dd"),
+          endDate: null,
+          nextPaymentDate: format(getNextPaymentDate(date, allowance.frequency), "yyyy-MM-dd")
+        });
+      }
     }
   };
   
   const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
     setAllowance({
       ...allowance,
-      endDate: date || null
+      endDate: date ? format(date, "yyyy-MM-dd") : null
     });
-    
-    if (errors.endDate) {
-      setErrors({
-        ...errors,
-        endDate: ""
-      });
-    }
   };
   
-  const handleHasEndDateChange = (checked: boolean) => {
-    setHasEndDate(checked);
-    
+  const handleConditionsToggle = (checked: boolean) => {
+    setHasConditions(checked);
     if (!checked) {
       setAllowance({
         ...allowance,
-        endDate: null
+        conditions: null
       });
     }
   };
   
-  const handleStatusChange = (value: "active" | "paused" | "completed" | "cancelled") => {
-    setAllowance({
-      ...allowance,
-      status: value
-    });
-  };
-  
-  const handleAutoTransferChange = (checked: boolean) => {
+  const handleAutoTransferToggle = (checked: boolean) => {
     setAllowance({
       ...allowance,
       autoTransfer: checked
     });
   };
   
+  const getNextPaymentDate = (startDate: Date, frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | null | undefined): Date => {
+    const today = new Date();
+    
+    // If start date is in the future, that's the next payment date
+    if (isBefore(today, startDate)) {
+      return startDate;
+    }
+    
+    // Otherwise calculate based on frequency
+    switch (frequency) {
+      case 'daily':
+        return addDays(today, 1);
+      case 'weekly':
+        return addWeeks(today, 1);
+      case 'biweekly':
+        return addWeeks(today, 2);
+      case 'monthly':
+        return addMonths(today, 1);
+      default:
+        return addWeeks(today, 1); // Default to weekly
+    }
+  };
+  
+  const updateNextPaymentDate = (startDate: Date, frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | null | undefined) => {
+    if (frequency && allowance.type === 'recurring') {
+      setAllowance({
+        ...allowance,
+        nextPaymentDate: format(getNextPaymentDate(startDate, frequency), "yyyy-MM-dd")
+      });
+    } else {
+      setAllowance({
+        ...allowance,
+        nextPaymentDate: null
+      });
+    }
+  };
+  
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    
+    if (!allowance.title?.trim()) {
+      newErrors.title = "Title is required";
+    }
     
     if (!allowance.amount) {
       newErrors.amount = "Amount is required";
@@ -210,15 +244,16 @@ export default function AllowanceModal({
       newErrors.amount = "Amount must be greater than zero";
     }
     
-    if (!allowance.startDate) {
-      newErrors.startDate = "Start date is required";
+    if (allowance.type === 'recurring' && !allowance.frequency) {
+      newErrors.frequency = "Frequency is required for recurring allowances";
     }
     
-    if (hasEndDate && !allowance.endDate) {
-      newErrors.endDate = "End date is required when enabled";
+    if (hasConditions && !allowance.conditions?.trim()) {
+      newErrors.conditions = "Conditions are required if enabled";
     }
     
-    if (allowance.startDate && allowance.endDate && allowance.startDate > allowance.endDate) {
+    // Validate that endDate is after startDate if provided
+    if (endDate && startDate && isBefore(endDate, startDate)) {
       newErrors.endDate = "End date must be after start date";
     }
     
@@ -228,7 +263,18 @@ export default function AllowanceModal({
   
   const handleSave = () => {
     if (validateForm()) {
-      onSave(allowance);
+      // Prepare final allowance object with all computed fields
+      const finalAllowance: Allowance = {
+        ...allowance,
+        childId: childInfo.id,
+        conditions: hasConditions ? allowance.conditions : null,
+        // Compute nextPaymentDate if needed
+        nextPaymentDate: allowance.type === 'recurring' 
+          ? format(getNextPaymentDate(startDate, allowance.frequency), "yyyy-MM-dd") 
+          : null
+      };
+      
+      onSave(finalAllowance);
       onClose();
     }
   };
@@ -238,34 +284,49 @@ export default function AllowanceModal({
     return amount;
   };
   
-  const getFrequencyText = (frequency: "daily" | "weekly" | "biweekly" | "monthly") => {
-    switch (frequency) {
-      case "daily":
-        return "Every day";
-      case "weekly":
-        return "Every week";
-      case "biweekly":
-        return "Every two weeks";
-      case "monthly":
-        return "Every month";
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return '';
+    return format(new Date(date), "PPP");
+  };
+  
+  const getTypeLabel = (type: 'recurring' | 'one_time' | 'reward') => {
+    switch (type) {
+      case 'recurring':
+        return 'Regular Allowance';
+      case 'one_time':
+        return 'One-Time Payment';
+      case 'reward':
+        return 'Reward';
+      default:
+        return type;
     }
   };
   
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return 'Not set';
-    return format(date, 'MMM d, yyyy');
+  const getFrequencyLabel = (frequency: string | null | undefined) => {
+    if (!frequency) return '';
+    
+    switch (frequency) {
+      case 'daily':
+        return 'Daily';
+      case 'weekly':
+        return 'Weekly';
+      case 'biweekly':
+        return 'Every Two Weeks';
+      case 'monthly':
+        return 'Monthly';
+      default:
+        return frequency;
+    }
   };
   
-  const getStatusBadgeColor = () => {
-    switch (allowance.status) {
-      case "active":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "paused":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-      case "completed":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "cancelled":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+  const getTypeIcon = (type: 'recurring' | 'one_time' | 'reward') => {
+    switch (type) {
+      case 'recurring':
+        return <Repeat className="h-5 w-5" />;
+      case 'one_time':
+        return <Clock className="h-5 w-5" />;
+      case 'reward':
+        return <Gift className="h-5 w-5" />;
     }
   };
   
@@ -273,218 +334,336 @@ export default function AllowanceModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogTitle className="flex items-center">
-          <Repeat className="mr-2 h-5 w-5" />
-          {currentAllowance ? "Edit Allowance" : "Set Up Allowance"}
+          {getTypeIcon(allowance.type)}
+          <span className="ml-2">
+            {currentAllowance ? "Edit Allowance" : "Create Allowance"}
+          </span>
         </DialogTitle>
         
         <DialogDescription>
           {currentAllowance 
-            ? `Modify the allowance settings for ${childInfo.name}.`
-            : `Set up a regular allowance payment for ${childInfo.name}.`}
+            ? `Update the allowance details for ${childInfo.name}` 
+            : `Set up a new allowance for ${childInfo.name}`
+          }
         </DialogDescription>
         
-        <div className="grid gap-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="amount" className="flex items-center">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="details">
               <DollarSign className="mr-2 h-4 w-4" />
-              Payment Amount
-            </Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="amount"
-                value={formatCurrency(allowance.amount)}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                className="pl-9"
-                placeholder="0.00"
-              />
-            </div>
-            {errors.amount && (
-              <p className="text-sm text-red-500">{errors.amount}</p>
-            )}
-          </div>
+              Allowance Details
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Additional Settings
+            </TabsTrigger>
+          </TabsList>
           
-          <div className="space-y-2">
-            <Label htmlFor="frequency">
-              Payment Frequency
-            </Label>
-            <Select
-              value={allowance.frequency}
-              onValueChange={(value) => handleFrequencyChange(value as "daily" | "weekly" | "biweekly" | "monthly")}
-            >
-              <SelectTrigger id="frequency">
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="biweekly">Every Two Weeks</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="startDate" className="flex items-center">
-              <Calendar className="mr-2 h-4 w-4" />
-              Start Date
-            </Label>
-            <DatePicker
-              date={allowance.startDate}
-              onSelect={handleStartDateChange}
-              placeholder="When to start payments"
-            />
-            {errors.startDate && (
-              <p className="text-sm text-red-500">{errors.startDate}</p>
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between space-x-2">
-            <Label htmlFor="hasEndDate" className="cursor-pointer">
-              Set an end date?
-            </Label>
-            <Switch
-              id="hasEndDate"
-              checked={hasEndDate}
-              onCheckedChange={handleHasEndDateChange}
-            />
-          </div>
-          
-          {hasEndDate && (
-            <div className="space-y-2 pl-6 border-l-2 border-muted">
-              <Label htmlFor="endDate" className="flex items-center">
-                <Calendar className="mr-2 h-4 w-4" />
-                End Date
+          {/* Allowance Details Tab */}
+          <TabsContent value="details" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">
+                Allowance Name
               </Label>
-              <DatePicker
-                date={allowance.endDate || undefined}
-                onSelect={handleEndDateChange}
-                placeholder="When to stop payments"
+              <Input
+                id="title"
+                value={allowance.title}
+                onChange={(e) => handleTextChange("title", e.target.value)}
+                placeholder="Weekly Allowance, Chore Money, Birthday Gift, etc."
               />
-              {errors.endDate && (
-                <p className="text-sm text-red-500">{errors.endDate}</p>
+              {errors.title && (
+                <p className="text-sm text-red-500">{errors.title}</p>
               )}
             </div>
-          )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              Description (Optional)
-            </Label>
-            <Textarea
-              id="description"
-              value={allowance.description || ""}
-              onChange={(e) => handleTextChange("description", e.target.value)}
-              placeholder="Add any notes about this allowance"
-              rows={3}
-            />
-          </div>
-          
-          {currentAllowance && (
-            <div className="space-y-3">
-              <Label>Status</Label>
-              <RadioGroup 
-                value={allowance.status} 
-                onValueChange={(value) => handleStatusChange(value as "active" | "paused" | "completed" | "cancelled")}
-                className="flex flex-wrap gap-3"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="active" id="active" />
-                  <Label htmlFor="active" className="cursor-pointer">
-                    Active
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="paused" id="paused" />
-                  <Label htmlFor="paused" className="cursor-pointer">
-                    Paused
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="completed" id="completed" />
-                  <Label htmlFor="completed" className="cursor-pointer">
-                    Completed
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cancelled" id="cancelled" />
-                  <Label htmlFor="cancelled" className="cursor-pointer">
-                    Cancelled
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between pt-2">
-            <div className="space-y-0.5">
-              <Label htmlFor="autoTransfer" className="flex items-center">
-                <Clock className="mr-2 h-4 w-4" />
-                Automatic Transfer
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">
+                <DollarSign className="inline-block mr-1 h-4 w-4" />
+                Amount
               </Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically transfer allowance to child's wallet
-              </p>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="amount"
+                  value={formatCurrency(allowance.amount)}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  className="pl-9"
+                  placeholder="0.00"
+                />
+              </div>
+              {errors.amount && (
+                <p className="text-sm text-red-500">{errors.amount}</p>
+              )}
             </div>
-            <Switch
-              id="autoTransfer"
-              checked={allowance.autoTransfer}
-              onCheckedChange={handleAutoTransferChange}
-            />
-          </div>
-          
-          {currentAllowance && (
-            <div className="bg-muted/40 rounded-lg p-4 space-y-3 mt-2">
-              <h3 className="font-medium">Payment Schedule</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="type">
+                Allowance Type
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={allowance.type === 'recurring' ? "default" : "outline"}
+                  className="flex flex-col items-center justify-center h-20 py-2"
+                  onClick={() => handleTypeChange('recurring')}
+                >
+                  <Repeat className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Regular</span>
+                  <span className="text-xs">Allowance</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={allowance.type === 'one_time' ? "default" : "outline"}
+                  className="flex flex-col items-center justify-center h-20 py-2"
+                  onClick={() => handleTypeChange('one_time')}
+                >
+                  <Clock className="h-5 w-5 mb-1" />
+                  <span className="text-xs">One-Time</span>
+                  <span className="text-xs">Payment</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={allowance.type === 'reward' ? "default" : "outline"}
+                  className="flex flex-col items-center justify-center h-20 py-2"
+                  onClick={() => handleTypeChange('reward')}
+                >
+                  <Gift className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Reward</span>
+                  <span className="text-xs invisible">X</span>
+                </Button>
+              </div>
+            </div>
+            
+            {allowance.type === 'recurring' && (
+              <div className="space-y-2">
+                <Label htmlFor="frequency">
+                  <Repeat className="inline-block mr-1 h-4 w-4" />
+                  How Often
+                </Label>
+                <Select
+                  value={allowance.frequency || undefined}
+                  onValueChange={(value) => handleFrequencyChange(value as 'daily' | 'weekly' | 'biweekly' | 'monthly')}
+                >
+                  <SelectTrigger id="frequency">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Every Two Weeks</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.frequency && (
+                  <p className="text-sm text-red-500">{errors.frequency}</p>
+                )}
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">
+                  <Calendar className="inline-block mr-1 h-4 w-4" />
+                  Start Date
+                </Label>
+                <DatePicker
+                  date={startDate}
+                  onSelect={handleStartDateChange}
+                  placeholder="When to start"
+                />
+              </div>
               
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-muted-foreground">Frequency:</div>
-                <div>{getFrequencyText(allowance.frequency)}</div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">
+                  <Calendar className="inline-block mr-1 h-4 w-4" />
+                  End Date (Optional)
+                </Label>
+                <DatePicker
+                  date={endDate}
+                  onSelect={handleEndDateChange}
+                  placeholder="No end date"
+                />
+                {errors.endDate && (
+                  <p className="text-sm text-red-500">{errors.endDate}</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">
+                Description (Optional)
+              </Label>
+              <Textarea
+                id="description"
+                value={allowance.description || ""}
+                onChange={(e) => handleTextChange("description", e.target.value)}
+                placeholder="Add details about this allowance"
+                rows={2}
+              />
+            </div>
+          </TabsContent>
+          
+          {/* Additional Settings Tab */}
+          <TabsContent value="settings" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between space-x-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoTransfer" className="cursor-pointer">
+                    <Sparkles className="inline-block mr-1 h-4 w-4" />
+                    Automatic Transfer
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically deposit funds to {childInfo.name}'s account
+                  </p>
+                </div>
+                <Switch
+                  id="autoTransfer"
+                  checked={allowance.autoTransfer === true}
+                  onCheckedChange={handleAutoTransferToggle}
+                />
+              </div>
+              
+              {!allowance.autoTransfer && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded border border-amber-200 dark:border-amber-900 text-sm text-amber-600 dark:text-amber-300">
+                  You'll need to manually transfer funds when this allowance is due.
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-4 mt-6">
+              <div className="flex items-center justify-between space-x-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="hasConditions" className="cursor-pointer">
+                    <GiftIcon className="inline-block mr-1 h-4 w-4" />
+                    Conditions
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add conditions that must be met to receive this allowance
+                  </p>
+                </div>
+                <Switch
+                  id="hasConditions"
+                  checked={hasConditions}
+                  onCheckedChange={handleConditionsToggle}
+                />
+              </div>
+              
+              {hasConditions && (
+                <div className="space-y-2 pl-4 border-l-2 border-primary/20">
+                  <Textarea
+                    value={allowance.conditions || ""}
+                    onChange={(e) => handleTextChange("conditions", e.target.value)}
+                    placeholder="Example: Complete all homework, Keep room clean, etc."
+                    rows={3}
+                  />
+                  {errors.conditions && (
+                    <p className="text-sm text-red-500">{errors.conditions}</p>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Next Payment Information */}
+            {allowance.type === 'recurring' && (
+              <div className="mt-6 pt-4 border-t space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Payment Schedule:</span>
+                  <Badge variant="outline">
+                    {getFrequencyLabel(allowance.frequency)}
+                  </Badge>
+                </div>
                 
-                <div className="text-muted-foreground">Start date:</div>
-                <div>{formatDate(allowance.startDate)}</div>
+                <div className="flex justify-between text-sm">
+                  <span>First payment:</span>
+                  <span>{formatDate(allowance.startDate)}</span>
+                </div>
                 
-                <div className="text-muted-foreground">End date:</div>
-                <div>{formatDate(allowance.endDate)}</div>
+                {allowance.endDate && (
+                  <div className="flex justify-between text-sm">
+                    <span>Last payment:</span>
+                    <span>{formatDate(allowance.endDate)}</span>
+                  </div>
+                )}
                 
-                <div className="text-muted-foreground">Last payment:</div>
-                <div>{formatDate(allowance.lastPaymentDate)}</div>
+                {allowance.nextPaymentDate && (
+                  <div className="flex justify-between text-sm">
+                    <span>Next payment:</span>
+                    <span>{formatDate(allowance.nextPaymentDate)}</span>
+                  </div>
+                )}
                 
-                <div className="text-muted-foreground">Next payment:</div>
-                <div className="font-medium">{formatDate(allowance.nextPaymentDate)}</div>
-                
-                <div className="text-muted-foreground">Status:</div>
-                <div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeColor()}`}>
-                    {allowance.status.charAt(0).toUpperCase() + allowance.status.slice(1)}
-                  </span>
+                <div className="flex justify-between text-sm">
+                  <span>Auto-transfer:</span>
+                  <span>{allowance.autoTransfer ? "Yes" : "No"}</span>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {!currentAllowance && (
-            <div className="flex items-start bg-blue-50 dark:bg-blue-950 p-4 rounded-md">
-              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-              <div className="text-sm text-blue-700 dark:text-blue-300">
-                <p className="font-medium mb-1">Payment Preview</p>
-                <p className="mb-2">
-                  ${formatCurrency(allowance.amount)} will be transferred {getFrequencyText(allowance.frequency).toLowerCase()}, 
-                  starting on {formatDate(allowance.startDate)}.
-                </p>
-                <p>
-                  First payment: {formatDate(allowance.startDate)}
-                  <br />
-                  Next payment: {formatDate(allowance.nextPaymentDate)}
-                </p>
+            )}
+            
+            {/* One-time information */}
+            {allowance.type === 'one_time' && (
+              <div className="mt-6 pt-4 border-t space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Payment Type:</span>
+                  <Badge variant="outline">
+                    One-Time Payment
+                  </Badge>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span>Payment date:</span>
+                  <span>{formatDate(allowance.startDate)}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span>Auto-transfer:</span>
+                  <span>{allowance.autoTransfer ? "Yes" : "No"}</span>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+            
+            {/* Reward information */}
+            {allowance.type === 'reward' && (
+              <div className="mt-6 pt-4 border-t space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Payment Type:</span>
+                  <Badge variant="outline">
+                    Reward
+                  </Badge>
+                </div>
+                
+                {allowance.conditions && (
+                  <div className="text-sm">
+                    <span className="font-medium">Conditions:</span>
+                    <p className="text-muted-foreground mt-1">{allowance.conditions}</p>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-sm">
+                  <span>Available from:</span>
+                  <span>{formatDate(allowance.startDate)}</span>
+                </div>
+                
+                {allowance.endDate && (
+                  <div className="flex justify-between text-sm">
+                    <span>Available until:</span>
+                    <span>{formatDate(allowance.endDate)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-sm">
+                  <span>Auto-transfer:</span>
+                  <span>{allowance.autoTransfer ? "Yes (when conditions met)" : "No"}</span>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>{currentAllowance ? "Update" : "Create"} Allowance</Button>
+          <Button onClick={handleSave}>
+            {currentAllowance ? "Update Allowance" : "Create Allowance"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

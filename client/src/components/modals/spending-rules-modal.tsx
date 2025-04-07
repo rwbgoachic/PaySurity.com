@@ -3,17 +3,17 @@ import { Dialog, DialogTitle, DialogContent, DialogDescription, DialogFooter } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { 
-  CreditCard, 
-  DollarSign, 
-  Calendar, 
-  Clock, 
-  ShoppingCart, 
-  Store, 
-  AtomIcon, 
-  CreditCardIcon 
+import {
+  DollarSign,
+  Calendar,
+  ShoppingBag,
+  Store,
+  Smartphone,
+  CreditCard,
+  ShieldAlert,
+  AlertOctagon,
+  Banknote
 } from "lucide-react";
 import {
   Select,
@@ -22,111 +22,128 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export interface SpendingRules {
   id?: string;
   childId: string;
-  dailyLimit: string | null;
-  weeklyLimit: string | null;
-  monthlyLimit: string | null;
-  perTransactionLimit: string | null;
-  withdrawalLimit: string | null;
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
-  allowedMerchantCategories: string[] | null;
-  blockedMerchantCategories: string[] | null;
-  restrictedDaysOfWeek: string[] | null;
-  allowInternationalTransactions: boolean | null;
-  requireParentalApprovalAbove: string | null;
-  requireParentalApprovalForMerchants: string[] | null;
-  allowOnlineTransactions: boolean | null;
-  allowWithdrawals: boolean | null;
+  dailyLimit?: string | null;
+  weeklyLimit?: string | null;
+  monthlyLimit?: string | null;
+  perTransactionLimit?: string | null;
+  withdrawalLimit?: string | null;
+  allowedCategories?: string[] | null;
+  blockedCategories?: string[] | null;
+  allowedMerchants?: string[] | null;
+  blockedMerchants?: string[] | null;
+  requireApprovalAbove?: string | null;
+  allowInAppPurchases?: boolean | null;
+  allowInStorePurchases?: boolean | null;
+  allowOnlinePurchases?: boolean | null;
+  allowATMWithdrawals?: boolean | null;
+}
+
+interface ChildInfo {
+  id: string;
+  name: string;
 }
 
 interface SpendingRulesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (rules: SpendingRules) => void;
+  childInfo: ChildInfo;
   currentRules?: SpendingRules;
-  childId: string;
-  childName: string;
 }
 
-const merchantCategories = [
-  { id: "retail", name: "Retail Stores" },
-  { id: "food", name: "Restaurants & Food" },
-  { id: "entertainment", name: "Entertainment" },
-  { id: "digital", name: "Digital & Online Services" },
-  { id: "education", name: "Education" },
-  { id: "health", name: "Health & Wellness" },
-  { id: "gaming", name: "Gaming" },
-  { id: "transportation", name: "Transportation" },
-  { id: "subscriptions", name: "Subscriptions" },
-  { id: "cashback", name: "ATM Withdrawals" },
+const purchaseCategories = [
+  { value: "retail", label: "Retail Stores" },
+  { value: "online", label: "Online Shopping" },
+  { value: "food", label: "Restaurants & Food" },
+  { value: "grocery", label: "Grocery Stores" },
+  { value: "entertainment", label: "Entertainment" },
+  { value: "games", label: "Video Games" },
+  { value: "clothing", label: "Clothing & Apparel" },
+  { value: "electronics", label: "Electronics" },
+  { value: "books", label: "Books & Education" },
+  { value: "sports", label: "Sports Equipment" }
 ];
 
-const daysOfWeek = [
-  { id: "monday", name: "Monday" },
-  { id: "tuesday", name: "Tuesday" },
-  { id: "wednesday", name: "Wednesday" },
-  { id: "thursday", name: "Thursday" },
-  { id: "friday", name: "Friday" },
-  { id: "saturday", name: "Saturday" },
-  { id: "sunday", name: "Sunday" },
+const commonMerchants = [
+  { value: "amazon", label: "Amazon" },
+  { value: "walmart", label: "Walmart" },
+  { value: "target", label: "Target" },
+  { value: "apple", label: "Apple Store" },
+  { value: "mcdonalds", label: "McDonald's" },
+  { value: "starbucks", label: "Starbucks" },
+  { value: "netflix", label: "Netflix" },
+  { value: "steam", label: "Steam (Games)" },
+  { value: "playstation", label: "PlayStation Store" },
+  { value: "xbox", label: "Xbox Store" },
+  { value: "nike", label: "Nike" },
+  { value: "adidas", label: "Adidas" }
 ];
 
 export default function SpendingRulesModal({
   isOpen,
   onClose,
   onSave,
+  childInfo,
   currentRules,
-  childId,
-  childName,
 }: SpendingRulesModalProps) {
   const [rules, setRules] = useState<SpendingRules>(() => {
     if (currentRules) {
-      return {
-        ...currentRules,
-        createdAt: currentRules.createdAt ? new Date(currentRules.createdAt) : null,
-        updatedAt: currentRules.updatedAt ? new Date(currentRules.updatedAt) : null,
-      };
+      return { ...currentRules };
     }
     
     // Default values for new rules
     return {
-      childId,
-      dailyLimit: "10",
-      weeklyLimit: "50",
-      monthlyLimit: "150",
-      perTransactionLimit: "25",
-      withdrawalLimit: "20",
-      allowedMerchantCategories: [],
-      blockedMerchantCategories: ["gaming"],
-      restrictedDaysOfWeek: [],
-      allowInternationalTransactions: false,
-      requireParentalApprovalAbove: "25",
-      requireParentalApprovalForMerchants: [],
-      allowOnlineTransactions: true,
-      allowWithdrawals: true,
+      childId: childInfo.id,
+      dailyLimit: null,
+      weeklyLimit: null,
+      monthlyLimit: null,
+      perTransactionLimit: null,
+      withdrawalLimit: null,
+      allowedCategories: null,
+      blockedCategories: null,
+      allowedMerchants: null,
+      blockedMerchants: null,
+      requireApprovalAbove: null,
+      allowInAppPurchases: true,
+      allowInStorePurchases: true,
+      allowOnlinePurchases: true,
+      allowATMWithdrawals: false
     };
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [limitType, setLimitType] = useState<'all' | 'specific'>(
-    rules.allowedMerchantCategories && rules.allowedMerchantCategories.length > 0 ? 'specific' : 'all'
-  );
+  const [activeTab, setActiveTab] = useState("limits");
   
-  const [merchantControlType, setMerchantControlType] = useState<'allowed' | 'blocked'>(
-    rules.allowedMerchantCategories && rules.allowedMerchantCategories.length > 0 ? 'allowed' : 'blocked'
-  );
+  const handleTextChange = (field: keyof SpendingRules, value: string) => {
+    setRules({
+      ...rules,
+      [field]: value || null
+    });
+    
+    if (errors[field]) {
+      setErrors({
+        ...errors,
+        [field]: ""
+      });
+    }
+  };
   
   const handleAmountChange = (field: keyof SpendingRules, value: string) => {
     // Only allow numbers and up to 2 decimal places
@@ -145,78 +162,52 @@ export default function SpendingRulesModal({
     }
   };
   
-  const handleSwitchChange = (field: keyof SpendingRules, checked: boolean) => {
+  const handleBooleanToggle = (field: keyof SpendingRules, checked: boolean) => {
     setRules({
       ...rules,
       [field]: checked
     });
   };
   
-  const handleMerchantCategorySelection = (selectedCategories: string[]) => {
-    if (merchantControlType === 'allowed') {
-      setRules({
-        ...rules,
-        allowedMerchantCategories: selectedCategories.length > 0 ? selectedCategories : null,
-        blockedMerchantCategories: null
-      });
-    } else {
-      setRules({
-        ...rules,
-        blockedMerchantCategories: selectedCategories.length > 0 ? selectedCategories : null,
-        allowedMerchantCategories: null
-      });
-    }
-  };
-  
-  const handleRestrictedDaysChange = (selectedDays: string[]) => {
+  const handleCategorySelect = (categories: string[], isAllowed: boolean) => {
     setRules({
       ...rules,
-      restrictedDaysOfWeek: selectedDays.length > 0 ? selectedDays : null
+      [isAllowed ? 'allowedCategories' : 'blockedCategories']: categories.length > 0 ? categories : null
     });
   };
   
-  const handleApprovalMerchantsChange = (selectedCategories: string[]) => {
+  const handleMerchantSelect = (merchants: string[], isAllowed: boolean) => {
     setRules({
       ...rules,
-      requireParentalApprovalForMerchants: selectedCategories.length > 0 ? selectedCategories : null
+      [isAllowed ? 'allowedMerchants' : 'blockedMerchants']: merchants.length > 0 ? merchants : null
     });
   };
   
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    const validateLimit = (field: keyof SpendingRules, value: string | null, label: string) => {
-      if (value !== null && value !== "") {
-        const numValue = parseFloat(value);
-        if (isNaN(numValue) || numValue < 0) {
-          newErrors[field] = `${label} must be a positive number`;
-        }
+    // Validate limits are positive if provided
+    ['dailyLimit', 'weeklyLimit', 'monthlyLimit', 'perTransactionLimit', 'withdrawalLimit', 'requireApprovalAbove'].forEach(field => {
+      const value = rules[field as keyof SpendingRules] as string | null;
+      if (value && parseFloat(value) <= 0) {
+        newErrors[field] = "Amount must be greater than zero";
       }
-    };
+    });
     
-    validateLimit('dailyLimit', rules.dailyLimit, 'Daily limit');
-    validateLimit('weeklyLimit', rules.weeklyLimit, 'Weekly limit');
-    validateLimit('monthlyLimit', rules.monthlyLimit, 'Monthly limit');
-    validateLimit('perTransactionLimit', rules.perTransactionLimit, 'Transaction limit');
-    validateLimit('withdrawalLimit', rules.withdrawalLimit, 'Withdrawal limit');
-    validateLimit('requireParentalApprovalAbove', rules.requireParentalApprovalAbove, 'Approval threshold');
-    
-    // Check if daily limit is less than weekly limit
-    if (rules.dailyLimit && rules.weeklyLimit) {
-      const dailyLimit = parseFloat(rules.dailyLimit);
-      const weeklyLimit = parseFloat(rules.weeklyLimit);
-      if (dailyLimit > weeklyLimit) {
-        newErrors.dailyLimit = "Daily limit cannot be greater than weekly limit";
-      }
+    // Validate logical relationships between limits
+    if (rules.dailyLimit && rules.weeklyLimit && 
+        parseFloat(rules.dailyLimit) > parseFloat(rules.weeklyLimit)) {
+      newErrors.dailyLimit = "Daily limit cannot be greater than weekly limit";
     }
     
-    // Check if weekly limit is less than monthly limit
-    if (rules.weeklyLimit && rules.monthlyLimit) {
-      const weeklyLimit = parseFloat(rules.weeklyLimit);
-      const monthlyLimit = parseFloat(rules.monthlyLimit);
-      if (weeklyLimit > monthlyLimit) {
-        newErrors.weeklyLimit = "Weekly limit cannot be greater than monthly limit";
-      }
+    if (rules.weeklyLimit && rules.monthlyLimit && 
+        parseFloat(rules.weeklyLimit) > parseFloat(rules.monthlyLimit)) {
+      newErrors.weeklyLimit = "Weekly limit cannot be greater than monthly limit";
+    }
+    
+    if (rules.dailyLimit && rules.monthlyLimit && 
+        parseFloat(rules.dailyLimit) > parseFloat(rules.monthlyLimit)) {
+      newErrors.dailyLimit = "Daily limit cannot be greater than monthly limit";
     }
     
     setErrors(newErrors);
@@ -230,80 +221,51 @@ export default function SpendingRulesModal({
     }
   };
   
-  const formatCurrency = (amount: string | null | undefined) => {
+  const formatCurrency = (amount: string | undefined | null) => {
     if (!amount) return '';
     return amount;
   };
   
-  // Helper to check if a value is included in an array
-  const isSelected = (arr: string[] | null, value: string) => {
+  // Helper to check if array contains a value
+  const arrayIncludes = (arr: string[] | null | undefined, value: string): boolean => {
     return arr ? arr.includes(value) : false;
-  };
-  
-  // Toggle selection in an array
-  const toggleSelected = (arr: string[] | null, value: string) => {
-    if (!arr) arr = [];
-    
-    if (arr.includes(value)) {
-      return arr.filter(item => item !== value);
-    } else {
-      return [...arr, value];
-    }
-  };
-  
-  const handleMerchantControlTypeChange = (value: 'allowed' | 'blocked') => {
-    setMerchantControlType(value);
-    
-    // Convert existing selections if changing types
-    if (value === 'allowed') {
-      if (rules.blockedMerchantCategories && rules.blockedMerchantCategories.length > 0) {
-        const allCategories = merchantCategories.map(cat => cat.id);
-        const allowedCategories = allCategories.filter(
-          cat => !rules.blockedMerchantCategories?.includes(cat)
-        );
-        
-        setRules({
-          ...rules,
-          allowedMerchantCategories: allowedCategories.length > 0 ? allowedCategories : null,
-          blockedMerchantCategories: null
-        });
-      }
-    } else {
-      if (rules.allowedMerchantCategories && rules.allowedMerchantCategories.length > 0) {
-        const allCategories = merchantCategories.map(cat => cat.id);
-        const blockedCategories = allCategories.filter(
-          cat => !rules.allowedMerchantCategories?.includes(cat)
-        );
-        
-        setRules({
-          ...rules,
-          blockedMerchantCategories: blockedCategories.length > 0 ? blockedCategories : null,
-          allowedMerchantCategories: null
-        });
-      }
-    }
   };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogTitle className="flex items-center">
-          <CreditCard className="mr-2 h-5 w-5" />
-          Spending Rules for {childName}
+          <ShieldAlert className="mr-2 h-5 w-5" />
+          {currentRules ? "Edit Spending Rules" : "Set Spending Rules"}
         </DialogTitle>
         
         <DialogDescription>
-          Configure spending limits and restrictions to help your child learn financial responsibility.
+          Control how {childInfo.name} can spend money
         </DialogDescription>
         
-        <div className="grid gap-6 py-4">
-          <div>
-            <h3 className="text-base font-medium mb-3">Spending Limits</h3>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="limits">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Spending Limits
+            </TabsTrigger>
+            <TabsTrigger value="permissions">
+              <ShieldAlert className="mr-2 h-4 w-4" />
+              Permissions
+            </TabsTrigger>
+            <TabsTrigger value="merchants">
+              <Store className="mr-2 h-4 w-4" />
+              Merchants
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Spending Limits Tab */}
+          <TabsContent value="limits" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="dailyLimit" className="flex items-center">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Daily Limit
+                <Label htmlFor="dailyLimit">
+                  <Calendar className="inline-block mr-1 h-4 w-4" />
+                  Daily Spending Limit
                 </Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -312,7 +274,7 @@ export default function SpendingRulesModal({
                     value={formatCurrency(rules.dailyLimit)}
                     onChange={(e) => handleAmountChange("dailyLimit", e.target.value)}
                     className="pl-9"
-                    placeholder="0.00"
+                    placeholder="No limit"
                   />
                 </div>
                 {errors.dailyLimit && (
@@ -321,9 +283,9 @@ export default function SpendingRulesModal({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="weeklyLimit" className="flex items-center">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Weekly Limit
+                <Label htmlFor="weeklyLimit">
+                  <Calendar className="inline-block mr-1 h-4 w-4" />
+                  Weekly Spending Limit
                 </Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -332,18 +294,20 @@ export default function SpendingRulesModal({
                     value={formatCurrency(rules.weeklyLimit)}
                     onChange={(e) => handleAmountChange("weeklyLimit", e.target.value)}
                     className="pl-9"
-                    placeholder="0.00"
+                    placeholder="No limit"
                   />
                 </div>
                 {errors.weeklyLimit && (
                   <p className="text-sm text-red-500">{errors.weeklyLimit}</p>
                 )}
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="monthlyLimit" className="flex items-center">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Monthly Limit
+                <Label htmlFor="monthlyLimit">
+                  <Calendar className="inline-block mr-1 h-4 w-4" />
+                  Monthly Spending Limit
                 </Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -352,7 +316,7 @@ export default function SpendingRulesModal({
                     value={formatCurrency(rules.monthlyLimit)}
                     onChange={(e) => handleAmountChange("monthlyLimit", e.target.value)}
                     className="pl-9"
-                    placeholder="0.00"
+                    placeholder="No limit"
                   />
                 </div>
                 {errors.monthlyLimit && (
@@ -361,8 +325,8 @@ export default function SpendingRulesModal({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="perTransactionLimit" className="flex items-center">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
+                <Label htmlFor="perTransactionLimit">
+                  <CreditCard className="inline-block mr-1 h-4 w-4" />
                   Per Transaction Limit
                 </Label>
                 <div className="relative">
@@ -372,7 +336,7 @@ export default function SpendingRulesModal({
                     value={formatCurrency(rules.perTransactionLimit)}
                     onChange={(e) => handleAmountChange("perTransactionLimit", e.target.value)}
                     className="pl-9"
-                    placeholder="0.00"
+                    placeholder="No limit"
                   />
                 </div>
                 {errors.perTransactionLimit && (
@@ -380,240 +344,472 @@ export default function SpendingRulesModal({
                 )}
               </div>
             </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h3 className="text-base font-medium mb-3">Merchant Controls</h3>
             
-            <RadioGroup 
-              value={merchantControlType} 
-              onValueChange={(v) => handleMerchantControlTypeChange(v as 'allowed' | 'blocked')}
-              className="flex flex-col space-y-3 mb-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="blocked" id="blocked" />
-                <Label htmlFor="blocked" className="cursor-pointer">Block specific merchant categories</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="withdrawalLimit">
+                  <Banknote className="inline-block mr-1 h-4 w-4" />
+                  ATM Withdrawal Limit
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="withdrawalLimit"
+                    value={formatCurrency(rules.withdrawalLimit)}
+                    onChange={(e) => handleAmountChange("withdrawalLimit", e.target.value)}
+                    className="pl-9"
+                    placeholder="No limit"
+                    disabled={rules.allowATMWithdrawals !== true}
+                  />
+                </div>
+                {errors.withdrawalLimit && (
+                  <p className="text-sm text-red-500">{errors.withdrawalLimit}</p>
+                )}
+                {rules.allowATMWithdrawals !== true && (
+                  <p className="text-xs text-muted-foreground">Enable ATM withdrawals in the Permissions tab first</p>
+                )}
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="allowed" id="allowed" />
-                <Label htmlFor="allowed" className="cursor-pointer">Only allow specific merchant categories</Label>
-              </div>
-            </RadioGroup>
-            
-            <div className="space-y-3">
-              <Label>
-                {merchantControlType === 'allowed' ? 'Allowed Categories' : 'Blocked Categories'}:
-              </Label>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {merchantCategories.map((category) => {
-                  const isChecked = merchantControlType === 'allowed'
-                    ? isSelected(rules.allowedMerchantCategories, category.id)
-                    : isSelected(rules.blockedMerchantCategories, category.id);
-                    
-                  return (
-                    <div key={category.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`category-${category.id}`}
-                        checked={isChecked}
-                        onChange={() => {
-                          if (merchantControlType === 'allowed') {
-                            const newCategories = toggleSelected(rules.allowedMerchantCategories, category.id);
-                            handleMerchantCategorySelection(newCategories);
-                          } else {
-                            const newCategories = toggleSelected(rules.blockedMerchantCategories, category.id);
-                            handleMerchantCategorySelection(newCategories);
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <Label htmlFor={`category-${category.id}`} className="cursor-pointer">
-                        {category.name}
-                      </Label>
+              <div className="space-y-2">
+                <Label htmlFor="requireApprovalAbove">
+                  <AlertOctagon className="inline-block mr-1 h-4 w-4" />
+                  Require Approval Above
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="requireApprovalAbove"
+                    value={formatCurrency(rules.requireApprovalAbove)}
+                    onChange={(e) => handleAmountChange("requireApprovalAbove", e.target.value)}
+                    className="pl-9"
+                    placeholder="No automatic approval threshold"
+                  />
+                </div>
+                {errors.requireApprovalAbove && (
+                  <p className="text-sm text-red-500">{errors.requireApprovalAbove}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Purchases above this amount will require your approval
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+          
+          {/* Permissions Tab */}
+          <TabsContent value="permissions" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Purchase Methods</CardTitle>
+                <CardDescription>
+                  Control where and how {childInfo.name} can make purchases
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="allowInStorePurchases" className="cursor-pointer">
+                      <ShoppingBag className="inline-block mr-1 h-4 w-4" />
+                      In-Store Purchases
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow purchases at physical stores with a card
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowInStorePurchases"
+                    checked={rules.allowInStorePurchases === true}
+                    onCheckedChange={(checked) => handleBooleanToggle("allowInStorePurchases", checked)}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="allowOnlinePurchases" className="cursor-pointer">
+                      <CreditCard className="inline-block mr-1 h-4 w-4" />
+                      Online Shopping
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow purchases on websites and online retailers
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowOnlinePurchases"
+                    checked={rules.allowOnlinePurchases === true}
+                    onCheckedChange={(checked) => handleBooleanToggle("allowOnlinePurchases", checked)}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="allowInAppPurchases" className="cursor-pointer">
+                      <Smartphone className="inline-block mr-1 h-4 w-4" />
+                      In-App Purchases
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow purchases within mobile apps and games
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowInAppPurchases"
+                    checked={rules.allowInAppPurchases === true}
+                    onCheckedChange={(checked) => handleBooleanToggle("allowInAppPurchases", checked)}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="allowATMWithdrawals" className="cursor-pointer">
+                      <Banknote className="inline-block mr-1 h-4 w-4" />
+                      ATM Withdrawals
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow cash withdrawals from ATM machines
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowATMWithdrawals"
+                    checked={rules.allowATMWithdrawals === true}
+                    onCheckedChange={(checked) => handleBooleanToggle("allowATMWithdrawals", checked)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Purchase Categories</CardTitle>
+                <CardDescription>
+                  Control what types of purchases {childInfo.name} can make
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Allowed Categories (Optional)</Label>
+                  <Select
+                    onValueChange={(value) => {
+                      const selected = rules.allowedCategories || [];
+                      const newSelected = selected.includes(value)
+                        ? selected.filter(v => v !== value)
+                        : [...selected, value];
+                      handleCategorySelect(newSelected, true);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select allowed categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {purchaseCategories.map((category) => (
+                        <SelectItem
+                          key={category.value}
+                          value={category.value}
+                          className={arrayIncludes(rules.allowedCategories, category.value) ? "bg-primary/20" : ""}
+                        >
+                          {category.label}
+                          {arrayIncludes(rules.allowedCategories, category.value) && " ✓"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {rules.allowedCategories?.map((category) => {
+                      const categoryInfo = purchaseCategories.find(c => c.value === category);
+                      return (
+                        <div 
+                          key={category}
+                          className="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs flex items-center"
+                        >
+                          {categoryInfo?.label || category}
+                          <button
+                            onClick={() => {
+                              const newSelected = rules.allowedCategories?.filter(c => c !== category) || [];
+                              handleCategorySelect(newSelected, true);
+                            }}
+                            className="ml-1 rounded-full hover:bg-primary/20 p-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {rules.allowedCategories?.length 
+                      ? "Only these categories will be allowed" 
+                      : "If none selected, all categories are allowed except blocked ones"}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Blocked Categories (Optional)</Label>
+                  <Select
+                    onValueChange={(value) => {
+                      const selected = rules.blockedCategories || [];
+                      const newSelected = selected.includes(value)
+                        ? selected.filter(v => v !== value)
+                        : [...selected, value];
+                      handleCategorySelect(newSelected, false);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select blocked categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {purchaseCategories.map((category) => (
+                        <SelectItem
+                          key={category.value}
+                          value={category.value}
+                          className={arrayIncludes(rules.blockedCategories, category.value) ? "bg-destructive/20" : ""}
+                        >
+                          {category.label}
+                          {arrayIncludes(rules.blockedCategories, category.value) && " ✓"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {rules.blockedCategories?.map((category) => {
+                      const categoryInfo = purchaseCategories.find(c => c.value === category);
+                      return (
+                        <div 
+                          key={category}
+                          className="bg-destructive/10 text-destructive rounded-full px-2 py-1 text-xs flex items-center"
+                        >
+                          {categoryInfo?.label || category}
+                          <button
+                            onClick={() => {
+                              const newSelected = rules.blockedCategories?.filter(c => c !== category) || [];
+                              handleCategorySelect(newSelected, false);
+                            }}
+                            className="ml-1 rounded-full hover:bg-destructive/20 p-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {rules.blockedCategories?.length 
+                      ? "These categories will be blocked" 
+                      : "If none selected, no categories are explicitly blocked"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Merchants Tab */}
+          <TabsContent value="merchants" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Merchant Controls</CardTitle>
+                <CardDescription>
+                  Control which specific stores or websites {childInfo.name} can shop at
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Allowed Merchants (Optional)</Label>
+                  <Select
+                    onValueChange={(value) => {
+                      const selected = rules.allowedMerchants || [];
+                      const newSelected = selected.includes(value)
+                        ? selected.filter(v => v !== value)
+                        : [...selected, value];
+                      handleMerchantSelect(newSelected, true);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select allowed merchants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commonMerchants.map((merchant) => (
+                        <SelectItem
+                          key={merchant.value}
+                          value={merchant.value}
+                          className={arrayIncludes(rules.allowedMerchants, merchant.value) ? "bg-primary/20" : ""}
+                        >
+                          {merchant.label}
+                          {arrayIncludes(rules.allowedMerchants, merchant.value) && " ✓"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {rules.allowedMerchants?.map((merchant) => {
+                      const merchantInfo = commonMerchants.find(m => m.value === merchant);
+                      return (
+                        <div 
+                          key={merchant}
+                          className="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs flex items-center"
+                        >
+                          {merchantInfo?.label || merchant}
+                          <button
+                            onClick={() => {
+                              const newSelected = rules.allowedMerchants?.filter(m => m !== merchant) || [];
+                              handleMerchantSelect(newSelected, true);
+                            }}
+                            className="ml-1 rounded-full hover:bg-primary/20 p-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {rules.allowedMerchants?.length 
+                      ? "Only these merchants will be allowed" 
+                      : "If none selected, all merchants are allowed except blocked ones"}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Blocked Merchants (Optional)</Label>
+                  <Select
+                    onValueChange={(value) => {
+                      const selected = rules.blockedMerchants || [];
+                      const newSelected = selected.includes(value)
+                        ? selected.filter(v => v !== value)
+                        : [...selected, value];
+                      handleMerchantSelect(newSelected, false);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select blocked merchants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commonMerchants.map((merchant) => (
+                        <SelectItem
+                          key={merchant.value}
+                          value={merchant.value}
+                          className={arrayIncludes(rules.blockedMerchants, merchant.value) ? "bg-destructive/20" : ""}
+                        >
+                          {merchant.label}
+                          {arrayIncludes(rules.blockedMerchants, merchant.value) && " ✓"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {rules.blockedMerchants?.map((merchant) => {
+                      const merchantInfo = commonMerchants.find(m => m.value === merchant);
+                      return (
+                        <div 
+                          key={merchant}
+                          className="bg-destructive/10 text-destructive rounded-full px-2 py-1 text-xs flex items-center"
+                        >
+                          {merchantInfo?.label || merchant}
+                          <button
+                            onClick={() => {
+                              const newSelected = rules.blockedMerchants?.filter(m => m !== merchant) || [];
+                              handleMerchantSelect(newSelected, false);
+                            }}
+                            className="ml-1 rounded-full hover:bg-destructive/20 p-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {rules.blockedMerchants?.length 
+                      ? "These merchants will be blocked" 
+                      : "If none selected, no merchants are explicitly blocked"}
+                  </p>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm">
+                    Add custom merchants by typing their name and pressing Enter
+                  </p>
+                  <div className="mt-2 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="customAllowedMerchant">Custom Allowed Merchant</Label>
+                      <div className="flex space-x-2">
+                        <Input
+                          id="customAllowedMerchant"
+                          placeholder="Enter merchant name"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const value = e.currentTarget.value.trim().toLowerCase();
+                              const selected = rules.allowedMerchants || [];
+                              if (!selected.includes(value)) {
+                                handleMerchantSelect([...selected, value], true);
+                              }
+                              e.currentTarget.value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={(e) => {
+                            const input = document.getElementById('customAllowedMerchant') as HTMLInputElement;
+                            if (input && input.value.trim()) {
+                              const value = input.value.trim().toLowerCase();
+                              const selected = rules.allowedMerchants || [];
+                              if (!selected.includes(value)) {
+                                handleMerchantSelect([...selected, value], true);
+                              }
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h3 className="text-base font-medium mb-3">Parental Approval</h3>
-            
-            <div className="space-y-2 mb-4">
-              <Label htmlFor="requireParentalApprovalAbove" className="flex items-center">
-                <DollarSign className="mr-2 h-4 w-4" />
-                Require approval for purchases above
-              </Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="requireParentalApprovalAbove"
-                  value={formatCurrency(rules.requireParentalApprovalAbove)}
-                  onChange={(e) => handleAmountChange("requireParentalApprovalAbove", e.target.value)}
-                  className="pl-9"
-                  placeholder="0.00"
-                />
-              </div>
-              {errors.requireParentalApprovalAbove && (
-                <p className="text-sm text-red-500">{errors.requireParentalApprovalAbove}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Your child will need to request approval for any purchases above this amount
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <Label>Always require approval for these categories:</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {merchantCategories.map((category) => (
-                  <div key={`approval-${category.id}`} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`approval-${category.id}`}
-                      checked={isSelected(rules.requireParentalApprovalForMerchants, category.id)}
-                      onChange={() => {
-                        const newCategories = toggleSelected(
-                          rules.requireParentalApprovalForMerchants, 
-                          category.id
-                        );
-                        handleApprovalMerchantsChange(newCategories);
-                      }}
-                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <Label htmlFor={`approval-${category.id}`} className="cursor-pointer">
-                      {category.name}
-                    </Label>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="customBlockedMerchant">Custom Blocked Merchant</Label>
+                      <div className="flex space-x-2">
+                        <Input
+                          id="customBlockedMerchant"
+                          placeholder="Enter merchant name"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const value = e.currentTarget.value.trim().toLowerCase();
+                              const selected = rules.blockedMerchants || [];
+                              if (!selected.includes(value)) {
+                                handleMerchantSelect([...selected, value], false);
+                              }
+                              e.currentTarget.value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={(e) => {
+                            const input = document.getElementById('customBlockedMerchant') as HTMLInputElement;
+                            if (input && input.value.trim()) {
+                              const value = input.value.trim().toLowerCase();
+                              const selected = rules.blockedMerchants || [];
+                              if (!selected.includes(value)) {
+                                handleMerchantSelect([...selected, value], false);
+                              }
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h3 className="text-base font-medium mb-3">Time Restrictions</h3>
-            
-            <div className="space-y-3">
-              <Label>Restrict spending on these days:</Label>
-              <div className="flex flex-wrap gap-2">
-                {daysOfWeek.map((day) => (
-                  <div key={day.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`day-${day.id}`}
-                      checked={isSelected(rules.restrictedDaysOfWeek, day.id)}
-                      onChange={() => {
-                        const newDays = toggleSelected(
-                          rules.restrictedDaysOfWeek, 
-                          day.id
-                        );
-                        handleRestrictedDaysChange(newDays);
-                      }}
-                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <Label htmlFor={`day-${day.id}`} className="cursor-pointer">
-                      {day.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Your child will not be able to make purchases on selected days
-              </p>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h3 className="text-base font-medium mb-3">Additional Controls</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="allowWithdrawals" className="flex items-center">
-                    <CreditCardIcon className="mr-2 h-4 w-4" />
-                    Allow ATM Withdrawals
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Let your child withdraw cash from ATMs
-                  </p>
                 </div>
-                <Switch
-                  id="allowWithdrawals"
-                  checked={rules.allowWithdrawals || false}
-                  onCheckedChange={(checked) => handleSwitchChange("allowWithdrawals", checked)}
-                />
-              </div>
-              
-              {rules.allowWithdrawals && (
-                <div className="pl-6 border-l-2 border-muted space-y-2">
-                  <Label htmlFor="withdrawalLimit">
-                    Maximum withdrawal amount
-                  </Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="withdrawalLimit"
-                      value={formatCurrency(rules.withdrawalLimit)}
-                      onChange={(e) => handleAmountChange("withdrawalLimit", e.target.value)}
-                      className="pl-9"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  {errors.withdrawalLimit && (
-                    <p className="text-sm text-red-500">{errors.withdrawalLimit}</p>
-                  )}
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="allowOnlineTransactions" className="flex items-center">
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Allow Online Purchases
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable or disable online shopping
-                  </p>
-                </div>
-                <Switch
-                  id="allowOnlineTransactions"
-                  checked={rules.allowOnlineTransactions || false}
-                  onCheckedChange={(checked) => handleSwitchChange("allowOnlineTransactions", checked)}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="allowInternationalTransactions" className="flex items-center">
-                    <Store className="mr-2 h-4 w-4" />
-                    Allow International Purchases
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable or disable purchases from foreign merchants
-                  </p>
-                </div>
-                <Switch
-                  id="allowInternationalTransactions"
-                  checked={rules.allowInternationalTransactions || false}
-                  onCheckedChange={(checked) => handleSwitchChange("allowInternationalTransactions", checked)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save Rules</Button>
+          <Button onClick={handleSave}>
+            {currentRules ? "Update Rules" : "Save Rules"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

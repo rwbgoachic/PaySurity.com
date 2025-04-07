@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, CreditCard, DollarSign, Clock, AlertTriangle, Check, X, HelpCircle } from "lucide-react";
+import { DollarSign, Calendar, Store, Tag, Clock, AlertTriangle, ShoppingCart } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Badge
 } from "@/components/ui/badge";
@@ -24,16 +30,17 @@ export interface SpendingRequest {
   title: string;
   amount: string;
   description: string | null;
-  category: string | null;
-  status?: 'pending' | 'approved' | 'rejected' | 'canceled';
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
+  status: 'pending' | 'approved' | 'rejected' | 'canceled';
+  childId?: string;
+  parentId?: string;
+  merchantName?: string | null;
+  merchantCategory?: string | null;
+  requestedDate?: Date | null;
+  responseDate?: Date | null;
   expirationDate?: Date | null;
   rejectionReason?: string | null;
-  approvedAt?: Date | null;
-  rejectedAt?: Date | null;
-  parentNote?: string | null;
-  urgent?: boolean | null;
+  receiptImage?: string | null;
+  urgent?: boolean;
 }
 
 interface SpendingRequestModalProps {
@@ -41,22 +48,36 @@ interface SpendingRequestModalProps {
   onClose: () => void;
   onSave: (request: SpendingRequest) => void;
   currentRequest?: SpendingRequest;
-  viewOnly?: boolean;
   isParentMode?: boolean;
 }
 
-const requestCategories = [
-  { value: "clothing", label: "Clothing & Accessories" },
+const merchantCategories = [
+  { value: "retail", label: "Retail Stores" },
+  { value: "online", label: "Online Shopping" },
+  { value: "food", label: "Restaurants & Food" },
+  { value: "grocery", label: "Grocery Stores" },
   { value: "entertainment", label: "Entertainment" },
-  { value: "food", label: "Food & Drinks" },
-  { value: "games", label: "Games & Apps" },
-  { value: "gifts", label: "Gifts" },
-  { value: "health", label: "Health & Beauty" },
-  { value: "school", label: "School Supplies" },
-  { value: "sports", label: "Sports & Activities" },
-  { value: "tech", label: "Technology" },
-  { value: "transportation", label: "Transportation" },
-  { value: "other", label: "Other" },
+  { value: "games", label: "Video Games" },
+  { value: "clothing", label: "Clothing & Apparel" },
+  { value: "electronics", label: "Electronics" },
+  { value: "books", label: "Books & Education" },
+  { value: "sports", label: "Sports Equipment" },
+  { value: "other", label: "Other" }
+];
+
+const commonMerchants = [
+  { value: "amazon", label: "Amazon" },
+  { value: "walmart", label: "Walmart" },
+  { value: "target", label: "Target" },
+  { value: "apple", label: "Apple Store" },
+  { value: "mcdonalds", label: "McDonald's" },
+  { value: "starbucks", label: "Starbucks" },
+  { value: "netflix", label: "Netflix" },
+  { value: "steam", label: "Steam (Games)" },
+  { value: "playstation", label: "PlayStation Store" },
+  { value: "xbox", label: "Xbox Store" },
+  { value: "nike", label: "Nike" },
+  { value: "adidas", label: "Adidas" }
 ];
 
 export default function SpendingRequestModal({
@@ -64,41 +85,31 @@ export default function SpendingRequestModal({
   onClose,
   onSave,
   currentRequest,
-  viewOnly = false,
   isParentMode = false,
 }: SpendingRequestModalProps) {
   const [request, setRequest] = useState<SpendingRequest>(() => {
     if (currentRequest) {
-      return { 
-        ...currentRequest,
-        expirationDate: currentRequest.expirationDate ? new Date(currentRequest.expirationDate) : undefined,
-        createdAt: currentRequest.createdAt ? new Date(currentRequest.createdAt) : undefined,
-        updatedAt: currentRequest.updatedAt ? new Date(currentRequest.updatedAt) : undefined,
-        approvedAt: currentRequest.approvedAt ? new Date(currentRequest.approvedAt) : undefined,
-        rejectedAt: currentRequest.rejectedAt ? new Date(currentRequest.rejectedAt) : undefined,
-      };
+      return { ...currentRequest };
     }
     
-    // Default values for a new request
+    // Default values for new request
     return {
       title: "",
       amount: "",
-      description: "",
-      category: "other",
+      description: null,
       status: "pending",
-      expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      urgent: false,
+      merchantName: null,
+      merchantCategory: null,
+      requestedDate: new Date(),
+      expirationDate: addDays(new Date(), 7),
+      urgent: false
     };
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [parentResponse, setParentResponse] = useState<{
-    status: 'approved' | 'rejected';
-    note: string;
-  }>({
-    status: 'approved',
-    note: currentRequest?.parentNote || "",
-  });
+  const [showResponse, setShowResponse] = useState<boolean>(isParentMode);
+  const [rejectionReason, setRejectionReason] = useState<string>(request.rejectionReason || "");
+  const [activeTab, setActiveTab] = useState("details");
   
   const handleTextChange = (field: keyof SpendingRequest, value: string) => {
     setRequest({
@@ -131,39 +142,44 @@ export default function SpendingRequestModal({
     }
   };
   
-  const handleCategoryChange = (value: string) => {
+  const handleMerchantCategoryChange = (value: string) => {
     setRequest({
       ...request,
-      category: value
+      merchantCategory: value
     });
   };
   
-  const handleDateChange = (date: Date | undefined) => {
+  const handleMerchantNameChange = (value: string) => {
+    setRequest({
+      ...request,
+      merchantName: value
+    });
+  };
+  
+  const handleExpirationDateChange = (date: Date | undefined) => {
     setRequest({
       ...request,
       expirationDate: date || null
     });
-    
-    if (errors.expirationDate) {
-      setErrors({
-        ...errors,
-        expirationDate: ""
-      });
-    }
   };
   
-  const handleUrgentChange = (checked: boolean) => {
+  const handleUrgentToggle = (checked: boolean) => {
     setRequest({
       ...request,
       urgent: checked
     });
   };
   
-  const handleParentResponseChange = (field: 'status' | 'note', value: string) => {
-    setParentResponse({
-      ...parentResponse,
-      [field]: value
+  const handleStatusChange = (status: 'approved' | 'rejected') => {
+    setRequest({
+      ...request,
+      status,
+      responseDate: new Date()
     });
+    
+    if (status === 'rejected') {
+      setShowResponse(true);
+    }
   };
   
   const validateForm = (): boolean => {
@@ -179,12 +195,8 @@ export default function SpendingRequestModal({
       newErrors.amount = "Amount must be greater than zero";
     }
     
-    if (request.expirationDate && request.expirationDate < new Date()) {
-      newErrors.expirationDate = "Expiration date must be in the future";
-    }
-    
-    if (isParentMode && parentResponse.status === 'rejected' && !parentResponse.note?.trim()) {
-      newErrors.parentNote = "Please provide a reason for rejection";
+    if (isParentMode && request.status === 'rejected' && !rejectionReason.trim()) {
+      newErrors.rejectionReason = "Please provide a reason for rejecting this request";
     }
     
     setErrors(newErrors);
@@ -193,20 +205,12 @@ export default function SpendingRequestModal({
   
   const handleSave = () => {
     if (validateForm()) {
-      if (isParentMode) {
-        // When parent is responding to a request
-        onSave({
-          ...request,
-          status: parentResponse.status,
-          parentNote: parentResponse.note,
-          rejectionReason: parentResponse.status === 'rejected' ? parentResponse.note : request.rejectionReason,
-          approvedAt: parentResponse.status === 'approved' ? new Date() : request.approvedAt,
-          rejectedAt: parentResponse.status === 'rejected' ? new Date() : request.rejectedAt,
-        });
-      } else {
-        // Normal save for child creating/editing request
-        onSave(request);
-      }
+      const finalRequest = {
+        ...request,
+        rejectionReason: request.status === 'rejected' ? rejectionReason : null
+      };
+      
+      onSave(finalRequest);
       onClose();
     }
   };
@@ -216,243 +220,91 @@ export default function SpendingRequestModal({
     return amount;
   };
   
-  const getStatusColor = (status: string | undefined) => {
-    switch (status) {
+  const formatDate = (date: Date | null | undefined) => {
+    if (!date) return '';
+    return format(date, "PPP");
+  };
+  
+  // Determine if we should show parent response section
+  const isEditable = !isParentMode || (isParentMode && request.status === 'pending');
+  
+  const getStatusBadgeVariant = () => {
+    switch (request.status) {
       case 'approved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'default';
       case 'rejected':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        return 'destructive';
       case 'canceled':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        return 'outline';
       case 'pending':
       default:
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'secondary';
     }
   };
   
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return 'N/A';
-    return format(date, 'MMM d, yyyy');
-  };
-  
-  const getStatusBadge = (status: string | undefined) => {
-    let label = status || 'pending';
-    let icon = null;
-    
-    switch (status) {
-      case 'approved':
-        icon = <Check className="h-3 w-3 mr-1" />;
-        break;
-      case 'rejected':
-        icon = <X className="h-3 w-3 mr-1" />;
-        break;
-      case 'pending':
-        icon = <Clock className="h-3 w-3 mr-1" />;
-        break;
-      case 'canceled':
-        icon = <X className="h-3 w-3 mr-1" />;
-        break;
-    }
-    
-    return (
-      <Badge variant="outline" className={`flex items-center capitalize ${getStatusColor(status)}`}>
-        {icon}
-        {label}
-      </Badge>
-    );
-  };
-  
-  // Render different content based on view mode
-  const renderContent = () => {
-    if (viewOnly) {
-      // View only mode (details)
-      return (
-        <div className="grid gap-6 py-4">
-          <div className="flex justify-between items-start">
-            <h3 className="text-lg font-semibold">{request.title}</h3>
-            {getStatusBadge(request.status)}
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="flex items-center">
+          <ShoppingCart className="mr-2 h-5 w-5" />
+          {currentRequest && isParentMode 
+            ? "Review Spending Request" 
+            : currentRequest 
+              ? "Edit Spending Request" 
+              : "Create Spending Request"
+          }
+        </DialogTitle>
+        
+        <DialogDescription>
+          {isParentMode 
+            ? "Review and approve or reject this spending request" 
+            : "Request permission to spend money"
+          }
+        </DialogDescription>
+        
+        {currentRequest && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Status:</span>
+            <Badge variant={getStatusBadgeVariant()}>
+              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+            </Badge>
           </div>
+        )}
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="details" disabled={!isEditable && !isParentMode}>
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Request Details
+            </TabsTrigger>
+            <TabsTrigger value="merchant" disabled={!isEditable && !isParentMode}>
+              <Store className="mr-2 h-4 w-4" />
+              Merchant Info
+            </TabsTrigger>
+          </TabsList>
           
-          <div className="bg-muted/30 p-4 rounded-lg">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Amount:</span>
-              <span className="font-semibold">${formatCurrency(request.amount)}</span>
-            </div>
-            <div className="flex justify-between mt-2">
-              <span className="text-muted-foreground">Category:</span>
-              <span>{requestCategories.find(c => c.value === request.category)?.label || request.category}</span>
-            </div>
-            {request.expirationDate && (
-              <div className="flex justify-between mt-2">
-                <span className="text-muted-foreground">Expires on:</span>
-                <span>{formatDate(request.expirationDate)}</span>
-              </div>
-            )}
-            <div className="flex justify-between mt-2">
-              <span className="text-muted-foreground">Requested on:</span>
-              <span>{formatDate(request.createdAt)}</span>
-            </div>
-            {request.urgent && (
-              <div className="flex items-center justify-center bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg p-2 mt-3">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">Urgent Request</span>
-              </div>
-            )}
-          </div>
-          
-          {request.description && (
-            <div>
-              <h4 className="font-medium mb-2">Description</h4>
-              <div className="bg-muted/30 p-3 rounded text-sm">
-                {request.description}
-              </div>
-            </div>
-          )}
-          
-          {request.status === 'rejected' && request.rejectionReason && (
-            <div>
-              <h4 className="font-medium mb-2 text-red-600 dark:text-red-400 flex items-center">
-                <X className="h-4 w-4 mr-2" />
-                Rejection Reason
-              </h4>
-              <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded border border-red-200 dark:border-red-800 text-sm">
-                {request.rejectionReason}
-              </div>
-            </div>
-          )}
-          
-          {request.status === 'approved' && request.parentNote && (
-            <div>
-              <h4 className="font-medium mb-2 text-green-600 dark:text-green-400 flex items-center">
-                <Check className="h-4 w-4 mr-2" />
-                Parent Note
-              </h4>
-              <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded border border-green-200 dark:border-green-800 text-sm">
-                {request.parentNote}
-              </div>
-            </div>
-          )}
-          
-          {(request.approvedAt || request.rejectedAt) && (
-            <div className="text-xs text-muted-foreground mt-2">
-              {request.approvedAt && <div>Approved on: {formatDate(request.approvedAt)}</div>}
-              {request.rejectedAt && <div>Rejected on: {formatDate(request.rejectedAt)}</div>}
-            </div>
-          )}
-        </div>
-      );
-    } else if (isParentMode && currentRequest) {
-      // Parent response mode
-      return (
-        <div className="grid gap-6 py-4">
-          <div className="flex justify-between items-start">
-            <h3 className="text-lg font-semibold">{request.title}</h3>
-            {getStatusBadge('pending')}
-          </div>
-          
-          <div className="bg-muted/30 p-4 rounded-lg">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Amount:</span>
-              <span className="font-semibold">${formatCurrency(request.amount)}</span>
-            </div>
-            <div className="flex justify-between mt-2">
-              <span className="text-muted-foreground">Category:</span>
-              <span>{requestCategories.find(c => c.value === request.category)?.label || request.category}</span>
-            </div>
-            {request.expirationDate && (
-              <div className="flex justify-between mt-2">
-                <span className="text-muted-foreground">Expires on:</span>
-                <span>{formatDate(request.expirationDate)}</span>
-              </div>
-            )}
-            <div className="flex justify-between mt-2">
-              <span className="text-muted-foreground">Requested on:</span>
-              <span>{formatDate(request.createdAt)}</span>
-            </div>
-            {request.urgent && (
-              <div className="flex items-center justify-center bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg p-2 mt-3">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">Urgent Request</span>
-              </div>
-            )}
-          </div>
-          
-          {request.description && (
-            <div>
-              <h4 className="font-medium mb-2">Description</h4>
-              <div className="bg-muted/30 p-3 rounded text-sm">
-                {request.description}
-              </div>
-            </div>
-          )}
-          
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-3">Your Response</h4>
-            
-            <div className="flex space-x-2 mb-4">
-              <Button
-                type="button"
-                variant={parentResponse.status === 'approved' ? 'default' : 'outline'}
-                className={parentResponse.status === 'approved' ? 'bg-green-600 hover:bg-green-700' : ''}
-                onClick={() => handleParentResponseChange('status', 'approved')}
-              >
-                <Check className="mr-2 h-4 w-4" />
-                Approve
-              </Button>
-              <Button
-                type="button"
-                variant={parentResponse.status === 'rejected' ? 'destructive' : 'outline'}
-                onClick={() => handleParentResponseChange('status', 'rejected')}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Reject
-              </Button>
-            </div>
-            
+          {/* Request Details Tab */}
+          <TabsContent value="details" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="parentNote">
-                {parentResponse.status === 'approved' ? 'Note (Optional)' : 'Rejection Reason'}
+              <Label htmlFor="title">
+                What do you want to buy?
               </Label>
-              <Textarea
-                id="parentNote"
-                value={parentResponse.note}
-                onChange={(e) => handleParentResponseChange('note', e.target.value)}
-                placeholder={parentResponse.status === 'approved' 
-                  ? "Add an optional note for your child"
-                  : "Please explain why you're rejecting this request"}
-                rows={3}
+              <Input
+                id="title"
+                value={request.title}
+                onChange={(e) => handleTextChange("title", e.target.value)}
+                placeholder="New headphones, Movie ticket, etc."
+                disabled={!isEditable}
               />
-              {errors.parentNote && (
-                <p className="text-sm text-red-500">{errors.parentNote}</p>
+              {errors.title && (
+                <p className="text-sm text-red-500">{errors.title}</p>
               )}
             </div>
-          </div>
-        </div>
-      );
-    } else {
-      // Standard form for creating/editing requests
-      return (
-        <div className="grid gap-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">
-              What do you need money for?
-            </Label>
-            <Input
-              id="title"
-              value={request.title}
-              onChange={(e) => handleTextChange("title", e.target.value)}
-              placeholder="Enter a title for your request"
-              disabled={viewOnly}
-            />
-            {errors.title && (
-              <p className="text-sm text-red-500">{errors.title}</p>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
             <div className="space-y-2">
               <Label htmlFor="amount">
-                How much do you need? ($)
+                <DollarSign className="inline-block mr-1 h-4 w-4" />
+                How much will it cost?
               </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -462,7 +314,7 @@ export default function SpendingRequestModal({
                   onChange={(e) => handleAmountChange(e.target.value)}
                   className="pl-9"
                   placeholder="0.00"
-                  disabled={viewOnly}
+                  disabled={!isEditable}
                 />
               </div>
               {errors.amount && (
@@ -471,19 +323,95 @@ export default function SpendingRequestModal({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="category">
-                Category
+              <Label htmlFor="description">
+                Why do you want to buy this? (Optional)
+              </Label>
+              <Textarea
+                id="description"
+                value={request.description || ""}
+                onChange={(e) => handleTextChange("description", e.target.value)}
+                placeholder="Explain why you want to purchase this item"
+                rows={3}
+                disabled={!isEditable}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between space-x-2 pt-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="urgent" className="cursor-pointer">
+                  <AlertTriangle className="inline-block mr-1 h-4 w-4 text-amber-500" />
+                  Mark as Urgent
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Request a quick response for time-sensitive purchases
+                </p>
+              </div>
+              <Switch
+                id="urgent"
+                checked={request.urgent === true}
+                onCheckedChange={handleUrgentToggle}
+                disabled={!isEditable}
+              />
+            </div>
+            
+            {request.urgent && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded border border-amber-200 dark:border-amber-900 text-sm text-amber-600 dark:text-amber-300">
+                Urgent requests will be highlighted for faster review.
+              </div>
+            )}
+          </TabsContent>
+          
+          {/* Merchant Info Tab */}
+          <TabsContent value="merchant" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="merchantName">
+                <Store className="inline-block mr-1 h-4 w-4" />
+                Store or Website Name (Optional)
               </Label>
               <Select
-                value={request.category || "other"}
-                onValueChange={handleCategoryChange}
-                disabled={viewOnly}
+                value={request.merchantName || ""}
+                onValueChange={handleMerchantNameChange}
+                disabled={!isEditable}
               >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select a category" />
+                <SelectTrigger id="merchantName">
+                  <SelectValue placeholder="Where will you shop?" />
                 </SelectTrigger>
                 <SelectContent>
-                  {requestCategories.map((category) => (
+                  <SelectItem value="">Select a merchant or enter below</SelectItem>
+                  {commonMerchants.map((merchant) => (
+                    <SelectItem key={merchant.value} value={merchant.value}>
+                      {merchant.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {!commonMerchants.some(m => m.value === request.merchantName) && (
+                <Input
+                  placeholder="Or enter a different store name"
+                  value={request.merchantName || ""}
+                  onChange={(e) => handleTextChange("merchantName", e.target.value)}
+                  className="mt-2"
+                  disabled={!isEditable}
+                />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="merchantCategory">
+                <Tag className="inline-block mr-1 h-4 w-4" />
+                Category (Optional)
+              </Label>
+              <Select
+                value={request.merchantCategory || ""}
+                onValueChange={handleMerchantCategoryChange}
+                disabled={!isEditable}
+              >
+                <SelectTrigger id="merchantCategory">
+                  <SelectValue placeholder="What type of purchase is this?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {merchantCategories.map((category) => (
                     <SelectItem key={category.value} value={category.value}>
                       {category.label}
                     </SelectItem>
@@ -491,106 +419,103 @@ export default function SpendingRequestModal({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              Description (Optional)
-            </Label>
-            <Textarea
-              id="description"
-              value={request.description || ""}
-              onChange={(e) => handleTextChange("description", e.target.value)}
-              placeholder="Explain why you need this money and what it's for"
-              rows={3}
-              disabled={viewOnly}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="expirationDate" className="flex items-center">
-              <Calendar className="mr-2 h-4 w-4" />
-              By when do you need an answer?
-            </Label>
-            <DatePicker
-              date={request.expirationDate || undefined}
-              onSelect={handleDateChange}
-              placeholder="Select an expiration date"
-              disabled={viewOnly}
-            />
-            {errors.expirationDate && (
-              <p className="text-sm text-red-500">{errors.expirationDate}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              After this date, your request will expire if not answered
-            </p>
-          </div>
-          
-          <div className="flex items-center justify-between pt-2">
-            <div className="space-y-0.5">
-              <Label htmlFor="urgent" className="flex items-center">
-                <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
-                Urgent Request
+            
+            <div className="space-y-2">
+              <Label htmlFor="expirationDate">
+                <Clock className="inline-block mr-1 h-4 w-4" />
+                When do you need an answer by? (Optional)
               </Label>
-              <p className="text-sm text-muted-foreground">
-                Mark this as urgent if you need a quick response
+              <DatePicker
+                date={request.expirationDate || undefined}
+                onSelect={handleExpirationDateChange}
+                placeholder="Select a date"
+                disabled={!isEditable}
+              />
+              <p className="text-xs text-muted-foreground">
+                Default is one week from today
               </p>
             </div>
-            <Switch
-              id="urgent"
-              checked={request.urgent || false}
-              onCheckedChange={handleUrgentChange}
-              disabled={viewOnly}
-            />
-          </div>
-          
-          {request.urgent && (
-            <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md border border-red-100 dark:border-red-800">
-              <div className="flex items-start">
-                <HelpCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  Only use urgent requests for time-sensitive needs. Your parent will be notified immediately.
-                </p>
+          </TabsContent>
+        </Tabs>
+        
+        {isParentMode && (
+          <div className="mt-6 pt-6 border-t space-y-4">
+            <h3 className="text-lg font-medium">Parent Response</h3>
+            
+            {request.status === 'pending' ? (
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="default" 
+                    onClick={() => handleStatusChange('approved')}
+                    className="flex-1"
+                  >
+                    Approve Request
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => handleStatusChange('rejected')}
+                    className="flex-1"
+                  >
+                    Deny Request
+                  </Button>
+                </div>
+                
+                {showResponse && (
+                  <div className="space-y-2 animate-in fade-in">
+                    <Label htmlFor="rejectionReason">
+                      Reason for Denial
+                    </Label>
+                    <Textarea
+                      id="rejectionReason"
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Please provide a reason for denying this request"
+                      rows={2}
+                    />
+                    {errors.rejectionReason && (
+                      <p className="text-sm text-red-500">{errors.rejectionReason}</p>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-  };
-  
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
-        <DialogTitle className="flex items-center">
-          <CreditCard className="mr-2 h-5 w-5" />
-          {(() => {
-            if (viewOnly) return "Spending Request Details";
-            if (isParentMode) return "Respond to Spending Request";
-            return currentRequest ? "Edit Spending Request" : "New Spending Request";
-          })()}
-        </DialogTitle>
-        
-        <DialogDescription>
-          {(() => {
-            if (viewOnly) return "View the details of this spending request.";
-            if (isParentMode) return "Review and respond to your child's spending request.";
-            return currentRequest 
-              ? "Update your spending request details." 
-              : "Ask your parent for money for a specific purchase.";
-          })()}
-        </DialogDescription>
-        
-        {renderContent()}
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Status:</span>
+                  <Badge variant={getStatusBadgeVariant()}>
+                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                  </Badge>
+                </div>
+                
+                {request.responseDate && (
+                  <div className="flex justify-between text-sm">
+                    <span>Response date:</span>
+                    <span>{formatDate(request.responseDate)}</span>
+                  </div>
+                )}
+                
+                {request.status === 'rejected' && request.rejectionReason && (
+                  <div className="mt-2">
+                    <Label>Reason for Denial:</Label>
+                    <p className="text-sm mt-1 p-2 bg-muted rounded">
+                      {request.rejectionReason}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {viewOnly ? "Close" : "Cancel"}
-          </Button>
-          
-          {!viewOnly && (
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          {(isEditable || (isParentMode && request.status === 'pending')) && (
             <Button onClick={handleSave}>
-              {isParentMode ? "Submit Response" : (currentRequest ? "Update" : "Submit")}
+              {isParentMode 
+                ? (request.status === 'pending' ? "Submit Response" : "Update Response") 
+                : (currentRequest ? "Update Request" : "Submit Request")
+              }
             </Button>
           )}
         </DialogFooter>

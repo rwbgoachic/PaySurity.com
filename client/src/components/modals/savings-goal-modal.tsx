@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Target, DollarSign, Clock, CreditCard, Upload, Check } from "lucide-react";
+import { DollarSign, Calendar, Tag, Bookmark, Sparkles, PiggyBank } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
-import { format, addDays, addWeeks, addMonths } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Progress
+} from "@/components/ui/progress";
 
 export interface SavingsGoal {
   id?: string;
@@ -42,24 +51,22 @@ interface SavingsGoalModalProps {
 }
 
 const goalCategories = [
-  { value: "education", label: "Education" },
   { value: "electronics", label: "Electronics" },
-  { value: "games", label: "Games" },
+  { value: "toys", label: "Toys & Games" },
   { value: "clothing", label: "Clothing" },
-  { value: "toys", label: "Toys" },
-  { value: "vacation", label: "Vacation" },
-  { value: "bike", label: "Bicycle" },
-  { value: "car", label: "Car" },
-  { value: "gift", label: "Gift for Someone" },
-  { value: "charity", label: "Charity" },
-  { value: "other", label: "Other" },
+  { value: "books", label: "Books" },
+  { value: "travel", label: "Travel" },
+  { value: "events", label: "Events & Experiences" },
+  { value: "education", label: "Education" },
+  { value: "charity", label: "Charity & Donations" },
+  { value: "sports", label: "Sports Equipment" },
+  { value: "other", label: "Other" }
 ];
 
-const frequencyOptions = [
-  { value: "daily", label: "Daily" },
+const contributionFrequencies = [
   { value: "weekly", label: "Weekly" },
-  { value: "biweekly", label: "Every 2 Weeks" },
-  { value: "monthly", label: "Monthly" },
+  { value: "biweekly", label: "Every Two Weeks" },
+  { value: "monthly", label: "Monthly" }
 ];
 
 export default function SavingsGoalModal({
@@ -71,35 +78,27 @@ export default function SavingsGoalModal({
 }: SavingsGoalModalProps) {
   const [goal, setGoal] = useState<SavingsGoal>(() => {
     if (currentGoal) {
-      return { 
-        ...currentGoal, 
-        dueDate: currentGoal.dueDate ? new Date(currentGoal.dueDate) : undefined,
-        createdAt: currentGoal.createdAt ? new Date(currentGoal.createdAt) : undefined,
-      };
+      return { ...currentGoal };
     }
     
-    // Default values for a new goal
+    // Default values for new goal
     return {
       name: "",
       targetAmount: "",
       currentAmount: "0",
-      category: "other",
+      category: null,
       isCompleted: false,
-      dueDate: addMonths(new Date(), 3),
-      description: "",
+      description: null,
+      dueDate: null,
       autoContributeAmount: null,
       autoContributeFrequency: null,
-      parentContribution: "",
+      parentContribution: ""
     };
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [enableAutoContribute, setEnableAutoContribute] = useState<boolean>(
-    !!goal.autoContributeAmount && !!goal.autoContributeFrequency
-  );
-  const [enableParentContribution, setEnableParentContribution] = useState<boolean>(
-    isParentMode && !!goal.parentContribution
-  );
+  const [autoContribute, setAutoContribute] = useState<boolean>(!!goal.autoContributeAmount);
+  const [activeTab, setActiveTab] = useState("details");
   
   const handleTextChange = (field: keyof SavingsGoal, value: string) => {
     setGoal({
@@ -117,7 +116,7 @@ export default function SavingsGoalModal({
   
   const handleAmountChange = (field: keyof SavingsGoal, value: string) => {
     // Only allow numbers and up to 2 decimal places
-    if (/^\d*\.?\d{0,2}$/.test(value)) {
+    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
       setGoal({
         ...goal,
         [field]: value
@@ -132,24 +131,17 @@ export default function SavingsGoalModal({
     }
   };
   
-  const handleDateChange = (date: Date | undefined) => {
-    setGoal({
-      ...goal,
-      dueDate: date || null
-    });
-    
-    if (errors.dueDate) {
-      setErrors({
-        ...errors,
-        dueDate: ""
-      });
-    }
-  };
-  
   const handleCategoryChange = (value: string) => {
     setGoal({
       ...goal,
       category: value
+    });
+  };
+  
+  const handleDueDateChange = (date: Date | undefined) => {
+    setGoal({
+      ...goal,
+      dueDate: date || null
     });
   };
   
@@ -160,8 +152,8 @@ export default function SavingsGoalModal({
     });
   };
   
-  const handleEnableAutoContribute = (checked: boolean) => {
-    setEnableAutoContribute(checked);
+  const handleAutoContributeToggle = (checked: boolean) => {
+    setAutoContribute(checked);
     
     if (!checked) {
       setGoal({
@@ -169,27 +161,10 @@ export default function SavingsGoalModal({
         autoContributeAmount: null,
         autoContributeFrequency: null
       });
-    } else if (!goal.autoContributeAmount || !goal.autoContributeFrequency) {
+    } else if (!goal.autoContributeFrequency) {
       setGoal({
         ...goal,
-        autoContributeAmount: "",
         autoContributeFrequency: "weekly"
-      });
-    }
-  };
-  
-  const handleEnableParentContribution = (checked: boolean) => {
-    setEnableParentContribution(checked);
-    
-    if (!checked) {
-      setGoal({
-        ...goal,
-        parentContribution: ""
-      });
-    } else if (!goal.parentContribution) {
-      setGoal({
-        ...goal,
-        parentContribution: ""
       });
     }
   };
@@ -198,7 +173,7 @@ export default function SavingsGoalModal({
     const newErrors: Record<string, string> = {};
     
     if (!goal.name?.trim()) {
-      newErrors.name = "Goal name is required";
+      newErrors.name = "Name is required";
     }
     
     if (!goal.targetAmount) {
@@ -207,11 +182,7 @@ export default function SavingsGoalModal({
       newErrors.targetAmount = "Target amount must be greater than zero";
     }
     
-    if (goal.dueDate && goal.dueDate < new Date()) {
-      newErrors.dueDate = "Due date must be in the future";
-    }
-    
-    if (enableAutoContribute) {
+    if (autoContribute) {
       if (!goal.autoContributeAmount) {
         newErrors.autoContributeAmount = "Contribution amount is required when auto-contribute is enabled";
       } else if (parseFloat(goal.autoContributeAmount) <= 0) {
@@ -223,11 +194,11 @@ export default function SavingsGoalModal({
       }
     }
     
-    if (enableParentContribution) {
-      if (!goal.parentContribution) {
-        newErrors.parentContribution = "Parent contribution amount is required when enabled";
-      } else if (parseFloat(goal.parentContribution) <= 0) {
-        newErrors.parentContribution = "Parent contribution must be greater than zero";
+    if (isParentMode && goal.parentContribution) {
+      if (!/^\d*\.?\d{0,2}$/.test(goal.parentContribution)) {
+        newErrors.parentContribution = "Parent contribution must be a valid amount";
+      } else if (parseFloat(goal.parentContribution) < 0) {
+        newErrors.parentContribution = "Parent contribution cannot be negative";
       }
     }
     
@@ -237,7 +208,13 @@ export default function SavingsGoalModal({
   
   const handleSave = () => {
     if (validateForm()) {
-      onSave(goal);
+      const finalGoal = {
+        ...goal,
+        autoContributeAmount: autoContribute ? goal.autoContributeAmount : null,
+        autoContributeFrequency: autoContribute ? goal.autoContributeFrequency : null
+      };
+      
+      onSave(finalGoal);
       onClose();
     }
   };
@@ -247,266 +224,277 @@ export default function SavingsGoalModal({
     return amount;
   };
   
-  const calculateProgress = () => {
+  const getProgress = (): number => {
     if (!goal.targetAmount || !goal.currentAmount) return 0;
-    const current = parseFloat(goal.currentAmount);
+    
     const target = parseFloat(goal.targetAmount);
+    const current = parseFloat(goal.currentAmount);
+    
     if (target <= 0) return 0;
     return Math.min(Math.round((current / target) * 100), 100);
+  };
+  
+  const formatDate = (date: Date | null | undefined) => {
+    if (!date) return '';
+    return format(date, "PPP");
   };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogTitle className="flex items-center">
-          <Target className="mr-2 h-5 w-5" />
+          <PiggyBank className="mr-2 h-5 w-5" />
           {currentGoal ? "Edit Savings Goal" : "Create Savings Goal"}
         </DialogTitle>
         
         <DialogDescription>
-          {currentGoal
-            ? "Update your savings goal details to keep track of your progress."
-            : "Set up a new savings goal to help save for something special."}
+          {currentGoal 
+            ? "Update your savings goal details" 
+            : "Set up a new savings goal to help save for something special"
+          }
         </DialogDescription>
         
-        <div className="grid gap-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              What are you saving for?
-            </Label>
-            <Input
-              id="name"
-              value={goal.name}
-              onChange={(e) => handleTextChange("name", e.target.value)}
-              placeholder="Enter the name of your goal"
-            />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name}</p>
-            )}
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="details">
+              <Bookmark className="mr-2 h-4 w-4" />
+              Goal Details
+            </TabsTrigger>
+            <TabsTrigger value="contribution">
+              <PiggyBank className="mr-2 h-4 w-4" />
+              Contributions
+            </TabsTrigger>
+          </TabsList>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Goal Details Tab */}
+          <TabsContent value="details" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="targetAmount">
-                Target Amount ($)
+              <Label htmlFor="name">
+                Goal Name
               </Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="targetAmount"
-                  value={formatCurrency(goal.targetAmount)}
-                  onChange={(e) => handleAmountChange("targetAmount", e.target.value)}
-                  className="pl-9"
-                  placeholder="0.00"
-                />
-              </div>
-              {errors.targetAmount && (
-                <p className="text-sm text-red-500">{errors.targetAmount}</p>
+              <Input
+                id="name"
+                value={goal.name}
+                onChange={(e) => handleTextChange("name", e.target.value)}
+                placeholder="New bicycle, Video game console, etc."
+              />
+              {errors.name && (
+                <p className="text-sm text-red-500">{errors.name}</p>
               )}
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="category">
-                Category
-              </Label>
-              <Select
-                value={goal.category || "other"}
-                onValueChange={handleCategoryChange}
-              >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {goalCategories.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="dueDate" className="flex items-center">
-              <Calendar className="mr-2 h-4 w-4" />
-              Target Date
-            </Label>
-            <DatePicker
-              date={goal.dueDate || undefined}
-              onSelect={handleDateChange}
-              placeholder="When do you want to reach this goal?"
-            />
-            {errors.dueDate && (
-              <p className="text-sm text-red-500">{errors.dueDate}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              This is when you hope to reach your savings goal.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              Description (Optional)
-            </Label>
-            <Textarea
-              id="description"
-              value={goal.description || ""}
-              onChange={(e) => handleTextChange("description", e.target.value)}
-              placeholder="Add any notes about this savings goal"
-              rows={3}
-            />
-          </div>
-          
-          {currentGoal && (
-            <div className="space-y-4">
-              <Label>Progress</Label>
-              <div className="h-4 w-full bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300 ease-in-out"
-                  style={{ width: `${calculateProgress()}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>
-                  ${formatCurrency(goal.currentAmount)} of ${formatCurrency(goal.targetAmount)}
-                </span>
-                <span>{calculateProgress()}%</span>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between pt-2">
-            <div className="space-y-0.5">
-              <Label htmlFor="enableAutoContribute" className="flex items-center">
-                <Clock className="mr-2 h-4 w-4" />
-                Automatic Contributions
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically contribute to this goal on a schedule
-              </p>
-            </div>
-            <Switch
-              id="enableAutoContribute"
-              checked={enableAutoContribute}
-              onCheckedChange={handleEnableAutoContribute}
-            />
-          </div>
-          
-          {enableAutoContribute && (
-            <div className="pl-6 border-l-2 border-muted space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="autoContributeAmount">
-                    Contribution Amount ($)
-                  </Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="autoContributeAmount"
-                      value={formatCurrency(goal.autoContributeAmount)}
-                      onChange={(e) => handleAmountChange("autoContributeAmount", e.target.value)}
-                      className="pl-9"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  {errors.autoContributeAmount && (
-                    <p className="text-sm text-red-500">{errors.autoContributeAmount}</p>
-                  )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="targetAmount">
+                  <DollarSign className="inline-block mr-1 h-4 w-4" />
+                  Target Amount
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="targetAmount"
+                    value={formatCurrency(goal.targetAmount)}
+                    onChange={(e) => handleAmountChange("targetAmount", e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
+                  />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="autoContributeFrequency">
-                    Contribution Frequency
-                  </Label>
-                  <Select
-                    value={goal.autoContributeFrequency || "weekly"}
-                    onValueChange={handleFrequencyChange}
-                  >
-                    <SelectTrigger id="autoContributeFrequency">
-                      <SelectValue placeholder="Select frequency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {frequencyOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.autoContributeFrequency && (
-                    <p className="text-sm text-red-500">{errors.autoContributeFrequency}</p>
-                  )}
-                </div>
+                {errors.targetAmount && (
+                  <p className="text-sm text-red-500">{errors.targetAmount}</p>
+                )}
               </div>
               
-              <p className="text-xs text-muted-foreground">
-                This amount will be automatically moved from your wallet to this savings goal at the frequency you select.
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="category">
+                  <Tag className="inline-block mr-1 h-4 w-4" />
+                  Category (Optional)
+                </Label>
+                <Select
+                  value={goal.category || ""}
+                  onValueChange={handleCategoryChange}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {goalCategories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">
+                <Calendar className="inline-block mr-1 h-4 w-4" />
+                Goal Date (Optional)
+              </Label>
+              <DatePicker
+                date={goal.dueDate || undefined}
+                onSelect={handleDueDateChange}
+                placeholder="When do you want to reach this goal?"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">
+                Description (Optional)
+              </Label>
+              <Textarea
+                id="description"
+                value={goal.description || ""}
+                onChange={(e) => handleTextChange("description", e.target.value)}
+                placeholder="Describe what you're saving for and why it's important to you"
+                rows={3}
+              />
+            </div>
+          </TabsContent>
           
-          {isParentMode && (
-            <>
-              <div className="flex items-center justify-between pt-2">
+          {/* Contribution Tab */}
+          <TabsContent value="contribution" className="space-y-4 mt-4">
+            {currentGoal && (
+              <div className="space-y-2 mb-4">
+                <Label>Current Progress</Label>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>
+                      ${parseFloat(goal.currentAmount || "0").toFixed(2)}
+                    </span>
+                    <span>
+                      ${parseFloat(goal.targetAmount || "0").toFixed(2)}
+                    </span>
+                  </div>
+                  <Progress value={getProgress()} />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {getProgress()}% of your goal
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-4 py-2">
+              <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-0.5">
-                  <Label htmlFor="enableParentContribution" className="flex items-center">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Parent Contribution
+                  <Label htmlFor="autoContribute" className="cursor-pointer">
+                    <Sparkles className="inline-block mr-1 h-4 w-4" />
+                    Automatic Contributions
                   </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Add your contribution to help your child reach this goal
+                  <p className="text-xs text-muted-foreground">
+                    Automatically contribute to this goal on a regular schedule
                   </p>
                 </div>
                 <Switch
-                  id="enableParentContribution"
-                  checked={enableParentContribution}
-                  onCheckedChange={handleEnableParentContribution}
+                  id="autoContribute"
+                  checked={autoContribute}
+                  onCheckedChange={handleAutoContributeToggle}
                 />
               </div>
               
-              {enableParentContribution && (
-                <div className="pl-6 border-l-2 border-muted space-y-4">
+              {autoContribute && (
+                <div className="pl-4 border-l-2 border-l-primary/20 space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="parentContribution">
-                      Your Contribution ($)
+                    <Label htmlFor="autoContributeAmount">
+                      Contribution Amount
                     </Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="parentContribution"
-                        value={formatCurrency(goal.parentContribution)}
-                        onChange={(e) => handleTextChange("parentContribution", e.target.value)}
+                        id="autoContributeAmount"
+                        value={formatCurrency(goal.autoContributeAmount)}
+                        onChange={(e) => handleAmountChange("autoContributeAmount", e.target.value)}
                         className="pl-9"
                         placeholder="0.00"
                       />
                     </div>
-                    {errors.parentContribution && (
-                      <p className="text-sm text-red-500">{errors.parentContribution}</p>
+                    {errors.autoContributeAmount && (
+                      <p className="text-sm text-red-500">{errors.autoContributeAmount}</p>
                     )}
                   </div>
                   
-                  <div className="bg-primary/10 p-4 rounded-md">
-                    <div className="flex items-start">
-                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2" />
-                      <div>
-                        <p className="text-sm font-medium">Match your child's savings</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Your contribution will be added immediately to help motivate your child to reach their goal.
-                        </p>
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="autoContributeFrequency">
+                      Contribution Frequency
+                    </Label>
+                    <Select
+                      value={goal.autoContributeFrequency || ""}
+                      onValueChange={handleFrequencyChange}
+                    >
+                      <SelectTrigger id="autoContributeFrequency">
+                        <SelectValue placeholder="Select frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contributionFrequencies.map((frequency) => (
+                          <SelectItem key={frequency.value} value={frequency.value}>
+                            {frequency.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.autoContributeFrequency && (
+                      <p className="text-sm text-red-500">{errors.autoContributeFrequency}</p>
+                    )}
                   </div>
                 </div>
               )}
-            </>
-          )}
-        </div>
+            </div>
+            
+            {isParentMode && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="parentContribution">
+                  <Sparkles className="inline-block mr-1 h-4 w-4" />
+                  Parent Contribution
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="parentContribution"
+                    value={formatCurrency(goal.parentContribution)}
+                    onChange={(e) => handleAmountChange("parentContribution", e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Add a one-time contribution from your account to help reach this goal
+                </p>
+                {errors.parentContribution && (
+                  <p className="text-sm text-red-500">{errors.parentContribution}</p>
+                )}
+              </div>
+            )}
+            
+            {currentGoal && goal.dueDate && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>Created on:</span>
+                    <span>{goal.createdAt ? formatDate(goal.createdAt) : "—"}</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span>Goal date:</span>
+                    <span>{formatDate(goal.dueDate)}</span>
+                  </div>
+                  
+                  {autoContribute && goal.autoContributeAmount && goal.autoContributeFrequency && (
+                    <div className="flex justify-between">
+                      <span>Auto-contribute:</span>
+                      <span>${parseFloat(goal.autoContributeAmount).toFixed(2)} {goal.autoContributeFrequency}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave}>
-            {currentGoal ? "Update" : "Create"} Goal
+            {currentGoal ? "Update Goal" : "Create Goal"}
           </Button>
         </DialogFooter>
       </DialogContent>

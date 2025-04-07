@@ -12,9 +12,8 @@ import {
 
 interface DatePickerProps {
   date?: Date;
-  onSelect?: (date?: Date) => void;
+  onSelect?: (date: Date | undefined) => void;
   placeholder?: string;
-  className?: string;
   disabled?: boolean;
 }
 
@@ -22,18 +21,23 @@ export function DatePicker({
   date,
   onSelect,
   placeholder = "Select date",
-  className,
   disabled = false,
 }: DatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleSelect = (selectedDate: Date | undefined) => {
+    if (onSelect) onSelect(selectedDate);
+    setOpen(false);
+  };
+
   return (
-    <Popover>
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
+          variant="outline"
           className={cn(
             "w-full justify-start text-left font-normal",
-            !date && "text-muted-foreground",
-            className
+            !date && "text-muted-foreground"
           )}
           disabled={disabled}
         >
@@ -45,7 +49,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onSelect}
+          onSelect={handleSelect}
           initialFocus
         />
       </PopoverContent>
@@ -54,101 +58,106 @@ export function DatePicker({
 }
 
 interface DateRangePickerProps {
-  from?: Date;
-  to?: Date;
-  onSelect?: (range: { from?: Date; to?: Date }) => void;
+  dateRange?: { from: Date; to?: Date };
+  onSelect?: (dateRange: { from: Date; to?: Date } | undefined) => void;
   placeholder?: string;
-  className?: string;
   disabled?: boolean;
+  align?: "center" | "start" | "end";
 }
 
 export function DateRangePicker({
-  from,
-  to,
+  dateRange,
   onSelect,
   placeholder = "Select date range",
-  className,
   disabled = false,
+  align = "start",
 }: DateRangePickerProps) {
-  const [date, setDate] = React.useState<{
-    from?: Date;
-    to?: Date;
-  }>({ from, to });
+  const [open, setOpen] = React.useState(false);
 
-  // Update internal state when props change
-  React.useEffect(() => {
-    setDate({ from, to });
-  }, [from, to]);
-
-  // When the internal state changes, call the onSelect callback
-  const handleSelect = (selectedDate: Date | undefined) => {
-    const newDate = {
-      from: date?.from,
-      to: date?.to,
-    };
-
-    // If no date selected yet or both dates selected, start a new selection
-    if (!newDate.from || (newDate.from && newDate.to)) {
-      newDate.from = selectedDate;
-      newDate.to = undefined;
-    } 
-    // If only 'from' is selected and the new date is after it
-    else if (selectedDate && newDate.from && selectedDate > newDate.from) {
-      newDate.to = selectedDate;
-    } 
-    // If only 'from' is selected and the new date is before it
-    else if (selectedDate && newDate.from && selectedDate < newDate.from) {
-      newDate.to = newDate.from;
-      newDate.from = selectedDate;
+  // Define this function to handle selection from the Calendar component
+  function handleSelect(range: { from: Date; to?: Date } | undefined) {
+    if (onSelect) onSelect(range);
+    if (range?.from && range?.to) {
+      setOpen(false);
     }
-    // If dates are the same, select just that one day
-    else if (selectedDate && newDate.from && selectedDate.getTime() === newDate.from.getTime()) {
-      newDate.to = selectedDate;
-    }
-
-    setDate(newDate);
-    
-    if (onSelect) {
-      onSelect(newDate);
-    }
-  };
-
-  const formattedDateRange = () => {
-    if (date?.from && date?.to) {
-      return `${format(date.from, "PP")} - ${format(date.to, "PP")}`;
-    }
-    if (date?.from) {
-      return `${format(date.from, "PP")} - ?`;
-    }
-    return placeholder;
-  };
+  }
 
   return (
-    <Popover>
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
+          variant="outline"
           className={cn(
             "w-full justify-start text-left font-normal",
-            !date?.from && "text-muted-foreground",
-            className
+            !dateRange && "text-muted-foreground"
           )}
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          <span>{formattedDateRange()}</span>
+          {dateRange?.from ? (
+            dateRange.to ? (
+              <>
+                {format(dateRange.from, "LLL dd, y")} -{" "}
+                {format(dateRange.to, "LLL dd, y")}
+              </>
+            ) : (
+              format(dateRange.from, "LLL dd, y")
+            )
+          ) : (
+            <span>{placeholder}</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align={align}>
+        <Calendar
+          mode="range"
+          selected={dateRange}
+          onSelect={handleSelect}
+          initialFocus
+          numberOfMonths={2}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function MonthPicker({
+  date,
+  onSelect,
+  placeholder = "Select month",
+  disabled = false,
+}: DatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleSelect = (selectedDate: Date | undefined) => {
+    if (onSelect) onSelect(selectedDate);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !date && "text-muted-foreground"
+          )}
+          disabled={disabled}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "MMMM yyyy") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
-          mode="range"
-          selected={{ 
-            from: date?.from,
-            to: date?.to
-          }}
+          mode="single"
+          selected={date}
           onSelect={handleSelect}
           initialFocus
-          numberOfMonths={2}
+          captionLayout="dropdown-buttons"
+          fromYear={1900}
+          toYear={2100}
         />
       </PopoverContent>
     </Popover>
