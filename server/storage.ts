@@ -5004,6 +5004,25 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     return order;
   }
+  
+  // Update restaurant order with modification token
+  async updateRestaurantOrderModificationToken(
+    id: number,
+    token: string,
+    expiry: Date
+  ): Promise<RestaurantOrder> {
+    const [order] = await db
+      .update(restaurantOrders)
+      .set({
+        modificationToken: token,
+        modificationTokenExpiry: expiry,
+        updatedAt: new Date()
+      })
+      .where(eq(restaurantOrders.id, id))
+      .returning();
+    
+    return order;
+  }
 
   async getRecentRestaurantOrders(merchantId: number, minutes: number): Promise<RestaurantOrder[]> {
     const cutoffTime = new Date();
