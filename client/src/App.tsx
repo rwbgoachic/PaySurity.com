@@ -19,6 +19,8 @@ import EmployerUsers from "./pages/employer/users";
 import EmployerBanking from "./pages/employer/banking";
 import EmployerPayroll from "./pages/employer/payroll";
 import EmployerSettings from "./pages/employer/settings";
+import EmployerExpenseReports from "./pages/employer/expense-reports";
+import EmployerExpenseReportDetail from "./pages/employer/expense-report-detail";
 import HubSpotSettings from "./pages/admin/hubspot-settings";
 import AnalyticsDashboard from "./pages/admin/analytics-dashboard";
 import EmployeeDashboard from "./pages/employee/dashboard";
@@ -26,6 +28,8 @@ import EmployeeTransactions from "./pages/employee/transactions";
 import EmployeeBanking from "./pages/employee/banking";
 import EmployeeFundRequests from "./pages/employee/fund-requests";
 import EmployeeSettings from "./pages/employee/settings";
+import EmployeeExpenseReports from "./pages/employee/expense-reports";
+import EmployeeExpenseReportDetail from "./pages/employee/expense-report-detail";
 import MerchantDashboard from "./pages/merchant/dashboard";
 import MerchantOnboarding from "./pages/merchant/onboarding";
 import MerchantVerification from "./pages/merchant/verification";
@@ -106,11 +110,15 @@ function Router() {
       <ProtectedRoute path="/employer/banking" component={EmployerBanking} />
       <ProtectedRoute path="/employer/payroll" component={EmployerPayroll} />
       <ProtectedRoute path="/employer/settings" component={EmployerSettings} />
+      <ProtectedRoute path="/employer/expense-reports" component={EmployerExpenseReports} />
+      <ProtectedRoute path="/employer/expense-reports/:id" component={EmployerExpenseReportDetail} />
       <ProtectedRoute path="/employee/dashboard" component={EmployeeDashboard} />
       <ProtectedRoute path="/employee/transactions" component={EmployeeTransactions} />
       <ProtectedRoute path="/employee/banking" component={EmployeeBanking} />
       <ProtectedRoute path="/employee/fund-requests" component={EmployeeFundRequests} />
       <ProtectedRoute path="/employee/settings" component={EmployeeSettings} />
+      <ProtectedRoute path="/employee/expense-reports" component={EmployeeExpenseReports} />
+      <ProtectedRoute path="/employee/expense-reports/:id" component={EmployeeExpenseReportDetail} />
       <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboard} />
       <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboarding} />
       <ProtectedRoute path="/merchant/verification" component={MerchantVerification} />

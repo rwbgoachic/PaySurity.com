@@ -86,19 +86,80 @@ export function WebSocketHandler() {
               break;
               
             case 'application-status-update':
-              const statusColors: Record<string, "default" | "destructive"> = {
+              const appStatusColors: Record<string, "default" | "destructive"> = {
                 pending: 'default',
                 reviewing: 'default',
                 approved: 'default',
                 rejected: 'destructive'
               };
               
-              const variant = statusColors[data.data.status as string] || 'default';
+              const appVariant = appStatusColors[data.data.status as string] || 'default';
               
               toast({
                 title: 'Application Status Updated',
                 description: `${data.data.businessName}'s application status changed to ${data.data.status}`,
-                variant: variant as "default" | "destructive"
+                variant: appVariant as "default" | "destructive"
+              });
+              break;
+
+            // Expense report notifications
+            case 'expense_report_created':
+              toast({
+                title: 'New Expense Report',
+                description: `A new expense report "${data.data.title}" has been created`,
+                variant: 'default'
+              });
+              break;
+              
+            case 'expense_report_submitted':
+              toast({
+                title: 'Expense Report Submitted',
+                description: `An expense report "${data.data.title}" has been submitted for approval`,
+                variant: 'default'
+              });
+              break;
+              
+            case 'expense_report_status_updated':
+              const expenseStatusColors: Record<string, "default" | "destructive"> = {
+                draft: 'default',
+                submitted: 'default',
+                under_review: 'default',
+                approved: 'default',
+                rejected: 'destructive',
+                paid: 'default',
+                canceled: 'destructive'
+              };
+              
+              const expenseVariant = expenseStatusColors[data.data.status as string] || 'default';
+              
+              toast({
+                title: 'Expense Report Updated',
+                description: `Expense report "${data.data.title}" status changed to ${data.data.status}`,
+                variant: expenseVariant as "default" | "destructive"
+              });
+              break;
+              
+            case 'expense_report_line_item_added':
+              toast({
+                title: 'New Expense Item',
+                description: `A new expense item was added to report #${data.data.expenseReportId}`,
+                variant: 'default'
+              });
+              break;
+              
+            case 'expense_report_line_item_updated':
+              toast({
+                title: 'Expense Item Updated',
+                description: `An expense item in report #${data.data.expenseReportId} was updated`,
+                variant: 'default'
+              });
+              break;
+              
+            case 'expense_report_line_item_deleted':
+              toast({
+                title: 'Expense Item Removed',
+                description: `An expense item was removed from report #${data.data.expenseReportId}`,
+                variant: 'default'
               });
               break;
               
