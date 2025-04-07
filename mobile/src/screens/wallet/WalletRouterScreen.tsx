@@ -1,221 +1,176 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Button } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Image, Text, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Card, Title, Paragraph } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import useWallet from '../../hooks/useWallet';
-import { colors, spacing, shadows, walletColorSchemes } from '../../utils/theme';
-
-import ParentWalletScreen from './ParentWalletScreen';
-import ChildWalletScreen from './ChildWalletScreen';
-import EmployerWalletScreen from './EmployerWalletScreen';
-import EmployeeWalletScreen from './EmployeeWalletScreen';
+import { useWallet, WalletType } from '../../hooks/useWallet';
+import { colors, spacing, borderRadius, walletColorSchemes, shadows, typography } from '../../utils/theme';
 
 /**
- * WalletRouterScreen
- * 
- * This component routes the user to the appropriate wallet screen based on their role:
- * - Parent: For family head accounts managing children's wallets
- * - Child: For dependent accounts connected to a parent wallet
- * - Employer: For business accounts managing employee payroll
- * - Employee: For employee accounts connected to an employer wallet
- * 
- * If no wallet exists, it shows a wallet selection screen to create a new wallet.
+ * WalletRouterScreen serves as the entry point to wallet functionality
+ * It allows users to choose their wallet type (parent, child, employer, employee)
+ * and routes them to the appropriate wallet screen
  */
 const WalletRouterScreen = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { setWalletType, currentWallet } = useWallet();
   const navigation = useNavigation();
-  const { currentWallet, loading, error, setWalletType, getCurrentWalletInfo } = useWallet();
-  
-  // Local state
-  const [selectingWallet, setSelectingWallet] = useState(false);
-  
-  // Load wallet info on mount
+  const insets = useSafeAreaInsets();
+
+  // Redirect to specific wallet screen if user already has a wallet
   useEffect(() => {
-    const loadWalletInfo = async () => {
-      try {
-        const walletInfo = await getCurrentWalletInfo();
-        
-        // If no wallet exists, show selection screen
-        if (!walletInfo) {
-          setSelectingWallet(true);
-        }
-      } catch (error) {
-        console.error('Error loading wallet info:', error);
-        setSelectingWallet(true);
-      }
-    };
-    
-    loadWalletInfo();
-  }, []);
-  
-  // Create new wallet and navigate to the appropriate screen
-  const handleCreateWallet = async (type: 'parent' | 'child' | 'employer' | 'employee') => {
-    try {
-      await setWalletType(type);
-      setSelectingWallet(false);
-    } catch (error) {
-      console.error('Error creating wallet:', error);
+    if (currentWallet) {
+      redirectToWalletScreen(currentWallet.type);
+    }
+  }, [currentWallet]);
+
+  // Navigate to specific wallet screen based on type
+  const redirectToWalletScreen = (type: WalletType) => {
+    if (type === 'parent') {
+      navigation.navigate('ParentWallet' as never);
+    } else if (type === 'child') {
+      navigation.navigate('ChildWallet' as never);
+    } else if (type === 'employer') {
+      navigation.navigate('EmployerWallet' as never);
+    } else if (type === 'employee') {
+      navigation.navigate('EmployeeWallet' as never);
     }
   };
-  
-  // If loading
-  if (loading && !selectingWallet) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your wallet...</Text>
+
+  // Handle wallet type selection
+  const handleWalletTypeSelect = async (type: WalletType) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Set wallet type in context
+      await setWalletType(type);
+      
+      // Navigate to appropriate wallet screen
+      redirectToWalletScreen(type);
+    } catch (err: any) {
+      setError(err.message || 'Failed to set wallet type. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Wallet type options
+  const walletTypes: { type: WalletType; title: string; description: string; icon: string }[] = [
+    {
+      type: 'parent',
+      title: 'Family Wallet - Parent',
+      description: 'Manage your family finances, set up allowances, and track your children\'s spending.',
+      icon: 'account-child-circle',
+    },
+    {
+      type: 'child',
+      title: 'Family Wallet - Child', 
+      description: 'Manage your allowance, create savings goals, and learn financial responsibility.',
+      icon: 'account-child',
+    },
+    {
+      type: 'employer',
+      title: 'Business Wallet - Employer',
+      description: 'Manage payroll, expenses, and employee financial benefits for your business.',
+      icon: 'domain',
+    },
+    {
+      type: 'employee',
+      title: 'Business Wallet - Employee',
+      description: 'Receive payments, manage benefits, and submit expenses to your employer.',
+      icon: 'account-tie',
+    },
+  ];
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Choose Your Wallet</Text>
+        <Text style={styles.headerSubtitle}>
+          Select the wallet type that best fits your needs
+        </Text>
       </View>
-    );
-  }
-  
-  // If error and not selecting wallet
-  if (error && !selectingWallet) {
-    return (
-      <View style={styles.errorContainer}>
-        <Icon name="alert-circle" size={48} color={colors.error} />
-        <Text style={styles.errorTitle}>Something went wrong</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <Button 
-          mode="contained" 
-          onPress={() => getCurrentWalletInfo()}
-          style={styles.retryButton}
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Setting up your wallet...</Text>
+        </View>
+      ) : (
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          Retry
-        </Button>
-      </View>
-    );
-  }
-  
-  // If selecting wallet type (no wallet exists yet)
-  if (selectingWallet || !currentWallet) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Choose Your Wallet Type</Text>
-          <Text style={styles.headerSubtitle}>
-            Select the type of wallet that best suits your needs. You can have multiple wallet types.
-          </Text>
-        </View>
-        
-        <View style={styles.optionsContainer}>
-          {/* Personal Wallets Section */}
-          <Text style={styles.sectionTitle}>Personal Wallets</Text>
-          
-          {/* Parent Wallet Option */}
-          <View style={styles.walletOption}>
-            <View style={[styles.walletIconContainer, { backgroundColor: walletColorSchemes.parent.primary }]}>
-              <Icon name="account-supervisor" size={32} color="#fff" />
+          {error && (
+            <View style={styles.errorContainer}>
+              <Icon name="alert-circle" size={24} color={colors.error} />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
-            <View style={styles.walletInfoContainer}>
-              <Text style={styles.walletTitle}>Parent Wallet</Text>
-              <Text style={styles.walletDescription}>
-                For managing family finances, controlling children's accounts, setting allowances, and reward tasks.
-              </Text>
-              <Button 
-                mode="contained" 
-                onPress={() => handleCreateWallet('parent')}
-                style={[styles.walletButton, { backgroundColor: walletColorSchemes.parent.primary }]}
-              >
-                Set Up Parent Wallet
-              </Button>
-            </View>
+          )}
+
+          {walletTypes.map((wallet) => (
+            <TouchableOpacity
+              key={wallet.type}
+              style={styles.walletCard}
+              onPress={() => handleWalletTypeSelect(wallet.type)}
+              disabled={loading}
+            >
+              <View style={[
+                styles.walletIconContainer,
+                { backgroundColor: walletColorSchemes[wallet.type].primary }
+              ]}>
+                <Icon 
+                  name={wallet.icon} 
+                  size={32} 
+                  color="white" 
+                />
+              </View>
+              <View style={styles.walletContent}>
+                <Text style={styles.walletTitle}>{wallet.title}</Text>
+                <Text style={styles.walletDescription}>{wallet.description}</Text>
+              </View>
+              <Icon 
+                name="chevron-right" 
+                size={24} 
+                color={colors.textSecondary} 
+                style={styles.chevron}
+              />
+            </TouchableOpacity>
+          ))}
+
+          <View style={styles.infoSection}>
+            <Card style={styles.infoCard}>
+              <Card.Content>
+                <Title style={styles.infoTitle}>Why Choose PaySurity?</Title>
+                <Paragraph style={styles.infoParagraph}>
+                  Our digital wallet solutions offer secure transactions, 
+                  comprehensive financial management, and tailored features 
+                  for families and businesses.
+                </Paragraph>
+                <View style={styles.featureRow}>
+                  <Icon name="shield-check" size={20} color={colors.success} />
+                  <Text style={styles.featureText}>Bank-level security</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  <Icon name="cash-multiple" size={20} color={colors.success} />
+                  <Text style={styles.featureText}>Multiple payment methods</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  <Icon name="chart-line" size={20} color={colors.success} />
+                  <Text style={styles.featureText}>Financial insights</Text>
+                </View>
+              </Card.Content>
+            </Card>
           </View>
-          
-          {/* Child Wallet Option */}
-          <View style={styles.walletOption}>
-            <View style={[styles.walletIconContainer, { backgroundColor: walletColorSchemes.child.primary }]}>
-              <Icon name="account-child" size={32} color="#fff" />
-            </View>
-            <View style={styles.walletInfoContainer}>
-              <Text style={styles.walletTitle}>Child Wallet</Text>
-              <Text style={styles.walletDescription}>
-                For kids and teenagers to manage allowances, save money, complete tasks, and learn financial skills.
-              </Text>
-              <Button 
-                mode="contained" 
-                onPress={() => handleCreateWallet('child')}
-                style={[styles.walletButton, { backgroundColor: walletColorSchemes.child.primary }]}
-              >
-                Set Up Child Wallet
-              </Button>
-            </View>
-          </View>
-          
-          {/* Business Wallets Section */}
-          <Text style={styles.sectionTitle}>Business Wallets</Text>
-          
-          {/* Employer Wallet Option */}
-          <View style={styles.walletOption}>
-            <View style={[styles.walletIconContainer, { backgroundColor: walletColorSchemes.employer.primary }]}>
-              <Icon name="domain" size={32} color="#fff" />
-            </View>
-            <View style={styles.walletInfoContainer}>
-              <Text style={styles.walletTitle}>Employer Wallet</Text>
-              <Text style={styles.walletDescription}>
-                For businesses to manage employee payroll, expense reimbursements, track time, and handle benefits.
-              </Text>
-              <Button 
-                mode="contained" 
-                onPress={() => handleCreateWallet('employer')}
-                style={[styles.walletButton, { backgroundColor: walletColorSchemes.employer.primary }]}
-              >
-                Set Up Employer Wallet
-              </Button>
-            </View>
-          </View>
-          
-          {/* Employee Wallet Option */}
-          <View style={styles.walletOption}>
-            <View style={[styles.walletIconContainer, { backgroundColor: walletColorSchemes.employee.primary }]}>
-              <Icon name="account-tie" size={32} color="#fff" />
-            </View>
-            <View style={styles.walletInfoContainer}>
-              <Text style={styles.walletTitle}>Employee Wallet</Text>
-              <Text style={styles.walletDescription}>
-                For receiving salary, submitting time entries, expense reports, and managing workplace benefits.
-              </Text>
-              <Button 
-                mode="contained" 
-                onPress={() => handleCreateWallet('employee')}
-                style={[styles.walletButton, { backgroundColor: walletColorSchemes.employee.primary }]}
-              >
-                Set Up Employee Wallet
-              </Button>
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-  
-  // Router to appropriate wallet screen based on type
-  switch (currentWallet.type) {
-    case 'parent':
-      return <ParentWalletScreen />;
-    case 'child':
-      return <ChildWalletScreen />;
-    case 'employer':
-      return <EmployerWalletScreen />;
-    case 'employee':
-      return <EmployeeWalletScreen />;
-    default:
-      return (
-        <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={48} color={colors.error} />
-          <Text style={styles.errorTitle}>Invalid Wallet Type</Text>
-          <Text style={styles.errorText}>The wallet type '{currentWallet.type}' is not recognized.</Text>
-          <Button 
-            mode="contained" 
-            onPress={() => setSelectingWallet(true)}
-            style={styles.retryButton}
-          >
-            Select Different Wallet
-          </Button>
-        </View>
-      );
-  }
+        </ScrollView>
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -223,103 +178,118 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  errorText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  retryButton: {
-    paddingHorizontal: spacing.md,
-  },
-  headerContainer: {
-    padding: spacing.lg,
-    backgroundColor: colors.backgroundDark,
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.backgroundDark,
+    borderBottomColor: colors.divider,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: typography.fontSizes['2xl'],
+    fontWeight: typography.fontWeights.bold as any,
     color: colors.text,
     marginBottom: spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.normal as any,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
-  optionsContainer: {
+  scrollView: {
     flex: 1,
-    padding: spacing.md,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingBottom: spacing['3xl'],
   },
-  walletOption: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSizes.md,
+    color: colors.textSecondary,
+  },
+  errorContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: 12, // Using value directly from our theme's borderRadius.md
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadows.medium,
+  },
+  errorText: {
+    flex: 1,
+    marginLeft: spacing.sm,
+    fontSize: typography.fontSizes.md,
+    color: colors.error,
+  },
+  walletCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   walletIconContainer: {
     width: 60,
     height: 60,
-    borderRadius: 30, // Half of width/height for circle
-    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.small,
+    marginRight: spacing.md,
   },
-  walletInfoContainer: {
+  walletContent: {
     flex: 1,
-    marginLeft: spacing.md,
   },
   walletTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: typography.fontSizes.lg,
+    fontWeight: typography.fontWeights.semibold as any,
     color: colors.text,
     marginBottom: spacing.xs,
   },
   walletDescription: {
-    fontSize: 14,
+    fontSize: typography.fontSizes.sm,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
-    lineHeight: 20,
+    lineHeight: typography.fontSizes.sm * 1.4,
   },
-  walletButton: {
-    alignSelf: 'flex-start',
+  chevron: {
+    marginLeft: spacing.sm,
+  },
+  infoSection: {
+    marginTop: spacing.xl,
+  },
+  infoCard: {
+    borderRadius: borderRadius.lg,
+    ...shadows.sm,
+  },
+  infoTitle: {
+    fontSize: typography.fontSizes.xl,
+    fontWeight: typography.fontWeights.bold as any,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  infoParagraph: {
+    fontSize: typography.fontSizes.md,
+    color: colors.textSecondary,
+    lineHeight: typography.fontSizes.md * 1.5,
+    marginBottom: spacing.md,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  featureText: {
+    fontSize: typography.fontSizes.md,
+    color: colors.text,
+    marginLeft: spacing.sm,
   },
 });
 

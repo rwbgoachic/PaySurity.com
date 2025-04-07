@@ -1,159 +1,140 @@
-import React, { useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+import { useState, useCallback } from 'react';
 import ApiService from '../services/api';
 
-// Define API response interface
-export interface ApiResponse<T = any> {
-  data: T;
-  headers?: Headers;
+/**
+ * Custom hook to handle API requests with loading and error states
+ * This hook provides a consistent way to make API requests across the application
+ */
+interface UseApiReturnType {
+  loading: boolean;
+  error: string | null;
+  get: <T>(endpoint: string, params?: Record<string, any>) => Promise<T | null>;
+  post: <T>(endpoint: string, data?: any) => Promise<T | null>;
+  put: <T>(endpoint: string, data?: any) => Promise<T | null>;
+  delete: <T>(endpoint: string) => Promise<T | null>;
+  uploadFile: <T>(
+    endpoint: string,
+    fileUri: string,
+    formName?: string,
+    mimeType?: string,
+    extraData?: Record<string, string>
+  ) => Promise<T | null>;
+  clearError: () => void;
 }
 
-// Custom hook for API calls with loading and error states
-export const useApi = () => {
+const useApi = (): UseApiReturnType => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Wrapper for GET requests
-  const get = useCallback(async <T = any>(endpoint: string, params?: any): Promise<ApiResponse<T>> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await ApiService.get(endpoint, params);
-      const data = await response.json();
-      
-      return {
-        data,
-        headers: response.headers,
-      };
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Wrapper for POST requests
-  const post = useCallback(async <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await ApiService.post(endpoint, data);
-      const responseData = await response.json();
-      
-      return {
-        data: responseData,
-        headers: response.headers,
-      };
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Wrapper for PUT requests
-  const put = useCallback(async <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await ApiService.put(endpoint, data);
-      const responseData = await response.json();
-      
-      return {
-        data: responseData,
-        headers: response.headers,
-      };
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Wrapper for DELETE requests
-  const del = useCallback(async <T = any>(endpoint: string): Promise<ApiResponse<T>> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await ApiService.delete(endpoint);
-      const data = await response.json();
-      
-      return {
-        data,
-        headers: response.headers,
-      };
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Upload file method
-  const uploadFile = useCallback(async <T = any>(
-    endpoint: string, 
-    fileUri: string, 
-    formName: string = 'file',
-    mimeType: string = 'image/jpeg',
-    extraData?: Record<string, string>
-  ): Promise<ApiResponse<T>> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await ApiService.uploadFile(endpoint, fileUri, formName, mimeType, extraData);
-      const data = await response.json();
-      
-      return {
-        data,
-        headers: response.headers,
-      };
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during file upload');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Set authentication token
-  const setAuthToken = useCallback(async (token: string): Promise<void> => {
-    try {
-      await ApiService.setAuthToken(token);
-    } catch (err: any) {
-      setError(err.message || 'Failed to set authentication token');
-      throw err;
-    }
-  }, []);
-
-  // Clear authentication token
-  const clearAuthToken = useCallback(async (): Promise<void> => {
-    try {
-      await ApiService.clearAuthToken();
-    } catch (err: any) {
-      setError(err.message || 'Failed to clear authentication token');
-      throw err;
-    }
-  }, []);
-
-  // Show API error as an alert
-  const showError = useCallback((message: string = 'An error occurred') => {
-    Alert.alert('Error', message);
-  }, []);
-
-  // Clear current error
+  /**
+   * Clear any existing error messages
+   */
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  /**
+   * Generic request handler that wraps the ApiService methods
+   */
+  const handleRequest = useCallback(async <T>(
+    requestFn: () => Promise<Response>
+  ): Promise<T | null> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await requestFn();
+
+      if (!response.ok) {
+        let errorMessage = 'An error occurred';
+        
+        try {
+          // Try to get a more specific error message from the API
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || `Error: ${response.status} ${response.statusText}`;
+        } catch (parseError) {
+          errorMessage = `Error: ${response.status} ${response.statusText}`;
+        }
+        
+        setError(errorMessage);
+        setLoading(false);
+        return null;
+      }
+
+      // Handle empty responses (like for DELETE operations)
+      if (response.status === 204) {
+        setLoading(false);
+        return {} as T;
+      }
+
+      const data = await response.json();
+      setLoading(false);
+      return data as T;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Network error occurred';
+      setError(errorMessage);
+      setLoading(false);
+      return null;
+    }
+  }, []);
+
+  /**
+   * GET request handler
+   */
+  const get = useCallback(<T>(
+    endpoint: string,
+    params?: Record<string, any>
+  ): Promise<T | null> => {
+    return handleRequest<T>(() => ApiService.get(endpoint, params));
+  }, [handleRequest]);
+
+  /**
+   * POST request handler
+   */
+  const post = useCallback(<T>(
+    endpoint: string,
+    data?: any
+  ): Promise<T | null> => {
+    return handleRequest<T>(() => ApiService.post(endpoint, data));
+  }, [handleRequest]);
+
+  /**
+   * PUT request handler
+   */
+  const put = useCallback(<T>(
+    endpoint: string,
+    data?: any
+  ): Promise<T | null> => {
+    return handleRequest<T>(() => ApiService.put(endpoint, data));
+  }, [handleRequest]);
+
+  /**
+   * DELETE request handler
+   */
+  const deleteRequest = useCallback(<T>(
+    endpoint: string
+  ): Promise<T | null> => {
+    return handleRequest<T>(() => ApiService.delete(endpoint));
+  }, [handleRequest]);
+
+  /**
+   * File upload handler
+   */
+  const uploadFile = useCallback(<T>(
+    endpoint: string,
+    fileUri: string,
+    formName: string = 'file',
+    mimeType: string = 'image/jpeg',
+    extraData?: Record<string, string>
+  ): Promise<T | null> => {
+    return handleRequest<T>(() => ApiService.uploadFile(
+      endpoint,
+      fileUri,
+      formName,
+      mimeType,
+      extraData
+    ));
+  }, [handleRequest]);
 
   return {
     loading,
@@ -161,11 +142,8 @@ export const useApi = () => {
     get,
     post,
     put,
-    delete: del,
+    delete: deleteRequest,
     uploadFile,
-    setAuthToken,
-    clearAuthToken,
-    showError,
     clearError,
   };
 };
