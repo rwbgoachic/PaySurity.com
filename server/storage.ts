@@ -2,6 +2,7 @@ import {
   users, wallets, transactions, bankAccounts, fundRequests, 
   payrollEntries, timeEntries, accountRequests, spendingControls, 
   educationalContent, savingsGoals, accountingIntegrations,
+  expenseReports, expenseLineItems,
   // New merchant and value-added service entities
   merchantProfiles, paymentGateways, pointOfSaleSystems, loyaltyPrograms, 
   customerLoyaltyAccounts, promotionalCampaigns, analyticsReports,
@@ -33,6 +34,8 @@ import {
   type EducationalContent, type InsertEducationalContent,
   type SavingsGoal, type InsertSavingsGoal,
   type AccountingIntegration, type InsertAccountingIntegration,
+  type ExpenseReport, type InsertExpenseReport,
+  type ExpenseLineItem, type InsertExpenseLineItem,
   
   // New merchant and value-added service types
   type MerchantProfile, type InsertMerchantProfile,
@@ -201,6 +204,22 @@ export interface IStorage {
   createAccountingIntegration(accountingIntegration: InsertAccountingIntegration): Promise<AccountingIntegration>;
   updateAccountingIntegration(id: number, data: Partial<InsertAccountingIntegration>): Promise<AccountingIntegration>;
   deleteAccountingIntegration(id: number): Promise<void>;
+  
+  // Expense Reports operations
+  getExpenseReport(id: number): Promise<ExpenseReport | undefined>;
+  getExpenseReportsByUserId(userId: number): Promise<ExpenseReport[]>;
+  getExpenseReportsByEmployerId(employerId: number): Promise<ExpenseReport[]>;
+  getPendingExpenseReportsByEmployerId(employerId: number): Promise<ExpenseReport[]>;
+  createExpenseReport(expenseReport: InsertExpenseReport): Promise<ExpenseReport>;
+  updateExpenseReportStatus(id: number, status: string, reviewedBy?: number, reviewedAt?: Date, rejectionReason?: string): Promise<ExpenseReport>;
+  updateExpenseReportTotalAmount(id: number, totalAmount: string): Promise<ExpenseReport>;
+  
+  // Expense Line Items operations
+  getExpenseLineItem(id: number): Promise<ExpenseLineItem | undefined>;
+  getExpenseLineItemsByReportId(expenseReportId: number): Promise<ExpenseLineItem[]>;
+  createExpenseLineItem(lineItem: InsertExpenseLineItem): Promise<ExpenseLineItem>;
+  updateExpenseLineItem(id: number, data: Partial<InsertExpenseLineItem>): Promise<ExpenseLineItem>;
+  deleteExpenseLineItem(id: number): Promise<void>;
   
   // Merchant Profile operations
   getMerchantProfile(id: number): Promise<MerchantProfile | undefined>;
@@ -1622,6 +1641,121 @@ export class DatabaseStorage implements IStorage {
     if (!deletedIntegration) {
       throw new Error(`Accounting integration with id ${id} not found`);
     }
+  }
+
+  // Expense Reports operations
+  async getExpenseReport(id: number): Promise<ExpenseReport | undefined> {
+    const [report] = await db.select().from(expenseReports).where(eq(expenseReports.id, id));
+    return report;
+  }
+
+  async getExpenseReportsByUserId(userId: number): Promise<ExpenseReport[]> {
+    return await db
+      .select()
+      .from(expenseReports)
+      .where(eq(expenseReports.userId, userId))
+      .orderBy(desc(expenseReports.createdAt));
+  }
+
+  async getExpenseReportsByEmployerId(employerId: number): Promise<ExpenseReport[]> {
+    return await db
+      .select()
+      .from(expenseReports)
+      .where(eq(expenseReports.employerId, employerId))
+      .orderBy(desc(expenseReports.createdAt));
+  }
+
+  async getPendingExpenseReportsByEmployerId(employerId: number): Promise<ExpenseReport[]> {
+    return await db
+      .select()
+      .from(expenseReports)
+      .where(and(
+        eq(expenseReports.employerId, employerId),
+        eq(expenseReports.status, 'pending')
+      ))
+      .orderBy(desc(expenseReports.createdAt));
+  }
+
+  async createExpenseReport(expenseReport: InsertExpenseReport): Promise<ExpenseReport> {
+    const [report] = await db
+      .insert(expenseReports)
+      .values(expenseReport)
+      .returning();
+    return report;
+  }
+
+  async updateExpenseReportStatus(
+    id: number, 
+    status: string, 
+    reviewedBy?: number, 
+    reviewedAt?: Date, 
+    rejectionReason?: string
+  ): Promise<ExpenseReport> {
+    const [updatedReport] = await db
+      .update(expenseReports)
+      .set({
+        status,
+        reviewedBy: reviewedBy || null,
+        reviewedAt: reviewedAt || null,
+        rejectionReason: rejectionReason || null,
+        updatedAt: new Date()
+      })
+      .where(eq(expenseReports.id, id))
+      .returning();
+    return updatedReport;
+  }
+
+  async updateExpenseReportTotalAmount(
+    id: number,
+    totalAmount: string
+  ): Promise<ExpenseReport> {
+    const [updatedReport] = await db
+      .update(expenseReports)
+      .set({
+        totalAmount,
+        updatedAt: new Date()
+      })
+      .where(eq(expenseReports.id, id))
+      .returning();
+    return updatedReport;
+  }
+
+  // Expense Line Items operations
+  async getExpenseLineItem(id: number): Promise<ExpenseLineItem | undefined> {
+    const [lineItem] = await db.select().from(expenseLineItems).where(eq(expenseLineItems.id, id));
+    return lineItem;
+  }
+
+  async getExpenseLineItemsByReportId(expenseReportId: number): Promise<ExpenseLineItem[]> {
+    return await db
+      .select()
+      .from(expenseLineItems)
+      .where(eq(expenseLineItems.expenseReportId, expenseReportId))
+      .orderBy(asc(expenseLineItems.date));
+  }
+
+  async createExpenseLineItem(lineItem: InsertExpenseLineItem): Promise<ExpenseLineItem> {
+    const [item] = await db
+      .insert(expenseLineItems)
+      .values(lineItem)
+      .returning();
+    return item;
+  }
+
+  async updateExpenseLineItem(id: number, data: Partial<InsertExpenseLineItem>): Promise<ExpenseLineItem> {
+    const [updatedItem] = await db
+      .update(expenseLineItems)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(expenseLineItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async deleteExpenseLineItem(id: number): Promise<void> {
+    await db.delete(expenseLineItems).where(eq(expenseLineItems.id, id));
   }
 
   // Merchant Profile operations

@@ -19,6 +19,8 @@ import {
   referralStatusEnum,
   insertPaymentGatewaySchema,
   insertHelcimIntegrationSchema,
+  insertExpenseReportSchema,
+  insertExpenseLineItemSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -291,6 +293,384 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching fund requests:", error);
       res.status(500).json({ error: "Failed to fetch fund requests" });
+    }
+  });
+  
+  // Expense Reports API
+  app.get("/api/expense-reports", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const expenseReports = await storage.getExpenseReportsByUserId(req.user.id);
+      res.json(expenseReports);
+    } catch (error) {
+      console.error("Error fetching expense reports:", error);
+      res.status(500).json({ error: "Failed to fetch expense reports" });
+    }
+  });
+  
+  app.post("/api/expense-reports", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const reportData = insertExpenseReportSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+        status: "draft"
+      });
+      
+      const report = await storage.createExpenseReport(reportData);
+      
+      // Broadcast report creation event to employer using both classic and new methods
+      if (reportData.employerId) {
+        // Classic broadcast method
+        broadcast(`user-${reportData.employerId}`, {
+          type: 'expense_report_created',
+          data: report
+        });
+        
+        // New employer notification method for real-time updates
+        notifyEmployer(reportData.employerId, {
+          type: 'new_expense_report_draft',
+          report: {
+            id: report.id,
+            title: report.title,
+            status: report.status,
+            createdAt: report.createdAt,
+            employeeId: report.userId
+          }
+        });
+      }
+      
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating expense report:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid expense report data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create expense report" });
+    }
+  });
+  
+  app.get("/api/expense-reports/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const reportId = parseInt(req.params.id);
+      const report = await storage.getExpenseReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Expense report not found" });
+      }
+      
+      // Ensure user has access to this report (either as employee or employer)
+      if (report.userId !== req.user.id && report.employerId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const lineItems = await storage.getExpenseLineItemsByReportId(reportId);
+      
+      res.json({
+        ...report,
+        lineItems
+      });
+    } catch (error) {
+      console.error("Error fetching expense report:", error);
+      res.status(500).json({ error: "Failed to fetch expense report" });
+    }
+  });
+  
+  app.patch("/api/expense-reports/:id/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const reportId = parseInt(req.params.id);
+      const report = await storage.getExpenseReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Expense report not found" });
+      }
+      
+      // For submitting a report (employee)
+      if (req.body.status === "submitted" && report.userId === req.user.id) {
+        const submittedReport = await storage.updateExpenseReportStatus(
+          reportId, 
+          "submitted",
+          null,
+          null,
+          null
+        );
+        
+        // Notify employer about the submitted report using both classic and new methods
+        broadcast(`user-${report.employerId}`, {
+          type: 'expense_report_submitted',
+          data: submittedReport
+        });
+        
+        // Use our new employer notification method
+        if (report.employerId) {
+          notifyEmployer(report.employerId, {
+            type: 'new_expense_report',
+            report: {
+              id: report.id,
+              title: report.title,
+              totalAmount: report.totalAmount,
+              submissionDate: new Date().toISOString(),
+              employeeId: report.userId
+            }
+          });
+        }
+        
+        return res.json(submittedReport);
+      }
+      
+      // For reviewing/approving/rejecting a report (employer)
+      if (report.employerId === req.user.id) {
+        const { status, rejectionReason } = req.body;
+        
+        if (!["under_review", "approved", "rejected", "paid"].includes(status)) {
+          return res.status(400).json({ error: "Invalid status" });
+        }
+        
+        if (status === "rejected" && !rejectionReason) {
+          return res.status(400).json({ error: "Rejection reason is required" });
+        }
+        
+        const updatedReport = await storage.updateExpenseReportStatus(
+          reportId,
+          status,
+          req.user.id,
+          new Date(),
+          rejectionReason
+        );
+        
+        // Notify employee about the status change using both classic and new method
+        broadcast(`user-${report.userId}`, {
+          type: 'expense_report_status_changed',
+          data: updatedReport
+        });
+        
+        // Use our new employee notification method
+        if (report.userId) {
+          notifyEmployee(report.userId, {
+            type: 'expense_report_status_update',
+            report: {
+              id: report.id,
+              title: report.title,
+              status: status,
+              totalAmount: report.totalAmount,
+              reviewDate: new Date().toISOString(),
+              reviewNotes: status === "rejected" ? rejectionReason : null
+            }
+          });
+        }
+        
+        return res.json(updatedReport);
+      }
+      
+      return res.status(403).json({ error: "Forbidden" });
+    } catch (error) {
+      console.error("Error updating expense report status:", error);
+      res.status(500).json({ error: "Failed to update expense report status" });
+    }
+  });
+  
+  app.post("/api/expense-reports/:id/line-items", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const reportId = parseInt(req.params.id);
+      const report = await storage.getExpenseReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Expense report not found" });
+      }
+      
+      // Only the owner of the report can add line items
+      if (report.userId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Cannot add line items to submitted or processed reports
+      if (report.status !== "draft") {
+        return res.status(400).json({ error: "Cannot add items to a submitted or processed report" });
+      }
+      
+      const lineItemData = insertExpenseLineItemSchema.parse({
+        ...req.body,
+        expenseReportId: reportId
+      });
+      
+      const lineItem = await storage.createExpenseLineItem(lineItemData);
+      
+      // Update the total amount of the expense report
+      const lineItems = await storage.getExpenseLineItemsByReportId(reportId);
+      const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.amount.toString()), 0).toString();
+      
+      await storage.updateExpenseReportTotalAmount(reportId, totalAmount);
+      
+      // Notify about the new line item
+      notifyExpenseLineItemChange(
+        { userId: report.userId, employerId: report.employerId }, 
+        { ...lineItem, reportStatus: report.status }, 
+        'added'
+      );
+      
+      res.status(201).json(lineItem);
+    } catch (error) {
+      console.error("Error adding expense line item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid line item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to add expense line item" });
+    }
+  });
+  
+  app.patch("/api/expense-reports/line-items/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const lineItemId = parseInt(req.params.id);
+      const lineItem = await storage.getExpenseLineItem(lineItemId);
+      
+      if (!lineItem) {
+        return res.status(404).json({ error: "Expense line item not found" });
+      }
+      
+      const report = await storage.getExpenseReport(lineItem.expenseReportId);
+      
+      // Only the owner of the report can update line items
+      if (report.userId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Cannot update line items in submitted or processed reports
+      if (report.status !== "draft") {
+        return res.status(400).json({ error: "Cannot modify items in a submitted or processed report" });
+      }
+      
+      const updatedLineItem = await storage.updateExpenseLineItem(lineItemId, req.body);
+      
+      // Update the total amount of the expense report
+      const lineItems = await storage.getExpenseLineItemsByReportId(report.id);
+      const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.amount.toString()), 0).toString();
+      
+      await storage.updateExpenseReportTotalAmount(report.id, totalAmount);
+      
+      // Notify about the updated line item
+      notifyExpenseLineItemChange(
+        { userId: report.userId, employerId: report.employerId }, 
+        { ...updatedLineItem, reportStatus: report.status }, 
+        'updated'
+      );
+      
+      res.json(updatedLineItem);
+    } catch (error) {
+      console.error("Error updating expense line item:", error);
+      res.status(500).json({ error: "Failed to update expense line item" });
+    }
+  });
+  
+  app.delete("/api/expense-reports/line-items/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const lineItemId = parseInt(req.params.id);
+      const lineItem = await storage.getExpenseLineItem(lineItemId);
+      
+      if (!lineItem) {
+        return res.status(404).json({ error: "Expense line item not found" });
+      }
+      
+      const report = await storage.getExpenseReport(lineItem.expenseReportId);
+      
+      // Only the owner of the report can delete line items
+      if (report.userId !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Cannot delete line items in submitted or processed reports
+      if (report.status !== "draft") {
+        return res.status(400).json({ error: "Cannot delete items from a submitted or processed report" });
+      }
+      
+      // Save the line item data before deleting it for the notification
+      const lineItemData = { ...lineItem, reportStatus: report.status };
+      
+      // Delete the line item
+      await storage.deleteExpenseLineItem(lineItemId);
+      
+      // Update the total amount of the expense report
+      const lineItems = await storage.getExpenseLineItemsByReportId(report.id);
+      const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.amount.toString()), 0).toString();
+      
+      await storage.updateExpenseReportTotalAmount(report.id, totalAmount);
+      
+      // Notify about the deleted line item
+      notifyExpenseLineItemChange(
+        { userId: report.userId, employerId: report.employerId }, 
+        lineItemData, 
+        'deleted'
+      );
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting expense line item:", error);
+      res.status(500).json({ error: "Failed to delete expense line item" });
+    }
+  });
+  
+  // For employers to get all pending expense reports from their employees
+  app.get("/api/employer/expense-reports/pending", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Verify the user is an employer
+      if (!req.user.role.includes('employer')) {
+        return res.status(403).json({ error: "Only employers can access this endpoint" });
+      }
+      
+      const pendingReports = await storage.getPendingExpenseReportsByEmployerId(req.user.id);
+      res.json(pendingReports);
+    } catch (error) {
+      console.error("Error fetching pending expense reports:", error);
+      res.status(500).json({ error: "Failed to fetch pending expense reports" });
+    }
+  });
+  
+  // For employers to get all expense reports from their employees
+  app.get("/api/employer/expense-reports", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      // Verify the user is an employer
+      if (!req.user.role.includes('employer')) {
+        return res.status(403).json({ error: "Only employers can access this endpoint" });
+      }
+      
+      const reports = await storage.getExpenseReportsByEmployerId(req.user.id);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching employer expense reports:", error);
+      res.status(500).json({ error: "Failed to fetch employer expense reports" });
     }
   });
   
@@ -1271,6 +1651,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     channels?: string[];
     affiliateId?: number;
     isAffiliate?: boolean;
+    isEmployer?: boolean;
+    isEmployee?: boolean;
+    employerId?: number;
+    walletId?: number;
     lastActivity?: number;
   }
 
@@ -1501,6 +1885,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }));
               }
             }
+            
+            // Special handling for employer wallet
+            if (data.channel === 'employer_wallet' && data.userId) {
+              ws.userId = data.userId;
+              
+              try {
+                // Check if user is an employer
+                const user = await storage.getUser(data.userId);
+                if (user && user.role === 'employer') {
+                  ws.isEmployer = true;
+                  
+                  // Send initial data
+                  ws.send(JSON.stringify({
+                    type: 'connected',
+                    role: 'employer',
+                    timestamp: new Date().toISOString()
+                  }));
+                  
+                  // Get pending expense reports
+                  const pendingReports = await storage.getPendingExpenseReportsByEmployerId(data.userId);
+                  
+                  if (pendingReports.length > 0) {
+                    ws.send(JSON.stringify({
+                      type: 'expense_reports_pending',
+                      count: pendingReports.length,
+                      reports: pendingReports.map(report => ({
+                        id: report.id,
+                        title: report.title,
+                        totalAmount: report.totalAmount,
+                        submissionDate: report.submissionDate,
+                        employeeId: report.userId
+                      }))
+                    }));
+                  }
+                }
+              } catch (error) {
+                console.error('Error setting up employer wallet channel:', error);
+              }
+            }
+            
+            // Special handling for employee wallet
+            if (data.channel === 'employee_wallet' && data.userId) {
+              ws.userId = data.userId;
+              
+              try {
+                // Check if user is an employee
+                const user = await storage.getUser(data.userId);
+                if (user && user.role === 'employee') {
+                  ws.isEmployee = true;
+                  
+                  // Send initial data
+                  ws.send(JSON.stringify({
+                    type: 'connected',
+                    role: 'employee',
+                    timestamp: new Date().toISOString()
+                  }));
+                  
+                  // Get expense reports
+                  const expenseReports = await storage.getExpenseReportsByUserId(data.userId);
+                  
+                  if (expenseReports.length > 0) {
+                    ws.send(JSON.stringify({
+                      type: 'expense_reports_status',
+                      reports: expenseReports.map(report => ({
+                        id: report.id,
+                        title: report.title,
+                        totalAmount: report.totalAmount,
+                        status: report.status,
+                        submissionDate: report.submissionDate,
+                        reviewDate: report.reviewDate,
+                        paymentDate: report.paymentDate
+                      }))
+                    }));
+                  }
+                }
+              } catch (error) {
+                console.error('Error setting up employee wallet channel:', error);
+              }
+            }
           }
         } else if (data.type === 'unsubscribe' && data.channel) {
           if (ws.channels) {
@@ -1562,6 +2025,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         extClient.send(JSON.stringify(data));
       }
     });
+  };
+  
+  // Helper function to notify employer about expense reports
+  const notifyEmployer = (employerId: number, data: any) => {
+    console.log(`Notifying employer (ID: ${employerId}) about:`, data.type);
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.userId === employerId &&
+        extClient.isEmployer &&
+        extClient.channels?.includes('employer_wallet')
+      ) {
+        extClient.send(JSON.stringify({
+          ...data,
+          timestamp: new Date().toISOString(),
+          priority: data.type.includes('new') ? 'high' : 'normal'
+        }));
+      }
+    });
+  };
+  
+  // Helper function to notify employee about expense reports
+  const notifyEmployee = (employeeId: number, data: any) => {
+    console.log(`Notifying employee (ID: ${employeeId}) about:`, data.type);
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (
+        extClient.readyState === WebSocket.OPEN &&
+        extClient.userId === employeeId &&
+        extClient.isEmployee &&
+        extClient.channels?.includes('employee_wallet')
+      ) {
+        extClient.send(JSON.stringify({
+          ...data,
+          timestamp: new Date().toISOString(),
+          priority: data.type.includes('status_update') ? 'high' : 'normal'
+        }));
+      }
+    });
+  };
+  
+  // Helper function to notify about expense report line item changes
+  const notifyExpenseLineItemChange = (reportInfo: { userId: number, employerId: number }, itemData: any, action: 'added' | 'updated' | 'deleted') => {
+    // Notify the employee (owner of the report)
+    notifyEmployee(reportInfo.userId, {
+      type: `expense_line_item_${action}`,
+      item: itemData,
+      reportId: itemData.expenseReportId
+    });
+    
+    // If the report is submitted, also notify the employer
+    if (reportInfo.employerId && ['submitted', 'under_review'].includes(itemData.reportStatus)) {
+      notifyEmployer(reportInfo.employerId, {
+        type: `expense_line_item_${action}`,
+        item: itemData,
+        reportId: itemData.expenseReportId,
+        employeeId: reportInfo.userId
+      });
+    }
   };
 
   return httpServer;

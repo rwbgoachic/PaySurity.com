@@ -362,6 +362,127 @@ export const insertAccountRequestSchema = createInsertSchema(accountRequests).pi
   notes: true,
 });
 
+// Expense Reports
+export const expenseReportStatusEnum = pgEnum("expense_report_status", [
+  "draft",
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
+  "paid",
+  "canceled"
+]);
+
+export const expenseReports = pgTable("expense_reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(), // Employee submitting the report
+  employerId: integer("employer_id").notNull(), // Employer who needs to approve
+  title: text("title").notNull(),
+  description: text("description"),
+  totalAmount: numeric("total_amount").notNull().default("0"),
+  currency: text("currency").notNull().default("USD"),
+  status: text("status", { 
+    enum: ["draft", "submitted", "under_review", "approved", "rejected", "paid", "canceled"] 
+  }).notNull().default("draft"),
+  submissionDate: timestamp("submission_date"),
+  reviewDate: timestamp("review_date"),
+  reviewedBy: integer("reviewed_by"), // User ID who reviewed the report
+  approvalDate: timestamp("approval_date"),
+  paymentDate: timestamp("payment_date"),
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertExpenseReportSchema = createInsertSchema(expenseReports).pick({
+  userId: true,
+  employerId: true,
+  title: true,
+  description: true,
+  totalAmount: true,
+  currency: true,
+  status: true,
+  submissionDate: true,
+  reviewedBy: true,
+  rejectionReason: true,
+});
+
+export type ExpenseReport = typeof expenseReports.$inferSelect;
+export type InsertExpenseReport = typeof expenseReports.$inferInsert;
+
+// Expense Line Items
+export const expenseLineItems = pgTable("expense_line_items", {
+  id: serial("id").primaryKey(),
+  expenseReportId: integer("expense_report_id").notNull(),
+  amount: numeric("amount").notNull(),
+  description: text("description").notNull(),
+  date: date("date").notNull(),
+  category: text("category").notNull(),
+  merchant: text("merchant"),
+  receiptImageUrl: text("receipt_image_url"),
+  notes: text("notes"),
+  isPersonal: boolean("is_personal").default(false),
+  isBillable: boolean("is_billable").default(false),
+  billableClientId: integer("billable_client_id"),
+  billableProjectId: integer("billable_project_id"),
+  taxAmount: numeric("tax_amount"),
+  currency: text("currency").notNull().default("USD"),
+  exchangeRate: numeric("exchange_rate").default("1"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertExpenseLineItemSchema = createInsertSchema(expenseLineItems).pick({
+  expenseReportId: true,
+  amount: true,
+  description: true,
+  date: true,
+  category: true,
+  merchant: true,
+  receiptImageUrl: true,
+  notes: true,
+  isPersonal: true,
+  isBillable: true,
+  billableClientId: true,
+  billableProjectId: true,
+  taxAmount: true,
+  currency: true,
+  exchangeRate: true,
+});
+
+export type ExpenseLineItem = typeof expenseLineItems.$inferSelect;
+export type InsertExpenseLineItem = typeof expenseLineItems.$inferInsert;
+
+// Import relations function from drizzle-orm
+import { relations } from "drizzle-orm";
+
+// Create relations between entities
+export const expenseReportsRelations = relations(expenseReports, ({ one, many }) => ({
+  employee: one(users, {
+    fields: [expenseReports.userId],
+    references: [users.id],
+  }),
+  employer: one(users, {
+    fields: [expenseReports.employerId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [expenseReports.reviewedBy],
+    references: [users.id],
+    relationName: "expense_report_reviewer"
+  }),
+  lineItems: many(expenseLineItems)
+}));
+
+export const expenseLineItemsRelations = relations(expenseLineItems, ({ one }) => ({
+  expenseReport: one(expenseReports, {
+    fields: [expenseLineItems.expenseReportId],
+    references: [expenseReports.id],
+  })
+}));
+
 // Spending Controls
 export const spendingControls = pgTable("spending_controls", {
   id: serial("id").primaryKey(),
