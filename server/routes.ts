@@ -7,9 +7,10 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { z } from "zod";
-import { 
-import { sendOrderStatusSms, getEstimatedPrepTime } from "./services/sms";
+import { sendOrderStatusSms } from "./services/sms";
 import { processOrderModifications } from "./services/orderModification";
+import { generateOrderModificationUrl } from "./services/qrcode";
+import { 
   insertWalletSchema, 
   insertTransactionSchema, 
   insertBankAccountSchema, 
@@ -1760,6 +1761,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, ORDER_MODIFICATION_CHECK_INTERVAL);
   
+
+  // SMS Provider administration routes
+  app.get("/api/admin/sms-providers", (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const availableProviders = smsService.getAvailableProviders();
+
+      res.json({
+        active: process.env.SMS_PROVIDER || "mock",
+        available: availableProviders,
+        isConfigured: availableProviders.length > 0
+      });
+    } catch (error: any) {
+      console.error("Error getting SMS providers:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/sms-providers", (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const { provider } = req.body;
+
+    if (!provider) {
+      return res.status(400).json({ error: "Missing provider" });
+    }
+
+    try {
+      const success = smsService.setProvider(provider);
+
+      if (success) {
+        // Update environment variable (in memory only)
+        process.env.SMS_PROVIDER = provider;
+        res.json({ success: true, provider });
+      } else {
+        res.status(400).json({ error: "Failed to set provider" });
+      }
+    } catch (error: any) {
+      console.error("Error setting SMS provider:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Test SMS endpoint
+  app.post("/api/admin/test-sms", (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const { phoneNumber, message } = req.body;
+
+    if (!phoneNumber || !message) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+      smsService.sendSms(phoneNumber, message)
+        .then(success => {
+          if (success) {
+            res.json({ success: true });
+          } else {
+            res.status(400).json({ error: "Failed to send SMS" });
+          }
+        })
+        .catch(error => {
+          throw error;
+        });
+    } catch (error: any) {
+      console.error("Error sending test SMS:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Public Payment Processing API Endpoint for Helcim
@@ -4106,6 +4185,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated() || req.user.role !== "merchant") {
       return res.status(401).json({ error: "Unauthorized" });
     }
+  app.post("/api/restaurant/orders/:orderId/modification-qr", async (req, res) => {
+    try {
+      // Check if authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const orderId = parseInt(req.params.orderId);
+      
+      if (isNaN(orderId)) {
+        return res.status(400).json({ error: "Invalid order ID" });
+      }
+      
+      // Get the order
+      const order = await storage.getRestaurantOrderById(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Generate the QR code
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const qrCodeData = await generateOrderModificationQrCode(orderId, baseUrl);
+      
+      res.json(qrCodeData);
+    } catch (error: any) {
+      console.error("Error generating modification QR code:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
 
   // Order modification routes
   app.get("/api/orders/:token/modify", async (req, res) => {

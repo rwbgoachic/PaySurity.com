@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
@@ -144,6 +145,9 @@ function Router() {
       <ProtectedRoute path="/merchant/pos/bistro/staff" component={BistroBeastStaff} />
       <ProtectedRoute path="/merchant/pos/bistro/transactions" component={BistroBeastTransactions} />
       <ProtectedRoute path="/merchant/pos/bistro/kitchen" component={BistroBeastKitchen} />
+      <Route path="/merchant/pos/bistro/order-modify" component={React.lazy(() => import("./pages/merchant/pos/bistro/order-modify"))} />
+      <Route path="/merchant/pos/bistro/order-modify-success" component={React.lazy(() => import("./pages/merchant/pos/bistro/order-modify-success"))} />
+      <Route path="/merchant/pos/bistro/order-modify-cancelled" component={React.lazy(() => import("./pages/merchant/pos/bistro/order-modify-cancelled"))} />
       
       {/* PaySurity ECom Ready Retail POS */}
       <ProtectedRoute path="/merchant/pos/retail" component={RetailPOSSystem} />
@@ -157,6 +161,7 @@ function Router() {
       {/* Catch-all route */}
       <Route component={NotFound} />
           <Route path="/order-modify/:token" component={React.lazy(() => import("./pages/customer/order-modify"))} />
+          <Route path="/admin/sms-settings" component={React.lazy(() => import("./pages/admin/sms-settings"))} />
     </Switch>
   );
 }

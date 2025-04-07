@@ -27,7 +27,7 @@ type OrderItem = {
 type Order = {
   id: number;
   orderNumber: string;
-  status: "draft" | "placed" | "preparing" | "ready" | "served" | "completed" | "canceled";
+  status: "draft" | "placed" | "preparing" | "ready" | "served" | "completed" | "canceled" | "modifying";
   items: OrderItem[];
   tableId?: number;
   tableName?: string;
@@ -35,6 +35,13 @@ type Order = {
   guestCount?: number;
   specialInstructions?: string;
   serverName?: string;
+  isBeingModified?: boolean;
+  modificationStartTime?: string;
+  customerName?: string;
+  customerPhone?: string;
+  isTakeout?: boolean;
+  isDelivery?: boolean;
+  isQrOrder?: boolean;
 };
 
 function formatTimeAgo(dateString: string) {
@@ -162,6 +169,9 @@ export default function KitchenDisplay() {
   // Filter orders based on status filter
   const filteredOrders = orders ? orders
     .filter((order: Order) => {
+      // Show modifying orders in all views since they're important
+      if (order.isBeingModified || order.status === "modifying") return true;
+      
       if (visibleItems === "all") return true;
       if (visibleItems === "pending") return order.status === "placed";
       if (visibleItems === "preparing") return order.status === "preparing";
@@ -169,7 +179,15 @@ export default function KitchenDisplay() {
       return true;
     })
     .sort((a: Order, b: Order) => {
-      // Sort by creation date, newest first
+      // Always show orders being modified at the top
+      if ((a.isBeingModified || a.status === "modifying") && !(b.isBeingModified || b.status === "modifying")) {
+        return -1;
+      }
+      if (!(a.isBeingModified || a.status === "modifying") && (b.isBeingModified || b.status === "modifying")) {
+        return 1;
+      }
+      
+      // Then sort by creation date, newest first
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }) : [];
     
@@ -446,7 +464,9 @@ export default function KitchenDisplay() {
                 key={order.id}
                 id={`order-${order.id}`}
                 className={`kitchen-order-card rounded-xl ${
-                  order.status === "placed" 
+                  order.isBeingModified || order.status === "modifying"
+                    ? "border-purple-300 bg-purple-50/90 kitchen-status-modifying" 
+                    : order.status === "placed" 
                     ? "border-blue-300 bg-blue-50/90" 
                     : order.status === "preparing" 
                     ? "border-amber-300 bg-amber-50/90 kitchen-status-preparing" 
@@ -474,14 +494,18 @@ export default function KitchenDisplay() {
                     </div>
                     <Badge 
                       className={`bistro-touch-target px-3 py-1 rounded-md text-sm ${
-                        order.status === "placed" 
+                        order.isBeingModified || order.status === "modifying"
+                          ? "kitchen-status-modifying font-medium"
+                        : order.status === "placed" 
                           ? "kitchen-status-new font-medium" 
                           : order.status === "preparing" 
                           ? "kitchen-status-preparing font-medium" 
                           : "kitchen-status-ready font-medium"
                       }`}
                     >
-                      {order.status === "placed" 
+                      {order.isBeingModified || order.status === "modifying"
+                        ? "Customer Modifying" 
+                        : order.status === "placed" 
                         ? "New Order" 
                         : order.status === "preparing" 
                         ? "Preparing" 
@@ -562,7 +586,16 @@ export default function KitchenDisplay() {
                   )}
                 </CardContent>
                 <CardFooter className="flex justify-between pt-2 px-4 pb-4">
-                  {order.status === "placed" ? (
+                  {order.isBeingModified || order.status === "modifying" ? (
+                    <Button
+                      className="w-full kitchen-button-modifying h-11 bistro-touch-target rounded-md bg-purple-600 hover:bg-purple-700"
+                      disabled
+                      aria-label="Customer is modifying order"
+                    >
+                      <ArrowLeftRight className="h-4 w-4 mr-1.5" />
+                      <span className="font-medium">Customer Modifying Order</span>
+                    </Button>
+                  ) : order.status === "placed" ? (
                     <Button 
                       className="w-full kitchen-button-preparing h-11 bistro-touch-target rounded-md"
                       onClick={() => handleStartCooking(order.id)}

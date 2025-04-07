@@ -184,6 +184,11 @@
     animation: ready-appear 0.5s ease-out;
   }
   
+  .kitchen-status-modifying {
+    @apply bg-purple-100 text-purple-800 font-medium border border-purple-200;
+    animation: modifying-flash 2s infinite;
+  }
+  
   /* Kitchen button styles for improved visibility in kitchen environments */
   .kitchen-button-preparing {
     @apply bg-amber-600 hover:bg-amber-700 text-white border-amber-700 transition-all;
@@ -205,6 +210,15 @@
 
   .kitchen-button-served {
     @apply bg-blue-50 border-blue-200 text-blue-800;
+  }
+  
+  .kitchen-button-modifying {
+    @apply bg-purple-600 hover:bg-purple-700 text-white border-purple-700 transition-all;
+    transform-origin: center;
+  }
+  .kitchen-button-modifying:active {
+    @apply bg-purple-800;
+    transform: scale(0.97);
   }
 
   .kitchen-button-item-start {
@@ -248,6 +262,17 @@
     100% {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+  
+  @keyframes modifying-flash {
+    0%, 100% {
+      opacity: 1;
+      background-color: rgba(216, 180, 254, 0.4);
+    }
+    50% {
+      opacity: 0.8;
+      background-color: rgba(192, 132, 252, 0.5);
     }
   }
   
