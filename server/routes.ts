@@ -8,6 +8,8 @@ import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { z } from "zod";
 import { 
+import { sendOrderStatusSms, getEstimatedPrepTime } from "./services/sms";
+import { processOrderModifications } from "./services/orderModification";
   insertWalletSchema, 
   insertTransactionSchema, 
   insertBankAccountSchema, 
@@ -1745,6 +1747,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WebSocket for real-time notifications
+
+  // Set up periodic checking of orders being modified
+  const ORDER_MODIFICATION_CHECK_INTERVAL = 60000; // Check every minute
+  
+  // Start periodic checking of order modifications
+  const orderModificationInterval = setInterval(async () => {
+    try {
+      await processOrderModifications();
+    } catch (error) {
+      console.error("Error processing order modifications:", error);
+    }
+  }, ORDER_MODIFICATION_CHECK_INTERVAL);
+  
   const httpServer = createServer(app);
 
   // Public Payment Processing API Endpoint for Helcim
@@ -4091,6 +4106,260 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated() || req.user.role !== "merchant") {
       return res.status(401).json({ error: "Unauthorized" });
     }
+
+  // Order modification routes
+  app.get("/api/orders/:token/modify", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Missing token" });
+      }
+      
+      // Find the order by modification token
+      const order = await storage.getRestaurantOrderByToken(token);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found or token expired" });
+      }
+      
+      // Check token expiry
+      if (order.modificationTokenExpiry && new Date(order.modificationTokenExpiry) < new Date()) {
+        return res.status(400).json({ error: "Modification token has expired" });
+      }
+      
+      // Mark the order as being modified
+      await storage.startModifyingOrder(order.id);
+      
+      // Get order items
+      const orderItems = await storage.getRestaurantOrderItemsByOrderId(order.id);
+      
+      // Return order and items information for modification
+      res.json({
+        order,
+        items: orderItems
+      });
+      
+    } catch (error: any) {
+      console.error("Error modifying order:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/orders/:token/complete", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { wasModified } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Missing token" });
+      }
+      
+      // Find the order by modification token
+      const order = await storage.getRestaurantOrderByToken(token);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found or token expired" });
+      }
+      
+      // Complete the modification
+      await storage.finishModifyingOrder(order.id, wasModified);
+      
+      // Return success
+      res.json({ success: true });
+      
+    } catch (error: any) {
+      console.error("Error completing order modification:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Process modification timeouts - intended to be called periodically
+  app.post("/api/orders/process-modifications", async (req, res) => {
+    try {
+      const ordersBeingModified = await storage.getOrdersBeingModified();
+      const now = new Date();
+      
+      for (const order of ordersBeingModified) {
+        if (!order.modificationStartTime) continue;
+        
+        const modificationStartTime = new Date(order.modificationStartTime);
+        const minutesSinceStart = Math.floor((now.getTime() - modificationStartTime.getTime()) / (1000 * 60));
+        
+        // Send reminder after 5 minutes if not already sent
+        if (minutesSinceStart >= 5 && !order.modificationReminderSent) {
+          // Construct modification link
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const modificationLink = `${baseUrl}/order-modify/${order.modificationToken}`;
+          
+          // Send SMS reminder
+          const message = `You were modifying your order #${order.orderNumber}. Until you complete the modified or the same order, your order will not be prepared. Click the link to continue: ${modificationLink}`;
+          
+          if (order.customerPhone && order.smsOptedIn) {
+            const success = await sendOrderStatusSms({
+              ...order,
+              modificationLink
+            }, "modifying", message);
+            
+            if (success) {
+              await storage.updateOrderModificationReminder(order.id, true);
+            }
+          }
+        }
+        
+        // Cancel and send timeout notification after 15 minutes (5 + 10)
+        if (minutesSinceStart >= 15 && !order.modificationTimeoutSent) {
+          // Send SMS timeout notification
+          const message = `Since you didn't complete your modification for order #${order.orderNumber}, it has been cancelled.`;
+          
+          if (order.customerPhone && order.smsOptedIn) {
+            const success = await sendOrderStatusSms(order, "canceled", message);
+            
+            if (success) {
+              await storage.updateOrderModificationTimeout(order.id, true);
+            }
+          }
+          
+          // Cancel the order
+          await storage.cancelOrderDueToModificationTimeout(order.id);
+        }
+      }
+      
+      res.json({ success: true, processed: ordersBeingModified.length });
+      
+    } catch (error: any) {
+      console.error("Error processing order modifications:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+
+  // Order modification routes
+  app.get("/api/orders/:token/modify", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Missing token" });
+      }
+      
+      // Find the order by modification token
+      const order = await storage.getRestaurantOrderByToken(token);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found or token expired" });
+      }
+      
+      // Check token expiry
+      if (order.modificationTokenExpiry && new Date(order.modificationTokenExpiry) < new Date()) {
+        return res.status(400).json({ error: "Modification token has expired" });
+      }
+      
+      // Mark the order as being modified
+      await storage.startModifyingOrder(order.id);
+      
+      // Get order items
+      const orderItems = await storage.getRestaurantOrderItemsByOrderId(order.id);
+      
+      // Return order and items information for modification
+      res.json({
+        order,
+        items: orderItems
+      });
+      
+    } catch (error: any) {
+      console.error("Error modifying order:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/orders/:token/complete", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { wasModified } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Missing token" });
+      }
+      
+      // Find the order by modification token
+      const order = await storage.getRestaurantOrderByToken(token);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found or token expired" });
+      }
+      
+      // Complete the modification
+      await storage.finishModifyingOrder(order.id, wasModified);
+      
+      // Return success
+      res.json({ success: true });
+      
+    } catch (error: any) {
+      console.error("Error completing order modification:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Process modification timeouts - intended to be called periodically
+  app.post("/api/orders/process-modifications", async (req, res) => {
+    try {
+      const ordersBeingModified = await storage.getOrdersBeingModified();
+      const now = new Date();
+      
+      for (const order of ordersBeingModified) {
+        if (!order.modificationStartTime) continue;
+        
+        const modificationStartTime = new Date(order.modificationStartTime);
+        const minutesSinceStart = Math.floor((now.getTime() - modificationStartTime.getTime()) / (1000 * 60));
+        
+        // Send reminder after 5 minutes if not already sent
+        if (minutesSinceStart >= 5 && !order.modificationReminderSent) {
+          // Construct modification link
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const modificationLink = `${baseUrl}/order-modify/${order.modificationToken}`;
+          
+          // Send SMS reminder
+          const message = `You were modifying your order #${order.orderNumber}. Until you complete the modified or the same order, your order will not be prepared. Click the link to continue: ${modificationLink}`;
+          
+          if (order.customerPhone && order.smsOptedIn) {
+            const success = await sendOrderStatusSms({
+              ...order,
+              modificationLink
+            }, "modifying", message);
+            
+            if (success) {
+              await storage.updateOrderModificationReminder(order.id, true);
+            }
+          }
+        }
+        
+        // Cancel and send timeout notification after 15 minutes (5 + 10)
+        if (minutesSinceStart >= 15 && !order.modificationTimeoutSent) {
+          // Send SMS timeout notification
+          const message = `Since you didn't complete your modification for order #${order.orderNumber}, it has been cancelled.`;
+          
+          if (order.customerPhone && order.smsOptedIn) {
+            const success = await sendOrderStatusSms(order, "canceled", message);
+            
+            if (success) {
+              await storage.updateOrderModificationTimeout(order.id, true);
+            }
+          }
+          
+          // Cancel the order
+          await storage.cancelOrderDueToModificationTimeout(order.id);
+        }
+      }
+      
+      res.json({ success: true, processed: ordersBeingModified.length });
+      
+    } catch (error: any) {
+      console.error("Error processing order modifications:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
     
     try {
       const merchantId = req.user.id;

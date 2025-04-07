@@ -50,6 +50,7 @@
     "@types/compression": "^1.7.5",
     "@types/csurf": "^1.11.5",
     "@types/express-brute": "^1.0.6",
+    "@types/qrcode": "^1.5.5",
     "@types/validator": "^13.12.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

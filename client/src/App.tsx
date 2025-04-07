@@ -156,6 +156,7 @@ function Router() {
       
       {/* Catch-all route */}
       <Route component={NotFound} />
+          <Route path="/order-modify/:token" component={React.lazy(() => import("./pages/customer/order-modify"))} />
     </Switch>
   );
 }
