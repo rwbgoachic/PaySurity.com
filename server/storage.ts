@@ -17,7 +17,8 @@ import {
   // POS system entities
   posLocations, posCategories, posInventoryItems, posMenuItems, 
   posMenuItemModifiers, posTables, posAreas, posStaff, posOrders, 
-  posOrderItems, posPayments,
+  posOrderItems, posPayments, posStaffAvailability, posScheduleTemplates,
+  posTemplateShifts, posTimeOffRequests,
   // Restaurant POS entities
   restaurantTables, restaurantOrders, restaurantOrderItems, 
   restaurantInventoryItems, restaurantInventoryTransactions,
@@ -88,6 +89,10 @@ import {
   type PosOrder, type InsertPosOrder,
   type PosOrderItem, type InsertPosOrderItem,
   type PosPayment, type InsertPosPayment,
+  type PosStaffAvailability, type InsertPosStaffAvailability,
+  type PosScheduleTemplate, type InsertPosScheduleTemplate,
+  type PosTemplateShift, type InsertPosTemplateShift,
+  type PosTimeOffRequest, type InsertPosTimeOffRequest,
   
   // Restaurant POS types
   type RestaurantTable, type InsertRestaurantTable,
@@ -207,6 +212,34 @@ export interface IStorage {
   createPosStaff(staff: InsertPosStaff): Promise<PosStaff>;
   updatePosStaff(id: number, updates: Partial<PosStaff>): Promise<PosStaff | undefined>;
   deletePosStaff(id: number): Promise<void>;
+  
+  // Staff Scheduling operations
+  getPosStaffAvailabilityByStaffId(staffId: number): Promise<PosStaffAvailability[]>;
+  createPosStaffAvailability(availability: InsertPosStaffAvailability): Promise<PosStaffAvailability>;
+  updatePosStaffAvailability(id: number, updates: Partial<PosStaffAvailability>): Promise<PosStaffAvailability | undefined>;
+  deletePosStaffAvailability(id: number): Promise<void>;
+  
+  // Schedule Templates operations
+  getPosScheduleTemplatesByLocationId(locationId: number): Promise<PosScheduleTemplate[]>;
+  getPosScheduleTemplate(id: number): Promise<PosScheduleTemplate | undefined>;
+  createPosScheduleTemplate(template: InsertPosScheduleTemplate): Promise<PosScheduleTemplate>;
+  updatePosScheduleTemplate(id: number, updates: Partial<PosScheduleTemplate>): Promise<PosScheduleTemplate | undefined>;
+  deletePosScheduleTemplate(id: number): Promise<void>;
+  
+  // Template Shifts operations
+  getPosTemplateShiftsByTemplateId(templateId: number): Promise<PosTemplateShift[]>;
+  createPosTemplateShift(shift: InsertPosTemplateShift): Promise<PosTemplateShift>;
+  updatePosTemplateShift(id: number, updates: Partial<PosTemplateShift>): Promise<PosTemplateShift | undefined>;
+  deletePosTemplateShift(id: number): Promise<void>;
+  
+  // Time Off Requests operations
+  getPosTimeOffRequestsByStaffId(staffId: number): Promise<PosTimeOffRequest[]>;
+  getPosTimeOffRequestsByLocationId(locationId: number): Promise<PosTimeOffRequest[]>;
+  getPosTimeOffRequest(id: number): Promise<PosTimeOffRequest | undefined>;
+  createPosTimeOffRequest(request: InsertPosTimeOffRequest): Promise<PosTimeOffRequest>;
+  updatePosTimeOffRequest(id: number, updates: Partial<PosTimeOffRequest>): Promise<PosTimeOffRequest | undefined>;
+  approvePosTimeOffRequest(id: number, approvedById: number, isPaid: boolean): Promise<PosTimeOffRequest | undefined>;
+  denyPosTimeOffRequest(id: number, approvedById: number): Promise<PosTimeOffRequest | undefined>;
   
   // POS Payments operations
   getPosPaymentsByLocationId(locationId: number): Promise<PosPayment[]>;
@@ -5608,6 +5641,137 @@ export class DatabaseStorage implements IStorage {
   
   async deletePosStaff(id: number): Promise<void> {
     await db.delete(posStaff).where(eq(posStaff.id, id));
+  }
+  
+  // ======== Staff Scheduling ========
+  async getPosStaffAvailabilityByStaffId(staffId: number): Promise<PosStaffAvailability[]> {
+    return await db.select().from(posStaffAvailability).where(eq(posStaffAvailability.staffId, staffId));
+  }
+  
+  async createPosStaffAvailability(availability: InsertPosStaffAvailability): Promise<PosStaffAvailability> {
+    const [result] = await db.insert(posStaffAvailability).values(availability).returning();
+    return result;
+  }
+  
+  async updatePosStaffAvailability(id: number, updates: Partial<PosStaffAvailability>): Promise<PosStaffAvailability | undefined> {
+    const [result] = await db.update(posStaffAvailability).set(updates).where(eq(posStaffAvailability.id, id)).returning();
+    return result;
+  }
+  
+  async deletePosStaffAvailability(id: number): Promise<void> {
+    await db.delete(posStaffAvailability).where(eq(posStaffAvailability.id, id));
+  }
+  
+  // ======== Schedule Templates ========
+  async getPosScheduleTemplatesByLocationId(locationId: number): Promise<PosScheduleTemplate[]> {
+    return await db.select().from(posScheduleTemplates).where(eq(posScheduleTemplates.locationId, locationId));
+  }
+  
+  async getPosScheduleTemplate(id: number): Promise<PosScheduleTemplate | undefined> {
+    const [template] = await db.select().from(posScheduleTemplates).where(eq(posScheduleTemplates.id, id));
+    return template;
+  }
+  
+  async createPosScheduleTemplate(template: InsertPosScheduleTemplate): Promise<PosScheduleTemplate> {
+    const [result] = await db.insert(posScheduleTemplates).values(template).returning();
+    return result;
+  }
+  
+  async updatePosScheduleTemplate(id: number, updates: Partial<PosScheduleTemplate>): Promise<PosScheduleTemplate | undefined> {
+    const [result] = await db.update(posScheduleTemplates).set(updates).where(eq(posScheduleTemplates.id, id)).returning();
+    return result;
+  }
+  
+  async deletePosScheduleTemplate(id: number): Promise<void> {
+    await db.delete(posScheduleTemplates).where(eq(posScheduleTemplates.id, id));
+  }
+  
+  // ======== Template Shifts ========
+  async getPosTemplateShiftsByTemplateId(templateId: number): Promise<PosTemplateShift[]> {
+    return await db.select().from(posTemplateShifts).where(eq(posTemplateShifts.templateId, templateId));
+  }
+  
+  async createPosTemplateShift(shift: InsertPosTemplateShift): Promise<PosTemplateShift> {
+    const [result] = await db.insert(posTemplateShifts).values(shift).returning();
+    return result;
+  }
+  
+  async updatePosTemplateShift(id: number, updates: Partial<PosTemplateShift>): Promise<PosTemplateShift | undefined> {
+    const [result] = await db.update(posTemplateShifts).set(updates).where(eq(posTemplateShifts.id, id)).returning();
+    return result;
+  }
+  
+  async deletePosTemplateShift(id: number): Promise<void> {
+    await db.delete(posTemplateShifts).where(eq(posTemplateShifts.id, id));
+  }
+  
+  // ======== Time Off Requests ========
+  async getPosTimeOffRequestsByStaffId(staffId: number): Promise<PosTimeOffRequest[]> {
+    return await db.select().from(posTimeOffRequests).where(eq(posTimeOffRequests.staffId, staffId));
+  }
+  
+  async getPosTimeOffRequestsByLocationId(locationId: number): Promise<PosTimeOffRequest[]> {
+    // First, we need to get all staff IDs for this location
+    const staffMembers = await this.getPosStaffByLocationId(locationId);
+    const staffIds = staffMembers.map(staff => staff.id);
+    
+    if (staffIds.length === 0) {
+      return [];
+    }
+    
+    // Then we get all time-off requests for these staff members
+    const result = await db
+      .select()
+      .from(posTimeOffRequests)
+      .where(
+        inArray(posTimeOffRequests.staffId, staffIds)
+      );
+    
+    return result;
+  }
+  
+  async getPosTimeOffRequest(id: number): Promise<PosTimeOffRequest | undefined> {
+    const [request] = await db.select().from(posTimeOffRequests).where(eq(posTimeOffRequests.id, id));
+    return request;
+  }
+  
+  async createPosTimeOffRequest(request: InsertPosTimeOffRequest): Promise<PosTimeOffRequest> {
+    const [result] = await db.insert(posTimeOffRequests).values(request).returning();
+    return result;
+  }
+  
+  async updatePosTimeOffRequest(id: number, updates: Partial<PosTimeOffRequest>): Promise<PosTimeOffRequest | undefined> {
+    const [result] = await db.update(posTimeOffRequests).set(updates).where(eq(posTimeOffRequests.id, id)).returning();
+    return result;
+  }
+  
+  async approvePosTimeOffRequest(id: number, approvedById: number, isPaid: boolean): Promise<PosTimeOffRequest | undefined> {
+    const [result] = await db
+      .update(posTimeOffRequests)
+      .set({
+        status: "approved",
+        approvedById: approvedById,
+        approvedAt: new Date(),
+        isPaid: isPaid
+      })
+      .where(eq(posTimeOffRequests.id, id))
+      .returning();
+    
+    return result;
+  }
+  
+  async denyPosTimeOffRequest(id: number, approvedById: number): Promise<PosTimeOffRequest | undefined> {
+    const [result] = await db
+      .update(posTimeOffRequests)
+      .set({
+        status: "rejected",
+        approvedById: approvedById,
+        approvedAt: new Date(),
+      })
+      .where(eq(posTimeOffRequests.id, id))
+      .returning();
+    
+    return result;
   }
   
   // ======== POS Payments ========

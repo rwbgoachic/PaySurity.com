@@ -1550,6 +1550,10 @@ export const posStaff = pgTable("pos_staff", {
   isActive: boolean("is_active").default(true),
   hireDate: date("hire_date"),
   hourlyRate: numeric("hourly_rate"),
+  maxHoursPerWeek: numeric("max_hours_per_week"),
+  minRestHoursBetweenShifts: numeric("min_rest_hours_between_shifts").default("8"),
+  overtimeThreshold: numeric("overtime_threshold").default("40"), // Hours per week before overtime kicks in
+  overtimeRate: numeric("overtime_rate"), // Multiplier for overtime pay
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1563,6 +1567,108 @@ export const insertPosStaffSchema = createInsertSchema(posStaff).pick({
   isActive: true,
   hireDate: true,
   hourlyRate: true,
+  maxHoursPerWeek: true,
+  minRestHoursBetweenShifts: true,
+  overtimeThreshold: true,
+  overtimeRate: true,
+});
+
+// Staff Availability - When staff can work
+export const posStaffAvailability = pgTable("pos_staff_availability", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(), // References posStaff
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6 (Sunday-Saturday)
+  startTime: varchar("start_time", { length: 5 }).notNull(), // 24hr format (HH:MM)
+  endTime: varchar("end_time", { length: 5 }).notNull(), // 24hr format (HH:MM)
+  isAvailable: boolean("is_available").default(true), // Used to indicate preferred times vs unavailable times
+  priority: integer("priority").default(1), // Higher numbers mean higher priority for scheduling
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosStaffAvailabilitySchema = createInsertSchema(posStaffAvailability).pick({
+  staffId: true,
+  dayOfWeek: true,
+  startTime: true,
+  endTime: true,
+  isAvailable: true,
+  priority: true,
+  notes: true,
+});
+
+// Schedule Templates - Repeating shift patterns
+export const posScheduleTemplates = pgTable("pos_schedule_templates", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull(), // References posLocations
+  name: text("name").notNull(), // e.g., "Summer Schedule", "Holiday Schedule"
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosScheduleTemplateSchema = createInsertSchema(posScheduleTemplates).pick({
+  locationId: true,
+  name: true,
+  description: true,
+  isActive: true,
+});
+
+// Template Shifts - Shifts defined in a template
+export const posTemplateShifts = pgTable("pos_template_shifts", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull(), // References posScheduleTemplates
+  position: text("position").notNull(), // e.g., "Server", "Chef", "Bartender"
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6 (Sunday-Saturday)
+  startTime: varchar("start_time", { length: 5 }).notNull(), // 24hr format (HH:MM)
+  endTime: varchar("end_time", { length: 5 }).notNull(), // 24hr format (HH:MM)
+  staffCount: integer("staff_count").default(1), // Number of staff needed for this position
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosTemplateShiftSchema = createInsertSchema(posTemplateShifts).pick({
+  templateId: true,
+  position: true,
+  dayOfWeek: true,
+  startTime: true,
+  endTime: true,
+  staffCount: true,
+  notes: true,
+});
+
+// Time Off Requests
+export const posTimeOffRequests = pgTable("pos_time_off_requests", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(), // References posStaff
+  startDate: date("start_date").notNull(), 
+  endDate: date("end_date").notNull(),
+  startTime: varchar("start_time", { length: 5 }), // Optional, for partial day off
+  endTime: varchar("end_time", { length: 5 }), // Optional, for partial day off
+  reason: text("reason"),
+  status: text("status").notNull().default("pending"), // pending, approved, denied
+  approvedById: integer("approved_by_id"), // Staff who approved/denied
+  approvedAt: timestamp("approved_at"),
+  notes: text("notes"),
+  isPaid: boolean("is_paid").default(false), // Whether this is paid time off
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPosTimeOffRequestSchema = createInsertSchema(posTimeOffRequests).pick({
+  staffId: true,
+  startDate: true,
+  endDate: true,
+  startTime: true,
+  endTime: true,
+  reason: true,
+  status: true,
+  approvedById: true,
+  approvedAt: true,
+  notes: true,
+  isPaid: true,
 });
 
 // Shifts - Staff work periods
@@ -1577,6 +1683,8 @@ export const posShifts = pgTable("pos_shifts", {
   totalSales: numeric("total_sales").default("0"),
   totalTips: numeric("total_tips").default("0"),
   shiftNotes: text("shift_notes"),
+  status: text("status").notNull().default("scheduled"), // scheduled, in_progress, completed, canceled
+  isPublished: boolean("is_published").default(false), // Whether the shift is visible to staff
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1591,6 +1699,8 @@ export const insertPosShiftSchema = createInsertSchema(posShifts).pick({
   totalSales: true,
   totalTips: true,
   shiftNotes: true,
+  status: true,
+  isPublished: true,
 });
 
 // Orders - Customer orders
@@ -1917,6 +2027,19 @@ export type InsertPosReservation = z.infer<typeof insertPosReservationSchema>;
 
 export type PosDailyTotal = typeof posDailyTotals.$inferSelect;
 export type InsertPosDailyTotal = z.infer<typeof insertPosDailyTotalSchema>;
+
+// Staff scheduling types
+export type PosStaffAvailability = typeof posStaffAvailability.$inferSelect;
+export type InsertPosStaffAvailability = z.infer<typeof insertPosStaffAvailabilitySchema>;
+
+export type PosScheduleTemplate = typeof posScheduleTemplates.$inferSelect;
+export type InsertPosScheduleTemplate = z.infer<typeof insertPosScheduleTemplateSchema>;
+
+export type PosTemplateShift = typeof posTemplateShifts.$inferSelect;
+export type InsertPosTemplateShift = z.infer<typeof insertPosTemplateShiftSchema>;
+
+export type PosTimeOffRequest = typeof posTimeOffRequests.$inferSelect;
+export type InsertPosTimeOffRequest = z.infer<typeof insertPosTimeOffRequestSchema>;
 
 // Merchant Application Schema
 export const merchantApplicationStatusEnum = pgEnum("merchant_application_status", ["pending", "reviewing", "approved", "rejected"]);
