@@ -2211,9 +2211,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         businessId
       });
       
-      // TODO: Implement the createOrUpdateBusinessDeliverySettings method in deliveryService
-      // For now, just returning the validated data
-      res.status(200).json(settingsData);
+      // Create or update business delivery settings
+      const result = await deliveryService.createOrUpdateBusinessDeliverySettings(settingsData);
+      res.status(200).json(result);
     } catch (error) {
       console.error("Error updating business delivery settings:", error);
       if (error instanceof z.ZodError) {
@@ -2486,7 +2486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deliveryOrders 
       } = await import('@shared/delivery-schema');
       const { and, eq } = await import('drizzle-orm');
-      const deliveryService = (await import('./services/delivery/delivery-service')).default;
+      const { deliveryService } = await import('./services/delivery/delivery-service');
       
       // Find the provider by name
       const [provider] = await db
@@ -2514,11 +2514,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                        req.headers['x-doordash-signature'] ||
                        req.headers['signature'];
                        
-      if (provider.webhookSecret && signature) {
+      // Extract webhook secret from provider settings or webhook key
+      const webhookSecret = provider.webhookKey || 
+                          (provider.settings && typeof provider.settings === 'object' && 
+                           'webhookSecret' in provider.settings ? provider.settings.webhookSecret as string : null);
+                       
+      if (webhookSecret && signature) {
         const isValid = await adapter.verifyWebhookSignature(
           req.body,
           req.headers as Record<string, string>,
-          provider.webhookSecret
+          webhookSecret
         );
         
         if (!isValid) {
