@@ -12,7 +12,7 @@ import { deliveryTestService, TestReport, TestGroup, Test } from './test-deliver
 import { testReporter } from './test-reporter';
 import * as path from 'path';
 import * as fs from 'fs';
-import { systemTestService } from './test-system';
+import { SystemTestService, systemTestService } from './test-system';
 import { apiTestService } from './test-api';
 import { performanceTestService } from './test-performance';
 

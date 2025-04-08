@@ -952,7 +952,7 @@ export default function TestManagement() {
                                     <div>
                                       <span className="text-sm font-medium">Optimization Suggestions:</span>
                                       <ul className="mt-1 space-y-1 text-sm">
-                                        {analysis.optimizations.map((opt, i) => (
+                                        {analysis.optimizations.map((opt: string, i: number) => (
                                           <li key={i} className="flex items-start gap-2">
                                             <span className="text-primary mt-0.5">•</span>
                                             <span>{opt}</span>

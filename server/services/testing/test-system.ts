@@ -84,7 +84,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error connecting to database',
         expected: 'Successful connection',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;
@@ -111,7 +111,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error executing complex query',
         expected: 'Query execution without errors',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;
@@ -157,7 +157,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error creating directory',
         expected: 'Directory created successfully',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;
@@ -184,7 +184,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error writing to file',
         expected: 'File written successfully',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;
@@ -224,7 +224,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error reading file',
         expected: 'File read successfully',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;
@@ -265,10 +265,10 @@ export class SystemTestService {
       const exists = !!process.env[varName];
       
       testGroup.tests.push({
-        name: \`Environment Variable: \${varName}\`,
-        description: \`Should have \${varName} environment variable set\`,
+        name: `Environment Variable: ${varName}`,
+        description: `Should have ${varName} environment variable set`,
         passed: exists,
-        result: exists ? \`\${varName} is set\` : \`\${varName} is not set\`,
+        result: exists ? `${varName} is set` : `${varName} is not set`,
         expected: 'Variable is set',
         actual: exists ? 'Variable is set' : 'Variable is not set'
       });
@@ -298,9 +298,9 @@ export class SystemTestService {
         name: 'CPU Information',
         description: 'Should get CPU information',
         passed: cpuCount > 0,
-        result: cpuCount > 0 ? \`Found \${cpuCount} CPUs\` : 'No CPU information available',
+        result: cpuCount > 0 ? `Found ${cpuCount} CPUs` : 'No CPU information available',
         expected: 'At least 1 CPU',
-        actual: \`\${cpuCount} CPUs\`
+        actual: `${cpuCount} CPUs`
       });
       
       if (cpuCount === 0) testGroup.passed = false;
@@ -311,7 +311,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error getting CPU information',
         expected: 'CPU information',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;
@@ -328,9 +328,9 @@ export class SystemTestService {
         name: 'Memory Information',
         description: 'Should get memory information',
         passed: totalMem > 0,
-        result: totalMem > 0 ? \`Memory usage: \${memUsagePercent}%\` : 'No memory information available',
+        result: totalMem > 0 ? `Memory usage: ${memUsagePercent}%` : 'No memory information available',
         expected: 'Memory information',
-        actual: \`Total: \${Math.round(totalMem / 1024 / 1024)}MB, Free: \${Math.round(freeMem / 1024 / 1024)}MB\`
+        actual: `Total: ${Math.round(totalMem / 1024 / 1024)}MB, Free: ${Math.round(freeMem / 1024 / 1024)}MB`
       });
       
       if (totalMem === 0) testGroup.passed = false;
@@ -341,7 +341,7 @@ export class SystemTestService {
         passed: false,
         result: 'Error getting memory information',
         expected: 'Memory information',
-        actual: \`Error: \${(error as Error).message}\`,
+        actual: `Error: ${(error as Error).message}`,
         error
       });
       testGroup.passed = false;

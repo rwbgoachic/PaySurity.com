@@ -9,12 +9,12 @@
 import { db } from "../../db";
 import { 
   federalTaxBrackets, stateTaxBrackets, ficaRates, taxAllowances,
-  employeeTaxProfiles, taxCalculations, payrollEntries,
+  employeeTaxProfiles, taxCalculations, payrollEntries, taxFilingStatusEnum,
   type FederalTaxBracket, type StateTaxBracket, type FicaRate,
   type TaxAllowance, type EmployeeTaxProfile, type TaxCalculation,
   type InsertTaxCalculation
 } from "@shared/schema";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, SQL } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
 /**
@@ -442,12 +442,15 @@ export class TaxCalculationService {
    * Get federal tax brackets for the specified year and filing status
    */
   private async getFederalTaxBrackets(year: number, filingStatus: string): Promise<FederalTaxBracket[]> {
+    // Ensure filingStatus is a valid enum value
+    const validStatus = this.validateFilingStatus(filingStatus);
+    
     return db.select()
       .from(federalTaxBrackets)
       .where(
         and(
           eq(federalTaxBrackets.year, year),
-          eq(federalTaxBrackets.filingStatus, filingStatus)
+          eq(federalTaxBrackets.filingStatus, validStatus as any)
         )
       )
       .orderBy(federalTaxBrackets.bracketOrder);
@@ -457,16 +460,33 @@ export class TaxCalculationService {
    * Get state tax brackets for the specified state, year, and filing status
    */
   private async getStateTaxBrackets(year: number, state: string, filingStatus: string): Promise<StateTaxBracket[]> {
+    // Ensure filingStatus is a valid enum value
+    const validStatus = this.validateFilingStatus(filingStatus);
+    
     return db.select()
       .from(stateTaxBrackets)
       .where(
         and(
           eq(stateTaxBrackets.year, year),
           eq(stateTaxBrackets.state, state),
-          eq(stateTaxBrackets.filingStatus, filingStatus)
+          eq(stateTaxBrackets.filingStatus, validStatus as any)
         )
       )
       .orderBy(stateTaxBrackets.bracketOrder);
+  }
+  
+  /**
+   * Validate filing status to ensure it's one of the allowed enum values
+   */
+  private validateFilingStatus(status: string): "single" | "married_joint" | "married_separate" | "head_of_household" | "qualifying_widow" {
+    const validStatuses = ["single", "married_joint", "married_separate", "head_of_household", "qualifying_widow"];
+    
+    if (!validStatuses.includes(status)) {
+      // Default to single if invalid status is provided
+      return "single";
+    }
+    
+    return status as "single" | "married_joint" | "married_separate" | "head_of_household" | "qualifying_widow";
   }
   
   /**

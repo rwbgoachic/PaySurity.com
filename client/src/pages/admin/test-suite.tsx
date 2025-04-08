@@ -11,6 +11,7 @@ interface TestResult {
   passed: boolean;
   errorDetails?: string;
   timestamp: string;
+  reportPaths?: string[];
 }
 
 export default function TestSuite() {
