@@ -1,149 +1,180 @@
 /**
  * Delivery System Database Schema
+ * 
+ * This file defines the Drizzle ORM schema for the delivery system database tables.
  */
 
-import { integer, pgEnum, pgTable, serial, text, timestamp, boolean, json } from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable } from 'drizzle-orm/pg-core';
+// import { relations } from 'drizzle-orm';  // Uncomment when implementing database schema
 import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
+import { 
+  integer, 
+  json, 
+  primaryKey, 
+  serial, 
+  text, 
+  timestamp,
+  boolean
+} from 'drizzle-orm/pg-core';
 
-/**
- * Delivery status enum - all possible states a delivery can be in
- */
+// Define the delivery status enum
 export const deliveryStatusEnum = pgEnum('delivery_status', [
-  'pending',     // Delivery has been created but not yet accepted by the provider
-  'accepted',    // Delivery has been accepted by the provider
-  'assigned',    // Driver has been assigned to the delivery
-  'picked_up',   // Driver has picked up the order
-  'in_transit',  // Driver is en route to the customer
-  'delivered',   // Delivery has been successfully completed
-  'failed',      // Delivery failed (e.g., customer not found)
-  'cancelled'    // Delivery was cancelled
+  'pending',
+  'accepted',
+  'assigned',
+  'picked_up',
+  'in_transit',
+  'delivered',
+  'failed',
+  'cancelled'
 ]);
 
-/**
- * Delivery providers table - stores registered delivery services
- */
+// Define the OrderItem schema which will be used for JSON storage
+export const orderItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  quantity: z.number(),
+  price: z.number().optional(),
+  options: z.array(z.string()).optional(),
+  notes: z.string().optional()
+});
+
+export type OrderItem = z.infer<typeof orderItemSchema>;
+
+// Define delivery provider table
 export const deliveryProviders = pgTable('delivery_providers', {
   id: serial('id').primaryKey(),
-  name: text('name').notNull(), // Provider name (e.g., "DoorDash", "Restaurant Staff")
-  type: text('type').notNull(), // Provider type (e.g., "internal", "doordash", "uber_eats")
-  apiKey: text('api_key'), // API key for external provider
-  apiSecret: text('api_secret'), // API secret for external provider
-  webhookKey: text('webhook_key'), // Secret key for webhook verification
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'internal' or 'external'
+  apiKey: text('api_key'),
+  apiSecret: text('api_secret'),
+  webhookKey: text('webhook_key'),
   isActive: boolean('is_active').notNull().default(true),
-  settings: json('settings').default({}), // Provider-specific settings as JSON
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at')
+  settings: json('settings'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow()
 });
 
-/**
- * Delivery regions table - geographic areas where delivery is available
- */
-export const deliveryRegions = pgTable('delivery_regions', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(), // Region name (e.g., "Downtown", "North Side")
-  city: text('city').notNull(),
-  state: text('state').notNull(),
-  postalCodes: text('postal_codes').array(), // Array of postal codes in this region
-  providerId: integer('provider_id').references(() => deliveryProviders.id),
-  isActive: boolean('is_active').notNull().default(true),
-  maxDistance: integer('max_distance'), // Maximum delivery distance in miles
-  minimumOrderAmount: text('minimum_order_amount'), // Minimum order value for delivery
-  baseFee: text('base_fee'), // Base delivery fee for this region
-  feePerMile: text('fee_per_mile'), // Additional fee per mile
-  platformFee: text('platform_fee'), // Our platform fee or commission
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at')
-});
+// Insert schema for delivery providers
+export const insertDeliveryProviderSchema = createInsertSchema(deliveryProviders)
+  .omit({ id: true, createdAt: true, updatedAt: true });
 
-/**
- * Business delivery settings table - configuration for each business
- */
+export type InsertDeliveryProvider = z.infer<typeof insertDeliveryProviderSchema>;
+export type DeliveryProvider = typeof deliveryProviders.$inferSelect;
+
+// Define business delivery settings table
 export const businessDeliverySettings = pgTable('business_delivery_settings', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull(),
-  isDeliveryEnabled: boolean('is_delivery_enabled').notNull().default(true),
-  defaultProviderId: integer('default_provider_id').references(() => deliveryProviders.id),
-  customFeeEnabled: boolean('custom_fee_enabled').notNull().default(false),
-  customBaseFee: text('custom_base_fee'), // Custom base fee if different from provider
-  customFeePerMile: text('custom_fee_per_mile'), // Custom per-mile fee
-  customPlatformFee: text('custom_platform_fee'), // Custom platform fee
-  customDeliveryRadius: integer('custom_delivery_radius'), // Custom delivery radius in miles
-  autoAcceptOrders: boolean('auto_accept_orders').notNull().default(true),
-  deliveryInstructions: text('delivery_instructions'), // Default instructions for drivers
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at')
+  enabledProviders: json('enabled_providers').$type<number[]>().default([]),
+  defaultProvider: integer('default_provider'),
+  autoAssign: boolean('auto_assign').notNull().default(true),
+  deliveryRadius: integer('delivery_radius'), // in miles
+  deliveryFee: text('delivery_fee'), // stored as string to maintain decimal precision
+  minimumOrderAmount: text('minimum_order_amount'),
+  freeDeliveryThreshold: text('free_delivery_threshold'),
+  estimatedDeliveryTime: integer('estimated_delivery_time'), // in minutes
+  isActive: boolean('is_active').notNull().default(true),
+  settings: json('settings'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow()
 });
 
-/**
- * Delivery orders table - records of delivery orders
- */
+// Insert schema for business delivery settings
+export const insertBusinessDeliverySettingsSchema = createInsertSchema(businessDeliverySettings)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+export type InsertBusinessDeliverySetting = z.infer<typeof insertBusinessDeliverySettingsSchema>;
+export type BusinessDeliverySetting = typeof businessDeliverySettings.$inferSelect;
+
+// Define delivery orders table
 export const deliveryOrders = pgTable('delivery_orders', {
   id: serial('id').primaryKey(),
-  externalOrderId: text('external_order_id'), // ID assigned by external provider
   businessId: integer('business_id').notNull(),
-  providerId: integer('provider_id').references(() => deliveryProviders.id).notNull(),
-  orderId: integer('order_id').notNull(), // Reference to the POS order
+  orderId: text('order_id').notNull(), // Reference to the restaurant order
+  providerId: integer('provider_id').notNull(), // Which delivery provider is handling this
+  externalOrderId: text('external_order_id'), // Provider's order ID
   status: deliveryStatusEnum('status').notNull().default('pending'),
-  customerName: text('customer_name').notNull(),
-  customerPhone: text('customer_phone').notNull(),
-  customerAddress: text('customer_address').notNull(), // Stored as JSON string
-  businessAddress: text('business_address').notNull(), // Stored as JSON string
-  orderDetails: json('order_details').notNull(), // Order items, etc.
+  customerName: text('customer_name'),
+  customerPhone: text('customer_phone'),
+  pickupAddress: json('pickup_address'),
+  deliveryAddress: json('delivery_address'),
+  items: json('items').$type<OrderItem[]>(),
+  deliveryFee: text('delivery_fee'),
+  customerFee: text('customer_fee'),
+  platformFee: text('platform_fee'),
+  distance: text('distance'),
+  distanceUnit: text('distance_unit').default('miles'),
+  estimatedPickupTime: timestamp('estimated_pickup_time', { mode: 'date' }),
+  estimatedDeliveryTime: timestamp('estimated_delivery_time', { mode: 'date' }),
+  actualPickupTime: timestamp('actual_pickup_time', { mode: 'date' }),
+  actualDeliveryTime: timestamp('actual_delivery_time', { mode: 'date' }),
+  trackingUrl: text('tracking_url'),
+  driverInfo: json('driver_info'),
   specialInstructions: text('special_instructions'),
-  estimatedPickupTime: timestamp('estimated_pickup_time'),
-  estimatedDeliveryTime: timestamp('estimated_delivery_time'),
-  actualPickupTime: timestamp('actual_pickup_time'),
-  actualDeliveryTime: timestamp('actual_delivery_time'),
-  driverId: text('driver_id'), // Driver ID from provider
-  driverName: text('driver_name'),
-  driverPhone: text('driver_phone'),
-  trackingUrl: text('tracking_url'), // URL for tracking the delivery
-  distance: text('distance'), // Distance in miles
-  providerFee: text('provider_fee').notNull(), // Fee paid to provider
-  platformFee: text('platform_fee').notNull(), // Our platform fee
-  customerFee: text('customer_fee').notNull(), // Total fee charged to customer
-  providerResponse: json('provider_response'), // Raw response from provider
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at')
+  providerData: json('provider_data'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow()
 });
 
-/**
- * Delivery status history table - tracks all status changes
- */
-export const deliveryStatusHistory = pgTable('delivery_status_history', {
-  id: serial('id').primaryKey(),
-  deliveryOrderId: integer('delivery_order_id').references(() => deliveryOrders.id).notNull(),
-  status: deliveryStatusEnum('status').notNull(),
-  timestamp: timestamp('timestamp').notNull().defaultNow(),
-  notes: text('notes'),
-  driverLatitude: text('driver_latitude'),
-  driverLongitude: text('driver_longitude'),
-  createdAt: timestamp('created_at').defaultNow()
-});
+// Insert schema for delivery orders
+export const insertDeliveryOrderSchema = createInsertSchema(deliveryOrders)
+  .omit({ id: true, createdAt: true, updatedAt: true });
 
-export const insertDeliveryProviderSchema = createInsertSchema(deliveryProviders);
-export const insertDeliveryRegionSchema = createInsertSchema(deliveryRegions);
-export const insertBusinessDeliverySettingsSchema = createInsertSchema(businessDeliverySettings);
-export const insertDeliveryOrderSchema = createInsertSchema(deliveryOrders);
-export const insertDeliveryStatusHistorySchema = createInsertSchema(deliveryStatusHistory);
-
-// Extended schema for creating a new delivery with simplified fields
-export const createDeliverySchema = insertDeliveryOrderSchema.extend({
-  // Additional validation or transformation can be added here
-});
-
-// Types
-export type DeliveryProvider = typeof deliveryProviders.$inferSelect;
-export type InsertDeliveryProvider = typeof deliveryProviders.$inferInsert;
-
-export type DeliveryRegion = typeof deliveryRegions.$inferSelect;
-export type InsertDeliveryRegion = typeof deliveryRegions.$inferInsert;
-
-export type BusinessDeliverySetting = typeof businessDeliverySettings.$inferSelect;
-export type InsertBusinessDeliverySetting = typeof businessDeliverySettings.$inferInsert;
-
+export type InsertDeliveryOrder = z.infer<typeof insertDeliveryOrderSchema>;
 export type DeliveryOrder = typeof deliveryOrders.$inferSelect;
-export type InsertDeliveryOrder = typeof deliveryOrders.$inferInsert;
 
-export type DeliveryStatusHistoryEntry = typeof deliveryStatusHistory.$inferSelect;
-export type InsertDeliveryStatusHistoryEntry = typeof deliveryStatusHistory.$inferInsert;
+// Define delivery status updates table for tracking history
+export const deliveryStatusUpdates = pgTable('delivery_status_updates', {
+  id: serial('id').primaryKey(),
+  deliveryOrderId: integer('delivery_order_id').notNull(),
+  status: deliveryStatusEnum('status').notNull(),
+  timestamp: timestamp('timestamp', { mode: 'date' }).defaultNow(),
+  driverInfo: json('driver_info'),
+  location: json('location'),
+  notes: text('notes'),
+  providerData: json('provider_data')
+});
+
+// Insert schema for delivery status updates
+export const insertDeliveryStatusUpdateSchema = createInsertSchema(deliveryStatusUpdates)
+  .omit({ id: true });
+
+export type InsertDeliveryStatusUpdate = z.infer<typeof insertDeliveryStatusUpdateSchema>;
+export type DeliveryStatusUpdate = typeof deliveryStatusUpdates.$inferSelect;
+
+// Note: Relations are defined when we implement the database schema
+// These are not active in the current in-memory implementation
+// But they represent the relationships we'd implement with a real database
+
+/*
+// Define relations between tables
+export const deliveryProvidersRelations = relations(deliveryProviders, ({ many }) => ({
+  businessSettings: many(businessDeliverySettings),
+  deliveryOrders: many(deliveryOrders)
+}));
+
+export const businessDeliverySettingsRelations = relations(businessDeliverySettings, ({ one }) => ({
+  defaultProviderRelation: one(deliveryProviders, {
+    fields: [businessDeliverySettings.defaultProvider],
+    references: [deliveryProviders.id]
+  })
+}));
+
+export const deliveryOrdersRelations = relations(deliveryOrders, ({ one, many }) => ({
+  provider: one(deliveryProviders, {
+    fields: [deliveryOrders.providerId],
+    references: [deliveryProviders.id]
+  }),
+  statusUpdates: many(deliveryStatusUpdates)
+}));
+
+export const deliveryStatusUpdatesRelations = relations(deliveryStatusUpdates, ({ one }) => ({
+  deliveryOrder: one(deliveryOrders, {
+    fields: [deliveryStatusUpdates.deliveryOrderId],
+    references: [deliveryOrders.id]
+  })
+}));
+*/

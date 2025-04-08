@@ -157,12 +157,34 @@ function Router() {
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
       <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
       <ProtectedRoute path="/admin/project-dependencies" component={ProjectDependenciesPage} />
+      <Route path="/admin/test-suite" component={() => {
+        const TestSuite = React.lazy(() => import("./pages/admin/test-suite"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <TestSuite />
+          </React.Suspense>
+        );
+      }} />
       
       {/* Customer-facing routes */}
-      <Route path="/order-modify/:token" component={React.lazy(() => import("./pages/customer/order-modify"))} />
+      <Route path="/order-modify/:token" component={(props) => {
+        const OrderModify = React.lazy(() => import("./pages/customer/order-modify"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <OrderModify {...props} />
+          </React.Suspense>
+        );
+      }} />
       
       {/* Admin routes */}
-      <Route path="/admin/sms-settings" component={React.lazy(() => import("./pages/admin/sms-settings"))} />
+      <Route path="/admin/sms-settings" component={(props) => {
+        const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <SmsSettings {...props} />
+          </React.Suspense>
+        );
+      }} />
       
       {/* Catch-all route - must be last */}
       <Route component={NotFound} />

@@ -8,11 +8,9 @@ import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { z } from "zod";
 import { sendOrderStatusSms } from "./services/sms";
-import { DeliveryService } from "./services/delivery/delivery-service";
-import { deliveryStatusEnum, insertBusinessDeliverySettingsSchema } from "../shared/delivery-schema";
+import { deliveryService } from "./services/delivery/delivery-service";
 import { processOrderModifications } from "./services/orderModification";
 import { generateOrderModificationUrl } from "./services/qrcode";
-import deliveryService from "./services/delivery/delivery-service";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -59,8 +57,6 @@ import {
 // Import delivery schema
 import {
   insertDeliveryProviderSchema,
-  insertDeliveryRegionSchema,
-  insertDeliveryProviderRegionSchema,
   insertBusinessDeliverySettingsSchema,
   insertDeliveryOrderSchema,
   deliveryStatusEnum
@@ -1903,7 +1899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const providers = await deliveryService.getActiveProviders();
+      const providers = deliveryService.listProviders();
       res.json(providers);
     } catch (error) {
       console.error("Error fetching delivery providers:", error);
@@ -1992,16 +1988,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { businessId, pickup, delivery, orderDetails } = req.body;
+      const { pickup, delivery, orderDetails } = req.body;
       
-      if (!businessId || !pickup || !delivery || !orderDetails) {
+      if (!pickup || !delivery || !orderDetails) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       
       const quotes = await deliveryService.getDeliveryQuotes(
-        businessId,
-        pickup,
-        delivery,
+        pickup, 
+        delivery, 
         orderDetails
       );
       
@@ -2019,28 +2014,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { businessId, providerId, orderDetails } = req.body;
+      const { orderDetails } = req.body;
       
-      if (!businessId || !providerId || !orderDetails) {
-        return res.status(400).json({ error: "Missing required fields" });
+      if (!orderDetails) {
+        return res.status(400).json({ error: "Missing required orderDetails" });
       }
       
-      // Check if user has access to this business
-      if (req.user.role !== "admin" && req.user.businessId !== businessId) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-      
-      const order = await deliveryService.createDeliveryOrder(
-        businessId,
-        providerId,
-        orderDetails
-      );
+      const order = await deliveryService.createDelivery(orderDetails);
       
       // Send notification via WebSocket
-      broadcast(`business-${businessId}`, {
-        type: 'delivery_order_created',
-        data: order
-      });
+      if (orderDetails.businessId) {
+        broadcast(`business-${orderDetails.businessId}`, {
+          type: 'delivery_order_created',
+          data: order
+        });
+      }
       
       res.status(201).json(order);
     } catch (error) {
@@ -2205,7 +2193,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const cancelledOrder = await deliveryService.cancelDeliveryOrder(orderId);
+      // Find the order in the database with its provider details
+      const { db } = await import('./db');
+      const { deliveryOrders, deliveryProviders } = await import('@shared/delivery-schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Get provider ID for the order
+      const [deliveryOrderWithProvider] = await db
+        .select()
+        .from(deliveryOrders)
+        .where(eq(deliveryOrders.id, orderId));
+        
+      if (!deliveryOrderWithProvider || !deliveryOrderWithProvider.providerId) {
+        return res.status(404).json({ error: "Delivery order provider information not found" });
+      }
+      
+      const cancelledOrder = await deliveryService.cancelDelivery(
+        deliveryOrderWithProvider.providerId, 
+        order.externalOrderId
+      );
       
       // Send notification via WebSocket
       broadcast(`business-${order.businessId}`, {
@@ -2322,6 +2328,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // End of Delivery Management API
+  // -------------------------------------------------
+  
+  // Test API Endpoints
+  // -------------------------------------------------
+  
+  // Run comprehensive test suite
+  app.post("/api/tests/run", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    // Only admins can run tests
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Forbidden: Only admins can run tests" });
+    }
+    
+    try {
+      const { suite, format = 'json' } = req.body;
+      
+      // Import test coordinator
+      const { testCoordinator } = await import('./services/testing/test-coordinator');
+      
+      let report;
+      if (suite) {
+        // Run specific test suite
+        report = await testCoordinator.runTestSuite(suite);
+        
+        if (!report) {
+          return res.status(404).json({ error: `Test suite not found: ${suite}` });
+        }
+      } else {
+        // Run all test suites
+        report = await testCoordinator.runAllTests();
+      }
+      
+      // Generate report in requested format
+      const formats = (Array.isArray(format) ? format : [format]) as ('console' | 'html' | 'json')[];
+      const reportPaths = testCoordinator.saveReports(report, formats);
+      
+      // Return report summary
+      res.json({
+        passed: report.passed,
+        timestamp: report.timestamp,
+        testGroups: report.testGroups.map(group => ({
+          name: group.name,
+          passed: group.passed,
+          testCount: group.tests.length,
+          failedTests: group.tests.filter(test => !test.passed).length
+        })),
+        reportPaths
+      });
+    } catch (error) {
+      console.error("Error running tests:", error);
+      res.status(500).json({ error: "Failed to run tests" });
+    }
+  });
+  
+  // Get available test suites
+  app.get("/api/tests/suites", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    // Only admins can view test suites
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Forbidden: Only admins can view test suites" });
+    }
+    
+    try {
+      // Import test coordinator
+      const { testCoordinator } = await import('./services/testing/test-coordinator');
+      
+      // Get available test suites
+      const suites = testCoordinator.getAvailableTestSuites();
+      
+      res.json({ suites });
+    } catch (error) {
+      console.error("Error getting test suites:", error);
+      res.status(500).json({ error: "Failed to get test suites" });
+    }
+  });
+  
+  // View test report
+  app.get("/api/tests/reports/:reportName", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    // Only admins can view test reports
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Forbidden: Only admins can view test reports" });
+    }
+    
+    try {
+      const reportName = req.params.reportName;
+      const format = req.query.format as string || 'html';
+      
+      // Import fs and path
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // Construct report path
+      const reportPath = path.join(process.cwd(), 'test-reports', reportName);
+      
+      // Check if report exists
+      if (!fs.existsSync(reportPath)) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      // Read report
+      const reportContent = fs.readFileSync(reportPath, 'utf-8');
+      
+      // Set content type based on format
+      if (format === 'html' || reportName.endsWith('.html')) {
+        res.setHeader('Content-Type', 'text/html');
+      } else if (format === 'json' || reportName.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json');
+      } else {
+        res.setHeader('Content-Type', 'text/plain');
+      }
+      
+      res.send(reportContent);
+    } catch (error) {
+      console.error("Error viewing test report:", error);
+      res.status(500).json({ error: "Failed to view test report" });
+    }
+  });
+  
+  // End of Test API
   // -------------------------------------------------
 
   const httpServer = createServer(app);

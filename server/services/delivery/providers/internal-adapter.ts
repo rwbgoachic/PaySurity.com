@@ -1,9 +1,8 @@
 /**
  * Internal Delivery Provider Adapter
  * 
- * This adapter represents the restaurant's own delivery staff/drivers.
- * It allows businesses to manage their own delivery operations through
- * our platform without relying on external services.
+ * This adapter manages deliveries done by the restaurant's own delivery staff.
+ * It provides management of internal drivers and delivery logistics.
  */
 
 import {
@@ -16,32 +15,19 @@ import {
   ExternalDeliveryOrder
 } from '../interfaces';
 
-/**
- * Internal delivery service adapter for restaurants using their own drivers
- */
+// Storage of delivery orders by ID for testing and demo purposes
+// In a production environment, this would be stored in a database
+const deliveryOrders = new Map<string, {
+  orderId: string;
+  status: DeliveryStatus;
+  estimatedPickupTime: Date;
+  estimatedDeliveryTime: Date;
+  driverId?: string;
+  driverName?: string;
+  driverPhone?: string;
+}>();
+
 export class InternalDeliveryAdapter implements DeliveryProviderAdapter {
-  private deliveries: Map<string, {
-    status: DeliveryStatus;
-    driverInfo?: {
-      id?: string | number;
-      name?: string;
-      phone?: string;
-      location?: {
-        latitude: number;
-        longitude: number;
-        timestamp?: Date;
-      }
-    };
-    notes?: string;
-    createdAt: Date;
-    estimatedPickupTime: Date;
-    estimatedDeliveryTime: Date;
-    lastUpdate: Date;
-    businessAddress: Address;
-    customerAddress: Address;
-    orderDetails: OrderDetails;
-  }> = new Map();
-  
   getName(): string {
     return 'Restaurant Delivery';
   }
@@ -51,112 +37,118 @@ export class InternalDeliveryAdapter implements DeliveryProviderAdapter {
   }
   
   /**
-   * Calculate distance between two coordinates using Haversine formula
+   * Calculate a delivery fee based on distance (simplified)
    */
-  private calculateDistance(
-    lat1?: number, 
-    lon1?: number, 
-    lat2?: number, 
-    lon2?: number
-  ): number {
-    if (!lat1 || !lon1 || !lat2 || !lon2) {
-      return 2.5; // Default distance if coordinates not provided
-    }
+  private calculateDeliveryFee(distance: number): number {
+    // Base fee of $2.50
+    const baseFee = 2.5;
     
-    const R = 3958.8; // Radius of the earth in miles
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    
-    return Math.round(distance * 100) / 100;
-  }
-  
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI / 180);
-  }
-  
-  /**
-   * Estimate delivery time based on distance and traffic conditions
-   */
-  private estimateDeliveryTime(distance: number, pickupTime: Date): Date {
-    // Basic calculation: 5 minutes base + 3 minutes per mile
-    const deliveryMinutes = 5 + (distance * 3);
-    
-    return new Date(pickupTime.getTime() + deliveryMinutes * 60 * 1000);
-  }
-  
-  /**
-   * Calculate delivery fee based on distance and other factors
-   */
-  private calculateDeliveryFee(distance: number, orderValue: number): number {
-    // Base fee + distance fee
-    const baseFee = 2.99;
+    // $0.75 per mile
     const distanceFee = distance * 0.75;
     
-    // Apply minimum fee
-    let fee = Math.max(3.99, baseFee + distanceFee);
-    
-    // Discount for larger orders
-    if (orderValue > 50) {
-      fee *= 0.9; // 10% discount
-    }
-    if (orderValue > 100) {
-      fee *= 0.9; // additional 10% discount (19% total)
-    }
-    
-    // Round to 2 decimal places
-    return Math.round(fee * 100) / 100;
+    // Total fee rounded to 2 decimal places
+    return Math.round((baseFee + distanceFee) * 100) / 100;
   }
   
+  /**
+   * Calculate the approximate distance between two points
+   * Using the Haversine formula for a rough estimate
+   */
+  private calculateDistance(pickup: Address, delivery: Address): number {
+    // Default to 3 miles if coordinates are not provided
+    if (!pickup.latitude || !pickup.longitude || !delivery.latitude || !delivery.longitude) {
+      return 3.0;
+    }
+    
+    // Haversine formula to calculate distance between two points on Earth
+    const earthRadiusKm = 6371; // Radius of the Earth in km
+    
+    // Convert latitude and longitude from degrees to radians
+    const lat1 = pickup.latitude * Math.PI / 180;
+    const lon1 = pickup.longitude * Math.PI / 180;
+    const lat2 = delivery.latitude * Math.PI / 180;
+    const lon2 = delivery.longitude * Math.PI / 180;
+    
+    // Haversine formula
+    const dLat = lat2 - lat1;
+    const dLon = lon2 - lon1;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1) * Math.cos(lat2) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distanceKm = earthRadiusKm * c;
+    
+    // Convert km to miles and round to 2 decimal places
+    return Math.round(distanceKm * 0.621371 * 100) / 100;
+  }
+  
+  /**
+   * Estimate delivery times based on distance and current time
+   */
+  private estimateDeliveryTimes(distance: number): {
+    pickupTime: Date;
+    deliveryTime: Date;
+  } {
+    const now = new Date();
+    
+    // Estimate preparation time: base 10 minutes + 5 minutes per 2 miles
+    const prepMinutes = 10 + Math.floor(distance / 2) * 5;
+    const pickupTime = new Date(now.getTime() + prepMinutes * 60 * 1000);
+    
+    // Estimate delivery time: pickup time + delivery travel time
+    // Assume average speed of 20 mph, so it takes 3 minutes per mile
+    const deliveryMinutes = distance * 3;
+    const deliveryTime = new Date(pickupTime.getTime() + deliveryMinutes * 60 * 1000);
+    
+    return { pickupTime, deliveryTime };
+  }
+  
+  /**
+   * Get a delivery quote for the restaurant's delivery service
+   */
   async getQuote(
     pickup: Address,
     delivery: Address,
-    orderDetails: OrderDetails
+    _orderDetails: OrderDetails
   ): Promise<DeliveryQuote> {
     try {
-      // Calculate distance
-      const distance = this.calculateDistance(
-        pickup.latitude,
-        pickup.longitude,
-        delivery.latitude,
-        delivery.longitude
-      );
+      // Calculate the distance between pickup and delivery
+      const distance = this.calculateDistance(pickup, delivery);
+      
+      // Calculate the fee based on distance
+      const fee = this.calculateDeliveryFee(distance);
       
       // Estimate pickup and delivery times
-      const now = new Date();
-      const estimatedPickupTime = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes from now
-      const estimatedDeliveryTime = this.estimateDeliveryTime(distance, estimatedPickupTime);
+      const { pickupTime, deliveryTime } = this.estimateDeliveryTimes(distance);
       
-      // Calculate fee
-      const fee = this.calculateDeliveryFee(distance, orderDetails.totalValue);
+      // Generate a quote ID for reference
+      const quoteId = `internal-${Date.now()}`;
       
-      // Return the quote
+      // Quote expiration (valid for 30 minutes)
+      const validUntil = new Date(Date.now() + 30 * 60 * 1000);
+      
       return {
-        providerId: 0, // Will be set by the delivery service
+        providerId: 0, // Will be set by delivery service
         providerName: this.getName(),
-        fee,
-        customerFee: fee, // Same fee shown to customer
-        platformFee: 0, // No platform fee for internal delivery
-        currency: orderDetails.currency || 'USD',
-        estimatedPickupTime,
-        estimatedDeliveryTime,
+        fee: fee,
+        customerFee: fee * 1.2, // Add 20% for customer fee
+        platformFee: fee * 0.2, // Platform fee is 20% of base fee
+        currency: 'USD',
+        estimatedPickupTime: pickupTime,
+        estimatedDeliveryTime: deliveryTime,
         distance,
         distanceUnit: 'miles',
         valid: true,
-        validUntil: new Date(now.getTime() + 30 * 60 * 1000), // Valid for 30 minutes
-        errors: []
+        validUntil,
+        errors: [],
+        providerData: {
+          quoteId
+        }
       };
     } catch (error) {
-      console.error('Error getting internal delivery quote:', error);
+      console.error('Error generating internal delivery quote:', error);
       
-      const now = new Date();
       return {
         providerId: 0,
         providerName: this.getName(),
@@ -164,106 +156,146 @@ export class InternalDeliveryAdapter implements DeliveryProviderAdapter {
         customerFee: 0,
         platformFee: 0,
         currency: 'USD',
-        estimatedPickupTime: new Date(now.getTime() + 15 * 60 * 1000),
-        estimatedDeliveryTime: new Date(now.getTime() + 45 * 60 * 1000),
+        estimatedPickupTime: new Date(Date.now() + 15 * 60 * 1000),
+        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000),
         distance: 0,
         distanceUnit: 'miles',
         valid: false,
-        validUntil: now,
-        errors: [(error as Error).message || 'Unknown error calculating delivery quote']
+        validUntil: new Date(Date.now() + 5 * 60 * 1000),
+        errors: [(error as Error).message || 'Internal service error']
       };
     }
   }
   
+  /**
+   * Create a delivery with the restaurant's delivery service
+   */
   async createDelivery(
     orderDetails: DeliveryOrderDetails
   ): Promise<ExternalDeliveryOrder> {
     try {
-      // Parse addresses if they're strings
-      const businessAddress = typeof orderDetails.businessAddress === 'string'
-        ? JSON.parse(orderDetails.businessAddress) as Address
-        : orderDetails.businessAddress;
-      
-      const customerAddress = typeof orderDetails.customerAddress === 'string'
-        ? JSON.parse(orderDetails.customerAddress) as Address
-        : orderDetails.customerAddress;
-      
-      // Generate a unique ID for the delivery
-      const externalOrderId = `int-${orderDetails.businessId}-${orderDetails.orderId}-${Date.now()}`;
-      
-      // Calculate distance
+      // Calculate distance between business and customer
       const distance = this.calculateDistance(
-        businessAddress.latitude,
-        businessAddress.longitude,
-        customerAddress.latitude,
-        customerAddress.longitude
+        orderDetails.businessAddress,
+        orderDetails.customerAddress
       );
       
-      // Estimate pickup and delivery times
-      const now = new Date();
-      const estimatedPickupTime = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes from now
-      const estimatedDeliveryTime = this.estimateDeliveryTime(distance, estimatedPickupTime);
+      // Estimate delivery times
+      const { pickupTime, deliveryTime } = this.estimateDeliveryTimes(distance);
       
-      // Store the delivery in our internal map
-      this.deliveries.set(externalOrderId, {
-        status: 'pending',
-        createdAt: now,
-        estimatedPickupTime,
-        estimatedDeliveryTime,
-        lastUpdate: now,
-        businessAddress,
-        customerAddress,
-        orderDetails: orderDetails.orderDetails
-      });
+      // Create a unique delivery ID
+      const deliveryId = `internal-${orderDetails.businessId}-${orderDetails.orderId}-${Date.now()}`;
       
-      // Return delivery information
+      // Create initial delivery record (in a real app, this would be stored in the database)
+      const deliveryRecord = {
+        orderId: orderDetails.orderId,
+        status: 'pending' as DeliveryStatus,
+        estimatedPickupTime: pickupTime,
+        estimatedDeliveryTime: deliveryTime,
+      };
+      
+      // Store in memory for demo/testing purposes
+      deliveryOrders.set(deliveryId, deliveryRecord);
+      
       return {
-        externalOrderId,
+        externalOrderId: deliveryId,
         status: 'pending',
-        estimatedPickupTime,
-        estimatedDeliveryTime,
-        trackingUrl: `/delivery/track/${externalOrderId}`,
+        estimatedPickupTime: pickupTime,
+        estimatedDeliveryTime: deliveryTime,
         providerData: {
-          distance,
-          createdAt: now
+          deliveryId,
+          distance
         }
       };
     } catch (error) {
       console.error('Error creating internal delivery:', error);
-      throw error;
+      throw new Error(`Failed to create internal delivery: ${(error as Error).message}`);
     }
   }
   
+  /**
+   * Cancel an internal delivery
+   */
   async cancelDelivery(externalOrderId: string): Promise<boolean> {
-    const delivery = this.deliveries.get(externalOrderId);
-    
-    if (!delivery) {
+    try {
+      const delivery = deliveryOrders.get(externalOrderId);
+      
+      if (!delivery) {
+        return false;
+      }
+      
+      // Update status to cancelled
+      delivery.status = 'cancelled';
+      deliveryOrders.set(externalOrderId, delivery);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error cancelling internal delivery ${externalOrderId}:`, error);
       return false;
     }
-    
-    // Only allow cancellation for certain statuses
-    if (['delivered', 'failed', 'cancelled'].includes(delivery.status)) {
-      return false;
-    }
-    
-    // Update the delivery status
-    delivery.status = 'cancelled';
-    delivery.lastUpdate = new Date();
-    this.deliveries.set(externalOrderId, delivery);
-    
-    return true;
   }
   
+  /**
+   * Get the current status of an internal delivery
+   */
   async getDeliveryStatus(externalOrderId: string): Promise<DeliveryStatus> {
-    const delivery = this.deliveries.get(externalOrderId);
-    
-    if (!delivery) {
-      throw new Error(`Delivery with ID ${externalOrderId} not found`);
+    try {
+      const delivery = deliveryOrders.get(externalOrderId);
+      
+      if (!delivery) {
+        throw new Error(`Delivery with ID ${externalOrderId} not found`);
+      }
+      
+      return delivery.status;
+    } catch (error) {
+      console.error(`Error getting status for internal delivery ${externalOrderId}:`, error);
+      throw new Error(`Failed to get internal delivery status: ${(error as Error).message}`);
     }
-    
-    return delivery.status;
   }
   
+  /**
+   * Update the status of an internal delivery
+   * This would typically be called by the delivery management app
+   */
+  updateDeliveryStatus(
+    externalOrderId: string,
+    status: DeliveryStatus,
+    driverInfo?: {
+      driverId: string;
+      driverName: string;
+      driverPhone?: string;
+    }
+  ): boolean {
+    try {
+      const delivery = deliveryOrders.get(externalOrderId);
+      
+      if (!delivery) {
+        return false;
+      }
+      
+      // Update status
+      delivery.status = status;
+      
+      // Update driver info if provided
+      if (driverInfo) {
+        delivery.driverId = driverInfo.driverId;
+        delivery.driverName = driverInfo.driverName;
+        delivery.driverPhone = driverInfo.driverPhone;
+      }
+      
+      // Save updates
+      deliveryOrders.set(externalOrderId, delivery);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error updating internal delivery status ${externalOrderId}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Parse webhook data (this would be a status update from the driver app)
+   */
   async parseWebhookData(
     data: any,
     _headers: Record<string, string>
@@ -272,139 +304,63 @@ export class InternalDeliveryAdapter implements DeliveryProviderAdapter {
     status: DeliveryStatus;
     driverInfo?: any;
     timestamp: Date;
-    additionalData?: any;
   }> {
-    // Internal provider doesn't receive webhooks, but implements interface for consistency
-    const status = data.status as DeliveryStatus || 'pending';
+    // For internal deliveries, this might come from the driver app
+    const externalOrderId = data.deliveryId;
+    const status = data.status as DeliveryStatus;
     const timestamp = new Date(data.timestamp || Date.now());
     
+    // Extract driver information if available
+    const driverInfo = data.driverInfo ? {
+      id: data.driverInfo.id,
+      name: data.driverInfo.name,
+      phone: data.driverInfo.phone,
+      location: data.driverInfo.location ? {
+        latitude: data.driverInfo.location.latitude,
+        longitude: data.driverInfo.location.longitude,
+        timestamp: new Date(data.driverInfo.location.timestamp || timestamp)
+      } : undefined
+    } : undefined;
+    
+    // Update the status in our store
+    if (externalOrderId && status && driverInfo) {
+      // Format the driver info correctly, ensuring all required fields are strings
+      const formattedDriverInfo = {
+        driverId: String(driverInfo.id),
+        driverName: String(driverInfo.name),
+        driverPhone: driverInfo.phone ? String(driverInfo.phone) : undefined
+      };
+      this.updateDeliveryStatus(externalOrderId, status, formattedDriverInfo);
+    }
+    
     return {
-      externalOrderId: data.externalOrderId,
+      externalOrderId,
       status,
-      driverInfo: data.driverInfo,
-      timestamp,
-      additionalData: data
+      driverInfo,
+      timestamp
     };
   }
   
+  /**
+   * For internal webhooks, we would validate a shared secret or API key
+   */
   async verifyWebhookSignature(
     _data: any,
-    _headers: Record<string, string>,
-    _secret: string
+    headers: Record<string, string>,
+    secret: string
   ): Promise<boolean> {
-    // Internal provider doesn't need webhook signature verification
-    return true;
-  }
-  
-  /**
-   * Internal-specific method to update delivery status from the driver app
-   */
-  async updateDeliveryStatus(
-    externalOrderId: string,
-    status: DeliveryStatus,
-    driverInfo?: any,
-    notes?: string
-  ): Promise<boolean> {
-    const delivery = this.deliveries.get(externalOrderId);
-    
-    if (!delivery) {
+    // Simple implementation: check for the secret in the Authorization header
+    const authHeader = headers['authorization'];
+    if (!authHeader) {
       return false;
     }
     
-    // Update the delivery
-    delivery.status = status;
-    delivery.lastUpdate = new Date();
-    
-    if (driverInfo) {
-      delivery.driverInfo = {
-        ...delivery.driverInfo,
-        ...driverInfo
-      };
-    }
-    
-    if (notes) {
-      delivery.notes = notes;
-    }
-    
-    // Store the updated delivery
-    this.deliveries.set(externalOrderId, delivery);
-    
-    return true;
-  }
-  
-  /**
-   * Internal-specific method to assign a driver to a delivery
-   */
-  async assignDriver(
-    externalOrderId: string,
-    driverId: string | number,
-    driverName: string,
-    driverPhone: string
-  ): Promise<boolean> {
-    const delivery = this.deliveries.get(externalOrderId);
-    
-    if (!delivery) {
+    // Expected format: "Bearer <secret>"
+    const [bearer, token] = authHeader.split(' ');
+    if (bearer.toLowerCase() !== 'bearer' || token !== secret) {
       return false;
     }
     
-    // Assign the driver
-    delivery.driverInfo = {
-      id: driverId,
-      name: driverName,
-      phone: driverPhone
-    };
-    
-    // Update status to assigned if it's still pending
-    if (delivery.status === 'pending') {
-      delivery.status = 'assigned';
-    }
-    
-    delivery.lastUpdate = new Date();
-    this.deliveries.set(externalOrderId, delivery);
-    
     return true;
-  }
-  
-  /**
-   * Internal-specific method to update driver location
-   */
-  async updateDriverLocation(
-    externalOrderId: string,
-    latitude: number,
-    longitude: number
-  ): Promise<boolean> {
-    const delivery = this.deliveries.get(externalOrderId);
-    
-    if (!delivery || !delivery.driverInfo) {
-      return false;
-    }
-    
-    // Update driver location
-    delivery.driverInfo.location = {
-      latitude,
-      longitude,
-      timestamp: new Date()
-    };
-    
-    delivery.lastUpdate = new Date();
-    this.deliveries.set(externalOrderId, delivery);
-    
-    return true;
-  }
-  
-  /**
-   * Internal-specific method to get full delivery details
-   */
-  async getDeliveryDetails(externalOrderId: string): Promise<any> {
-    const delivery = this.deliveries.get(externalOrderId);
-    
-    if (!delivery) {
-      throw new Error(`Delivery with ID ${externalOrderId} not found`);
-    }
-    
-    return {
-      id: externalOrderId,
-      ...delivery
-    };
   }
 }

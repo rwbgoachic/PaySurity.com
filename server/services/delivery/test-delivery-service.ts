@@ -1,238 +1,483 @@
 /**
- * Test module for delivery service
+ * Delivery Service Test Suite
  * 
- * This file contains test functions to validate the delivery service and adapters
+ * Comprehensive tests for the delivery service and its providers
  */
 
-import { 
-  DeliveryProviderAdapter,
+import {
   Address,
   OrderDetails,
+  DeliveryStatus,
   DeliveryOrderDetails
 } from './interfaces';
+import { DeliveryService, deliveryService } from './delivery-service';
+import { DoorDashConfig } from './providers/doordash-adapter';
 import { InternalDeliveryAdapter } from './providers/internal-adapter';
-import { DoorDashAdapter } from './providers/doordash-adapter';
-import { deliveryService } from './delivery-service';
+
+export interface TestReport {
+  name: string;
+  success: boolean;
+  message: string;
+  details?: any;
+  timestamp: Date;
+  duration: number;
+}
+
+export interface TestSuiteResult {
+  suiteName: string;
+  totalTests: number;
+  passedTests: number;
+  failedTests: number;
+  skippedTests: number;
+  startTime: Date;
+  endTime: Date;
+  duration: number;
+  reports: TestReport[];
+}
 
 /**
- * Sample data for testing
+ * Test the delivery service and all registered providers
  */
-const testRestaurantAddress: Address = {
-  street: '123 Main Street',
-  city: 'San Francisco',
-  state: 'CA',
-  postalCode: '94105',
-  businessName: 'Test Restaurant',
-  phone: '415-555-1234',
-  latitude: 37.7749,
-  longitude: -122.4194
-};
-
-const testCustomerAddress: Address = {
-  street: '456 Market Street',
-  city: 'San Francisco',
-  state: 'CA',
-  postalCode: '94103',
-  apartment: 'Apt 2B',
-  phone: '415-555-5678',
-  instructions: 'Please leave at the door',
-  latitude: 37.7899,
-  longitude: -122.4021
-};
-
-const testOrderDetails: OrderDetails = {
-  orderId: 12345,
-  items: [
-    { id: 1, name: 'Cheeseburger', quantity: 1, price: 9.99 },
-    { id: 2, name: 'French Fries', quantity: 1, price: 3.99 },
-    { id: 3, name: 'Soda', quantity: 2, price: 1.99 }
-  ],
-  totalValue: 17.96,
-  currency: 'USD',
-  specialInstructions: 'Extra ketchup please'
-};
-
-/**
- * Test the DoorDash adapter
- */
-async function testDoorDashAdapter() {
-  console.log('Testing DoorDash adapter...');
+export async function runDeliveryServiceTests(
+  doordashConfig?: DoorDashConfig
+): Promise<TestSuiteResult> {
+  const result: TestSuiteResult = {
+    suiteName: 'DeliveryServiceTests',
+    totalTests: 0,
+    passedTests: 0,
+    failedTests: 0,
+    skippedTests: 0,
+    startTime: new Date(),
+    endTime: new Date(),
+    duration: 0,
+    reports: []
+  };
   
+  // Sample data for tests
+  const samplePickupAddress: Address = {
+    street: '123 Main St',
+    city: 'Los Angeles',
+    state: 'CA',
+    postalCode: '90001',
+    businessName: 'Test Restaurant',
+    phone: '555-123-4567',
+    latitude: 34.052235,
+    longitude: -118.243683
+  };
+  
+  const sampleDeliveryAddress: Address = {
+    street: '456 Oak Ave',
+    city: 'Los Angeles',
+    state: 'CA',
+    postalCode: '90002',
+    apartment: 'Apt 2B',
+    phone: '555-987-6543',
+    latitude: 34.048213,
+    longitude: -118.259583
+  };
+  
+  const sampleOrderDetails: OrderDetails = {
+    totalValue: 45.99,
+    items: [
+      { id: 'item-1', name: 'Burger', quantity: 2, price: 12.99 },
+      { id: 'item-2', name: 'Fries', quantity: 1, price: 4.99 },
+      { id: 'item-3', name: 'Soda', quantity: 2, price: 2.99 }
+    ],
+    requiresContactlessDelivery: true
+  };
+  
+  // Run tests
   try {
-    // Initialize with test credentials
-    // In a real environment, these would be loaded from environment variables or a secure vault
-    const doorDashAdapter = new DoorDashAdapter({
-      apiKey: 'test_key',
-      apiSecret: 'test_secret'
-    });
+    // Test 1: Initialize delivery service
+    await testServiceInitialization(result, doordashConfig);
     
-    console.log('Getting delivery quote...');
-    // This will likely fail with test credentials, but it's useful to verify the code path
-    try {
-      const quote = await doorDashAdapter.getQuote(
-        testRestaurantAddress,
-        testCustomerAddress,
-        testOrderDetails
-      );
-      console.log('Quote received:', quote);
-    } catch (error) {
-      console.log('Quote error (expected with test credentials):', error.message);
+    // Test 2: Test internal provider adapter
+    await testInternalProviderAdapter(result);
+    
+    // Test 3: Test DoorDash adapter
+    if (doordashConfig) {
+      await testDoorDashAdapter(result, doordashConfig);
+    } else {
+      addReport(result, {
+        name: 'DoorDashAdapterTest',
+        success: false,
+        message: 'Skipped - DoorDash config not provided',
+        timestamp: new Date(),
+        duration: 0
+      });
+      result.skippedTests++;
     }
     
-    // Test webhook parsing with mock data
-    const mockWebhookData = {
-      event_type: 'delivery.delivered',
-      external_delivery_id: 'dd_1234567890',
-      status: 'delivered',
-      event_timestamp: new Date().toISOString(),
-      dasher: {
-        dasher_id: 'dasher123',
-        first_name: 'John',
-        phone_number: '555-123-4567',
-        location: {
-          lat: 37.7855,
-          lng: -122.4090
-        }
-      }
-    };
+    // Test 4: Get quotes from all providers
+    await testGetQuotes(result, samplePickupAddress, sampleDeliveryAddress, sampleOrderDetails);
     
-    console.log('Testing webhook data parsing...');
-    const parsedWebhook = await doorDashAdapter.parseWebhookData(
-      mockWebhookData,
-      { 'doordash-signature': 't=1234567890,v1=abcdef123456' }
-    );
-    
-    console.log('Parsed webhook:', parsedWebhook);
-    
-    // Verify the mapping of DoorDash statuses
-    console.log('Verifying status mapping:');
-    const statuses = ['created', 'accepted', 'picked_up', 'delivered', 'canceled'];
-    for (const status of statuses) {
-      const mappedStatus = await doorDashAdapter.getDeliveryStatus('test-' + status);
-      console.log(`DoorDash status '${status}' mapped to '${mappedStatus}'`);
-    }
-    
-    console.log('DoorDash adapter tests completed');
+    // Test 5: Create delivery with internal provider
+    await testCreateDelivery(result, samplePickupAddress, sampleDeliveryAddress, sampleOrderDetails);
   } catch (error) {
-    console.error('Error testing DoorDash adapter:', error);
+    console.error('Error during delivery service tests:', error);
+    addReport(result, {
+      name: 'DeliveryServiceTests',
+      success: false,
+      message: `Unexpected error: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: 0
+    });
+  }
+  
+  // Calculate results
+  result.endTime = new Date();
+  result.duration = result.endTime.getTime() - result.startTime.getTime();
+  result.totalTests = result.passedTests + result.failedTests + result.skippedTests;
+  
+  return result;
+}
+
+/**
+ * Test delivery service initialization
+ */
+async function testServiceInitialization(result: TestSuiteResult, doordashConfig?: DoorDashConfig): Promise<void> {
+  const startTime = Date.now();
+  try {
+    // Reset/reinitialize the delivery service
+    deliveryService.initialize(doordashConfig);
+    
+    // Check if providers are registered
+    const providers = deliveryService.listProviders();
+    const expectedProviderCount = doordashConfig ? 2 : 1;
+    
+    if (providers.length !== expectedProviderCount) {
+      throw new Error(`Expected ${expectedProviderCount} providers, but got ${providers.length}`);
+    }
+    
+    // Internal provider should always be registered with ID 1
+    const internalProvider = deliveryService.getProvider(1);
+    if (!internalProvider || internalProvider.getName() !== 'Restaurant Delivery') {
+      throw new Error('Internal provider not registered correctly');
+    }
+    
+    // If DoorDash config is provided, check if it's registered with ID 2
+    if (doordashConfig) {
+      const doordashProvider = deliveryService.getProvider(2);
+      if (!doordashProvider || doordashProvider.getName() !== 'DoorDash Delivery') {
+        throw new Error('DoorDash provider not registered correctly');
+      }
+    }
+    
+    addReport(result, {
+      name: 'ServiceInitializationTest',
+      success: true,
+      message: `Successfully initialized delivery service with ${providers.length} providers`,
+      details: { providers },
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.passedTests++;
+  } catch (error) {
+    addReport(result, {
+      name: 'ServiceInitializationTest',
+      success: false,
+      message: `Failed to initialize delivery service: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.failedTests++;
   }
 }
 
 /**
- * Test the Internal delivery adapter
+ * Test internal provider adapter
  */
-async function testInternalAdapter() {
-  console.log('Testing Internal delivery adapter...');
-  
+async function testInternalProviderAdapter(result: TestSuiteResult): Promise<void> {
+  const startTime = Date.now();
   try {
     const internalAdapter = new InternalDeliveryAdapter();
     
-    console.log('Getting delivery quote...');
-    const quote = await internalAdapter.getQuote(
-      testRestaurantAddress,
-      testCustomerAddress,
-      testOrderDetails
-    );
+    // Check basic provider information
+    if (internalAdapter.getName() !== 'Restaurant Delivery') {
+      throw new Error('Incorrect provider name');
+    }
     
-    console.log('Quote received:', quote);
+    if (internalAdapter.getProviderType() !== 'internal') {
+      throw new Error('Incorrect provider type');
+    }
     
-    // Create a test delivery
-    const mockDeliveryDetails: DeliveryOrderDetails = {
-      orderId: 12345,
-      businessId: 1,
-      providerId: 1,
+    addReport(result, {
+      name: 'InternalProviderBasicTest',
+      success: true,
+      message: 'Internal provider adapter basic tests passed',
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.passedTests++;
+  } catch (error) {
+    addReport(result, {
+      name: 'InternalProviderBasicTest',
+      success: false,
+      message: `Internal provider test failed: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.failedTests++;
+  }
+}
+
+/**
+ * Test DoorDash adapter
+ */
+async function testDoorDashAdapter(result: TestSuiteResult, config: DoorDashConfig): Promise<void> {
+  const startTime = Date.now();
+  try {
+    // This is a mock test since we can't make actual API calls without valid credentials
+    
+    // First, check that the DoorDash adapter can be initialized
+    const provider = deliveryService.getProvider(2);
+    if (!provider) {
+      throw new Error('DoorDash provider not found');
+    }
+    
+    if (provider.getName() !== 'DoorDash Delivery') {
+      throw new Error(`Expected 'DoorDash Delivery' provider name, got '${provider.getName()}'`);
+    }
+    
+    if (provider.getProviderType() !== 'external') {
+      throw new Error(`Expected 'external' provider type, got '${provider.getProviderType()}'`);
+    }
+    
+    addReport(result, {
+      name: 'DoorDashAdapterTest',
+      success: true,
+      message: 'DoorDash adapter initialized correctly',
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.passedTests++;
+  } catch (error) {
+    addReport(result, {
+      name: 'DoorDashAdapterTest',
+      success: false,
+      message: `DoorDash adapter test failed: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.failedTests++;
+  }
+}
+
+/**
+ * Test getting quotes from all providers
+ */
+async function testGetQuotes(
+  result: TestSuiteResult,
+  pickup: Address,
+  delivery: Address,
+  orderDetails: OrderDetails
+): Promise<void> {
+  const startTime = Date.now();
+  try {
+    // Get quotes from all providers
+    const quotes = await deliveryService.getDeliveryQuotes(pickup, delivery, orderDetails);
+    
+    // Check if we got at least one quote
+    if (!quotes || quotes.length === 0) {
+      throw new Error('No delivery quotes returned');
+    }
+    
+    // Verify quote structure for each provider
+    quotes.forEach((quote, index) => {
+      if (!quote.providerName) {
+        throw new Error(`Quote ${index} missing provider name`);
+      }
+      
+      if (typeof quote.fee !== 'number') {
+        throw new Error(`Quote ${index} has invalid fee`);
+      }
+      
+      if (!(quote.estimatedPickupTime instanceof Date)) {
+        throw new Error(`Quote ${index} has invalid pickup time`);
+      }
+      
+      if (!(quote.estimatedDeliveryTime instanceof Date)) {
+        throw new Error(`Quote ${index} has invalid delivery time`);
+      }
+    });
+    
+    addReport(result, {
+      name: 'GetQuotesTest',
+      success: true,
+      message: `Successfully retrieved ${quotes.length} delivery quotes`,
+      details: { quotes },
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.passedTests++;
+  } catch (error) {
+    addReport(result, {
+      name: 'GetQuotesTest',
+      success: false,
+      message: `Failed to get delivery quotes: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.failedTests++;
+  }
+}
+
+/**
+ * Test creating a delivery with the internal provider
+ */
+async function testCreateDelivery(
+  result: TestSuiteResult,
+  pickup: Address,
+  delivery: Address,
+  orderDetails: OrderDetails
+): Promise<void> {
+  const startTime = Date.now();
+  try {
+    // First get quotes
+    const quotes = await deliveryService.getDeliveryQuotes(pickup, delivery, orderDetails);
+    
+    // Find the internal provider quote (should be provider ID 1)
+    const internalQuote = quotes.find(q => q.providerId === 1);
+    if (!internalQuote) {
+      throw new Error('Internal provider quote not found');
+    }
+    
+    // Create delivery order details
+    const deliveryOrderDetails: DeliveryOrderDetails = {
+      providerId: 1, // Internal provider
+      businessId: 123,
+      orderId: 'test-order-123',
+      orderDetails,
+      businessAddress: pickup,
+      customerAddress: delivery,
       customerName: 'Test Customer',
-      customerPhone: '415-555-5678',
-      customerAddress: testCustomerAddress,
-      businessAddress: testRestaurantAddress,
-      orderDetails: testOrderDetails,
-      providerFee: '5.99',
-      platformFee: '1.50',
-      customerFee: '7.49',
-      specialInstructions: 'Please deliver ASAP'
+      customerPhone: '555-987-6543',
+      specialInstructions: 'Please knock on the door',
+      providerQuoteId: internalQuote.providerData?.quoteId
     };
     
-    console.log('Creating test delivery...');
-    try {
-      const delivery = await internalAdapter.createDelivery(mockDeliveryDetails);
-      console.log('Delivery created:', delivery);
-      
-      console.log('Testing status updates...');
-      const statusUpdates = [
-        'accepted', 'assigned', 'picked_up', 'in_transit', 'delivered'
-      ];
-      
-      for (const status of statusUpdates) {
-        console.log(`Updating status to '${status}'...`);
-        // Update the status via the method that would be called from the web app
-        await internalAdapter.updateDeliveryStatus(delivery.externalOrderId, status as any);
-        
-        // Verify the status is updated
-        const currentStatus = await internalAdapter.getDeliveryStatus(delivery.externalOrderId);
-        console.log(`Status updated to '${currentStatus}'`);
-      }
-    } catch (error) {
-      console.log('Error in delivery creation/updates:', error.message);
+    // Create the delivery
+    const deliveryResult = await deliveryService.createDelivery(deliveryOrderDetails);
+    
+    // Verify the result
+    if (!deliveryResult.externalOrderId) {
+      throw new Error('No external order ID returned');
     }
     
-    console.log('Internal adapter tests completed');
+    if (!deliveryResult.status) {
+      throw new Error('No status returned');
+    }
+    
+    if (!(deliveryResult.estimatedPickupTime instanceof Date)) {
+      throw new Error('Invalid pickup time');
+    }
+    
+    if (!(deliveryResult.estimatedDeliveryTime instanceof Date)) {
+      throw new Error('Invalid delivery time');
+    }
+    
+    addReport(result, {
+      name: 'CreateDeliveryTest',
+      success: true,
+      message: 'Successfully created delivery',
+      details: { deliveryResult },
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.passedTests++;
+    
+    // Test getting status
+    await testGetDeliveryStatus(result, deliveryResult.externalOrderId);
   } catch (error) {
-    console.error('Error testing Internal adapter:', error);
+    addReport(result, {
+      name: 'CreateDeliveryTest',
+      success: false,
+      message: `Failed to create delivery: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.failedTests++;
   }
 }
 
 /**
- * Test the delivery service coordinator
+ * Test getting the status of a delivery
  */
-async function testDeliveryService() {
-  console.log('Testing Delivery Service coordinator...');
-  
+async function testGetDeliveryStatus(
+  result: TestSuiteResult,
+  externalOrderId: string
+): Promise<void> {
+  const startTime = Date.now();
   try {
-    // Initialize the service (will load providers from DB in production)
-    await deliveryService.initialize();
+    // For internal deliveries, provider ID is 1
+    const status = await deliveryService.getDeliveryStatus(1, externalOrderId);
     
-    console.log('Getting quotes from all providers...');
-    try {
-      const quotes = await deliveryService.getDeliveryQuotes(
-        testRestaurantAddress,
-        testCustomerAddress,
-        testOrderDetails
-      );
-      
-      console.log(`Received ${quotes.length} quotes`);
-      quotes.forEach((quote, index) => {
-        console.log(`Quote ${index + 1}: ${quote.providerName} - $${quote.customerFee} (${quote.valid ? 'valid' : 'invalid'})`);
-      });
-    } catch (error) {
-      console.log('Error getting quotes:', error.message);
+    // Check if the status is valid
+    const validStatuses: DeliveryStatus[] = [
+      'pending', 'accepted', 'assigned', 'picked_up', 'in_transit', 'delivered', 'failed', 'cancelled'
+    ];
+    
+    if (!validStatuses.includes(status)) {
+      throw new Error(`Invalid status: ${status}`);
     }
     
-    console.log('Delivery Service coordinator tests completed');
+    addReport(result, {
+      name: 'GetDeliveryStatusTest',
+      success: true,
+      message: `Successfully retrieved delivery status: ${status}`,
+      details: { externalOrderId, status },
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.passedTests++;
   } catch (error) {
-    console.error('Error testing Delivery Service coordinator:', error);
+    addReport(result, {
+      name: 'GetDeliveryStatusTest',
+      success: false,
+      message: `Failed to get delivery status: ${(error as Error).message}`,
+      timestamp: new Date(),
+      duration: Date.now() - startTime
+    });
+    result.failedTests++;
   }
 }
 
 /**
- * Run all tests
+ * Helper to add a test report to the results
  */
-export async function runDeliveryTests() {
-  console.log('=== STARTING DELIVERY SERVICE TESTS ===');
-  
-  await testInternalAdapter();
-  console.log('\n');
-  
-  await testDoorDashAdapter();
-  console.log('\n');
-  
-  await testDeliveryService();
-  
-  console.log('=== DELIVERY SERVICE TESTS COMPLETED ===');
+function addReport(result: TestSuiteResult, report: TestReport): void {
+  result.reports.push(report);
+  console.log(`[${report.success ? 'PASS' : 'FAIL'}] ${report.name}: ${report.message}`);
 }
 
-// Only run tests when called directly
+/**
+ * Run all tests and return the results
+ */
+export async function testDeliveryService(doordashConfig?: DoorDashConfig): Promise<TestSuiteResult> {
+  console.log('Starting delivery service tests...');
+  const results = await runDeliveryServiceTests(doordashConfig);
+  
+  console.log('\nDelivery Service Test Summary:');
+  console.log(`Total tests: ${results.totalTests}`);
+  console.log(`Passed: ${results.passedTests}`);
+  console.log(`Failed: ${results.failedTests}`);
+  console.log(`Skipped: ${results.skippedTests}`);
+  console.log(`Duration: ${results.duration}ms`);
+  
+  return results;
+}
+
+// Run the tests if this file is executed directly
 if (require.main === module) {
-  runDeliveryTests()
-    .then(() => console.log('Tests completed'))
-    .catch(err => console.error('Test error:', err));
+  // Create minimal DoorDash config for testing - replace with actual values for real tests
+  const config: DoorDashConfig = {
+    developerId: 'your-developer-id',
+    apiKey: 'your-api-key',
+    apiSecret: 'your-api-secret'
+  };
+  
+  testDeliveryService(config).catch(error => {
+    console.error('Test suite error:', error);
+    process.exit(1);
+  });
 }

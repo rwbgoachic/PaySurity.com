@@ -1,9 +1,12 @@
-declare module 'content-security-policy' {
-  export function createSecureHeaders(options?: any): any;
-}
+// Declare modules that don't have type definitions
+declare module 'jsonwebtoken';
+declare module 'express-brute';
+declare module 'connect-pg-simple';
 
-// Add Express request CSRF token function
+// Add additional types as needed
 declare namespace Express {
+  export function createSecureHeaders(options?: any): any;
+
   interface Request {
     csrfToken(): string;
   }

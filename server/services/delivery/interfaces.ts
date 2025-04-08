@@ -1,180 +1,127 @@
 /**
- * Interfaces for the Delivery System
+ * Delivery System Interfaces
  * 
- * This file defines the contract that all delivery providers must implement.
- * It standardizes how the system interacts with different delivery services,
- * whether they are internal (restaurant's own drivers) or external (DoorDash, etc.)
+ * This file defines the interfaces used throughout the delivery service,
+ * establishing a standardized contract for delivery providers.
  */
 
-/**
- * Address information used for pickup and delivery
- */
+import { OrderItem } from '../../../shared/delivery-schema';
+
+// Address format standardized across the system
 export interface Address {
   street: string;
-  city: string;
-  state: string;
-  postalCode: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
   country?: string;
   apartment?: string;
   businessName?: string;
-  phone?: string;
-  email?: string;
-  instructions?: string;
   latitude?: number;
   longitude?: number;
+  phone?: string;
+  instructions?: string;
 }
 
-/**
- * Order item details
- */
-export interface OrderItem {
-  name: string;
-  quantity: number;
-  price?: number;
-  options?: string[];
-  specialInstructions?: string;
-}
-
-/**
- * Order details for getting quotes and creating deliveries
- */
+// Basic order details for quote calculation
 export interface OrderDetails {
-  orderId?: string | number;
   totalValue: number;
-  currency?: string;
   items?: OrderItem[];
-  tipAmount?: number;
-  taxAmount?: number;
-  specialInstructions?: string;
+  requiresId?: boolean;
+  requiresContactlessDelivery?: boolean;
 }
 
-/**
- * Status of a delivery
- */
-export type DeliveryStatus = 
-  | 'pending'      // Order created but not accepted by courier service
-  | 'accepted'     // Order accepted by courier service, awaiting pickup
-  | 'assigned'     // Courier assigned, but not yet picked up
-  | 'picked_up'    // Food picked up, en route to customer
-  | 'in_transit'   // Actively being delivered
-  | 'delivered'    // Successfully delivered
-  | 'failed'       // Delivery failed
-  | 'cancelled';   // Delivery cancelled
-
-/**
- * Quote for a delivery from a specific provider
- */
+// Quote return format from delivery providers
 export interface DeliveryQuote {
-  providerId: number;               // Provider ID (assigned by DeliveryService)
-  providerName: string;             // Provider name
-  fee: number;                      // Delivery fee (to restaurant)
-  customerFee: number;              // Fee shown to customer
-  platformFee: number;              // Additional platform fee
-  currency: string;                 // Currency code (e.g., USD)
-  estimatedPickupTime: Date;        // Estimated pickup time
-  estimatedDeliveryTime: Date;      // Estimated delivery time
-  distance: number;                 // Distance in miles/kilometers
-  distanceUnit: 'miles' | 'kilometers';  // Unit of distance measurement
-  valid: boolean;                   // Whether the quote is valid
-  validUntil: Date;                 // When the quote expires
-  errors?: string[];                // Errors if the quote is invalid
-  providerData?: any;               // Provider-specific data
+  providerId: number;  // Added by service coordinator
+  providerName: string;
+  fee: number;        // How much the restaurant pays
+  customerFee: number; // How much the customer pays
+  platformFee: number; // Our cut
+  currency: string;
+  estimatedPickupTime: Date;
+  estimatedDeliveryTime: Date;
+  distance: number;
+  distanceUnit: string;
+  valid: boolean;      // Is this quote valid
+  validUntil: Date;    // When does the quote expire
+  errors: string[];    // Any errors in generation
+  providerData?: any;  // Provider-specific data
 }
 
-/**
- * Details needed to create a delivery
- */
+// Standardized status format across different providers
+export type DeliveryStatus = 
+  | 'pending'
+  | 'accepted'
+  | 'assigned'
+  | 'picked_up'
+  | 'in_transit'
+  | 'delivered'
+  | 'failed'
+  | 'cancelled';
+
+// Full details needed to create a delivery
 export interface DeliveryOrderDetails {
-  providerId: number;               // Provider ID to use
-  orderId: string | number;         // Order ID in restaurant system
-  businessId: number;               // Restaurant/business ID
-  customerName: string;             // Customer name
-  customerPhone: string;            // Customer phone
-  customerEmail?: string;           // Customer email
-  businessAddress: Address | string; // Restaurant address (string = JSON)
-  customerAddress: Address | string; // Customer address (string = JSON)
-  orderDetails: OrderDetails;       // Order details
-  providerQuoteId?: string;         // Quote ID from provider (if applicable)
-  providerFee?: string | number;    // Fee charged by provider
-  specialInstructions?: string;     // Special delivery instructions
+  providerId: number;
+  businessId: number; 
+  orderId: string;
+  orderDetails: OrderDetails;
+  businessAddress: Address;
+  customerAddress: Address;
+  customerName: string;
+  customerPhone?: string;
+  specialInstructions?: string;
+  providerQuoteId?: string | number;
 }
 
-/**
- * Delivery order created by a provider
- */
+// Information returned when a delivery is created
 export interface ExternalDeliveryOrder {
-  externalOrderId: string;          // Order ID in provider's system
-  status: DeliveryStatus;           // Current status
-  estimatedPickupTime: Date;        // Estimated pickup time
-  estimatedDeliveryTime: Date;      // Estimated delivery time
-  trackingUrl?: string;             // Tracking URL (if available)
-  providerData?: any;               // Provider-specific data
+  externalOrderId: string;
+  status: DeliveryStatus;
+  estimatedPickupTime: Date;
+  estimatedDeliveryTime: Date;
+  trackingUrl?: string;
+  providerData?: any;
 }
 
-/**
- * Interface that all delivery providers must implement
- */
+// The standardized interface all delivery providers must implement
 export interface DeliveryProviderAdapter {
-  /**
-   * Get the name of the provider
-   */
+  // Provider identification
   getName(): string;
-  
-  /**
-   * Get the type of provider
-   */
   getProviderType(): 'internal' | 'external';
   
-  /**
-   * Get a delivery quote
-   */
+  // Core delivery operations
   getQuote(
-    pickup: Address,
-    delivery: Address,
+    pickup: Address, 
+    delivery: Address, 
     orderDetails: OrderDetails
   ): Promise<DeliveryQuote>;
   
-  /**
-   * Create a delivery
-   */
   createDelivery(
     orderDetails: DeliveryOrderDetails
   ): Promise<ExternalDeliveryOrder>;
   
-  /**
-   * Cancel a delivery
-   */
   cancelDelivery(
     externalOrderId: string
   ): Promise<boolean>;
   
-  /**
-   * Get the status of a delivery
-   */
   getDeliveryStatus(
     externalOrderId: string
   ): Promise<DeliveryStatus>;
   
-  /**
-   * Parse webhook data from the provider
-   */
+  // Webhook handling
   parseWebhookData(
-    data: any,
+    data: any, 
     headers: Record<string, string>
   ): Promise<{
     externalOrderId: string;
     status: DeliveryStatus;
     driverInfo?: any;
     timestamp: Date;
-    additionalData?: any;
   }>;
   
-  /**
-   * Verify a webhook signature from the provider
-   */
   verifyWebhookSignature(
-    data: any,
-    headers: Record<string, string>,
+    data: any, 
+    headers: Record<string, string>, 
     secret: string
   ): Promise<boolean>;
 }
