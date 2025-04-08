@@ -835,7 +835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: status,
               totalAmount: report.totalAmount,
               reviewDate: new Date().toISOString(),
-              reviewNotes: status === "rejected" ? rejectionReason : null
+              reviewNotes: status === "rejected" ? rejectionReason : undefined
             }
           });
         }
@@ -1210,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profileData = insertMerchantProfileSchema.parse({
         ...merchantData,
         userId: req.user.id,
-        referralCode: referralCode || null,
+        referralCode: referralCode || undefined,
       });
       
       const merchantProfile = await storage.createMerchantProfile(profileData);
@@ -4398,7 +4398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If order is completed and there's a table, update table status to available
       if (status === "completed" && updatedOrder.tableId) {
-        await storage.updatePosTableStatus(updatedOrder.tableId, "available", null);
+        await storage.updatePosTableStatus(updatedOrder.tableId, "available", undefined);
         
         // Get updated table to broadcast
         const updatedTable = await storage.getPosTable(updatedOrder.tableId);
@@ -4444,7 +4444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If there's a table, update table status to available
       if (completedOrder.tableId) {
-        await storage.updatePosTableStatus(completedOrder.tableId, "available", null);
+        await storage.updatePosTableStatus(completedOrder.tableId, "available", undefined);
         
         // Get updated table to broadcast
         const updatedTable = await storage.getPosTable(completedOrder.tableId);

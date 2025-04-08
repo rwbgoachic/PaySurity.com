@@ -3,14 +3,17 @@
  * It checks if enabledProviders array in business_delivery_settings is saved and retrieved properly.
  */
 
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
+
+// Configure WebSocket for Neon database connections
+neonConfig.webSocketConstructor = ws;
 
 async function testArrayHandling() {
   try {
     console.log('Starting array handling test...');
     
-    // Connect to the database
+    // Create a new pool with WebSocket configuration
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     
     // Create a test business delivery settings record
