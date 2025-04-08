@@ -11,6 +11,9 @@ import { sendOrderStatusSms } from "./services/sms";
 import { deliveryService } from "./services/delivery/delivery-service";
 import { processOrderModifications } from "./services/orderModification";
 import { generateOrderModificationUrl } from "./services/qrcode";
+import { taxCalculationService } from "./services/payroll/tax-calculation-service";
+import { taxDataService } from "./services/payroll/tax-data-service";
+import { payrollProcessorService } from "./services/payroll/payroll-processor-service";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -101,6 +104,245 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   app.get("/api/healthcheck", (req, res) => {
     res.json({ status: "ok" });
+  });
+  
+  // Tax Calculation System API Routes
+  
+  // Get tax data for a specific year
+  app.get("/api/tax/data/:year", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance", "employer"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Insufficient permissions" });
+    }
+    
+    try {
+      const year = parseInt(req.params.year);
+      if (isNaN(year) || year < 2000 || year > 2050) {
+        return res.status(400).json({ error: "Invalid year" });
+      }
+      
+      const taxData = await taxDataService.getTaxDataForYear(year);
+      res.json(taxData);
+    } catch (error) {
+      console.error("Error fetching tax data:", error);
+      res.status(500).json({ error: "Failed to fetch tax data" });
+    }
+  });
+  
+  // Initialize default tax data for development/testing
+  app.post("/api/tax/init-defaults", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const year = req.body.year ? parseInt(req.body.year) : new Date().getFullYear();
+      await taxDataService.initializeDefaultTaxData(year);
+      res.json({ success: true, message: `Default tax data initialized for ${year}` });
+    } catch (error) {
+      console.error("Error initializing tax data:", error);
+      res.status(500).json({ error: "Failed to initialize tax data" });
+    }
+  });
+  
+  // Update federal tax brackets for a specific year and filing status
+  app.post("/api/tax/federal-brackets/:year/:filingStatus", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const year = parseInt(req.params.year);
+      const filingStatus = req.params.filingStatus;
+      const brackets = req.body.brackets;
+      
+      if (!brackets || !Array.isArray(brackets)) {
+        return res.status(400).json({ error: "Invalid tax brackets data" });
+      }
+      
+      const savedBrackets = await taxDataService.upsertFederalTaxBrackets(year, filingStatus, brackets);
+      res.json(savedBrackets);
+    } catch (error) {
+      console.error("Error updating federal tax brackets:", error);
+      res.status(500).json({ error: "Failed to update federal tax brackets" });
+    }
+  });
+  
+  // Update state tax brackets for a specific state, year, and filing status
+  app.post("/api/tax/state-brackets/:state/:year/:filingStatus", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const state = req.params.state.toUpperCase();
+      const year = parseInt(req.params.year);
+      const filingStatus = req.params.filingStatus;
+      const brackets = req.body.brackets;
+      
+      if (!brackets || !Array.isArray(brackets)) {
+        return res.status(400).json({ error: "Invalid tax brackets data" });
+      }
+      
+      const savedBrackets = await taxDataService.upsertStateTaxBrackets(state, year, filingStatus, brackets);
+      res.json(savedBrackets);
+    } catch (error) {
+      console.error("Error updating state tax brackets:", error);
+      res.status(500).json({ error: "Failed to update state tax brackets" });
+    }
+  });
+  
+  // Update FICA rates for a specific year
+  app.post("/api/tax/fica-rates/:year", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const year = parseInt(req.params.year);
+      const ratesData = req.body;
+      
+      if (!ratesData || typeof ratesData !== "object") {
+        return res.status(400).json({ error: "Invalid FICA rates data" });
+      }
+      
+      const savedRates = await taxDataService.upsertFicaRates(year, ratesData);
+      res.json(savedRates);
+    } catch (error) {
+      console.error("Error updating FICA rates:", error);
+      res.status(500).json({ error: "Failed to update FICA rates" });
+    }
+  });
+  
+  // Update employee tax profile
+  app.post("/api/tax/employee-profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const profileData = req.body;
+      
+      // Ensure the request is either for the authenticated user or the user has employer permissions
+      const targetUserId = profileData.userId;
+      if (
+        targetUserId !== req.user.id && 
+        (!req.user.role || !["admin", "finance", "employer"].includes(req.user.role))
+      ) {
+        return res.status(403).json({ error: "Unauthorized: Cannot update another user's tax profile" });
+      }
+      
+      const profile = await taxCalculationService.upsertEmployeeTaxProfile(profileData);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error updating employee tax profile:", error);
+      res.status(500).json({ error: "Failed to update employee tax profile" });
+    }
+  });
+  
+  // Payroll Processing API Routes
+  
+  // Process payroll for an employer
+  app.post("/api/payroll/process", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance", "employer"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Employer access required" });
+    }
+    
+    try {
+      const { employerId, startDate, endDate, payDate } = req.body;
+      
+      // Ensure the authenticated user is the employer or has admin/finance role
+      if (
+        employerId !== req.user.id && 
+        !["admin", "finance"].includes(req.user.role)
+      ) {
+        return res.status(403).json({ error: "Unauthorized: Can only process payroll for your own employees" });
+      }
+      
+      // Process the payroll
+      const result = await payrollProcessorService.processPayroll(
+        employerId,
+        new Date(startDate),
+        new Date(endDate),
+        new Date(payDate),
+        req.user.id
+      );
+      
+      // Notify each employee about their payroll via WebSocket
+      for (const entry of result.processedEntries) {
+        broadcast(`user-${entry.userId}`, {
+          type: 'payroll_processed',
+          data: {
+            id: entry.id,
+            payPeriodStart: entry.payPeriodStart,
+            payPeriodEnd: entry.payPeriodEnd,
+            payDate: entry.payDate,
+            grossPay: entry.grossPay,
+            netPay: entry.netPay
+          }
+        });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error processing payroll:", error);
+      res.status(500).json({ error: "Failed to process payroll" });
+    }
+  });
+  
+  // Generate pay stub for a specific payroll entry
+  app.get("/api/payroll/:id/paystub", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const payrollEntryId = parseInt(req.params.id);
+      const payStub = await payrollProcessorService.generatePayStub(payrollEntryId);
+      
+      // Check if the user has permissions to view this pay stub
+      if (
+        payStub.employee.id !== req.user.id && 
+        payStub.employer.id !== req.user.id &&
+        !["admin", "finance"].includes(req.user.role || "")
+      ) {
+        return res.status(403).json({ error: "Unauthorized: Cannot view another user's pay stub" });
+      }
+      
+      res.json(payStub);
+    } catch (error) {
+      console.error("Error generating pay stub:", error);
+      res.status(500).json({ error: "Failed to generate pay stub" });
+    }
+  });
+  
+  // Generate payroll report for an employer
+  app.post("/api/payroll/report", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "finance", "employer"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Employer access required" });
+    }
+    
+    try {
+      const { employerId, startDate, endDate } = req.body;
+      
+      // Ensure the authenticated user is the employer or has admin/finance role
+      if (
+        employerId !== req.user.id && 
+        !["admin", "finance"].includes(req.user.role)
+      ) {
+        return res.status(403).json({ error: "Unauthorized: Can only view payroll reports for your own employees" });
+      }
+      
+      const report = await payrollProcessorService.generatePayrollReport(
+        employerId,
+        new Date(startDate),
+        new Date(endDate)
+      );
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating payroll report:", error);
+      res.status(500).json({ error: "Failed to generate payroll report" });
+    }
   });
 
   // Wallet Management API
