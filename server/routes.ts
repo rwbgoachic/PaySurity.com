@@ -8,8 +8,11 @@ import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { z } from "zod";
 import { sendOrderStatusSms } from "./services/sms";
+import { DeliveryService } from "./services/delivery/delivery-service";
+import { deliveryStatusEnum, insertBusinessDeliverySettingsSchema } from "../shared/delivery-schema";
 import { processOrderModifications } from "./services/orderModification";
 import { generateOrderModificationUrl } from "./services/qrcode";
+import deliveryService from "./services/delivery/delivery-service";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -52,6 +55,16 @@ import {
   restaurantTableStatusEnum,
   restaurantOrderStatusEnum,
 } from "@shared/schema";
+
+// Import delivery schema
+import {
+  insertDeliveryProviderSchema,
+  insertDeliveryRegionSchema,
+  insertDeliveryProviderRegionSchema,
+  insertBusinessDeliverySettingsSchema,
+  insertDeliveryOrderSchema,
+  deliveryStatusEnum
+} from "@shared/delivery-schema";
 
 // Define extended WebSocket interface with channels support
 interface ExtendedWebSocket extends WebSocket {
@@ -1879,6 +1892,437 @@ export async function registerRoutes(app: Express): Promise<Server> {
       note: "These are test messages sent via the mock SMS provider and won't appear when using an actual SMS provider."
     });
   });
+
+  // Delivery Management API
+  // -------------------------------------------------
+  
+  // Get all active delivery providers
+  app.get("/api/delivery/providers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const providers = await deliveryService.getActiveProviders();
+      res.json(providers);
+    } catch (error) {
+      console.error("Error fetching delivery providers:", error);
+      res.status(500).json({ error: "Failed to fetch delivery providers" });
+    }
+  });
+  
+  // Get providers available for a specific region
+  app.get("/api/delivery/regions/:regionId/providers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const regionId = parseInt(req.params.regionId);
+      const providers = await deliveryService.getProvidersForRegion(regionId);
+      res.json(providers);
+    } catch (error) {
+      console.error("Error fetching region delivery providers:", error);
+      res.status(500).json({ error: "Failed to fetch region delivery providers" });
+    }
+  });
+  
+  // Get business delivery settings
+  app.get("/api/delivery/business/:businessId/settings", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const businessId = parseInt(req.params.businessId);
+      
+      // Check if user has access to this business
+      if (req.user.role !== "admin" && req.user.businessId !== businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const settings = await deliveryService.getBusinessDeliverySettings(businessId);
+      
+      if (!settings) {
+        return res.status(404).json({ error: "Delivery settings not found" });
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching business delivery settings:", error);
+      res.status(500).json({ error: "Failed to fetch business delivery settings" });
+    }
+  });
+  
+  // Create or update business delivery settings
+  app.post("/api/delivery/business/:businessId/settings", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const businessId = parseInt(req.params.businessId);
+      
+      // Check if user has access to manage this business
+      if (req.user.role !== "admin" && req.user.businessId !== businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const settingsData = insertBusinessDeliverySettingsSchema.parse({
+        ...req.body,
+        businessId
+      });
+      
+      // TODO: Implement the createOrUpdateBusinessDeliverySettings method in deliveryService
+      // For now, just returning the validated data
+      res.status(200).json(settingsData);
+    } catch (error) {
+      console.error("Error updating business delivery settings:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid delivery settings data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update business delivery settings" });
+    }
+  });
+  
+  // Get delivery quotes for an order
+  app.post("/api/delivery/quotes", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { businessId, pickup, delivery, orderDetails } = req.body;
+      
+      if (!businessId || !pickup || !delivery || !orderDetails) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const quotes = await deliveryService.getDeliveryQuotes(
+        businessId,
+        pickup,
+        delivery,
+        orderDetails
+      );
+      
+      res.json(quotes);
+    } catch (error) {
+      console.error("Error getting delivery quotes:", error);
+      res.status(500).json({ error: "Failed to get delivery quotes" });
+    }
+  });
+  
+  // Create a delivery order
+  app.post("/api/delivery/orders", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const { businessId, providerId, orderDetails } = req.body;
+      
+      if (!businessId || !providerId || !orderDetails) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Check if user has access to this business
+      if (req.user.role !== "admin" && req.user.businessId !== businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const order = await deliveryService.createDeliveryOrder(
+        businessId,
+        providerId,
+        orderDetails
+      );
+      
+      // Send notification via WebSocket
+      broadcast(`business-${businessId}`, {
+        type: 'delivery_order_created',
+        data: order
+      });
+      
+      res.status(201).json(order);
+    } catch (error) {
+      console.error("Error creating delivery order:", error);
+      res.status(500).json({ error: "Failed to create delivery order" });
+    }
+  });
+  
+  // Get delivery order details
+  app.get("/api/delivery/orders/:orderId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const order = await deliveryService.getDeliveryOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Delivery order not found" });
+      }
+      
+      // Check if user has access to this business
+      if (req.user.role !== "admin" && req.user.businessId !== order.businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching delivery order:", error);
+      res.status(500).json({ error: "Failed to fetch delivery order" });
+    }
+  });
+  
+  // Get all delivery orders for a business
+  app.get("/api/delivery/business/:businessId/orders", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const businessId = parseInt(req.params.businessId);
+      
+      // Check if user has access to this business
+      if (req.user.role !== "admin" && req.user.businessId !== businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Parse query parameters
+      const { startDate, endDate, status } = req.query;
+      
+      // Convert string dates to Date objects if provided
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      
+      // Validate status if provided
+      let validatedStatus: any = undefined;
+      if (status && typeof status === 'string') {
+        try {
+          validatedStatus = deliveryStatusEnum.enum[status as any];
+        } catch (e) {
+          return res.status(400).json({ error: "Invalid status" });
+        }
+      }
+      
+      const orders = await deliveryService.getBusinessDeliveryOrders(
+        businessId,
+        start,
+        end,
+        validatedStatus
+      );
+      
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching business delivery orders:", error);
+      res.status(500).json({ error: "Failed to fetch business delivery orders" });
+    }
+  });
+  
+  // Update delivery order status
+  app.patch("/api/delivery/orders/:orderId/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const { status, driverInfo } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+      
+      // Validate status
+      try {
+        deliveryStatusEnum.enum[status as any];
+      } catch (e) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const order = await deliveryService.getDeliveryOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Delivery order not found" });
+      }
+      
+      // Check if user has access to this business
+      if (req.user.role !== "admin" && req.user.businessId !== order.businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const updatedOrder = await deliveryService.updateDeliveryOrderStatus(
+        orderId,
+        status,
+        driverInfo
+      );
+      
+      // Send notification via WebSocket
+      broadcast(`business-${order.businessId}`, {
+        type: 'delivery_order_updated',
+        data: updatedOrder
+      });
+      
+      broadcast(`delivery-order-${orderId}`, {
+        type: 'status_updated',
+        status: status,
+        order: updatedOrder
+      });
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating delivery order status:", error);
+      res.status(500).json({ error: "Failed to update delivery order status" });
+    }
+  });
+  
+  // Cancel delivery order
+  app.post("/api/delivery/orders/:orderId/cancel", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const order = await deliveryService.getDeliveryOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Delivery order not found" });
+      }
+      
+      // Check if user has access to this business
+      if (req.user.role !== "admin" && req.user.businessId !== order.businessId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      // Check if order is in a cancellable state
+      const cancellableStates = ['pending', 'accepted', 'assigned'];
+      if (!cancellableStates.includes(order.status)) {
+        return res.status(400).json({ 
+          error: "Cannot cancel order in current state", 
+          status: order.status 
+        });
+      }
+      
+      const cancelledOrder = await deliveryService.cancelDeliveryOrder(orderId);
+      
+      // Send notification via WebSocket
+      broadcast(`business-${order.businessId}`, {
+        type: 'delivery_order_cancelled',
+        data: cancelledOrder
+      });
+      
+      broadcast(`delivery-order-${orderId}`, {
+        type: 'status_updated',
+        status: 'cancelled',
+        order: cancelledOrder
+      });
+      
+      res.json(cancelledOrder);
+    } catch (error) {
+      console.error("Error cancelling delivery order:", error);
+      res.status(500).json({ error: "Failed to cancel delivery order" });
+    }
+  });
+  
+  // Webhook endpoint for delivery providers
+  app.post("/api/delivery/webhook/:provider", async (req, res) => {
+    try {
+      const providerName = req.params.provider;
+      
+      // Import the necessary modules
+      const { db } = await import('./db');
+      const { 
+        deliveryProviders, 
+        deliveryOrders 
+      } = await import('@shared/delivery-schema');
+      const { and, eq } = await import('drizzle-orm');
+      const deliveryService = (await import('./services/delivery/delivery-service')).default;
+      
+      // Find the provider by name
+      const [provider] = await db
+        .select()
+        .from(deliveryProviders)
+        .where(
+          and(
+            eq(deliveryProviders.name, providerName),
+            eq(deliveryProviders.isActive, true)
+          )
+        );
+      
+      if (!provider) {
+        return res.status(404).json({ error: `Provider "${providerName}" not found` });
+      }
+      
+      // Get the adapter for the provider
+      const adapter = deliveryService.getProviderAdapter(provider.id);
+      if (!adapter) {
+        return res.status(400).json({ error: `No adapter available for provider "${providerName}"` });
+      }
+      
+      // Verify webhook signature if applicable
+      const signature = req.headers['x-delivery-signature'] || 
+                       req.headers['x-doordash-signature'] ||
+                       req.headers['signature'];
+                       
+      if (provider.webhookSecret && signature) {
+        const isValid = await adapter.verifyWebhookSignature(
+          req.body,
+          req.headers as Record<string, string>,
+          provider.webhookSecret
+        );
+        
+        if (!isValid) {
+          return res.status(401).json({ error: "Invalid webhook signature" });
+        }
+      }
+      
+      // Parse webhook data
+      const webhookData = await adapter.parseWebhookData(
+        req.body,
+        req.headers as Record<string, string>
+      );
+      
+      // Find the delivery order by external ID
+      const [deliveryOrder] = await db
+        .select()
+        .from(deliveryOrders)
+        .where(eq(deliveryOrders.externalOrderId, webhookData.externalOrderId));
+      
+      if (!deliveryOrder) {
+        return res.status(404).json({ error: `Delivery order with external ID "${webhookData.externalOrderId}" not found` });
+      }
+      
+      // Update the order status
+      await deliveryService.updateDeliveryOrderStatus(
+        deliveryOrder.id,
+        webhookData.status,
+        webhookData.driverInfo
+      );
+      
+      // Send a real-time notification via WebSocket
+      broadcast(`business-${deliveryOrder.businessId}`, {
+        type: "delivery_update",
+        data: {
+          orderId: deliveryOrder.orderId,
+          deliveryOrderId: deliveryOrder.id,
+          status: webhookData.status,
+          driverInfo: webhookData.driverInfo,
+          timestamp: webhookData.timestamp
+        }
+      });
+      
+      // Acknowledge receipt
+      res.status(200).json({ status: "processed" });
+    } catch (error) {
+      console.error("Error processing delivery webhook:", error);
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+  
+  // End of Delivery Management API
+  // -------------------------------------------------
 
   const httpServer = createServer(app);
 
