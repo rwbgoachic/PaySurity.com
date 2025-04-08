@@ -14,6 +14,27 @@ export interface TestSuite {
   tags: string[];
   dependencies: string[];
   failureReason?: string;
+  group?: string;
+  enabled?: boolean;
+  schedule?: TestSchedule;
+  lastErrors?: TestError[];
+  criticalPath?: boolean;
+  parallelizable?: boolean;
+  successRate?: number; // Historical success rate
+  avgExecutionTime?: number; // Average execution time
+  // Root cause data
+  errorPatterns?: {
+    pattern: string;
+    occurrences: number;
+    firstSeen: string;
+    lastSeen: string;
+  }[];
+  // Performance data
+  bottlenecks?: {
+    area: string;
+    impact: number;
+    suggestion: string;
+  }[];
 }
 
 export interface TestRecommendation {
@@ -23,13 +44,441 @@ export interface TestRecommendation {
   priority: 'critical' | 'high' | 'medium' | 'low';
   predictedSuccessRate: number;
   estimatedDuration: number;
+  optimizationSuggestions?: string[];
+  relatedTests?: string[];
+}
+
+export interface TestSchedule {
+  enabled: boolean;
+  pattern: 'daily' | 'weekly' | 'monthly' | 'custom';
+  time?: string;
+  days?: string[];
+  onCodeChange?: boolean;
+  onDeploy?: boolean;
+  lastScheduledRun?: string;
+  nextScheduledRun?: string;
+}
+
+export interface TestError {
+  message: string;
+  location: string;
+  timestamp: string;
+  stackTrace?: string;
+  frequency?: number;
+  relatedErrors?: string[];
+  potentialFix?: string;
+}
+
+export interface TestReport {
+  id: string;
+  date: string;
+  testSuiteId: string;
+  duration: number;
+  passRate: number;
+  passedTests: number;
+  failedTests: number;
+  skippedTests: number;
+  errors: TestError[];
+  exportFormats: ('pdf' | 'csv' | 'json')[];
+}
+
+export interface RootCauseAnalysis {
+  testSuiteId: string;
+  commonPatterns: string[];
+  suggestedFixes: string[];
+  relatedIssues: string[];
+  confidence: number;
+}
+
+export interface TestGroup {
+  id: string;
+  name: string;
+  description?: string;
+  testSuiteIds: string[];
+  tags?: string[];
 }
 
 /**
- * Local Test Recommendation Engine
- * Uses rule-based algorithms to provide test recommendations without external AI services
+ * Advanced Test Recommendation Engine
+ * Uses rule-based algorithms and local intelligence to provide comprehensive testing features
  */
 export class TestRecommendationService {
+  // FEATURE: Test Scheduling
+  generateSchedule(suite: TestSuite, pattern: 'daily' | 'weekly' | 'monthly' | 'custom', options: any = {}): TestSchedule {
+    const now = new Date();
+    let nextRun: Date;
+    
+    switch (pattern) {
+      case 'daily':
+        nextRun = new Date(now);
+        nextRun.setDate(nextRun.getDate() + 1);
+        nextRun.setHours(options.hour || 0, options.minute || 0, 0, 0);
+        break;
+      
+      case 'weekly':
+        nextRun = new Date(now);
+        // Get next occurrence of the specified day (0 = Sunday, 6 = Saturday)
+        const dayOfWeek = options.day || 1; // Default to Monday
+        const daysUntilNext = (dayOfWeek + 7 - now.getDay()) % 7 || 7; // If today, then next week
+        nextRun.setDate(nextRun.getDate() + daysUntilNext);
+        nextRun.setHours(options.hour || 0, options.minute || 0, 0, 0);
+        break;
+      
+      case 'monthly':
+        nextRun = new Date(now);
+        // Set to next month, same day (or last day of month if day doesn't exist)
+        nextRun.setMonth(nextRun.getMonth() + 1);
+        nextRun.setDate(Math.min(options.day || 1, this.getLastDayOfMonth(nextRun)));
+        nextRun.setHours(options.hour || 0, options.minute || 0, 0, 0);
+        break;
+      
+      case 'custom':
+        // Custom schedules can be implemented as needed
+        nextRun = new Date(now);
+        nextRun.setDate(nextRun.getDate() + (options.interval || 1));
+        nextRun.setHours(options.hour || 0, options.minute || 0, 0, 0);
+        break;
+    }
+    
+    return {
+      enabled: true,
+      pattern,
+      time: `${options.hour || 0}:${options.minute || 0}`,
+      days: options.days || [],
+      onCodeChange: options.onCodeChange || false,
+      onDeploy: options.onDeploy || false,
+      lastScheduledRun: now.toISOString(),
+      nextScheduledRun: nextRun.toISOString()
+    };
+  }
+  
+  private getLastDayOfMonth(date: Date): number {
+    const nextMonth = new Date(date);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setDate(0);
+    return nextMonth.getDate();
+  }
+  
+  // FEATURE: Root Cause Analysis
+  analyzeRootCause(suite: TestSuite): RootCauseAnalysis {
+    if (!suite.lastErrors || suite.lastErrors.length === 0) {
+      return {
+        testSuiteId: suite.id,
+        commonPatterns: [],
+        suggestedFixes: [],
+        relatedIssues: [],
+        confidence: 0
+      };
+    }
+    
+    // Extract common error patterns
+    const errorMessages = suite.lastErrors.map(e => e.message);
+    const commonPatterns = this.extractCommonPatterns(errorMessages);
+    
+    // Generate suggested fixes based on error patterns
+    const suggestedFixes = this.generateSuggestedFixes(commonPatterns, suite);
+    
+    // Find related issues by examining error stack traces and locations
+    const relatedIssues = this.findRelatedIssues(suite.lastErrors, suite);
+    
+    // Calculate confidence based on pattern strength and consistency
+    const confidence = Math.min(95, commonPatterns.length * 15 + 40);
+    
+    return {
+      testSuiteId: suite.id,
+      commonPatterns,
+      suggestedFixes,
+      relatedIssues,
+      confidence
+    };
+  }
+  
+  private extractCommonPatterns(errorMessages: string[]): string[] {
+    const patterns: string[] = [];
+    
+    // Count occurrences of key phrases
+    const phraseCounts = new Map<string, number>();
+    
+    for (const message of errorMessages) {
+      // Extract key phrases (simplistic approach)
+      const key = message
+        .toLowerCase()
+        .replace(/[0-9]+/g, 'N') // Replace numbers with N
+        .replace(/[^a-z0-9 ]/g, ' ') // Replace non-alphanumeric with spaces
+        .split(' ')
+        .filter(word => word.length > 3) // Only consider words of reasonable length
+        .slice(0, 5) // Take first 5 significant words
+        .join(' ');
+      
+      phraseCounts.set(key, (phraseCounts.get(key) || 0) + 1);
+    }
+    
+    // Find the most common patterns
+    const sortedPatterns = Array.from(phraseCounts.entries())
+      .sort((a, b) => b[1] - a[1]);
+    
+    // Take patterns that occur in at least 25% of errors
+    const threshold = Math.max(1, Math.floor(errorMessages.length * 0.25));
+    
+    sortedPatterns.forEach(([pattern, count]) => {
+      if (count >= threshold) {
+        patterns.push(pattern);
+      }
+    });
+    
+    return patterns;
+  }
+  
+  private generateSuggestedFixes(patterns: string[], suite: TestSuite): string[] {
+    const fixes: string[] = [];
+    
+    // Simplistic pattern-to-fix mapping
+    for (const pattern of patterns) {
+      if (pattern.includes('timeout')) {
+        fixes.push('Increase timeout thresholds in the test configuration');
+      }
+      
+      if (pattern.includes('connection') || pattern.includes('network')) {
+        fixes.push('Check network connectivity and DNS resolution');
+      }
+      
+      if (pattern.includes('database') || pattern.includes('sql')) {
+        fixes.push('Verify database connection settings and ensure the database is accessible');
+      }
+      
+      if (pattern.includes('null') || pattern.includes('undefined')) {
+        fixes.push('Check for null or undefined values in the code path');
+      }
+      
+      if (pattern.includes('memory') || pattern.includes('heap')) {
+        fixes.push('Optimize memory usage or increase memory allocation');
+      }
+    }
+    
+    // Add generic fixes if no specific ones were found
+    if (fixes.length === 0) {
+      if (suite.complexity === 'high') {
+        fixes.push('Refactor complex test logic into smaller, more manageable tests');
+      }
+      
+      if (suite.passRate < 50) {
+        fixes.push('Review test data and preconditions to ensure they match the expected state');
+      }
+      
+      fixes.push('Run tests with verbose logging to gather more detailed error information');
+    }
+    
+    return fixes;
+  }
+  
+  private findRelatedIssues(errors: TestError[], suite: TestSuite): string[] {
+    const relatedIssues: string[] = [];
+    
+    // Look for common code locations
+    const locations = errors.map(e => e.location);
+    const locationCounts = new Map<string, number>();
+    
+    locations.forEach(loc => {
+      locationCounts.set(loc, (locationCounts.get(loc) || 0) + 1);
+    });
+    
+    // Find hot spots (locations with multiple errors)
+    const hotspots = Array.from(locationCounts.entries())
+      .filter(([_, count]) => count > 1)
+      .map(([loc, _]) => loc);
+    
+    if (hotspots.length > 0) {
+      relatedIssues.push(`Code hotspots detected in: ${hotspots.join(', ')}`);
+    }
+    
+    // Check for dependency-related issues
+    if (suite.dependencies && suite.dependencies.length > 0) {
+      relatedIssues.push(`Check dependent test suites: ${suite.dependencies.join(', ')}`);
+    }
+    
+    return relatedIssues;
+  }
+  
+  // FEATURE: Enhanced Reporting
+  generateReport(suite: TestSuite): TestReport {
+    const passedTests = Math.round((suite.testCount * suite.passRate) / 100);
+    const failedTests = suite.testCount - passedTests;
+    
+    return {
+      id: `report-${suite.id}-${Date.now()}`,
+      date: new Date().toISOString(),
+      testSuiteId: suite.id,
+      duration: suite.executionTime,
+      passRate: suite.passRate,
+      passedTests,
+      failedTests,
+      skippedTests: 0, // Placeholder, would be determined by actual test data
+      errors: suite.lastErrors || [],
+      exportFormats: ['pdf', 'csv', 'json']
+    };
+  }
+  
+  // FEATURE: Performance Optimization
+  analyzePerformance(suite: TestSuite): any {
+    // Calculate test efficiency
+    const testsPerSecond = suite.testCount / suite.executionTime;
+    const efficiencyRating = this.getEfficiencyRating(testsPerSecond, suite.complexity);
+    
+    // Identify potential for parallelization
+    const parallelizationPotential = suite.parallelizable ? 'high' : 'low';
+    
+    // Generate optimization suggestions
+    const optimizations = this.generateOptimizationSuggestions(suite);
+    
+    // Estimate potential time savings
+    const potentialTimeSavings = this.estimatePotentialTimeSavings(suite, optimizations);
+    
+    return {
+      testSuiteId: suite.id,
+      testsPerSecond,
+      efficiencyRating,
+      parallelizationPotential,
+      optimizations,
+      potentialTimeSavings
+    };
+  }
+  
+  private getEfficiencyRating(testsPerSecond: number, complexity: 'low' | 'medium' | 'high'): string {
+    let threshold = 0;
+    
+    switch (complexity) {
+      case 'low': threshold = 2.0; break;
+      case 'medium': threshold = 1.0; break;
+      case 'high': threshold = 0.5; break;
+    }
+    
+    if (testsPerSecond > threshold * 2) return 'excellent';
+    if (testsPerSecond > threshold) return 'good';
+    if (testsPerSecond > threshold / 2) return 'fair';
+    return 'poor';
+  }
+  
+  private generateOptimizationSuggestions(suite: TestSuite): string[] {
+    const suggestions: string[] = [];
+    
+    // Check for slow tests
+    if (suite.executionTime > 60 && suite.testCount < 50) {
+      suggestions.push('Tests are running slowly. Consider optimizing test setup/teardown.');
+    }
+    
+    // Check for parallelization potential
+    if (!suite.parallelizable && suite.testCount > 20) {
+      suggestions.push('Tests could benefit from parallelization. Review for independent test cases.');
+    }
+    
+    // Check for critical path optimization
+    if (suite.criticalPath && suite.executionTime > 30) {
+      suggestions.push('This is on the critical test path. Prioritize optimizing these tests.');
+    }
+    
+    // Check for dependency optimization
+    if (suite.dependencies && suite.dependencies.length > 2) {
+      suggestions.push('Test has many dependencies. Consider reducing coupling between test suites.');
+    }
+    
+    // Generic optimization suggestions
+    suggestions.push('Review setup/teardown to minimize redundant operations.');
+    
+    return suggestions;
+  }
+  
+  private estimatePotentialTimeSavings(suite: TestSuite, optimizations: string[]): number {
+    // Simplistic estimate
+    let savingsFactor = 0;
+    
+    if (optimizations.some(opt => opt.includes('parallelization'))) {
+      savingsFactor += 0.3; // Estimate 30% reduction with parallelization
+    }
+    
+    if (optimizations.some(opt => opt.includes('setup/teardown'))) {
+      savingsFactor += 0.15; // Estimate 15% reduction with setup/teardown optimization
+    }
+    
+    if (optimizations.some(opt => opt.includes('coupling'))) {
+      savingsFactor += 0.1; // Estimate 10% reduction by reducing coupling
+    }
+    
+    return Math.round(suite.executionTime * savingsFactor);
+  }
+  
+  // FEATURE: Test Management
+  organizeTestGroups(testSuites: TestSuite[]): TestGroup[] {
+    const groups: TestGroup[] = [];
+    
+    // Group by explicit group name
+    const groupedByName = new Map<string, TestSuite[]>();
+    
+    testSuites.forEach(suite => {
+      if (suite.group) {
+        if (!groupedByName.has(suite.group)) {
+          groupedByName.set(suite.group, []);
+        }
+        groupedByName.get(suite.group)!.push(suite);
+      }
+    });
+    
+    // Convert to TestGroup objects
+    groupedByName.forEach((suites, name) => {
+      groups.push({
+        id: `group-${name.toLowerCase().replace(/\s+/g, '-')}`,
+        name,
+        testSuiteIds: suites.map(s => s.id),
+        tags: this.extractCommonTags(suites)
+      });
+    });
+    
+    // Group by common tags for tests that don't have an explicit group
+    const ungroupedTests = testSuites.filter(suite => !suite.group);
+    
+    // Group by primary tag
+    const groupedByTag = new Map<string, TestSuite[]>();
+    
+    ungroupedTests.forEach(suite => {
+      if (suite.tags && suite.tags.length > 0) {
+        const primaryTag = suite.tags[0];
+        if (!groupedByTag.has(primaryTag)) {
+          groupedByTag.set(primaryTag, []);
+        }
+        groupedByTag.get(primaryTag)!.push(suite);
+      }
+    });
+    
+    // Convert tag groups to TestGroup objects
+    groupedByTag.forEach((suites, tag) => {
+      // Only create a group if there are multiple tests with this tag
+      if (suites.length > 1) {
+        groups.push({
+          id: `group-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`,
+          name: `${tag.charAt(0).toUpperCase() + tag.slice(1)} Tests`,
+          description: `Tests related to ${tag}`,
+          testSuiteIds: suites.map(s => s.id),
+          tags: [tag, ...this.extractCommonTags(suites).filter(t => t !== tag)]
+        });
+      }
+    });
+    
+    return groups;
+  }
+  
+  private extractCommonTags(suites: TestSuite[]): string[] {
+    if (suites.length === 0) return [];
+    
+    // Start with the tags from the first suite
+    let commonTags = [...(suites[0].tags || [])];
+    
+    // Find intersection with tags from all other suites
+    for (let i = 1; i < suites.length; i++) {
+      const suiteTags = suites[i].tags || [];
+      commonTags = commonTags.filter(tag => suiteTags.includes(tag));
+    }
+    
+    return commonTags;
+  }
   // Generate test recommendations based on test suite data
   generateRecommendations(testSuites: TestSuite[]): TestRecommendation[] {
     if (!testSuites || testSuites.length === 0) {

@@ -134,6 +134,38 @@ function Router() {
       {/* Admin Routes */}
       <Route path="/admin/analytics" component={AnalyticsDashboard} />
       <Route path="/admin/test-recommendation" component={TestRecommendationEngine} />
+      <Route path="/admin/test-management" component={() => {
+        const TestManagement = React.lazy(() => import("./pages/admin/test-management"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <TestManagement />
+          </React.Suspense>
+        );
+      }} />
+      <Route path="/admin/test-reporting" component={() => {
+        const TestReporting = React.lazy(() => import("./pages/admin/test-reporting"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <TestReporting />
+          </React.Suspense>
+        );
+      }} />
+      <Route path="/admin/test-root-cause" component={() => {
+        const TestRootCause = React.lazy(() => import("./pages/admin/test-root-cause"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <TestRootCause />
+          </React.Suspense>
+        );
+      }} />
+      <Route path="/admin/test-optimization" component={() => {
+        const TestOptimization = React.lazy(() => import("./pages/admin/test-optimization"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <TestOptimization />
+          </React.Suspense>
+        );
+      }} />
       
       <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboard} />
       <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboarding} />
