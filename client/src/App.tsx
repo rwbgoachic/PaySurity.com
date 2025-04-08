@@ -130,6 +130,9 @@ function Router() {
       <ProtectedRoute path="/parent/dashboard" component={ParentDashboard} />
       <ProtectedRoute path="/child/dashboard" component={ChildDashboard} />
       
+      {/* Admin Routes */}
+      <Route path="/admin/analytics" component={AnalyticsDashboard} />
+      
       <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboard} />
       <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboarding} />
       <ProtectedRoute path="/merchant/verification" component={MerchantVerification} />

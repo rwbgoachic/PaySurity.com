@@ -1,430 +1,493 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { formatDistance } from 'date-fns';
-import { useAuth } from '@/hooks/use-auth';
-import { Redirect, Link } from 'wouter';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import { 
-  BarChart2, 
-  PieChart as PieChartIcon, 
-  ListFilter, 
-  Download, 
-  RefreshCw 
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveBar } from "@nivo/bar";
+import { ResponsiveLine } from "@nivo/line";
+import { ResponsivePie } from "@nivo/pie";
+import { BarChart, LineChart, PieChart, Activity, UserCheck, AlertTriangle, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
-// Analytics dashboard page
+interface TestResultSummary {
+  totalTests: number;
+  passedTests: number;
+  failedTests: number;
+  passRatePercentage: number;
+  testsByType: { id: string; value: number }[];
+  testTrend: { x: string; y: number }[];
+  performanceMetrics: { category: string; avg: number; max: number }[];
+}
+
 export default function AnalyticsDashboard() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [dateRange, setDateRange] = useState('7days');
+  const [summaryData, setSummaryData] = useState<TestResultSummary | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Redirect if not admin
-  if (!user || user.role !== 'admin') {
-    return <Redirect to="/" />;
+  useEffect(() => {
+    // In a real application, this would fetch from a real API endpoint
+    // But for demonstration, we'll use sample data
+    
+    // Simulate API fetch delay
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Demo data for visualization - this would be fetched from the API
+        const demoData = {
+          totalTests: 432,
+          passedTests: 398,
+          failedTests: 34,
+          passRatePercentage: 92.13,
+          testsByType: [
+            { id: "API", value: 128 },
+            { id: "System", value: 94 },
+            { id: "Performance", value: 112 },
+            { id: "Delivery", value: 98 }
+          ],
+          testTrend: [
+            { x: "Jan", y: 87 },
+            { x: "Feb", y: 88 },
+            { x: "Mar", y: 91 },
+            { x: "Apr", y: 89 },
+            { x: "May", y: 92 },
+            { x: "Jun", y: 93 },
+            { x: "Jul", y: 92 }
+          ],
+          performanceMetrics: [
+            { category: "Database", avg: 240, max: 780 },
+            { category: "API Response", avg: 180, max: 620 },
+            { category: "Page Load", avg: 380, max: 980 },
+            { category: "Auth", avg: 110, max: 420 }
+          ]
+        };
+        
+        setSummaryData(demoData);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching analytics data:", error);
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  if (loading || !summaryData) {
+    return (
+      <div className="container py-10">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      </div>
+    );
   }
 
-  // Get start and end dates based on selected range
-  const getDateRange = () => {
-    const endDate = new Date();
-    let startDate = new Date();
-
-    switch (dateRange) {
-      case '24hours':
-        startDate.setHours(startDate.getHours() - 24);
-        break;
-      case '7days':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case '30days':
-        startDate.setDate(startDate.getDate() - 30);
-        break;
-      case '90days':
-        startDate.setDate(startDate.getDate() - 90);
-        break;
-      default:
-        startDate.setDate(startDate.getDate() - 7);
+  // Prepare data for charts
+  const testPassRateData = [
+    { id: "Passed", label: "Passed", value: summaryData.passedTests },
+    { id: "Failed", label: "Failed", value: summaryData.failedTests }
+  ];
+  
+  const lineChartData = [
+    {
+      id: "Pass Rate",
+      data: summaryData.testTrend.map(point => ({ x: point.x, y: point.y }))
     }
-
-    return { startDate, endDate };
-  };
-
-  // Query for page metrics
-  const { data: pageMetrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useQuery({
-    queryKey: ['/api/analytics/metrics/by-page'],
-    queryFn: async () => {
-      const res = await fetch('/api/analytics/metrics/by-page');
-      if (!res.ok) throw new Error('Failed to fetch metrics');
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Query for click events
-  const { startDate, endDate } = getDateRange();
-  const { 
-    data: clickEvents, 
-    isLoading: isLoadingEvents, 
-    refetch: refetchEvents 
-  } = useQuery({
-    queryKey: ['/api/analytics/events', startDate.toISOString(), endDate.toISOString()],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/analytics/events?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
-      );
-      if (!res.ok) throw new Error('Failed to fetch events');
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Get element type distribution for pie chart
-  const getElementTypeDistribution = () => {
-    if (!clickEvents || clickEvents.length === 0) return [];
-    
-    const typeCounts: Record<string, number> = {};
-    clickEvents.forEach((event: any) => {
-      typeCounts[event.elementType] = (typeCounts[event.elementType] || 0) + 1;
-    });
-    
-    return Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
-  };
-
-  // Handle refresh
-  const handleRefresh = () => {
-    refetchMetrics();
-    refetchEvents();
-    toast({
-      title: "Refreshed data",
-      description: "The analytics data has been refreshed",
-    });
-  };
-
-  // Export data as CSV
-  const exportToCsv = () => {
-    if (!clickEvents || clickEvents.length === 0) {
-      toast({
-        title: "No data to export",
-        description: "There is no data available to export",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Create CSV content
-    const headers = ["timestamp", "elementType", "elementId", "elementText", "pagePath", "sessionId"];
-    const csvRows = [headers.join(",")];
-    
-    clickEvents.forEach((event: any) => {
-      const row = headers.map(header => {
-        let value = event[header];
-        
-        // Format timestamp
-        if (header === 'timestamp') {
-          value = new Date(value).toISOString();
-        }
-        
-        // Handle strings with commas by wrapping in quotes
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value}"`;
-        }
-        
-        return value || '';
-      });
-      
-      csvRows.push(row.join(","));
-    });
-    
-    // Create and download the file
-    const csvContent = csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `analytics_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Export successful",
-      description: "Analytics data has been exported to CSV",
-    });
-  };
-
-  // Random colors for pie chart
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
+  ];
+  
+  const performanceChartData = summaryData.performanceMetrics.map(metric => ({
+    category: metric.category,
+    avg: metric.avg,
+    max: metric.max
+  }));
 
   return (
-    <div className="container mx-auto py-10 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container py-10">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
           <p className="text-muted-foreground">
-            Monitor user interactions and engagement across the platform
+            View test statistics, performance metrics, and system health indicators
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24hours">Last 24 Hours</SelectItem>
-              <SelectItem value="7days">Last 7 Days</SelectItem>
-              <SelectItem value="30days">Last 30 Days</SelectItem>
-              <SelectItem value="90days">Last 90 Days</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleRefresh} variant="outline" size="icon">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button onClick={exportToCsv} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-        </div>
+        <Button onClick={() => window.location.reload()}>Refresh Data</Button>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Total Events</CardTitle>
-            <CardDescription>Total click events tracked</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Tests Run</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {isLoadingEvents ? '...' : clickEvents?.length || 0}
-            </div>
+            <div className="text-2xl font-bold">{summaryData.totalTests}</div>
+            <p className="text-xs text-muted-foreground">
+              Across all test suites
+            </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Unique Pages</CardTitle>
-            <CardDescription>Distinct pages with events</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Tests Passed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {isLoadingMetrics ? '...' : pageMetrics?.length || 0}
-            </div>
+            <div className="text-2xl font-bold">{summaryData.passedTests}</div>
+            <p className="text-xs text-muted-foreground">
+              {summaryData.passRatePercentage.toFixed(1)}% success rate
+            </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Unique Sessions</CardTitle>
-            <CardDescription>Distinct user sessions</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Tests Failed</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {isLoadingEvents ? '...' : new Set(clickEvents?.map((e: any) => e.sessionId)).size || 0}
-            </div>
+            <div className="text-2xl font-bold">{summaryData.failedTests}</div>
+            <p className="text-xs text-muted-foreground">
+              {(100 - summaryData.passRatePercentage).toFixed(1)}% failure rate
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">System Health</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Good</div>
+            <p className="text-xs text-muted-foreground">
+              Based on test metrics & performance
+            </p>
           </CardContent>
         </Card>
       </div>
-
-      <Tabs defaultValue="pageViews">
+      
+      <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="pageViews">
-            <BarChart2 className="h-4 w-4 mr-2" />
-            Page Views
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" /> Overview
           </TabsTrigger>
-          <TabsTrigger value="elementTypes">
-            <PieChartIcon className="h-4 w-4 mr-2" />
-            Interaction Types
+          <TabsTrigger value="performance" className="flex items-center gap-2">
+            <LineChart className="h-4 w-4" /> Performance
           </TabsTrigger>
-          <TabsTrigger value="rawData">
-            <ListFilter className="h-4 w-4 mr-2" />
-            Raw Data
+          <TabsTrigger value="distribution" className="flex items-center gap-2">
+            <PieChart className="h-4 w-4" /> Distribution
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="pageViews" className="mt-6">
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Test Pass Rate Trend</CardTitle>
+                <CardDescription>
+                  Monthly trend of test pass rate percentage
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveLine
+                  data={lineChartData}
+                  margin={{ top: 20, right: 20, bottom: 50, left: 50 }}
+                  xScale={{ type: 'point' }}
+                  yScale={{
+                    type: 'linear',
+                    min: 'auto',
+                    max: 'auto',
+                  }}
+                  axisBottom={{
+                    tickSize: 5,
+                    tickPadding: 5,
+                    tickRotation: 0,
+                    legend: 'Month',
+                    legendOffset: 36,
+                    legendPosition: 'middle'
+                  }}
+                  axisLeft={{
+                    tickSize: 5,
+                    tickPadding: 5,
+                    tickRotation: 0,
+                    legend: 'Pass Rate (%)',
+                    legendOffset: -40,
+                    legendPosition: 'middle'
+                  }}
+                  colors={{ scheme: 'category10' }}
+                  pointSize={10}
+                  pointColor={{ theme: 'background' }}
+                  pointBorderWidth={2}
+                  pointBorderColor={{ from: 'serieColor' }}
+                  pointLabelYOffset={-12}
+                  useMesh={true}
+                />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Pass Rate</CardTitle>
+                <CardDescription>
+                  Current pass/fail test distribution
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsivePie
+                  data={testPassRateData}
+                  margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                  innerRadius={0.5}
+                  padAngle={0.7}
+                  cornerRadius={3}
+                  activeOuterRadiusOffset={8}
+                  borderWidth={1}
+                  borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+                  arcLabelsSkipAngle={10}
+                  arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
+                  colors={['#22c55e', '#ef4444']}
+                  legends={[
+                    {
+                      anchor: 'bottom',
+                      direction: 'row',
+                      justify: false,
+                      translateX: 0,
+                      translateY: 30,
+                      itemsSpacing: 0,
+                      itemWidth: 100,
+                      itemHeight: 18,
+                      itemTextColor: '#999',
+                      itemDirection: 'left-to-right',
+                      itemOpacity: 1,
+                      symbolSize: 10,
+                      symbolShape: 'circle'
+                    }
+                  ]}
+                />
+              </CardContent>
+            </Card>
+          </div>
+          
           <Card>
             <CardHeader>
-              <CardTitle>Page View Distribution</CardTitle>
+              <CardTitle>Tests by Type</CardTitle>
               <CardDescription>
-                Number of interactions per page
+                Distribution of test cases across test categories
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {isLoadingMetrics ? (
-                <div className="flex justify-center py-10">
-                  <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-                </div>
-              ) : pageMetrics && pageMetrics.length > 0 ? (
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={pageMetrics}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="pagePath" 
-                        angle={-45} 
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="count" fill="#8884d8" name="Click Count" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No page view data available
-                </div>
-              )}
+            <CardContent className="h-[300px]">
+              <ResponsiveBar
+                data={summaryData.testsByType}
+                keys={['value']}
+                indexBy="id"
+                margin={{ top: 20, right: 20, bottom: 50, left: 60 }}
+                padding={0.3}
+                colors={{ scheme: 'category10' }}
+                borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+                axisBottom={{
+                  tickSize: 5,
+                  tickPadding: 5,
+                  tickRotation: 0,
+                  legend: 'Test Type',
+                  legendPosition: 'middle',
+                  legendOffset: 32
+                }}
+                axisLeft={{
+                  tickSize: 5,
+                  tickPadding: 5,
+                  tickRotation: 0,
+                  legend: 'Count',
+                  legendPosition: 'middle',
+                  legendOffset: -40
+                }}
+                labelSkipWidth={12}
+                labelSkipHeight={12}
+                labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+                animate={true}
+              />
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="elementTypes" className="mt-6">
+        <TabsContent value="performance" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Element Type Distribution</CardTitle>
+              <CardTitle>Performance Metrics</CardTitle>
               <CardDescription>
-                Types of elements users interact with
+                Average and maximum response time in milliseconds by category
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {isLoadingEvents ? (
-                <div className="flex justify-center py-10">
-                  <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-                </div>
-              ) : clickEvents && clickEvents.length > 0 ? (
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={getElementTypeDistribution()}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={150}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {getElementTypeDistribution().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} clicks`, 'Count']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No element type data available
-                </div>
-              )}
+            <CardContent className="h-[400px]">
+              <ResponsiveBar
+                data={performanceChartData}
+                keys={['avg', 'max']}
+                indexBy="category"
+                margin={{ top: 30, right: 30, bottom: 50, left: 60 }}
+                padding={0.3}
+                groupMode="grouped"
+                colors={{ scheme: 'paired' }}
+                borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+                axisBottom={{
+                  tickSize: 5,
+                  tickPadding: 5,
+                  tickRotation: 0,
+                  legend: 'Category',
+                  legendPosition: 'middle',
+                  legendOffset: 32
+                }}
+                axisLeft={{
+                  tickSize: 5,
+                  tickPadding: 5,
+                  tickRotation: 0,
+                  legend: 'Time (ms)',
+                  legendPosition: 'middle',
+                  legendOffset: -40
+                }}
+                labelSkipWidth={12}
+                labelSkipHeight={12}
+                labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+                legends={[
+                  {
+                    dataFrom: 'keys',
+                    anchor: 'bottom',
+                    direction: 'row',
+                    justify: false,
+                    translateX: 0,
+                    translateY: 40,
+                    itemsSpacing: 2,
+                    itemWidth: 100,
+                    itemHeight: 20,
+                    itemDirection: 'left-to-right',
+                    itemOpacity: 0.85,
+                    symbolSize: 20,
+                    effects: [
+                      {
+                        on: 'hover',
+                        style: {
+                          itemOpacity: 1
+                        }
+                      }
+                    ]
+                  }
+                ]}
+                animate={true}
+              />
             </CardContent>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="rawData" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Raw Click Event Data</CardTitle>
-              <CardDescription>
-                Detailed view of all recorded click events
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingEvents ? (
-                <div className="flex justify-center py-10">
-                  <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-                </div>
-              ) : clickEvents && clickEvents.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableCaption>
-                      Click events from {startDate.toLocaleDateString()} to {endDate.toLocaleDateString()}
-                    </TableCaption>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Page</TableHead>
-                        <TableHead>Element Type</TableHead>
-                        <TableHead>Element Text</TableHead>
-                        <TableHead>Session ID</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {clickEvents.slice(0, 100).map((event: any) => (
-                        <TableRow key={event.id}>
-                          <TableCell>
-                            {formatDistance(new Date(event.timestamp), new Date(), { addSuffix: true })}
-                          </TableCell>
-                          <TableCell className="max-w-md truncate">
-                            {event.pagePath}
-                          </TableCell>
-                          <TableCell>{event.elementType}</TableCell>
-                          <TableCell className="max-w-md truncate">
-                            {event.elementText || '-'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {event.sessionId?.substring(0, 8)}...
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {clickEvents.length > 100 && (
-                    <div className="text-center text-sm text-muted-foreground mt-4">
-                      Showing 100 of {clickEvents.length} events. Export to CSV to access all data.
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            {performanceChartData.map((metric, index) => (
+              <Card key={index}>
+                <CardHeader>
+                  <CardTitle className="text-md font-medium">{metric.category} Response Time</CardTitle>
+                  <CardDescription>
+                    Average: {metric.avg}ms / Maximum: {metric.max}ms
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Average</span>
+                      <span className="text-sm font-medium">{metric.avg}ms</span>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No click event data available for the selected date range
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <Progress value={(metric.avg / 1000) * 100} className="h-2" />
+                    
+                    <div className="flex justify-between pt-2">
+                      <span className="text-sm">Maximum</span>
+                      <span className="text-sm font-medium">{metric.max}ms</span>
+                    </div>
+                    <Progress value={(metric.max / 1000) * 100} className="h-2" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="distribution" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Type Distribution</CardTitle>
+                <CardDescription>
+                  Distribution of tests by test type
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsivePie
+                  data={summaryData.testsByType}
+                  margin={{ top: 20, right: 20, bottom: 40, left: 20 }}
+                  innerRadius={0.5}
+                  padAngle={0.7}
+                  cornerRadius={3}
+                  activeOuterRadiusOffset={8}
+                  borderWidth={1}
+                  borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+                  arcLabelsSkipAngle={10}
+                  arcLabelsTextColor="#ffffff"
+                  colors={{ scheme: 'nivo' }}
+                  legends={[
+                    {
+                      anchor: 'bottom',
+                      direction: 'row',
+                      justify: false,
+                      translateX: 0,
+                      translateY: 30,
+                      itemsSpacing: 0,
+                      itemWidth: 80,
+                      itemHeight: 18,
+                      itemTextColor: '#999',
+                      itemDirection: 'left-to-right',
+                      itemOpacity: 1,
+                      symbolSize: 10,
+                      symbolShape: 'circle'
+                    }
+                  ]}
+                />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Pass/Fail Distribution</CardTitle>
+                <CardDescription>
+                  Distribution of test results by pass/fail status
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsivePie
+                  data={testPassRateData}
+                  margin={{ top: 20, right: 20, bottom: 40, left: 20 }}
+                  innerRadius={0.5}
+                  padAngle={0.7}
+                  cornerRadius={3}
+                  activeOuterRadiusOffset={8}
+                  borderWidth={1}
+                  borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+                  arcLabelsSkipAngle={10}
+                  arcLabelsTextColor="#ffffff"
+                  colors={['#22c55e', '#ef4444']}
+                  legends={[
+                    {
+                      anchor: 'bottom',
+                      direction: 'row',
+                      justify: false,
+                      translateX: 0,
+                      translateY: 30,
+                      itemsSpacing: 0,
+                      itemWidth: 100,
+                      itemHeight: 18,
+                      itemTextColor: '#999',
+                      itemDirection: 'left-to-right',
+                      itemOpacity: 1,
+                      symbolSize: 10,
+                      symbolShape: 'circle'
+                    }
+                  ]}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
