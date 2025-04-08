@@ -1,12 +1,8 @@
 /**
- * Delivery Service
+ * Delivery Service Coordinator
  * 
- * This service coordinates between different delivery providers, handling:
- * - Provider registration and selection
- * - Quote generation and comparison
- * - Order creation and tracking
- * - Status updates and webhooks
- * - Fee calculations
+ * This service coordinates between different delivery providers, managing
+ * delivery quotes, order creation, status updates, and webhooks.
  */
 
 import {
@@ -15,141 +11,130 @@ import {
   OrderDetails,
   DeliveryQuote,
   DeliveryOrderDetails,
-  ExternalDeliveryOrder,
-  DeliveryStatus
+  DeliveryStatus,
+  ExternalDeliveryOrder
 } from './interfaces';
+
+// Import providers
 import { InternalDeliveryAdapter } from './providers/internal-adapter';
 import { DoorDashAdapter } from './providers/doordash-adapter';
-import { storage } from '../../storage';
 
 /**
- * Main delivery service that coordinates between different delivery providers
+ * Singleton delivery service coordinator
  */
-export class DeliveryService {
+class DeliveryService {
   private providers: Map<number, DeliveryProviderAdapter> = new Map();
   private initialized = false;
-  private doorDashWebhookSecret: string | null = null;
-
-  constructor() {
-    // Register built-in providers
-    this.registerProvider(1, new InternalDeliveryAdapter());
-  }
-
+  
   /**
-   * Initialize the delivery service
-   * This will load all provider configurations from the database
+   * Initialize the delivery service with providers from the database
+   * This can be called multiple times but will only load once
    */
-  async initialize(): Promise<void> {
+  async initialize() {
     if (this.initialized) {
       return;
     }
-
+    
     try {
-      // Load delivery providers from database
-      const dbProviders = await storage.getAllDeliveryProviders();
+      // In production, we would load providers from the database
+      // For demo purposes, we'll add static providers
       
-      // Set up each provider based on provider type
-      for (const provider of dbProviders) {
-        if (!provider.isActive) {
-          continue;
-        }
-        
-        switch (provider.type) {
-          case 'doordash':
-            if (provider.apiKey && provider.apiSecret) {
-              const doorDashAdapter = new DoorDashAdapter({
-                apiKey: provider.apiKey,
-                apiSecret: provider.apiSecret
-              });
-              this.registerProvider(provider.id, doorDashAdapter);
-              
-              // Store webhook secret for later validation
-              if (provider.webhookKey) {
-                this.doorDashWebhookSecret = provider.webhookKey;
-              }
-            }
-            break;
-            
-          // Add more providers as needed (e.g., UberEats, Grubhub)
-          
-          default:
-            console.warn(`Unknown delivery provider type: ${provider.type}`);
-        }
-      }
+      // Add default providers for testing
+      this.addDefaultProviders();
       
       this.initialized = true;
-      console.log(`Delivery service initialized with ${this.providers.size} providers`);
+      console.log('Delivery service initialized with providers:', 
+        Array.from(this.providers.entries()).map(([id, provider]) => 
+          `${id}: ${provider.getName()} (${provider.getProviderType()})`
+        )
+      );
     } catch (error) {
       console.error('Failed to initialize delivery service:', error);
-      throw new Error(`Failed to initialize delivery service: ${(error as Error).message}`);
+      throw new Error(`Delivery service initialization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Register a delivery provider
+   * Add default providers for testing
    */
-  registerProvider(providerId: number, adapter: DeliveryProviderAdapter): void {
-    this.providers.set(providerId, adapter);
-    console.log(`Registered delivery provider: ${adapter.getName()} (ID: ${providerId})`);
+  private addDefaultProviders() {
+    // Add internal provider (restaurant's own delivery staff)
+    const internalProvider = new InternalDeliveryAdapter();
+    this.providers.set(1, internalProvider);
+    
+    // Add DoorDash provider (if credentials available)
+    try {
+      // In production, these would be loaded from environment or secure storage
+      const doordashConfig = {
+        apiKey: process.env.DOORDASH_API_KEY || 'test_api_key',
+        apiSecret: process.env.DOORDASH_API_SECRET || 'test_api_secret',
+        developerId: process.env.DOORDASH_DEVELOPER_ID || 'paysurity_test'
+      };
+      
+      const doordashProvider = new DoorDashAdapter(doordashConfig);
+      this.providers.set(2, doordashProvider);
+    } catch (error) {
+      console.warn('Failed to initialize DoorDash provider:', error);
+    }
+    
+    // In production, more providers would be loaded here
+    // e.g., UberEats, GrubHub, etc.
   }
-
+  
   /**
-   * Get a delivery provider by ID
-   */
-  getProvider(providerId: number): DeliveryProviderAdapter | undefined {
-    return this.providers.get(providerId);
-  }
-
-  /**
-   * Get all available providers 
-   */
-  getAllProviders(): DeliveryProviderAdapter[] {
-    return Array.from(this.providers.values());
-  }
-
-  /**
-   * Get delivery quotes from multiple providers
+   * Get quotes from all available delivery providers for a given delivery
    */
   async getDeliveryQuotes(
-    pickup: Address, 
-    delivery: Address, 
+    pickup: Address,
+    delivery: Address,
     orderDetails: OrderDetails
   ): Promise<DeliveryQuote[]> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
+    await this.ensureInitialized();
     
     const quotes: DeliveryQuote[] = [];
-    const quotePromises = [];
+    const quotePromises: Promise<void>[] = [];
     
-    // Request quotes from all providers in parallel
+    // Get quotes from all providers in parallel
     for (const provider of this.providers.values()) {
-      quotePromises.push(
-        provider.getQuote(pickup, delivery, orderDetails)
-          .then(quote => {
-            quotes.push(quote);
-          })
-          .catch(error => {
-            console.error(`Error getting quote from ${provider.getName()}:`, error);
-            // Don't add invalid quotes to the list
-          })
-      );
+      const quotePromise = provider.getQuote(pickup, delivery, orderDetails)
+        .then(quote => {
+          quotes.push(quote);
+        })
+        .catch(error => {
+          console.error(`Error getting quote from ${provider.getName()}:`, error);
+          // Add failed quote with error message
+          quotes.push({
+            providerId: -1, // Will be updated with actual provider ID
+            providerName: provider.getName(),
+            fee: 0,
+            customerFee: 0,
+            platformFee: 0,
+            currency: orderDetails.currency || 'USD',
+            estimatedPickupTime: new Date(),
+            estimatedDeliveryTime: new Date(),
+            distance: 0,
+            distanceUnit: 'miles',
+            valid: false,
+            validUntil: new Date(),
+            errors: [error instanceof Error ? error.message : String(error)]
+          });
+        });
+      
+      quotePromises.push(quotePromise);
     }
     
+    // Wait for all quotes to be fetched
     await Promise.all(quotePromises);
     
-    // Sort by customer fee (ascending)
+    // Sort quotes by fee (lowest first)
     return quotes.sort((a, b) => a.customerFee - b.customerFee);
   }
-
+  
   /**
-   * Create a new delivery order
+   * Create a delivery order with the specified provider
    */
-  async createDeliveryOrder(
-    orderDetails: DeliveryOrderDetails
-  ): Promise<{
-    id: number;
-    externalOrderId: string;
+  async createDelivery(orderDetails: DeliveryOrderDetails): Promise<{
+    deliveryId: string;
     providerId: number;
     providerName: string;
     status: DeliveryStatus;
@@ -157,208 +142,114 @@ export class DeliveryService {
     estimatedDeliveryTime: Date;
     trackingUrl?: string;
   }> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
+    await this.ensureInitialized();
     
-    // Get the provider
     const provider = this.providers.get(orderDetails.providerId);
     if (!provider) {
-      throw new Error(`Delivery provider with ID ${orderDetails.providerId} not found`);
+      throw new Error(`Provider with ID ${orderDetails.providerId} not found`);
     }
     
     try {
-      // Create the delivery in the provider's system
-      const externalDelivery = await provider.createDelivery(orderDetails);
-      
-      // Store the delivery in our database
-      const delivery = await storage.createDeliveryOrder({
-        businessId: orderDetails.businessId,
-        providerId: orderDetails.providerId,
-        externalOrderId: externalDelivery.externalOrderId,
-        orderId: typeof orderDetails.orderId === 'string' 
-          ? parseInt(orderDetails.orderId) 
-          : orderDetails.orderId,
-        customerName: orderDetails.customerName,
-        customerPhone: orderDetails.customerPhone,
-        customerAddress: typeof orderDetails.customerAddress === 'string'
-          ? orderDetails.customerAddress
-          : JSON.stringify(orderDetails.customerAddress),
-        businessAddress: typeof orderDetails.businessAddress === 'string'
-          ? orderDetails.businessAddress
-          : JSON.stringify(orderDetails.businessAddress),
-        status: externalDelivery.status,
-        fee: orderDetails.providerFee,
-        platformFee: orderDetails.platformFee,
-        customerFee: orderDetails.customerFee,
-        estimatedPickupTime: externalDelivery.estimatedPickupTime,
-        estimatedDeliveryTime: externalDelivery.estimatedDeliveryTime,
-        specialInstructions: orderDetails.specialInstructions || null,
-        driverName: externalDelivery.driverName || null,
-        driverPhone: externalDelivery.driverPhone || null,
-        trackingUrl: externalDelivery.trackingUrl || null,
-        providerData: JSON.stringify(externalDelivery.providerData || {}),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      
-      // Create initial status history entry
-      await this.recordStatusChange(
-        delivery.id,
-        externalDelivery.status,
-        new Date()
-      );
+      const delivery = await provider.createDelivery(orderDetails);
       
       return {
-        id: delivery.id,
-        externalOrderId: externalDelivery.externalOrderId,
+        deliveryId: delivery.externalOrderId,
         providerId: orderDetails.providerId,
         providerName: provider.getName(),
-        status: externalDelivery.status,
-        estimatedPickupTime: externalDelivery.estimatedPickupTime,
-        estimatedDeliveryTime: externalDelivery.estimatedDeliveryTime,
-        trackingUrl: externalDelivery.trackingUrl
+        status: delivery.status,
+        estimatedPickupTime: delivery.estimatedPickupTime,
+        estimatedDeliveryTime: delivery.estimatedDeliveryTime,
+        trackingUrl: delivery.trackingUrl
       };
     } catch (error) {
-      console.error('Error creating delivery order:', error);
-      throw new Error(`Failed to create delivery order: ${(error as Error).message}`);
+      console.error(`Error creating delivery with ${provider.getName()}:`, error);
+      throw new Error(`Failed to create delivery: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Cancel a delivery order
+   * Cancel a delivery
    */
-  async cancelDelivery(deliveryId: number, reason?: string): Promise<boolean> {
-    if (!this.initialized) {
-      await this.initialize();
+  async cancelDelivery(deliveryId: string, providerId: number): Promise<boolean> {
+    await this.ensureInitialized();
+    
+    const provider = this.providers.get(providerId);
+    if (!provider) {
+      throw new Error(`Provider with ID ${providerId} not found`);
     }
     
     try {
-      // Get the delivery order
-      const delivery = await storage.getDeliveryOrder(deliveryId);
-      if (!delivery) {
-        throw new Error(`Delivery order with ID ${deliveryId} not found`);
-      }
-      
-      // Check if the delivery is already cancelled or completed
-      if (delivery.status === 'cancelled' || delivery.status === 'delivered') {
-        return false;
-      }
-      
-      // Get the provider
-      const provider = this.providers.get(delivery.providerId);
-      if (!provider) {
-        throw new Error(`Delivery provider with ID ${delivery.providerId} not found`);
-      }
-      
-      // Cancel the delivery with the provider
-      const cancelled = await provider.cancelDelivery(delivery.externalOrderId);
-      if (cancelled) {
-        // Update the status in our database
-        await storage.updateDeliveryOrderStatus(deliveryId, 'cancelled');
-        
-        // Record the status change
-        await this.recordStatusChange(
-          deliveryId,
-          'cancelled',
-          new Date(),
-          reason
-        );
-      }
-      
-      return cancelled;
+      return await provider.cancelDelivery(deliveryId);
     } catch (error) {
-      console.error('Error cancelling delivery:', error);
-      return false;
+      console.error(`Error cancelling delivery with ${provider.getName()}:`, error);
+      throw new Error(`Failed to cancel delivery: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Get a delivery order by ID
+   * Get the current status of a delivery
    */
-  async getDeliveryOrder(deliveryId: number) {
-    if (!this.initialized) {
-      await this.initialize();
+  async getDeliveryStatus(deliveryId: string, providerId: number): Promise<DeliveryStatus> {
+    await this.ensureInitialized();
+    
+    const provider = this.providers.get(providerId);
+    if (!provider) {
+      throw new Error(`Provider with ID ${providerId} not found`);
     }
     
     try {
-      const delivery = await storage.getDeliveryOrder(deliveryId);
-      if (!delivery) {
-        return null;
-      }
-      
-      // Try to get a status update from the provider
-      const provider = this.providers.get(delivery.providerId);
-      if (provider) {
-        try {
-          const currentStatus = await provider.getDeliveryStatus(delivery.externalOrderId);
-          
-          // If the status has changed, update our database
-          if (currentStatus !== delivery.status) {
-            const oldStatus = delivery.status;
-            delivery.status = currentStatus;
-            
-            // Update the status in our database
-            await storage.updateDeliveryOrderStatus(deliveryId, currentStatus);
-            
-            // Record the status change
-            await this.recordStatusChange(
-              deliveryId,
-              currentStatus,
-              new Date(),
-              `Status changed from ${oldStatus} to ${currentStatus} by provider`
-            );
-          }
-        } catch (error) {
-          console.warn(`Failed to get status update for delivery ${deliveryId}:`, error);
-          // Continue with the existing status
-        }
-      }
-      
-      return delivery;
+      return await provider.getDeliveryStatus(deliveryId);
     } catch (error) {
-      console.error('Error getting delivery order:', error);
-      throw new Error(`Failed to get delivery order: ${(error as Error).message}`);
+      console.error(`Error getting delivery status from ${provider.getName()}:`, error);
+      throw new Error(`Failed to get delivery status: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Get delivery orders for a business
+   * For internal deliveries: update the status including driver info
+   * This is a convenience method that only works for the internal provider
    */
-  async getBusinessDeliveryOrders(
-    businessId: number,
-    options?: {
-      status?: DeliveryStatus;
-      orderId?: number;
-      limit?: number;
-      offset?: number;
-      startDate?: Date;
-      endDate?: Date;
-    }
-  ) {
-    if (!this.initialized) {
-      await this.initialize();
+  async updateInternalDeliveryStatus(
+    deliveryId: string,
+    status: DeliveryStatus,
+    driver?: {
+      id: string;
+      name: string;
+      phone: string;
+      location?: {
+        latitude: number;
+        longitude: number;
+      };
+    },
+    notes?: string
+  ): Promise<boolean> {
+    await this.ensureInitialized();
+    
+    // Get internal provider (always ID 1)
+    const internalProvider = this.providers.get(1) as InternalDeliveryAdapter;
+    if (!internalProvider || internalProvider.getProviderType() !== 'internal') {
+      throw new Error('Internal provider not configured');
     }
     
     try {
-      return await storage.getBusinessDeliveryOrders(businessId, options);
+      return await internalProvider.updateDeliveryStatus(deliveryId, status, driver, notes);
     } catch (error) {
-      console.error('Error getting business delivery orders:', error);
-      throw new Error(`Failed to get business delivery orders: ${(error as Error).message}`);
+      console.error('Error updating internal delivery status:', error);
+      throw new Error(`Failed to update delivery status: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Process a webhook from a delivery provider
+   * Handle a webhook request from a delivery provider
    */
-  async processWebhook(
-    providerType: string,
+  async handleProviderWebhook(
+    providerId: number,
     data: any,
-    headers: Record<string, string>
+    headers: Record<string, string>,
+    webhookSecret: string
   ): Promise<{
-    deliveryId: number;
-    oldStatus?: DeliveryStatus;
-    newStatus?: DeliveryStatus;
+    deliveryId: string;
+    status: DeliveryStatus;
     driverInfo?: {
       id?: string;
       name?: string;
@@ -368,213 +259,62 @@ export class DeliveryService {
         longitude: number;
       };
     };
-  } | null> {
-    if (!this.initialized) {
-      await this.initialize();
+    timestamp: Date;
+    additionalData?: any;
+  }> {
+    await this.ensureInitialized();
+    
+    const provider = this.providers.get(providerId);
+    if (!provider) {
+      throw new Error(`Provider with ID ${providerId} not found`);
     }
     
     try {
-      // Find the provider ID by type
-      const providerId = await this.findProviderIdByType(providerType);
-      if (!providerId) {
-        throw new Error(`No active provider found for type: ${providerType}`);
-      }
-      
-      // Get the provider
-      const provider = this.providers.get(providerId);
-      if (!provider) {
-        throw new Error(`Provider with ID ${providerId} not found`);
-      }
-      
-      // Get webhook secret
-      let webhookSecret = null;
-      if (providerType === 'doordash') {
-        webhookSecret = this.doorDashWebhookSecret;
-      }
-      
-      // Verify webhook signature if secret is available
-      if (webhookSecret) {
-        const isValid = await provider.verifyWebhookSignature(data, headers, webhookSecret);
-        if (!isValid) {
-          throw new Error('Invalid webhook signature');
-        }
+      // Verify webhook signature first
+      const validSignature = await provider.verifyWebhookSignature(data, headers, webhookSecret);
+      if (!validSignature) {
+        throw new Error('Invalid webhook signature');
       }
       
       // Parse webhook data
-      const webhookData = await provider.parseWebhookData(data, headers);
-      
-      // Find the delivery order in our database
-      const delivery = await storage.getDeliveryOrderByExternalId(webhookData.externalOrderId);
-      if (!delivery) {
-        console.warn(`Delivery order with external ID ${webhookData.externalOrderId} not found`);
-        return null;
-      }
-      
-      const oldStatus = delivery.status;
-      const newStatus = webhookData.status;
-      
-      // Update driver information if available
-      if (webhookData.driverInfo) {
-        const updates: any = {};
-        
-        if (webhookData.driverInfo.name) {
-          updates.driverName = webhookData.driverInfo.name;
-        }
-        
-        if (webhookData.driverInfo.phone) {
-          updates.driverPhone = webhookData.driverInfo.phone;
-        }
-        
-        if (webhookData.driverInfo.location) {
-          updates.lastDriverLocation = JSON.stringify(webhookData.driverInfo.location);
-          updates.lastLocationUpdate = new Date();
-        }
-        
-        if (Object.keys(updates).length > 0) {
-          await storage.updateDeliveryOrder(delivery.id, updates);
-        }
-      }
-      
-      // Update status if it has changed
-      if (oldStatus !== newStatus) {
-        await storage.updateDeliveryOrderStatus(delivery.id, newStatus);
-        
-        // Record the status change
-        await this.recordStatusChange(
-          delivery.id,
-          newStatus,
-          webhookData.timestamp,
-          `Status updated by ${providerType} webhook`
-        );
-        
-        // For completed deliveries, update any additional data
-        if (newStatus === 'delivered') {
-          await storage.updateDeliveryOrder(delivery.id, {
-            actualDeliveryTime: webhookData.timestamp,
-            updatedAt: new Date()
-          });
-        }
-      }
-      
-      // For tracking additional webhook data
-      const additionalData = webhookData.additionalData;
-      if (additionalData) {
-        const currentData = delivery.providerData ? JSON.parse(delivery.providerData) : {};
-        const updatedData = {
-          ...currentData,
-          webhookEvents: [
-            ...(currentData.webhookEvents || []),
-            {
-              timestamp: webhookData.timestamp,
-              status: newStatus,
-              data: additionalData
-            }
-          ]
-        };
-        
-        await storage.updateDeliveryOrder(delivery.id, {
-          providerData: JSON.stringify(updatedData),
-          updatedAt: new Date()
-        });
-      }
-      
-      return {
-        deliveryId: delivery.id,
-        oldStatus,
-        newStatus,
-        driverInfo: webhookData.driverInfo
-      };
+      return await provider.parseWebhookData(data, headers);
     } catch (error) {
-      console.error('Error processing webhook:', error);
-      throw new Error(`Failed to process webhook: ${(error as Error).message}`);
+      console.error(`Error handling webhook from ${provider.getName()}:`, error);
+      throw new Error(`Failed to handle webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Update delivery status manually
+   * Get all available delivery providers
    */
-  async updateDeliveryStatus(
-    deliveryId: number,
-    newStatus: DeliveryStatus,
-    timestamp: Date = new Date()
-  ): Promise<{
-    oldStatus: DeliveryStatus;
-    newStatus: DeliveryStatus;
-  }> {
+  async getProviders(): Promise<{
+    id: number;
+    name: string;
+    type: 'internal' | 'external';
+  }[]> {
+    await this.ensureInitialized();
+    
+    const providerList: {
+      id: number;
+      name: string;
+      type: 'internal' | 'external';
+    }[] = [];
+    
+    for (const [id, provider] of this.providers.entries()) {
+      providerList.push({
+        id,
+        name: provider.getName(),
+        type: provider.getProviderType()
+      });
+    }
+    
+    return providerList;
+  }
+  
+  private async ensureInitialized() {
     if (!this.initialized) {
       await this.initialize();
     }
-    
-    try {
-      // Get the delivery order
-      const delivery = await storage.getDeliveryOrder(deliveryId);
-      if (!delivery) {
-        throw new Error(`Delivery order with ID ${deliveryId} not found`);
-      }
-      
-      const oldStatus = delivery.status;
-      
-      // Skip if status hasn't changed
-      if (oldStatus === newStatus) {
-        return { oldStatus, newStatus };
-      }
-      
-      // Update status in our database
-      await storage.updateDeliveryOrderStatus(deliveryId, newStatus);
-      
-      // Record the status change
-      await this.recordStatusChange(
-        deliveryId,
-        newStatus,
-        timestamp,
-        'Status updated manually'
-      );
-      
-      // For completed deliveries, update actual delivery time
-      if (newStatus === 'delivered') {
-        await storage.updateDeliveryOrder(deliveryId, {
-          actualDeliveryTime: timestamp,
-          updatedAt: new Date()
-        });
-      }
-      
-      return { oldStatus, newStatus };
-    } catch (error) {
-      console.error('Error updating delivery status:', error);
-      throw new Error(`Failed to update delivery status: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Record a status change in the history
-   */
-  private async recordStatusChange(
-    deliveryId: number,
-    status: DeliveryStatus,
-    timestamp: Date = new Date(),
-    notes?: string
-  ): Promise<void> {
-    try {
-      await storage.createDeliveryStatusHistory({
-        deliveryId,
-        status,
-        timestamp,
-        notes: notes || null,
-        createdAt: new Date()
-      });
-    } catch (error) {
-      console.error('Error recording delivery status change:', error);
-      // Don't throw error here, so the main operation can still succeed
-    }
-  }
-
-  /**
-   * Find a provider ID by type (e.g., 'doordash')
-   */
-  private async findProviderIdByType(type: string): Promise<number | null> {
-    const providers = await storage.getAllDeliveryProviders();
-    const provider = providers.find(p => p.type === type && p.isActive);
-    return provider ? provider.id : null;
   }
 }
 

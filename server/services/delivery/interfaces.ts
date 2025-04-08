@@ -1,24 +1,12 @@
 /**
- * Delivery System Interfaces
+ * Interfaces for delivery service components
  * 
- * This file contains interfaces and types used throughout the delivery system.
+ * These interfaces define the contract between the delivery service 
+ * and its various provider adapters.
  */
 
 /**
- * Delivery status enum - matches what's in the database schema
- */
-export type DeliveryStatus = 
-  | 'pending'     // Delivery has been created but not yet accepted by the provider
-  | 'accepted'    // Delivery has been accepted by the provider
-  | 'assigned'    // Driver has been assigned to the delivery
-  | 'picked_up'   // Driver has picked up the order
-  | 'in_transit'  // Driver is en route to the customer
-  | 'delivered'   // Delivery has been successfully completed
-  | 'failed'      // Delivery failed (e.g., customer not found)
-  | 'cancelled';  // Delivery was cancelled
-
-/**
- * Address information for delivery
+ * Physical address for pickup and dropoff locations
  */
 export interface Address {
   street: string;
@@ -26,27 +14,27 @@ export interface Address {
   state: string;
   postalCode: string;
   country?: string;
+  apartment?: string;
+  businessName?: string;
+  phone?: string;
+  instructions?: string;
   latitude?: number;
   longitude?: number;
-  businessName?: string;
-  apartment?: string;
-  instructions?: string;
-  phone?: string; // Optional phone number for the address
 }
 
 /**
- * Order item for delivery
+ * Order item to be delivered
  */
 export interface OrderItem {
-  id: number | string;
+  id: number;
   name: string;
   quantity: number;
   price: number;
-  notes?: string;
+  options?: string[];
 }
 
 /**
- * Order details for delivery
+ * Details about the order being delivered
  */
 export interface OrderDetails {
   orderId: number | string;
@@ -57,27 +45,40 @@ export interface OrderDetails {
 }
 
 /**
- * Delivery quote response
+ * Delivery status enum
+ */
+export type DeliveryStatus = 
+  | 'pending'    // Initial state, not yet accepted by provider
+  | 'accepted'   // Provider has accepted the delivery request
+  | 'assigned'   // Driver has been assigned
+  | 'picked_up'  // Driver has picked up the order
+  | 'in_transit' // Driver is en route to customer
+  | 'delivered'  // Order has been delivered
+  | 'failed'     // Delivery failed (problem occurred)
+  | 'cancelled'; // Delivery was cancelled
+
+/**
+ * Quote from a delivery provider
  */
 export interface DeliveryQuote {
   providerId: number;
   providerName: string;
-  fee: number;
-  customerFee: number;
-  platformFee: number;
+  fee: number;              // Fee charged by provider
+  customerFee: number;      // Fee to charge the customer
+  platformFee: number;      // Fee retained by platform
   currency: string;
   estimatedPickupTime: Date;
   estimatedDeliveryTime: Date;
   distance: number;
   distanceUnit: 'miles' | 'kilometers';
   valid: boolean;
-  validUntil: Date;
-  errors?: string[];
-  providerData?: any;
+  validUntil: Date;         // Quote valid until this time
+  errors?: string[];        // Any errors if quote is invalid
+  providerData?: any;       // Raw provider response data
 }
 
 /**
- * Delivery order details for creating a delivery
+ * Details needed to create a delivery
  */
 export interface DeliveryOrderDetails {
   orderId: number | string;
@@ -85,8 +86,8 @@ export interface DeliveryOrderDetails {
   providerId: number;
   customerName: string;
   customerPhone: string;
-  customerAddress: Address | string;
-  businessAddress: Address | string;
+  customerAddress: string | Address; // Can be stringified JSON
+  businessAddress: string | Address; // Can be stringified JSON
   orderDetails: OrderDetails;
   providerFee: string;
   platformFee: string;
@@ -95,67 +96,61 @@ export interface DeliveryOrderDetails {
 }
 
 /**
- * External delivery order response from provider
+ * External delivery order response
  */
 export interface ExternalDeliveryOrder {
   externalOrderId: string;
   status: DeliveryStatus;
   estimatedPickupTime: Date;
   estimatedDeliveryTime: Date;
-  driverId?: string;
   driverName?: string;
   driverPhone?: string;
-  driverLocation?: {
-    latitude: number;
-    longitude: number;
-  };
   trackingUrl?: string;
   providerData?: any;
 }
 
 /**
- * Delivery provider adapter interface
- * All delivery providers must implement this interface
+ * Interface that all delivery provider adapters must implement
  */
 export interface DeliveryProviderAdapter {
   /**
-   * Get the provider name
+   * Get the name of this delivery provider
    */
   getName(): string;
-
+  
   /**
-   * Get the provider type (internal or external)
+   * Get the type of this provider (internal or external)
    */
   getProviderType(): 'internal' | 'external';
-
+  
   /**
-   * Get a delivery quote from the provider
+   * Get a delivery quote from this provider
    */
   getQuote(
     pickup: Address,
     delivery: Address,
     orderDetails: OrderDetails
   ): Promise<DeliveryQuote>;
-
+  
   /**
-   * Create a delivery with the provider
+   * Create a delivery with this provider
    */
   createDelivery(
     orderDetails: DeliveryOrderDetails
   ): Promise<ExternalDeliveryOrder>;
-
+  
   /**
-   * Cancel a delivery with the provider
+   * Cancel an existing delivery
    */
   cancelDelivery(externalOrderId: string): Promise<boolean>;
-
+  
   /**
    * Get the current status of a delivery
    */
   getDeliveryStatus(externalOrderId: string): Promise<DeliveryStatus>;
-
+  
   /**
-   * Parse webhook data from the provider
+   * Parse webhook data from provider
    */
   parseWebhookData(
     data: any,
@@ -175,9 +170,9 @@ export interface DeliveryProviderAdapter {
     timestamp: Date;
     additionalData?: any;
   }>;
-
+  
   /**
-   * Verify webhook signature from the provider
+   * Verify webhook signature
    */
   verifyWebhookSignature(
     data: any,
