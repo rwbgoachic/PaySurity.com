@@ -12,16 +12,16 @@ import { deliveryTestService, TestReport, TestGroup, Test } from './test-deliver
 import { testReporter } from './test-reporter';
 import * as path from 'path';
 import * as fs from 'fs';
-import { SystemTestService } from './test-system';
-import { APITestService } from './test-api';
-import { PerformanceTestService } from './test-performance';
+import { systemTestService } from './test-system';
+import { apiTestService } from './test-api';
+import { performanceTestService } from './test-performance';
 
 export class TestCoordinator {
   private testSuites: { [key: string]: any } = {
     delivery: deliveryTestService,
-    system: new SystemTestService(),
-    api: new APITestService(),
-    performance: new PerformanceTestService()
+    system: systemTestService,
+    api: apiTestService,
+    performance: performanceTestService
   };
   
   /**
