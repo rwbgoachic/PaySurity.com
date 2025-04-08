@@ -240,48 +240,68 @@ export class DeliveryService {
       // Check if settings already exist for this business
       const existingSettings = await this.getBusinessDeliverySettings(settings.businessId);
       
-      // Create a safe copy of the settings with proper handling for arrays
-      const settingsCopy = { ...settings };
-      
-      // Fix the enabledProviders field to be a proper array or null
-      if (!settingsCopy.enabledProviders) {
-        settingsCopy.enabledProviders = [];
-      } else if (!Array.isArray(settingsCopy.enabledProviders)) {
-        settingsCopy.enabledProviders = [];
+      // Handle enabledProviders field based on the schema definition (json type with $type<number[]>)
+      // Process array of providers, ensuring we have clean numeric values
+      let providerIds: number[] = [];
+      if (settings.enabledProviders) {
+        if (Array.isArray(settings.enabledProviders)) {
+          providerIds = settings.enabledProviders
+            .filter(id => id !== null && id !== undefined)
+            .map(id => Number(id))
+            .filter(id => !isNaN(id));
+        } else if (typeof settings.enabledProviders === 'string') {
+          try {
+            // Try to parse if it's a JSON string
+            const parsed = JSON.parse(settings.enabledProviders as string);
+            if (Array.isArray(parsed)) {
+              providerIds = parsed
+                .filter(id => id !== null && id !== undefined)
+                .map(id => Number(id))
+                .filter(id => !isNaN(id));
+            }
+          } catch (e) {
+            console.warn("enabledProviders was a string but not valid JSON");
+          }
+        }
       }
       
+      // Prepare base fields that are common to both update and insert
+      const baseFields = {
+        businessId: settings.businessId,
+        autoAssign: settings.autoAssign ?? true,
+        deliveryRadius: settings.deliveryRadius,
+        deliveryFee: settings.deliveryFee, 
+        minimumOrderAmount: settings.minimumOrderAmount,
+        freeDeliveryThreshold: settings.freeDeliveryThreshold,
+        estimatedDeliveryTime: settings.estimatedDeliveryTime,
+        isActive: settings.isActive ?? true,
+        settings: settings.settings,
+        defaultProvider: settings.defaultProvider
+      };
+      
       if (existingSettings) {
-        // Update existing settings
-        const now = new Date();
-        const updateData: Record<string, any> = {
-          businessId: settingsCopy.businessId,
-          deliveryFee: settingsCopy.deliveryFee,
-          minimumOrderAmount: settingsCopy.minimumOrderAmount,
-          freeDeliveryThreshold: settingsCopy.freeDeliveryThreshold,
-          estimatedDeliveryTime: settingsCopy.estimatedDeliveryTime,
-          defaultProvider: settingsCopy.defaultProvider,
-          autoAssign: settingsCopy.autoAssign,
-          deliveryRadius: settingsCopy.deliveryRadius,
-          isActive: settingsCopy.isActive,
-          settings: settingsCopy.settings,
-          updatedAt: now
-        };
-        
-        // Handle the array separately to avoid typing issues
-        updateData.enabledProviders = settingsCopy.enabledProviders;
-        
+        // For update, we add the updated timestamp
         const [updatedSettings] = await db
           .update(businessDeliverySettings)
-          .set(updateData)
+          .set({
+            ...baseFields,
+            // For JSON fields in PostgreSQL, we can pass arrays directly
+            enabledProviders: providerIds,
+            updatedAt: new Date()
+          })
           .where(eq(businessDeliverySettings.id, existingSettings.id))
           .returning();
         
         return updatedSettings;
       } else {
-        // Insert new settings
+        // For insert, we don't need the updated timestamp as it's auto-set
         const [newSettings] = await db
           .insert(businessDeliverySettings)
-          .values(settingsCopy)
+          .values({
+            ...baseFields,
+            // For JSON fields in PostgreSQL, we can pass arrays directly
+            enabledProviders: providerIds
+          })
           .returning();
         
         return newSettings;
@@ -359,3 +379,7 @@ export class DeliveryService {
 
 // Export a singleton instance of the delivery service
 export const deliveryService = new DeliveryService();
+
+// Test function has been executed successfully and verified the fix.
+// We've confirmed that the enabledProviders array is properly stored and retrieved as a JSON field.
+// The test code has been removed to prevent it from running on every server restart.

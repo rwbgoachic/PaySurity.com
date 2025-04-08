@@ -27,7 +27,7 @@ export type HubspotToken = typeof hubspotTokens.$inferSelect;
 export type InsertHubspotToken = typeof hubspotTokens.$inferInsert;
 
 // User roles enum
-export const userRoleEnum = pgEnum("user_role", ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"]);
 
 // User schema
 export const users = pgTable("users", {
@@ -37,10 +37,11 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  role: text("role", { enum: ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate"] }).notNull().default("executive"),
+  role: text("role", { enum: ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"] }).notNull().default("executive"),
   avatar: text("avatar"),
   department: text("department"),
   organizationId: integer("organization_id"),
+  businessId: integer("business_id"), // Added for merchant and business users
   dateOfBirth: date("date_of_birth"),
   ssn: text("ssn"),  // For Payroll purposes, stores last 4 digits or encrypted
   address: text("address"), // Could be split into multiple fields in production
@@ -69,6 +70,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   avatar: true,
   department: true,
   organizationId: true,
+  businessId: true,
   dateOfBirth: true,
   ssn: true,
   address: true,
