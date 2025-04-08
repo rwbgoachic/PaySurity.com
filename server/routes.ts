@@ -771,9 +771,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const submittedReport = await storage.updateExpenseReportStatus(
           reportId, 
           "submitted",
-          null,
-          null,
-          null
+          undefined,
+          undefined,
+          undefined
         );
         
         // Notify employer about the submitted report using both classic and new methods
@@ -918,6 +918,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const report = await storage.getExpenseReport(lineItem.expenseReportId);
       
+      if (!report) {
+        return res.status(404).json({ error: "Associated expense report not found" });
+      }
+      
       // Only the owner of the report can update line items
       if (report.userId !== req.user.id) {
         return res.status(403).json({ error: "Forbidden" });
@@ -964,6 +968,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const report = await storage.getExpenseReport(lineItem.expenseReportId);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Associated expense report not found" });
+      }
       
       // Only the owner of the report can delete line items
       if (report.userId !== req.user.id) {
@@ -2329,9 +2337,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate status if provided
       let validatedStatus: any = undefined;
       if (status && typeof status === 'string') {
-        try {
-          validatedStatus = deliveryStatusEnum.enum[status as any];
-        } catch (e) {
+        if (Object.values(deliveryStatusEnum.enumValues).includes(status as any)) {
+          validatedStatus = status;
+        } else {
           return res.status(400).json({ error: "Invalid status" });
         }
       }
@@ -2365,9 +2373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Validate status
-      try {
-        deliveryStatusEnum.enum[status as any];
-      } catch (e) {
+      if (!Object.values(deliveryStatusEnum.enumValues).includes(status as any)) {
         return res.status(400).json({ error: "Invalid status" });
       }
       
