@@ -24,6 +24,7 @@ import EmployerExpenseReports from "./pages/employer/expense-reports";
 import EmployerExpenseReportDetail from "./pages/employer/expense-report-detail";
 import HubSpotSettings from "./pages/admin/hubspot-settings";
 import AnalyticsDashboard from "./pages/admin/analytics-dashboard";
+import TestRecommendationEngine from "./pages/admin/test-recommendation-engine";
 import EmployeeDashboard from "./pages/employee/dashboard";
 import EmployeeTransactions from "./pages/employee/transactions";
 import EmployeeBanking from "./pages/employee/banking";
@@ -132,6 +133,7 @@ function Router() {
       
       {/* Admin Routes */}
       <Route path="/admin/analytics" component={AnalyticsDashboard} />
+      <Route path="/admin/test-recommendation" component={TestRecommendationEngine} />
       
       <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboard} />
       <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboarding} />
