@@ -1,0 +1,223 @@
+
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Test Report: API Tests</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+          }
+          h1, h2 {
+            color: #2c3e50;
+          }
+          .summary {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+          .progress-container {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            margin: 10px 0;
+          }
+          .progress-bar {
+            height: 100%;
+            border-radius: 10px;
+            background-color: #28a745;
+          }
+          .test-group {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+          }
+          .group-header {
+            padding: 10px 15px;
+            background-color: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+          }
+          .test-list {
+            padding: 0;
+            margin: 0;
+            list-style-type: none;
+          }
+          .test-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+          }
+          .test-item:last-child {
+            border-bottom: none;
+          }
+          .test-name {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+          }
+          .test-result {
+            margin-left: 10px;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+          }
+          .pass {
+            background-color: #d4edda;
+            color: #155724;
+          }
+          .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+          }
+          .test-details {
+            margin-top: 10px;
+            padding-left: 20px;
+            font-size: 14px;
+            color: #666;
+          }
+          .test-detail {
+            margin: 5px 0;
+          }
+          .stack-trace {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+          }
+          .timestamp {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Test Report: API Tests</h1>
+        <div class="timestamp">Generated on: 4/8/2025, 3:15:15 PM</div>
+        
+        <div class="summary">
+          <h2>Summary</h2>
+          <p>Overall Result: <strong class="fail">FAILED</strong></p>
+          <p>Test Groups: 2/3 passed (67%)</p>
+          <p>Individual Tests: 8/9 passed (89%)</p>
+          
+          <div class="progress-container">
+            <div class="progress-bar" style="width: 89%"></div>
+          </div>
+        </div>
+        
+        <h2>Detailed Results</h2>
+    
+        <div class="test-group">
+          <div class="group-header">
+            ✗ API Connectivity Tests (67% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✗ Health Endpoint
+              <span class="test-result fail">FAIL</span>
+            </div>
+        
+            <div class="test-details">
+              <div class="test-detail"><strong>Description:</strong> Check if health endpoint responds</div>
+              <div class="test-detail"><strong>Expected:</strong> 200 OK</div>
+              <div class="test-detail"><strong>Actual:</strong> Error: request to http://localhost:3000/api/health failed, reason: connect ECONNREFUSED 127.0.0.1:3000</div>
+          
+              <div class="test-detail"><strong>Error:</strong> request to http://localhost:3000/api/health failed, reason: connect ECONNREFUSED 127.0.0.1:3000</div>
+            
+                <div class="stack-trace">FetchError: request to http://localhost:3000/api/health failed, reason: connect ECONNREFUSED 127.0.0.1:3000
+    at ClientRequest.<anonymous> (file:///home/runner/workspace/node_modules/node-fetch/src/index.js:108:11)
+    at ClientRequest.emit (node:events:518:28)
+    at emitErrorEvent (node:_http_client:101:11)
+    at Socket.socketErrorListener (node:_http_client:504:5)
+    at Socket.emit (node:events:518:28)
+    at emitErrorNT (node:internal/streams/destroy:169:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:128:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)</div>
+              </div></li>
+          <li class="test-item">
+            <div class="test-name">
+              ✓ Endpoint: /api/tests/suites
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          <li class="test-item">
+            <div class="test-name">
+              ✓ Endpoint: /api/delivery/providers
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          </ul>
+        </div>
+      
+        <div class="test-group">
+          <div class="group-header">
+            ✓ API Authentication Tests (100% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✓ Authentication Required
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          <li class="test-item">
+            <div class="test-name">
+              ✓ CSRF Protection
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          <li class="test-item">
+            <div class="test-name">
+              ✓ Role-Based Access Control
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          </ul>
+        </div>
+      
+        <div class="test-group">
+          <div class="group-header">
+            ✓ API Performance Tests (100% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✓ API Response Time
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          <li class="test-item">
+            <div class="test-name">
+              ✓ Concurrent API Requests
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          <li class="test-item">
+            <div class="test-name">
+              ✓ API Rate Limiting
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          </ul>
+        </div>
+      
+      </body>
+      </html>
+    

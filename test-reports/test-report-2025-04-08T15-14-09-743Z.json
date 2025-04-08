@@ -1,0 +1,89 @@
+{
+  "name": "System Tests",
+  "timestamp": "2025-04-08T15:14:09.392Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "Database Connectivity Tests",
+      "tests": [
+        {
+          "name": "Database Connection",
+          "description": "Connect to the PostgreSQL database",
+          "passed": true,
+          "result": "Connected successfully",
+          "expected": "Successful connection",
+          "actual": "Connected in 248ms"
+        },
+        {
+          "name": "Database Query",
+          "description": "Execute a simple query",
+          "passed": false,
+          "result": "Query executed successfully",
+          "expected": "Query execution < 50ms",
+          "actual": "Query executed in 102ms"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "System Resources Tests",
+      "tests": [
+        {
+          "name": "Memory Usage",
+          "description": "Check system memory usage",
+          "passed": true,
+          "result": "Memory usage acceptable",
+          "expected": "Memory usage < 90%",
+          "actual": "Current usage: 85%"
+        },
+        {
+          "name": "CPU Usage",
+          "description": "Check system CPU usage",
+          "passed": true,
+          "result": "CPU usage acceptable",
+          "expected": "CPU usage < 85%",
+          "actual": "Current usage: 63%"
+        },
+        {
+          "name": "Disk Space",
+          "description": "Check available disk space",
+          "passed": true,
+          "result": "Disk space acceptable",
+          "expected": "Disk usage < 90%",
+          "actual": "Current usage: 45%"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Configuration Tests",
+      "tests": [
+        {
+          "name": "Environment Variable: DATABASE_URL",
+          "description": "Check if DATABASE_URL is defined",
+          "passed": true,
+          "result": "DATABASE_URL is defined",
+          "expected": "DATABASE_URL should be defined",
+          "actual": "Defined"
+        },
+        {
+          "name": "Environment Variable: NODE_ENV",
+          "description": "Check if NODE_ENV is defined",
+          "passed": true,
+          "result": "NODE_ENV is defined",
+          "expected": "NODE_ENV should be defined",
+          "actual": "Defined"
+        },
+        {
+          "name": "Test Reports Directory",
+          "description": "Check if test reports directory exists",
+          "passed": true,
+          "result": "Directory exists",
+          "expected": "Directory should exist",
+          "actual": "Found at /home/runner/workspace/test-reports"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

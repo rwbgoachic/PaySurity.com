@@ -165,6 +165,14 @@ function Router() {
           </React.Suspense>
         );
       }} />
+      <Route path="/admin/test-dashboard" component={() => {
+        const TestDashboard = React.lazy(() => import("./pages/admin/test-dashboard"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <TestDashboard />
+          </React.Suspense>
+        );
+      }} />
       
       {/* Customer-facing routes */}
       <Route path="/order-modify/:token" component={(props) => {

@@ -1,0 +1,89 @@
+{
+  "name": "Performance Tests",
+  "timestamp": "2025-04-08T15:15:18.749Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "Database Performance Tests",
+      "tests": [
+        {
+          "name": "Single Record Query",
+          "description": "Measure performance of a simple single record query",
+          "passed": false,
+          "result": "Query is slow",
+          "expected": "Query time < 10ms",
+          "actual": "Query time: 86.18ms"
+        },
+        {
+          "name": "Connection Pool Performance",
+          "description": "Test connection pool response time",
+          "passed": false,
+          "result": "Connection pool is slow",
+          "expected": "Average connection time < 20ms",
+          "actual": "Average connection time: 118.17ms"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "API Load Tests",
+      "tests": [
+        {
+          "name": "API Throughput",
+          "description": "Test API throughput under load",
+          "passed": true,
+          "result": "API throughput is acceptable",
+          "expected": "Throughput > 100 req/sec",
+          "actual": "Throughput: 125 req/sec"
+        },
+        {
+          "name": "Response Time Under Load",
+          "description": "Test API response time under load",
+          "passed": true,
+          "result": "Response time under load is acceptable",
+          "expected": "Response time < 200ms at 50 concurrent users",
+          "actual": "Response time: 145ms at 50 concurrent users"
+        },
+        {
+          "name": "Error Rate Under Load",
+          "description": "Test API error rate under load",
+          "passed": true,
+          "result": "Error rate under load is acceptable",
+          "expected": "Error rate < 0.1% at 50 concurrent users",
+          "actual": "Error rate: 0.02% at 50 concurrent users"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Memory Usage Tests",
+      "tests": [
+        {
+          "name": "Memory Usage Baseline",
+          "description": "Establish baseline memory usage",
+          "passed": false,
+          "result": "Memory usage is high",
+          "expected": "Heap used < 200MB",
+          "actual": "Heap used: 493.68MB"
+        },
+        {
+          "name": "Memory Usage Under Load",
+          "description": "Test memory usage under load",
+          "passed": true,
+          "result": "Memory increase is acceptable",
+          "expected": "Memory increase < 50MB",
+          "actual": "Memory increase: 0.33MB"
+        },
+        {
+          "name": "Garbage Collection",
+          "description": "Test effectiveness of garbage collection",
+          "passed": false,
+          "result": "Garbage collection is ineffective",
+          "expected": "Memory reduction after GC > 0MB",
+          "actual": "Memory reduction: -0.00MB"
+        }
+      ],
+      "passed": false
+    }
+  ]
+}

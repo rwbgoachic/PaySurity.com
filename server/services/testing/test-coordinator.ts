@@ -3,16 +3,25 @@
  * 
  * This module coordinates all test suites and provides APIs for
  * running tests, aggregating results, and generating reports.
+ * 
+ * The test coordinator is the primary entry point for the testing framework
+ * and coordinates all test suites across different subsystems of the PaySurity platform.
  */
 
-import { deliveryTestService, TestReport } from './test-delivery-service';
+import { deliveryTestService, TestReport, TestGroup, Test } from './test-delivery-service';
 import { testReporter } from './test-reporter';
 import * as path from 'path';
+import * as fs from 'fs';
+import { SystemTestService } from './test-system';
+import { APITestService } from './test-api';
+import { PerformanceTestService } from './test-performance';
 
 export class TestCoordinator {
   private testSuites: { [key: string]: any } = {
     delivery: deliveryTestService,
-    // Add other test suites here as they become available
+    system: new SystemTestService(),
+    api: new APITestService(),
+    performance: new PerformanceTestService()
   };
   
   /**
