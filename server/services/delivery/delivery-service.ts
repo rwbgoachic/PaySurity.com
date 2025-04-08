@@ -1,8 +1,9 @@
 /**
  * Delivery Service Coordinator
  * 
- * This service coordinates between different delivery providers, managing
- * delivery quotes, order creation, status updates, and webhooks.
+ * This service coordinates delivery operations across multiple providers.
+ * It's responsible for getting quotes, creating deliveries, and tracking status
+ * from multiple internal and external delivery services.
  */
 
 import {
@@ -15,292 +16,143 @@ import {
   ExternalDeliveryOrder
 } from './interfaces';
 
-// Import providers
 import { InternalDeliveryAdapter } from './providers/internal-adapter';
-import { DoorDashAdapter } from './providers/doordash-adapter';
+import { DoorDashAdapter, DoorDashConfig } from './providers/doordash-adapter';
 
 /**
- * Singleton delivery service coordinator
+ * The DeliveryService class provides a unified interface for working with
+ * multiple delivery providers.
  */
 class DeliveryService {
   private providers: Map<number, DeliveryProviderAdapter> = new Map();
-  private initialized = false;
+  private nextProviderID: number = 1;
   
-  /**
-   * Initialize the delivery service with providers from the database
-   * This can be called multiple times but will only load once
-   */
-  async initialize() {
-    if (this.initialized) {
-      return;
-    }
-    
-    try {
-      // In production, we would load providers from the database
-      // For demo purposes, we'll add static providers
-      
-      // Add default providers for testing
-      this.addDefaultProviders();
-      
-      this.initialized = true;
-      console.log('Delivery service initialized with providers:', 
-        Array.from(this.providers.entries()).map(([id, provider]) => 
-          `${id}: ${provider.getName()} (${provider.getProviderType()})`
-        )
-      );
-    } catch (error) {
-      console.error('Failed to initialize delivery service:', error);
-      throw new Error(`Delivery service initialization failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+  constructor() {
+    this.registerDefaultProviders();
   }
   
   /**
-   * Add default providers for testing
+   * Register the default delivery providers
    */
-  private addDefaultProviders() {
-    // Add internal provider (restaurant's own delivery staff)
-    const internalProvider = new InternalDeliveryAdapter();
-    this.providers.set(1, internalProvider);
-    
-    // Add DoorDash provider (if credentials available)
-    try {
-      // In production, these would be loaded from environment or secure storage
-      const doordashConfig = {
-        apiKey: process.env.DOORDASH_API_KEY || 'test_api_key',
-        apiSecret: process.env.DOORDASH_API_SECRET || 'test_api_secret',
-        developerId: process.env.DOORDASH_DEVELOPER_ID || 'paysurity_test'
-      };
-      
-      const doordashProvider = new DoorDashAdapter(doordashConfig);
-      this.providers.set(2, doordashProvider);
-    } catch (error) {
-      console.warn('Failed to initialize DoorDash provider:', error);
-    }
-    
-    // In production, more providers would be loaded here
-    // e.g., UberEats, GrubHub, etc.
+  private registerDefaultProviders(): void {
+    // Register internal delivery provider by default
+    this.registerProvider(new InternalDeliveryAdapter());
   }
   
   /**
-   * Get quotes from all available delivery providers for a given delivery
+   * Register a new delivery provider
    */
-  async getDeliveryQuotes(
+  registerProvider(provider: DeliveryProviderAdapter): number {
+    const providerId = this.nextProviderID++;
+    this.providers.set(providerId, provider);
+    return providerId;
+  }
+  
+  /**
+   * Get a delivery provider by ID
+   */
+  getProvider(providerId: number): DeliveryProviderAdapter | undefined {
+    return this.providers.get(providerId);
+  }
+  
+  /**
+   * Get quotes from all available providers
+   */
+  async getQuotes(
     pickup: Address,
     delivery: Address,
     orderDetails: OrderDetails
   ): Promise<DeliveryQuote[]> {
-    await this.ensureInitialized();
-    
     const quotes: DeliveryQuote[] = [];
-    const quotePromises: Promise<void>[] = [];
+    const errors: string[] = [];
     
-    // Get quotes from all providers in parallel
-    for (const provider of this.providers.values()) {
-      const quotePromise = provider.getQuote(pickup, delivery, orderDetails)
-        .then(quote => {
-          quotes.push(quote);
-        })
-        .catch(error => {
-          console.error(`Error getting quote from ${provider.getName()}:`, error);
-          // Add failed quote with error message
-          quotes.push({
-            providerId: -1, // Will be updated with actual provider ID
-            providerName: provider.getName(),
-            fee: 0,
-            customerFee: 0,
-            platformFee: 0,
-            currency: orderDetails.currency || 'USD',
-            estimatedPickupTime: new Date(),
-            estimatedDeliveryTime: new Date(),
-            distance: 0,
-            distanceUnit: 'miles',
-            valid: false,
-            validUntil: new Date(),
-            errors: [error instanceof Error ? error.message : String(error)]
-          });
-        });
-      
-      quotePromises.push(quotePromise);
+    // Get quotes from all registered providers
+    for (const [providerId, provider] of this.providers) {
+      try {
+        const quote = await provider.getQuote(pickup, delivery, orderDetails);
+        
+        // Set the provider ID (overriding any value that may have been set)
+        quote.providerId = providerId;
+        
+        quotes.push(quote);
+      } catch (error) {
+        console.error(`Error getting quote from provider ${provider.getName()}:`, error);
+        errors.push(`${provider.getName()}: ${(error as Error).message || 'Unknown error'}`);
+      }
     }
     
-    // Wait for all quotes to be fetched
-    await Promise.all(quotePromises);
-    
-    // Sort quotes by fee (lowest first)
-    return quotes.sort((a, b) => a.customerFee - b.customerFee);
+    return quotes;
   }
   
   /**
-   * Create a delivery order with the specified provider
+   * Create a delivery with the specified provider
    */
-  async createDelivery(orderDetails: DeliveryOrderDetails): Promise<{
-    deliveryId: string;
-    providerId: number;
-    providerName: string;
-    status: DeliveryStatus;
-    estimatedPickupTime: Date;
-    estimatedDeliveryTime: Date;
-    trackingUrl?: string;
-  }> {
-    await this.ensureInitialized();
-    
+  async createDelivery(
+    orderDetails: DeliveryOrderDetails
+  ): Promise<ExternalDeliveryOrder> {
     const provider = this.providers.get(orderDetails.providerId);
+    
     if (!provider) {
       throw new Error(`Provider with ID ${orderDetails.providerId} not found`);
     }
     
     try {
-      const delivery = await provider.createDelivery(orderDetails);
-      
-      return {
-        deliveryId: delivery.externalOrderId,
-        providerId: orderDetails.providerId,
-        providerName: provider.getName(),
-        status: delivery.status,
-        estimatedPickupTime: delivery.estimatedPickupTime,
-        estimatedDeliveryTime: delivery.estimatedDeliveryTime,
-        trackingUrl: delivery.trackingUrl
-      };
+      return await provider.createDelivery(orderDetails);
     } catch (error) {
-      console.error(`Error creating delivery with ${provider.getName()}:`, error);
-      throw new Error(`Failed to create delivery: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`Error creating delivery with provider ${provider.getName()}:`, error);
+      throw error;
     }
   }
   
   /**
-   * Cancel a delivery
+   * Cancel a delivery with the specified provider
    */
-  async cancelDelivery(deliveryId: string, providerId: number): Promise<boolean> {
-    await this.ensureInitialized();
-    
-    const provider = this.providers.get(providerId);
-    if (!provider) {
-      throw new Error(`Provider with ID ${providerId} not found`);
-    }
-    
-    try {
-      return await provider.cancelDelivery(deliveryId);
-    } catch (error) {
-      console.error(`Error cancelling delivery with ${provider.getName()}:`, error);
-      throw new Error(`Failed to cancel delivery: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
-   * Get the current status of a delivery
-   */
-  async getDeliveryStatus(deliveryId: string, providerId: number): Promise<DeliveryStatus> {
-    await this.ensureInitialized();
-    
-    const provider = this.providers.get(providerId);
-    if (!provider) {
-      throw new Error(`Provider with ID ${providerId} not found`);
-    }
-    
-    try {
-      return await provider.getDeliveryStatus(deliveryId);
-    } catch (error) {
-      console.error(`Error getting delivery status from ${provider.getName()}:`, error);
-      throw new Error(`Failed to get delivery status: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
-   * For internal deliveries: update the status including driver info
-   * This is a convenience method that only works for the internal provider
-   */
-  async updateInternalDeliveryStatus(
-    deliveryId: string,
-    status: DeliveryStatus,
-    driver?: {
-      id: string;
-      name: string;
-      phone: string;
-      location?: {
-        latitude: number;
-        longitude: number;
-      };
-    },
-    notes?: string
-  ): Promise<boolean> {
-    await this.ensureInitialized();
-    
-    // Get internal provider (always ID 1)
-    const internalProvider = this.providers.get(1) as InternalDeliveryAdapter;
-    if (!internalProvider || internalProvider.getProviderType() !== 'internal') {
-      throw new Error('Internal provider not configured');
-    }
-    
-    try {
-      return await internalProvider.updateDeliveryStatus(deliveryId, status, driver, notes);
-    } catch (error) {
-      console.error('Error updating internal delivery status:', error);
-      throw new Error(`Failed to update delivery status: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
-   * Handle a webhook request from a delivery provider
-   */
-  async handleProviderWebhook(
+  async cancelDelivery(
     providerId: number,
-    data: any,
-    headers: Record<string, string>,
-    webhookSecret: string
-  ): Promise<{
-    deliveryId: string;
-    status: DeliveryStatus;
-    driverInfo?: {
-      id?: string;
-      name?: string;
-      phone?: string;
-      location?: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-    timestamp: Date;
-    additionalData?: any;
-  }> {
-    await this.ensureInitialized();
-    
+    externalOrderId: string
+  ): Promise<boolean> {
     const provider = this.providers.get(providerId);
+    
     if (!provider) {
       throw new Error(`Provider with ID ${providerId} not found`);
     }
     
     try {
-      // Verify webhook signature first
-      const validSignature = await provider.verifyWebhookSignature(data, headers, webhookSecret);
-      if (!validSignature) {
-        throw new Error('Invalid webhook signature');
-      }
-      
-      // Parse webhook data
-      return await provider.parseWebhookData(data, headers);
+      return await provider.cancelDelivery(externalOrderId);
     } catch (error) {
-      console.error(`Error handling webhook from ${provider.getName()}:`, error);
-      throw new Error(`Failed to handle webhook: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`Error cancelling delivery ${externalOrderId} with provider ${provider.getName()}:`, error);
+      return false;
     }
   }
   
   /**
-   * Get all available delivery providers
+   * Get status of a delivery from the specified provider
    */
-  async getProviders(): Promise<{
-    id: number;
-    name: string;
-    type: 'internal' | 'external';
-  }[]> {
-    await this.ensureInitialized();
+  async getDeliveryStatus(
+    providerId: number,
+    externalOrderId: string
+  ): Promise<DeliveryStatus> {
+    const provider = this.providers.get(providerId);
     
-    const providerList: {
-      id: number;
-      name: string;
-      type: 'internal' | 'external';
-    }[] = [];
+    if (!provider) {
+      throw new Error(`Provider with ID ${providerId} not found`);
+    }
     
-    for (const [id, provider] of this.providers.entries()) {
+    try {
+      return await provider.getDeliveryStatus(externalOrderId);
+    } catch (error) {
+      console.error(`Error getting status for delivery ${externalOrderId} with provider ${provider.getName()}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get all registered providers
+   */
+  getAllProviders(): {id: number, name: string, type: string}[] {
+    const providerList = [];
+    
+    for (const [id, provider] of this.providers) {
       providerList.push({
         id,
         name: provider.getName(),
@@ -311,11 +163,96 @@ class DeliveryService {
     return providerList;
   }
   
-  private async ensureInitialized() {
-    if (!this.initialized) {
-      await this.initialize();
+  /**
+   * Handle a webhook from a delivery provider
+   */
+  async handleWebhook(
+    providerId: number,
+    data: any,
+    headers: Record<string, string>,
+    secret: string
+  ): Promise<{
+    externalOrderId: string;
+    status: DeliveryStatus;
+    timestamp: Date;
+    driverInfo?: any;
+  } | null> {
+    const provider = this.providers.get(providerId);
+    
+    if (!provider) {
+      throw new Error(`Provider with ID ${providerId} not found`);
     }
+    
+    try {
+      // Verify the webhook signature first
+      const isValid = await provider.verifyWebhookSignature(data, headers, secret);
+      
+      if (!isValid) {
+        console.error(`Invalid webhook signature from provider ${provider.getName()}`);
+        return null;
+      }
+      
+      // Parse the webhook data
+      const webhookData = await provider.parseWebhookData(data, headers);
+      
+      return {
+        externalOrderId: webhookData.externalOrderId,
+        status: webhookData.status,
+        driverInfo: webhookData.driverInfo,
+        timestamp: webhookData.timestamp
+      };
+    } catch (error) {
+      console.error(`Error handling webhook from provider ${provider.getName()}:`, error);
+      return null;
+    }
+  }
+  
+  /**
+   * Handle a real-time status update from the internal driver app
+   */
+  async updateInternalDeliveryStatus(
+    externalOrderId: string,
+    status: DeliveryStatus,
+    driverInfo?: any,
+    notes?: string
+  ): Promise<boolean> {
+    // Find the internal delivery provider
+    let internalProviderId: number | undefined;
+    let internalProvider: InternalDeliveryAdapter | undefined;
+    
+    for (const [id, provider] of this.providers) {
+      if (provider.getProviderType() === 'internal') {
+        internalProviderId = id;
+        internalProvider = provider as InternalDeliveryAdapter;
+        break;
+      }
+    }
+    
+    if (!internalProvider) {
+      throw new Error('Internal delivery provider not found');
+    }
+    
+    try {
+      return await internalProvider.updateDeliveryStatus(
+        externalOrderId,
+        status,
+        driverInfo,
+        notes
+      );
+    } catch (error) {
+      console.error(`Error updating internal delivery status for ${externalOrderId}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Create a DoorDash provider with the given credentials
+   */
+  registerDoorDashProvider(config: DoorDashConfig): number {
+    const doorDashAdapter = new DoorDashAdapter(config);
+    return this.registerProvider(doorDashAdapter);
   }
 }
 
+// Export a singleton instance
 export const deliveryService = new DeliveryService();

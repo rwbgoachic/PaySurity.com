@@ -1,8 +1,8 @@
 /**
- * DoorDash delivery adapter
+ * DoorDash Delivery Provider Adapter
  * 
- * This adapter integrates with DoorDash Drive API for external deliveries
- * Documentation: https://developer.doordash.com/en-US/api/drive
+ * This adapter integrates with DoorDash Drive API to provide delivery services
+ * through DoorDash's delivery network.
  */
 
 import {
@@ -15,50 +15,26 @@ import {
   ExternalDeliveryOrder
 } from '../interfaces';
 
-// For JWT authentication
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
-// Configuration for DoorDash Drive API
-interface DoorDashConfig {
+export interface DoorDashConfig {
   apiKey: string;
   apiSecret: string;
-  developerId?: string;
-}
-
-// Address format required by DoorDash API
-interface DoorDashAddressInfo {
-  street: string;
-  city: string;
-  state: string;
-  zip_code: string;
-  country: string;
-  business_name?: string;
-  first_name?: string;
-  last_name?: string;
-  phone_number?: string;
-  instructions?: string;
-  latitude?: number;
-  longitude?: number;
+  developerId: string;
+  webhookSecret?: string;
 }
 
 /**
- * DoorDash API integration for external deliveries
+ * Adapter for DoorDash Drive delivery API 
  */
 export class DoorDashAdapter implements DeliveryProviderAdapter {
-  private apiKey: string;
-  private apiSecret: string;
-  private developerId?: string;
-  private apiBaseUrl = 'https://openapi.doordash.com/drive/v2';
+  private config: DoorDashConfig;
+  private baseUrl = 'https://openapi.doordash.com/drive/v2';
+  private tokenCache: { token: string; expires: number } | null = null;
   
   constructor(config: DoorDashConfig) {
-    this.apiKey = config.apiKey;
-    this.apiSecret = config.apiSecret;
-    this.developerId = config.developerId;
-    
-    // Validate configuration
-    if (!this.apiKey || !this.apiSecret) {
-      throw new Error('DoorDash adapter requires API key and secret');
-    }
+    this.config = config;
   }
   
   getName(): string {
@@ -69,506 +45,113 @@ export class DoorDashAdapter implements DeliveryProviderAdapter {
     return 'external';
   }
   
-  async getQuote(
-    pickup: Address,
-    delivery: Address,
-    orderDetails: OrderDetails
-  ): Promise<DeliveryQuote> {
+  /**
+   * Get an authentication token for DoorDash API
+   */
+  private async getAuthToken(): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    
+    // Return cached token if it's still valid (expires in 20 min, refresh after 15 min)
+    if (this.tokenCache && now < this.tokenCache.expires - 300) {
+      return this.tokenCache.token;
+    }
+    
     try {
-      // Calculate distance for estimation purposes
-      const distance = this.calculateDistance(
-        pickup.latitude || 0,
-        pickup.longitude || 0,
-        delivery.latitude || 0,
-        delivery.longitude || 0
-      );
-      
-      const token = this.generateJwt();
-      
-      // Format addresses for DoorDash API
-      const pickupAddress = this.formatAddress(pickup, true);
-      const deliveryAddress = this.formatAddress(delivery, false);
-      
-      // Current time in ISO format
-      const now = new Date();
-      
-      // DoorDash quote request body
-      const quoteRequest = {
-        external_delivery_id: `quote-${orderDetails.orderId}-${Date.now()}`,
-        locale: "en-US",
-        order_value: Math.round(orderDetails.totalValue * 100), // In cents
-        currency: orderDetails.currency || 'USD',
-        pickup_address: pickupAddress,
-        dropoff_address: deliveryAddress,
-        pickup_time: new Date(now.getTime() + 15 * 60000).toISOString(), // 15 min from now
-        dropoff_time: new Date(now.getTime() + 60 * 60000).toISOString(), // 1 hour from now
-        contact_info: {
-          first_name: "Business",
-          last_name: "Owner",
-          phone_number: pickup.phone || "555-555-5555",
-          business_name: pickup.businessName || "Restaurant"
-        },
-        items: orderDetails.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          description: item.options ? item.options.join(', ') : undefined
-        }))
+      // Generate JWT for authentication
+      const expiresIn = 1800; // 30 minutes
+      const payload = {
+        aud: 'doordash',
+        iss: this.config.developerId,
+        kid: this.config.apiKey,
+        exp: now + expiresIn,
+        iat: now
       };
       
-      // In a real implementation, we would call the DoorDash API here:
-      // const response = await fetch(`${this.apiBaseUrl}/quotes`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //     'Accept': 'application/json'
-      //   },
-      //   body: JSON.stringify(quoteRequest)
-      // });
+      const token = jwt.sign(payload, this.config.apiSecret, {
+        algorithm: 'HS256',
+        header: {
+          'dd-ver': 'DD-JWT-V1'
+        }
+      });
       
-      // const quoteResponse = await response.json();
+      // Cache the token
+      this.tokenCache = {
+        token,
+        expires: now + expiresIn
+      };
       
-      // For demo purposes, we'll simulate a response
-      // In production, use the actual API response
+      return token;
+    } catch (error) {
+      console.error('Error generating DoorDash auth token:', error);
+      throw new Error('Failed to authenticate with DoorDash API');
+    }
+  }
+  
+  /**
+   * Make an authenticated request to DoorDash API
+   */
+  private async makeRequest(endpoint: string, method: string, body?: any): Promise<any> {
+    try {
+      const token = await this.getAuthToken();
+      const url = `${this.baseUrl}${endpoint}`;
       
-      // Simulate DoorDash fee calculation
-      let baseFee = 7.50; // Base delivery fee
-      if (distance > 0) {
-        // Add $2.00 per mile
-        baseFee += distance * 2.00;
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`DoorDash API error ${response.status}: ${data.error?.message || JSON.stringify(data)}`);
       }
       
-      // Round to 2 decimal places
-      baseFee = Math.round(baseFee * 100) / 100;
-      
-      // Platform fee (15% of delivery fee)
-      const platformFee = Math.round(baseFee * 0.15 * 100) / 100;
-      
-      // Customer pays delivery fee + platform fee
-      const customerFee = baseFee + platformFee;
-      
-      // Estimate pickup and delivery times
-      const estimatedPickupTime = new Date(now.getTime() + 20 * 60000); // 20 minutes from now
-      const estimatedDeliveryTime = new Date(now.getTime() + (45 + distance * 3) * 60000); // Base 45 min + 3 min per mile
-      
-      return {
-        providerId: 2, // ID for DoorDash provider
-        providerName: this.getName(),
-        fee: baseFee,
-        customerFee,
-        platformFee,
-        currency: orderDetails.currency || 'USD',
-        estimatedPickupTime,
-        estimatedDeliveryTime,
-        distance,
-        distanceUnit: 'miles',
-        valid: true,
-        validUntil: new Date(now.getTime() + 15 * 60000), // Valid for 15 minutes
-        providerData: {
-          // This would contain the raw DoorDash response in production
-          externalDeliveryId: quoteRequest.external_delivery_id
-        }
-      };
+      return data;
     } catch (error) {
-      console.error('Error getting DoorDash delivery quote:', error);
+      console.error(`Error making DoorDash API request to ${endpoint}:`, error);
       throw error;
     }
   }
   
-  async createDelivery(
-    orderDetails: DeliveryOrderDetails
-  ): Promise<ExternalDeliveryOrder> {
-    try {
-      const token = this.generateJwt();
-      
-      // Parse addresses if they're strings
-      const businessAddress = typeof orderDetails.businessAddress === 'string'
-        ? JSON.parse(orderDetails.businessAddress) as Address
-        : orderDetails.businessAddress;
-      
-      const customerAddress = typeof orderDetails.customerAddress === 'string'
-        ? JSON.parse(orderDetails.customerAddress) as Address
-        : orderDetails.customerAddress;
-      
-      // Calculate distance
-      const distance = this.calculateDistance(
-        businessAddress.latitude || 0,
-        businessAddress.longitude || 0,
-        customerAddress.latitude || 0,
-        customerAddress.longitude || 0
-      );
-      
-      // Format addresses for DoorDash API
-      const pickupAddress = this.formatAddress(businessAddress, true);
-      const deliveryAddress = this.formatAddress(customerAddress, false);
-      
-      // Generate unique delivery ID
-      const externalDeliveryId = `dd-${orderDetails.businessId}-${orderDetails.orderId}-${Date.now()}`;
-      
-      // Current time
-      const now = new Date();
-      
-      // Calculate estimated times
-      const pickupTime = new Date(now.getTime() + 20 * 60000); // 20 minutes from now
-      const deliveryTime = new Date(now.getTime() + (45 + distance * 3) * 60000); // Base 45 min + 3 min per mile
-      
-      // DoorDash delivery request body
-      const deliveryRequest = {
-        external_delivery_id: externalDeliveryId,
-        locale: "en-US",
-        order_value: parseInt(orderDetails.orderDetails.totalValue.toString()) * 100, // In cents
-        currency: orderDetails.orderDetails.currency || 'USD',
-        pickup_address: pickupAddress,
-        dropoff_address: deliveryAddress,
-        pickup_phone_number: businessAddress.phone || "555-555-5555",
-        pickup_business_name: businessAddress.businessName || "Restaurant",
-        pickup_instructions: businessAddress.instructions || "Please go to the pickup counter",
-        dropoff_phone_number: customerAddress.phone || orderDetails.customerPhone,
-        dropoff_instructions: customerAddress.instructions || "Please leave at door",
-        customer_name: orderDetails.customerName,
-        payment_details: {
-          payment_method: "credit_card",
-          fee: parseFloat(orderDetails.providerFee) * 100, // In cents
-          tip: 0 // No tip as it's a business delivery
-        },
-        items: orderDetails.orderDetails.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          description: item.options ? item.options.join(', ') : undefined
-        }))
-      };
-      
-      // In a real implementation, we would call the DoorDash API here:
-      // const response = await fetch(`${this.apiBaseUrl}/deliveries`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //     'Accept': 'application/json'
-      //   },
-      //   body: JSON.stringify(deliveryRequest)
-      // });
-      
-      // const deliveryResponse = await response.json();
-      
-      // For demo purposes, we'll simulate a response
-      // In production, use the actual API response
-      
-      return {
-        externalOrderId: externalDeliveryId,
-        status: 'pending',
-        estimatedPickupTime: pickupTime,
-        estimatedDeliveryTime: deliveryTime,
-        trackingUrl: `https://doordash.com/tracking/${externalDeliveryId}`,
-        providerData: {
-          // This would contain the raw DoorDash response in production
-          request: deliveryRequest
-        }
-      };
-    } catch (error) {
-      console.error('Error creating DoorDash delivery:', error);
-      throw new Error(`Failed to create DoorDash delivery: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  async cancelDelivery(externalOrderId: string): Promise<boolean> {
-    try {
-      const token = this.generateJwt();
-      
-      // In a real implementation, we would call the DoorDash API here:
-      // const response = await fetch(`${this.apiBaseUrl}/deliveries/${externalOrderId}/cancel`, {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //     'Accept': 'application/json'
-      //   },
-      //   body: JSON.stringify({
-      //     reason: "merchant_request"
-      //   })
-      // });
-      
-      // Check response status
-      // return response.ok;
-      
-      // For demo purposes, always return true
-      // In production, use the actual API response
-      
-      // Special case for test IDs
-      if (externalOrderId.startsWith('test-dd-fail-')) {
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error cancelling DoorDash delivery:', error);
-      return false;
-    }
-  }
-  
-  async getDeliveryStatus(externalOrderId: string): Promise<DeliveryStatus> {
-    try {
-      const token = this.generateJwt();
-      
-      // In a real implementation, we would call the DoorDash API here:
-      // const response = await fetch(`${this.apiBaseUrl}/deliveries/${externalOrderId}`, {
-      //   method: 'GET',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Accept': 'application/json'
-      //   }
-      // });
-      
-      // const deliveryData = await response.json();
-      // return this.mapDoorDashStatus(deliveryData.status);
-      
-      // For demo purposes, return a status based on the order ID pattern
-      // In production, use the actual API response
-      
-      // Special case for test IDs
-      if (externalOrderId.startsWith('test-dd-')) {
-        const status = externalOrderId.split('test-dd-')[1];
-        return status as DeliveryStatus;
-      }
-      
-      // If this is a generated DD ID with timestamp, use elapsed time to determine status
-      if (externalOrderId.startsWith('dd-')) {
-        const parts = externalOrderId.split('-');
-        const timestamp = parts[parts.length - 1];
-        
-        if (!timestamp) {
-          return 'pending';
-        }
-        
-        const createdTime = parseInt(timestamp);
-        const now = Date.now();
-        const minutesElapsed = (now - createdTime) / 60000;
-        
-        if (minutesElapsed < 3) return 'pending';
-        if (minutesElapsed < 7) return 'accepted';
-        if (minutesElapsed < 12) return 'assigned';
-        if (minutesElapsed < 18) return 'picked_up';
-        if (minutesElapsed < 35) return 'in_transit';
-        return 'delivered';
-      }
-      
-      // Default status if pattern doesn't match
-      return 'pending';
-    } catch (error) {
-      console.error('Error getting DoorDash delivery status:', error);
-      return 'pending';
-    }
-  }
-  
-  async parseWebhookData(
-    data: any,
-    headers: Record<string, string>
-  ): Promise<{
-    externalOrderId: string;
-    status: DeliveryStatus;
-    driverInfo?: {
-      id?: string;
-      name?: string;
-      phone?: string;
-      location?: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-    timestamp: Date;
-    additionalData?: any;
-  }> {
-    try {
-      // Validate the data structure
-      if (!data || !data.event_type || !data.external_delivery_id) {
-        throw new Error('Invalid webhook data format');
-      }
-      
-      // Map DoorDash event type to our status
-      let status: DeliveryStatus = 'pending';
-      
-      switch (data.event_type) {
-        case 'DELIVERY_CREATED':
-          status = 'pending';
-          break;
-        case 'DELIVERY_PICKUP_READY':
-        case 'DELIVERY_PICKUP_COMPLETE':
-          status = 'picked_up';
-          break;
-        case 'DASHER_CREATED':
-        case 'DASHER_ASSIGNED':
-          status = 'assigned';
-          break;
-        case 'DASHER_ENROUTE_TO_PICKUP':
-          status = 'accepted';
-          break;
-        case 'DASHER_ENROUTE_TO_DROPOFF':
-          status = 'in_transit';
-          break;
-        case 'DELIVERY_COMPLETE':
-          status = 'delivered';
-          break;
-        case 'DELIVERY_CANCELLED':
-          status = 'cancelled';
-          break;
-        case 'DELIVERY_FAILED':
-          status = 'failed';
-          break;
-        default:
-          status = 'pending';
-      }
-      
-      // Extract driver info if available
-      const driverInfo = data.dasher ? {
-        id: data.dasher.id,
-        name: `${data.dasher.first_name || ''} ${data.dasher.last_name || ''}`.trim(),
-        phone: data.dasher.phone_number,
-        location: data.dasher.location ? {
-          latitude: data.dasher.location.lat,
-          longitude: data.dasher.location.lng
-        } : undefined
-      } : undefined;
-      
-      // Create timestamp
-      const timestamp = data.event_timestamp 
-        ? new Date(data.event_timestamp) 
-        : new Date();
-      
-      return {
-        externalOrderId: data.external_delivery_id,
-        status,
-        driverInfo,
-        timestamp,
-        additionalData: data
-      };
-    } catch (error) {
-      console.error('Error parsing DoorDash webhook data:', error);
-      throw new Error(`Failed to parse webhook data: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  async verifyWebhookSignature(
-    data: any,
-    headers: Record<string, string>,
-    secret: string
-  ): Promise<boolean> {
-    try {
-      // DoorDash webhook verification
-      const signature = headers['doordash-signature'];
-      if (!signature) {
-        return false;
-      }
-      
-      // In production, validate the signature cryptographically
-      // This would use HMAC with SHA-256 or similar
-      
-      // For demo purposes, simulate signature verification
-      // In production, use proper cryptographic verification
-      
-      // Special case for testing (signature should be 'valid' or 'invalid')
-      if (signature === 'invalid') {
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error verifying DoorDash webhook signature:', error);
-      return false;
-    }
-  }
-  
   /**
-   * Generate JWT token for DoorDash API authentication
+   * Convert internal address format to DoorDash format
    */
-  private generateJwt(): string {
-    const now = Math.floor(Date.now() / 1000);
-    const payload = {
-      aud: 'doordash',
-      iss: this.developerId || 'paysurity',
-      kid: this.apiKey,
-      exp: now + 3600, // Token valid for 1 hour
-      iat: now
-    };
-    
-    return jwt.sign(payload, this.apiSecret, { algorithm: 'HS256' });
-  }
-  
-  /**
-   * Format address for DoorDash API
-   */
-  private formatAddress(address: Address, isBusinessAddress: boolean): DoorDashAddressInfo {
-    const formattedAddress: DoorDashAddressInfo = {
+  private formatAddress(address: Address): any {
+    return {
       street: address.street,
       city: address.city,
       state: address.state,
       zip_code: address.postalCode,
       country: address.country || 'US',
+      business_name: address.businessName || undefined,
+      phone_number: address.phone || undefined,
+      instructions: address.instructions || undefined,
       latitude: address.latitude,
       longitude: address.longitude,
-      instructions: address.instructions
+      apartment_number: address.apartment || undefined,
+      email: address.email || undefined
     };
-    
-    if (isBusinessAddress && address.businessName) {
-      formattedAddress.business_name = address.businessName;
-    } else if (!isBusinessAddress) {
-      // For customer addresses, split the name into first and last name
-      const nameParts = address.businessName ? 
-        address.businessName.split(' ') : 
-        ['Customer', ''];
-      
-      formattedAddress.first_name = nameParts[0];
-      formattedAddress.last_name = nameParts.slice(1).join(' ');
-    }
-    
-    if (address.phone) {
-      formattedAddress.phone_number = address.phone;
-    }
-    
-    return formattedAddress;
   }
   
   /**
-   * Map DoorDash status to our status
-   */
-  private mapDoorDashStatus(ddStatus: string): DeliveryStatus {
-    // Map DoorDash-specific status values to our standard statuses
-    switch (ddStatus) {
-      case 'created':
-        return 'pending';
-      case 'accepted':
-        return 'accepted';
-      case 'pickup_ready':
-      case 'pickup_complete':
-        return 'picked_up';
-      case 'enroute_to_pickup':
-        return 'assigned';
-      case 'enroute_to_dropoff':
-        return 'in_transit';
-      case 'delivered':
-        return 'delivered';
-      case 'cancelled':
-        return 'cancelled';
-      case 'failed':
-        return 'failed';
-      default:
-        return 'pending';
-    }
-  }
-  
-  /**
-   * Calculate distance between two coordinates using Haversine formula
+   * Calculate the straight-line distance between two coordinates (in miles)
    */
   private calculateDistance(
-    lat1: number, 
-    lon1: number, 
-    lat2: number, 
-    lon2: number
+    lat1?: number, 
+    lon1?: number, 
+    lat2?: number, 
+    lon2?: number
   ): number {
-    if (lat1 === 0 && lon1 === 0 && lat2 === 0 && lon2 === 0) {
-      return 0;
+    if (!lat1 || !lon1 || !lat2 || !lon2) {
+      return 3.0; // Default distance if coordinates not provided
     }
     
-    const R = 3958.8; // Radius of the Earth in miles
+    const R = 3958.8; // Radius of the earth in miles
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
     
@@ -585,5 +168,307 @@ export class DoorDashAdapter implements DeliveryProviderAdapter {
   
   private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+  
+  /**
+   * Map DoorDash status to internal status
+   */
+  private mapDoorDashStatus(status: string): DeliveryStatus {
+    const statusMap: { [key: string]: DeliveryStatus } = {
+      'created': 'pending',
+      'pickup_pending': 'accepted',
+      'accepted': 'assigned',
+      'arrived_at_pickup': 'assigned',
+      'picked_up': 'picked_up',
+      'delivered': 'delivered',
+      'canceled': 'cancelled',
+      'failed': 'failed',
+      'returned': 'failed'
+    };
+    
+    return statusMap[status] || 'pending';
+  }
+  
+  async getQuote(
+    pickup: Address,
+    delivery: Address,
+    orderDetails: OrderDetails
+  ): Promise<DeliveryQuote> {
+    try {
+      // Create a delivery quote request
+      const quoteData = {
+        pickup_address: this.formatAddress(pickup),
+        dropoff_address: this.formatAddress(delivery),
+        external_delivery_id: `quote_${Date.now()}`,
+        items: orderDetails.items?.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          description: item.options?.join(', ') || undefined
+        })) || [{name: 'Food order', quantity: 1}]
+      };
+      
+      // Call DoorDash API to get quote
+      const response = await this.makeRequest('/quotes', 'POST', quoteData);
+      
+      // Parse the response
+      let estimatedPickupTime: Date;
+      let estimatedDeliveryTime: Date;
+      
+      if (response.pickup_time) {
+        estimatedPickupTime = new Date(response.pickup_time);
+      } else {
+        estimatedPickupTime = new Date(Date.now() + 15 * 60 * 1000); // Default: 15 min
+      }
+      
+      if (response.dropoff_time) {
+        estimatedDeliveryTime = new Date(response.dropoff_time);
+      } else {
+        estimatedDeliveryTime = new Date(Date.now() + 45 * 60 * 1000); // Default: 45 min
+      }
+      
+      const distance = this.calculateDistance(
+        pickup.latitude,
+        pickup.longitude,
+        delivery.latitude,
+        delivery.longitude
+      );
+      
+      const fee = response.fee ? parseFloat(response.fee.total) : 0;
+      
+      // Return standardized quote object
+      return {
+        providerId: 0, // Will be set by the delivery service
+        providerName: this.getName(),
+        fee,
+        customerFee: fee * 1.1, // Add 10% markup for customer
+        platformFee: fee * 0.1, // Platform fee is the 10% markup
+        currency: 'USD',
+        estimatedPickupTime,
+        estimatedDeliveryTime,
+        distance,
+        distanceUnit: 'miles',
+        valid: true,
+        validUntil: new Date(Date.now() + 30 * 60 * 1000), // Valid for 30 min
+        errors: [],
+        providerData: {
+          quoteId: response.quote_id
+        }
+      };
+    } catch (error) {
+      console.error('Error getting DoorDash delivery quote:', error);
+      
+      const now = new Date();
+      return {
+        providerId: 0, // Will be set by the delivery service
+        providerName: this.getName(),
+        fee: 0,
+        customerFee: 0,
+        platformFee: 0,
+        currency: 'USD',
+        estimatedPickupTime: new Date(now.getTime() + 15 * 60 * 1000),
+        estimatedDeliveryTime: new Date(now.getTime() + 45 * 60 * 1000),
+        distance: 0,
+        distanceUnit: 'miles',
+        valid: false,
+        validUntil: now,
+        errors: [(error as Error).message || 'Unknown error getting DoorDash quote']
+      };
+    }
+  }
+  
+  async createDelivery(
+    orderDetails: DeliveryOrderDetails
+  ): Promise<ExternalDeliveryOrder> {
+    try {
+      // Parse addresses if they're strings
+      const businessAddress = typeof orderDetails.businessAddress === 'string'
+        ? JSON.parse(orderDetails.businessAddress) as Address
+        : orderDetails.businessAddress;
+      
+      const customerAddress = typeof orderDetails.customerAddress === 'string'
+        ? JSON.parse(orderDetails.customerAddress) as Address
+        : orderDetails.customerAddress;
+      
+      // Create the delivery request
+      const deliveryData = {
+        external_delivery_id: `dd-${orderDetails.businessId}-${orderDetails.orderId}-${Date.now()}`,
+        pickup_address: this.formatAddress(businessAddress),
+        dropoff_address: this.formatAddress(customerAddress),
+        pickup_business_name: businessAddress.businessName || 'Restaurant',
+        pickup_phone_number: businessAddress.phone || '',
+        dropoff_phone_number: customerAddress.phone || orderDetails.customerPhone,
+        dropoff_contact_given_name: orderDetails.customerName.split(' ')[0] || 'Customer',
+        dropoff_contact_family_name: orderDetails.customerName.split(' ').slice(1).join(' ') || '',
+        items: orderDetails.orderDetails.items?.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          description: item.options?.join(', ') || undefined
+        })) || [{name: 'Food order', quantity: 1}],
+        pickup_instructions: businessAddress.instructions || undefined,
+        dropoff_instructions: customerAddress.instructions || orderDetails.specialInstructions,
+        order_value: orderDetails.orderDetails.totalValue
+      };
+      
+      // If we have a quote ID, use it
+      if (orderDetails.providerQuoteId) {
+        (deliveryData as any).quote_id = orderDetails.providerQuoteId;
+      }
+      
+      // Call DoorDash API to create delivery
+      const response = await this.makeRequest('/deliveries', 'POST', deliveryData);
+      
+      // Parse the response
+      let estimatedPickupTime: Date;
+      let estimatedDeliveryTime: Date;
+      
+      if (response.pickup_time) {
+        estimatedPickupTime = new Date(response.pickup_time);
+      } else {
+        estimatedPickupTime = new Date(Date.now() + 15 * 60 * 1000); // Default: 15 min
+      }
+      
+      if (response.dropoff_time) {
+        estimatedDeliveryTime = new Date(response.dropoff_time);
+      } else {
+        estimatedDeliveryTime = new Date(Date.now() + 45 * 60 * 1000); // Default: 45 min
+      }
+      
+      // Return standardized delivery object
+      return {
+        externalOrderId: response.external_delivery_id,
+        status: this.mapDoorDashStatus(response.delivery_status),
+        estimatedPickupTime,
+        estimatedDeliveryTime,
+        trackingUrl: response.tracking_url,
+        providerData: {
+          doorDashId: response.delivery_id
+        }
+      };
+    } catch (error) {
+      console.error('Error creating DoorDash delivery:', error);
+      throw error;
+    }
+  }
+  
+  async cancelDelivery(externalOrderId: string): Promise<boolean> {
+    try {
+      await this.makeRequest(`/deliveries/${externalOrderId}/cancel`, 'PUT');
+      return true;
+    } catch (error) {
+      console.error(`Error cancelling DoorDash delivery ${externalOrderId}:`, error);
+      return false;
+    }
+  }
+  
+  async getDeliveryStatus(externalOrderId: string): Promise<DeliveryStatus> {
+    try {
+      const response = await this.makeRequest(`/deliveries/${externalOrderId}`, 'GET');
+      return this.mapDoorDashStatus(response.delivery_status);
+    } catch (error) {
+      console.error(`Error getting DoorDash delivery status for ${externalOrderId}:`, error);
+      throw error;
+    }
+  }
+  
+  async parseWebhookData(
+    data: any,
+    _headers: Record<string, string>
+  ): Promise<{
+    externalOrderId: string;
+    status: DeliveryStatus;
+    driverInfo?: any;
+    timestamp: Date;
+    additionalData?: any;
+  }> {
+    try {
+      const status = this.getStatusFromEvent(data.event_name, data.delivery_status);
+      const timestamp = new Date(data.timestamp || Date.now());
+      
+      let driverInfo = undefined;
+      
+      // Extract driver info if available
+      if (data.dasher) {
+        driverInfo = {
+          id: data.dasher.dasher_id,
+          name: `${data.dasher.first_name || ''} ${data.dasher.last_name || ''}`.trim(),
+          phone: data.dasher.phone_number
+        };
+        
+        // Add location if available
+        if (data.dasher.location) {
+          driverInfo.location = {
+            latitude: data.dasher.location.lat,
+            longitude: data.dasher.location.lng,
+            timestamp: new Date(data.dasher.location.timestamp || timestamp)
+          };
+        }
+      }
+      
+      return {
+        externalOrderId: data.delivery_id,
+        status,
+        driverInfo,
+        timestamp,
+        additionalData: data
+      };
+    } catch (error) {
+      console.error('Error parsing DoorDash webhook data:', error);
+      throw error;
+    }
+  }
+  
+  private getStatusFromEvent(event: string, status?: string): DeliveryStatus {
+    if (status) {
+      return this.mapDoorDashStatus(status);
+    }
+    
+    const eventMap: { [key: string]: DeliveryStatus } = {
+      'dasher.accepted': 'assigned',
+      'delivery.pickup.pending': 'accepted',
+      'dasher.arriving_pickup': 'assigned',
+      'dasher.arrived_pickup': 'assigned',
+      'dasher.picked_up': 'picked_up',
+      'dasher.arriving_dropoff': 'in_transit',
+      'dasher.arrived_dropoff': 'in_transit',
+      'delivery.completed': 'delivered',
+      'delivery.canceled': 'cancelled',
+      'delivery.cancellation_requested': 'pending',
+      'delivery.return.started': 'failed',
+      'delivery.return.completed': 'failed',
+      'delivery.failed': 'failed'
+    };
+    
+    return eventMap[event] || 'pending';
+  }
+  
+  async verifyWebhookSignature(
+    data: any,
+    headers: Record<string, string>,
+    secret: string
+  ): Promise<boolean> {
+    try {
+      if (!secret) {
+        console.warn('DoorDash webhook signature verification skipped: No webhook secret provided');
+        return true;
+      }
+      
+      const signature = headers['doordash-signature'];
+      if (!signature) {
+        console.error('DoorDash webhook signature verification failed: No signature in headers');
+        return false;
+      }
+      
+      // DoorDash uses HMAC-SHA-256 for webhook signatures
+      const hmac = crypto.createHmac('sha256', secret);
+      const computedSignature = hmac.update(JSON.stringify(data)).digest('hex');
+      
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(computedSignature)
+      );
+    } catch (error) {
+      console.error('DoorDash webhook signature verification error:', error);
+      return false;
+    }
   }
 }
