@@ -1,403 +1,364 @@
 /**
  * Delivery Service
  * 
- * This service manages the delivery process, handling both internal restaurant
- * deliveries and external delivery providers like DoorDash.
+ * This service coordinates between different delivery providers, handling:
+ * - Provider registration and selection
+ * - Quote generation and comparison
+ * - Order creation and tracking
+ * - Status updates and webhooks
+ * - Fee calculations
  */
 
-import { 
-  db 
-} from '../../db';
-import { 
+import {
   DeliveryProviderAdapter,
   Address,
   OrderDetails,
   DeliveryQuote,
   DeliveryOrderDetails,
-  DeliveryStatus,
-  ExternalDeliveryOrder
+  ExternalDeliveryOrder,
+  DeliveryStatus
 } from './interfaces';
-import {
-  deliveryProviders,
-  deliveryRegions,
-  deliveryProviderRegions,
-  businessDeliverySettings,
-  deliveryOrders,
-  deliveryPayments,
-  deliveryPaymentItems,
-  InsertDeliveryOrder,
-  InsertDeliveryPayment,
-  InsertDeliveryPaymentItem,
-  BusinessDeliverySetting
-} from '@shared/delivery-schema';
-import { eq, and, between, sql, inArray } from 'drizzle-orm';
-import { DoorDashAdapter } from './providers/doordash-adapter';
 import { InternalDeliveryAdapter } from './providers/internal-adapter';
-import { v4 as uuidv4 } from 'uuid';
+import { DoorDashAdapter } from './providers/doordash-adapter';
+import { storage } from '../../storage';
 
+/**
+ * Main delivery service that coordinates between different delivery providers
+ */
 export class DeliveryService {
-  private providerAdapters: Map<number, DeliveryProviderAdapter> = new Map();
+  private providers: Map<number, DeliveryProviderAdapter> = new Map();
+  private initialized = false;
+  private doorDashWebhookSecret: string | null = null;
 
   constructor() {
-    this.initializeProviderAdapters();
+    // Register built-in providers
+    this.registerProvider(1, new InternalDeliveryAdapter());
   }
 
   /**
-   * Initialize all delivery provider adapters
+   * Initialize the delivery service
+   * This will load all provider configurations from the database
    */
-  private async initializeProviderAdapters() {
-    try {
-      // Get all active providers from the database
-      const providers = await db.select().from(deliveryProviders).where(eq(deliveryProviders.isActive, true));
-
-      for (const provider of providers) {
-        if (provider.type === 'internal') {
-          // Create internal delivery provider adapter
-          this.providerAdapters.set(provider.id, new InternalDeliveryAdapter());
-        } else if (provider.type === 'external' && provider.name === 'DoorDash') {
-          // Create DoorDash adapter
-          this.providerAdapters.set(provider.id, new DoorDashAdapter({
-            apiKey: provider.apiKey || '',
-            apiSecret: provider.apiSecret || '',
-            baseUrl: provider.baseUrl || undefined
-          }));
-        }
-        // Add other provider adapters as needed
-      }
-
-      // If no providers were found in the database, add a default internal provider
-      if (this.providerAdapters.size === 0) {
-        // Create internal delivery provider
-        const [internalProvider] = await db.insert(deliveryProviders).values({
-          name: 'Internal Delivery',
-          type: 'internal',
-          isActive: true,
-          baseFee: '3.00',
-          perMileFee: '0.50',
-        }).returning();
-
-        if (internalProvider) {
-          this.providerAdapters.set(internalProvider.id, new InternalDeliveryAdapter());
-        }
-      }
-    } catch (error) {
-      console.error('Failed to initialize delivery provider adapters:', error);
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
     }
-  }
 
-  /**
-   * Get delivery quotes from all active providers
-   */
-  async getDeliveryQuotes(
-    businessId: number,
-    pickupAddress: Address,
-    deliveryAddress: Address,
-    orderDetails: OrderDetails
-  ): Promise<DeliveryQuote[]> {
     try {
-      // Get delivery settings for this business
-      const [businessSettings] = await db.select().from(businessDeliverySettings)
-        .where(eq(businessDeliverySettings.businessId, businessId));
-
-      if (!businessSettings || !businessSettings.isDeliveryEnabled) {
-        return [];
-      }
-
-      // Check if the order meets minimum value
-      if (businessSettings.minimumOrderValue && orderDetails.totalValue < parseFloat(businessSettings.minimumOrderValue)) {
-        return [{
-          providerId: 0,
-          providerName: 'Error',
-          fee: 0,
-          customerFee: 0,
-          platformFee: 0,
-          currency: 'USD',
-          estimatedPickupTime: new Date(),
-          estimatedDeliveryTime: new Date(),
-          distance: 0,
-          distanceUnit: 'miles',
-          valid: false,
-          validUntil: new Date(),
-          errors: [`Order value (${orderDetails.totalValue}) is below the minimum required (${businessSettings.minimumOrderValue})`]
-        }];
-      }
-
-      const quotes: DeliveryQuote[] = [];
-
-      // Get allowed providers for this business
-      const allowedProviderIds = businessSettings.allowedProviders 
-        ? (businessSettings.allowedProviders as number[])
-        : Array.from(this.providerAdapters.keys());
-
-      // Get quotes from each provider
-      for (const [providerId, adapter] of this.providerAdapters) {
-        if (!allowedProviderIds.includes(providerId)) {
+      // Load delivery providers from database
+      const dbProviders = await storage.getAllDeliveryProviders();
+      
+      // Set up each provider based on provider type
+      for (const provider of dbProviders) {
+        if (!provider.isActive) {
           continue;
         }
-
-        try {
-          const quote = await adapter.getQuote(pickupAddress, deliveryAddress, orderDetails);
-
-          // Apply any business-specific fee adjustments
-          if (quote.valid) {
-            // Calculate platform fee
-            const platformFeePercentage = parseFloat(businessSettings.platformFeePercentage || '0.15');
-            const platformFeeFixed = parseFloat(businessSettings.platformFeeFixed || '1.00');
-            
-            quote.platformFee = (quote.fee * platformFeePercentage) + platformFeeFixed;
-            quote.platformFee = Math.round(quote.platformFee * 100) / 100;
-
-            // Add the platform fee to the customer fee if business doesn't absorb it
-            if (!businessSettings.businessAbsorbsDeliveryFee) {
-              quote.customerFee = quote.fee + quote.platformFee;
-
-              // Apply any customer offset (e.g., business subsidizes part of the delivery fee)
-              if (businessSettings.deliveryFeeCustomerOffset) {
-                quote.customerFee -= parseFloat(businessSettings.deliveryFeeCustomerOffset);
-                quote.customerFee = Math.max(0, quote.customerFee); // Don't go below zero
+        
+        switch (provider.type) {
+          case 'doordash':
+            if (provider.apiKey && provider.apiSecret) {
+              const doorDashAdapter = new DoorDashAdapter({
+                apiKey: provider.apiKey,
+                apiSecret: provider.apiSecret
+              });
+              this.registerProvider(provider.id, doorDashAdapter);
+              
+              // Store webhook secret for later validation
+              if (provider.webhookKey) {
+                this.doorDashWebhookSecret = provider.webhookKey;
               }
-
-              // Round to 2 decimal places
-              quote.customerFee = Math.round(quote.customerFee * 100) / 100;
-            } else {
-              quote.customerFee = 0; // Business absorbs the entire fee
             }
-          }
-
-          quotes.push(quote);
-        } catch (error) {
-          console.error(`Error getting quote from provider ${providerId}:`, error);
+            break;
+            
+          // Add more providers as needed (e.g., UberEats, Grubhub)
+          
+          default:
+            console.warn(`Unknown delivery provider type: ${provider.type}`);
         }
       }
-
-      return quotes;
+      
+      this.initialized = true;
+      console.log(`Delivery service initialized with ${this.providers.size} providers`);
     } catch (error) {
-      console.error('Error getting delivery quotes:', error);
-      throw new Error(`Failed to get delivery quotes: ${(error as Error).message}`);
+      console.error('Failed to initialize delivery service:', error);
+      throw new Error(`Failed to initialize delivery service: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Create a delivery order with a specific provider
+   * Register a delivery provider
    */
-  async createDelivery(orderDetails: DeliveryOrderDetails): Promise<DeliveryOrder> {
+  registerProvider(providerId: number, adapter: DeliveryProviderAdapter): void {
+    this.providers.set(providerId, adapter);
+    console.log(`Registered delivery provider: ${adapter.getName()} (ID: ${providerId})`);
+  }
+
+  /**
+   * Get a delivery provider by ID
+   */
+  getProvider(providerId: number): DeliveryProviderAdapter | undefined {
+    return this.providers.get(providerId);
+  }
+
+  /**
+   * Get all available providers 
+   */
+  getAllProviders(): DeliveryProviderAdapter[] {
+    return Array.from(this.providers.values());
+  }
+
+  /**
+   * Get delivery quotes from multiple providers
+   */
+  async getDeliveryQuotes(
+    pickup: Address, 
+    delivery: Address, 
+    orderDetails: OrderDetails
+  ): Promise<DeliveryQuote[]> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
+    const quotes: DeliveryQuote[] = [];
+    const quotePromises = [];
+    
+    // Request quotes from all providers in parallel
+    for (const provider of this.providers.values()) {
+      quotePromises.push(
+        provider.getQuote(pickup, delivery, orderDetails)
+          .then(quote => {
+            quotes.push(quote);
+          })
+          .catch(error => {
+            console.error(`Error getting quote from ${provider.getName()}:`, error);
+            // Don't add invalid quotes to the list
+          })
+      );
+    }
+    
+    await Promise.all(quotePromises);
+    
+    // Sort by customer fee (ascending)
+    return quotes.sort((a, b) => a.customerFee - b.customerFee);
+  }
+
+  /**
+   * Create a new delivery order
+   */
+  async createDeliveryOrder(
+    orderDetails: DeliveryOrderDetails
+  ): Promise<{
+    id: number;
+    externalOrderId: string;
+    providerId: number;
+    providerName: string;
+    status: DeliveryStatus;
+    estimatedPickupTime: Date;
+    estimatedDeliveryTime: Date;
+    trackingUrl?: string;
+  }> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
+    // Get the provider
+    const provider = this.providers.get(orderDetails.providerId);
+    if (!provider) {
+      throw new Error(`Delivery provider with ID ${orderDetails.providerId} not found`);
+    }
+    
     try {
-      const providerId = orderDetails.providerId;
-      const adapter = this.providerAdapters.get(providerId);
-
-      if (!adapter) {
-        throw new Error(`Provider with ID ${providerId} not found`);
-      }
-
-      // Create delivery with the provider
-      const externalDelivery = await adapter.createDelivery(orderDetails);
-
-      // Prepare status history
-      const statusHistory = [{
-        status: externalDelivery.status,
-        timestamp: new Date().toISOString(),
-        notes: 'Delivery created'
-      }];
-
+      // Create the delivery in the provider's system
+      const externalDelivery = await provider.createDelivery(orderDetails);
+      
       // Store the delivery in our database
-      const [deliveryOrder] = await db.insert(deliveryOrders).values({
-        orderId: orderDetails.orderId,
+      const delivery = await storage.createDeliveryOrder({
         businessId: orderDetails.businessId,
-        providerId,
-        status: externalDelivery.status,
+        providerId: orderDetails.providerId,
         externalOrderId: externalDelivery.externalOrderId,
+        orderId: typeof orderDetails.orderId === 'string' 
+          ? parseInt(orderDetails.orderId) 
+          : orderDetails.orderId,
         customerName: orderDetails.customerName,
         customerPhone: orderDetails.customerPhone,
-        customerAddress: orderDetails.customerAddress.street,
-        customerLatitude: orderDetails.customerAddress.latitude?.toString(),
-        customerLongitude: orderDetails.customerAddress.longitude?.toString(),
-        businessAddress: orderDetails.businessAddress.street,
-        businessLatitude: orderDetails.businessAddress.latitude?.toString(),
-        businessLongitude: orderDetails.businessAddress.longitude?.toString(),
-        driverId: externalDelivery.driverId,
-        driverName: externalDelivery.driverName,
-        driverPhone: externalDelivery.driverPhone,
-        driverLocation: externalDelivery.driverLocation ? JSON.stringify(externalDelivery.driverLocation) : null,
+        customerAddress: typeof orderDetails.customerAddress === 'string'
+          ? orderDetails.customerAddress
+          : JSON.stringify(orderDetails.customerAddress),
+        businessAddress: typeof orderDetails.businessAddress === 'string'
+          ? orderDetails.businessAddress
+          : JSON.stringify(orderDetails.businessAddress),
+        status: externalDelivery.status,
+        fee: orderDetails.providerFee,
+        platformFee: orderDetails.platformFee,
+        customerFee: orderDetails.customerFee,
         estimatedPickupTime: externalDelivery.estimatedPickupTime,
         estimatedDeliveryTime: externalDelivery.estimatedDeliveryTime,
-        providerFee: orderDetails.providerFee,
-        customerFee: orderDetails.customerFee,
-        platformFee: orderDetails.platformFee,
-        specialInstructions: orderDetails.specialInstructions,
-        statusHistory: statusHistory,
-        trackingUrl: externalDelivery.trackingUrl,
-        providerData: externalDelivery.providerData,
-      }).returning();
-
-      return deliveryOrder;
-    } catch (error) {
-      console.error('Error creating delivery:', error);
-      throw new Error(`Failed to create delivery: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Cancel a delivery
-   */
-  async cancelDelivery(deliveryId: number): Promise<boolean> {
-    try {
-      const [delivery] = await db.select().from(deliveryOrders).where(eq(deliveryOrders.id, deliveryId));
-
-      if (!delivery) {
-        throw new Error(`Delivery with ID ${deliveryId} not found`);
-      }
-
-      if (delivery.status === 'cancelled' || delivery.status === 'delivered') {
-        throw new Error(`Cannot cancel delivery in ${delivery.status} state`);
-      }
-
-      const providerId = delivery.providerId;
-      const adapter = this.providerAdapters.get(providerId);
-
-      if (!adapter) {
-        throw new Error(`Provider with ID ${providerId} not found`);
-      }
-
-      if (delivery.externalOrderId) {
-        await adapter.cancelDelivery(delivery.externalOrderId);
-      }
-
-      // Update status history
-      const statusHistory = [
-        ...(delivery.statusHistory || []),
-        {
-          status: 'cancelled',
-          timestamp: new Date().toISOString(),
-          notes: 'Delivery cancelled'
-        }
-      ];
-
-      // Update delivery status in our database
-      await db.update(deliveryOrders)
-        .set({
-          status: 'cancelled',
-          statusHistory,
-          cancelReason: 'Cancelled by merchant',
-          updatedAt: new Date()
-        })
-        .where(eq(deliveryOrders.id, deliveryId));
-
-      return true;
-    } catch (error) {
-      console.error('Error cancelling delivery:', error);
-      throw new Error(`Failed to cancel delivery: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Get deliveries for a business
-   */
-  async getBusinessDeliveries(
-    businessId: number,
-    status?: DeliveryStatus | DeliveryStatus[],
-    page: number = 1,
-    limit: number = 50,
-    startDate?: Date,
-    endDate?: Date
-  ) {
-    try {
-      let query = db.select().from(deliveryOrders)
-        .where(eq(deliveryOrders.businessId, businessId));
-
-      // Filter by status if provided
-      if (status) {
-        if (Array.isArray(status)) {
-          // query = query.where(inArray(deliveryOrders.status, status));
-        } else {
-          // query = query.where(eq(deliveryOrders.status, status));
-        }
-      }
-
-      // Filter by date range if provided
-      if (startDate && endDate) {
-        query = query.where(
-          and(
-            sql`${deliveryOrders.createdAt} >= ${startDate}`,
-            sql`${deliveryOrders.createdAt} <= ${endDate}`
-          )
-        );
-      }
-
-      // Calculate pagination
-      const offset = (page - 1) * limit;
-      query = query.limit(limit).offset(offset).orderBy(sql`${deliveryOrders.createdAt} DESC`);
-
-      const deliveries = await query;
-
-      // Get total count for pagination
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(deliveryOrders)
-        .where(eq(deliveryOrders.businessId, businessId));
-
+        specialInstructions: orderDetails.specialInstructions || null,
+        driverName: externalDelivery.driverName || null,
+        driverPhone: externalDelivery.driverPhone || null,
+        trackingUrl: externalDelivery.trackingUrl || null,
+        providerData: JSON.stringify(externalDelivery.providerData || {}),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Create initial status history entry
+      await this.recordStatusChange(
+        delivery.id,
+        externalDelivery.status,
+        new Date()
+      );
+      
       return {
-        deliveries,
-        pagination: {
-          total: count,
-          page,
-          limit,
-          pages: Math.ceil(count / limit)
-        }
+        id: delivery.id,
+        externalOrderId: externalDelivery.externalOrderId,
+        providerId: orderDetails.providerId,
+        providerName: provider.getName(),
+        status: externalDelivery.status,
+        estimatedPickupTime: externalDelivery.estimatedPickupTime,
+        estimatedDeliveryTime: externalDelivery.estimatedDeliveryTime,
+        trackingUrl: externalDelivery.trackingUrl
       };
     } catch (error) {
-      console.error('Error getting business deliveries:', error);
-      throw new Error(`Failed to get business deliveries: ${(error as Error).message}`);
+      console.error('Error creating delivery order:', error);
+      throw new Error(`Failed to create delivery order: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Get a delivery by ID
+   * Cancel a delivery order
    */
-  async getDelivery(deliveryId: number) {
+  async cancelDelivery(deliveryId: number, reason?: string): Promise<boolean> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
     try {
-      const [delivery] = await db
-        .select()
-        .from(deliveryOrders)
-        .where(eq(deliveryOrders.id, deliveryId));
-
+      // Get the delivery order
+      const delivery = await storage.getDeliveryOrder(deliveryId);
       if (!delivery) {
-        throw new Error(`Delivery with ID ${deliveryId} not found`);
+        throw new Error(`Delivery order with ID ${deliveryId} not found`);
       }
+      
+      // Check if the delivery is already cancelled or completed
+      if (delivery.status === 'cancelled' || delivery.status === 'delivered') {
+        return false;
+      }
+      
+      // Get the provider
+      const provider = this.providers.get(delivery.providerId);
+      if (!provider) {
+        throw new Error(`Delivery provider with ID ${delivery.providerId} not found`);
+      }
+      
+      // Cancel the delivery with the provider
+      const cancelled = await provider.cancelDelivery(delivery.externalOrderId);
+      if (cancelled) {
+        // Update the status in our database
+        await storage.updateDeliveryOrderStatus(deliveryId, 'cancelled');
+        
+        // Record the status change
+        await this.recordStatusChange(
+          deliveryId,
+          'cancelled',
+          new Date(),
+          reason
+        );
+      }
+      
+      return cancelled;
+    } catch (error) {
+      console.error('Error cancelling delivery:', error);
+      return false;
+    }
+  }
 
+  /**
+   * Get a delivery order by ID
+   */
+  async getDeliveryOrder(deliveryId: number) {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
+    try {
+      const delivery = await storage.getDeliveryOrder(deliveryId);
+      if (!delivery) {
+        return null;
+      }
+      
+      // Try to get a status update from the provider
+      const provider = this.providers.get(delivery.providerId);
+      if (provider) {
+        try {
+          const currentStatus = await provider.getDeliveryStatus(delivery.externalOrderId);
+          
+          // If the status has changed, update our database
+          if (currentStatus !== delivery.status) {
+            const oldStatus = delivery.status;
+            delivery.status = currentStatus;
+            
+            // Update the status in our database
+            await storage.updateDeliveryOrderStatus(deliveryId, currentStatus);
+            
+            // Record the status change
+            await this.recordStatusChange(
+              deliveryId,
+              currentStatus,
+              new Date(),
+              `Status changed from ${oldStatus} to ${currentStatus} by provider`
+            );
+          }
+        } catch (error) {
+          console.warn(`Failed to get status update for delivery ${deliveryId}:`, error);
+          // Continue with the existing status
+        }
+      }
+      
       return delivery;
     } catch (error) {
-      console.error(`Error getting delivery ${deliveryId}:`, error);
-      throw new Error(`Failed to get delivery: ${(error as Error).message}`);
+      console.error('Error getting delivery order:', error);
+      throw new Error(`Failed to get delivery order: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Get a delivery by external order ID
+   * Get delivery orders for a business
    */
-  async getDeliveryByExternalId(externalOrderId: string) {
+  async getBusinessDeliveryOrders(
+    businessId: number,
+    options?: {
+      status?: DeliveryStatus;
+      orderId?: number;
+      limit?: number;
+      offset?: number;
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ) {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
     try {
-      const [delivery] = await db
-        .select()
-        .from(deliveryOrders)
-        .where(eq(deliveryOrders.externalOrderId, externalOrderId));
-
-      if (!delivery) {
-        throw new Error(`Delivery with external ID ${externalOrderId} not found`);
-      }
-
-      return delivery;
+      return await storage.getBusinessDeliveryOrders(businessId, options);
     } catch (error) {
-      console.error(`Error getting delivery with external ID ${externalOrderId}:`, error);
-      throw new Error(`Failed to get delivery: ${(error as Error).message}`);
+      console.error('Error getting business delivery orders:', error);
+      throw new Error(`Failed to get business delivery orders: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Update delivery status from webhook data
+   * Process a webhook from a delivery provider
    */
-  async updateDeliveryStatus(
-    externalOrderId: string,
-    status: DeliveryStatus,
+  async processWebhook(
+    providerType: string,
+    data: any,
+    headers: Record<string, string>
+  ): Promise<{
+    deliveryId: number;
+    oldStatus?: DeliveryStatus;
+    newStatus?: DeliveryStatus;
     driverInfo?: {
       id?: string;
       name?: string;
@@ -406,260 +367,214 @@ export class DeliveryService {
         latitude: number;
         longitude: number;
       };
-    },
-    additionalData?: any
-  ) {
+    };
+  } | null> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
     try {
-      const [delivery] = await db
-        .select()
-        .from(deliveryOrders)
-        .where(eq(deliveryOrders.externalOrderId, externalOrderId));
-
-      if (!delivery) {
-        throw new Error(`Delivery with external ID ${externalOrderId} not found`);
+      // Find the provider ID by type
+      const providerId = await this.findProviderIdByType(providerType);
+      if (!providerId) {
+        throw new Error(`No active provider found for type: ${providerType}`);
       }
-
-      // Update status history
-      const statusHistory = [
-        ...(delivery.statusHistory || []),
-        {
-          status,
-          timestamp: new Date().toISOString(),
-          notes: `Status updated to ${status}`
+      
+      // Get the provider
+      const provider = this.providers.get(providerId);
+      if (!provider) {
+        throw new Error(`Provider with ID ${providerId} not found`);
+      }
+      
+      // Get webhook secret
+      let webhookSecret = null;
+      if (providerType === 'doordash') {
+        webhookSecret = this.doorDashWebhookSecret;
+      }
+      
+      // Verify webhook signature if secret is available
+      if (webhookSecret) {
+        const isValid = await provider.verifyWebhookSignature(data, headers, webhookSecret);
+        if (!isValid) {
+          throw new Error('Invalid webhook signature');
         }
-      ];
-
-      // Prepare update data
-      const updateData: Partial<InsertDeliveryOrder> = {
-        status,
-        statusHistory,
-        updatedAt: new Date()
+      }
+      
+      // Parse webhook data
+      const webhookData = await provider.parseWebhookData(data, headers);
+      
+      // Find the delivery order in our database
+      const delivery = await storage.getDeliveryOrderByExternalId(webhookData.externalOrderId);
+      if (!delivery) {
+        console.warn(`Delivery order with external ID ${webhookData.externalOrderId} not found`);
+        return null;
+      }
+      
+      const oldStatus = delivery.status;
+      const newStatus = webhookData.status;
+      
+      // Update driver information if available
+      if (webhookData.driverInfo) {
+        const updates: any = {};
+        
+        if (webhookData.driverInfo.name) {
+          updates.driverName = webhookData.driverInfo.name;
+        }
+        
+        if (webhookData.driverInfo.phone) {
+          updates.driverPhone = webhookData.driverInfo.phone;
+        }
+        
+        if (webhookData.driverInfo.location) {
+          updates.lastDriverLocation = JSON.stringify(webhookData.driverInfo.location);
+          updates.lastLocationUpdate = new Date();
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          await storage.updateDeliveryOrder(delivery.id, updates);
+        }
+      }
+      
+      // Update status if it has changed
+      if (oldStatus !== newStatus) {
+        await storage.updateDeliveryOrderStatus(delivery.id, newStatus);
+        
+        // Record the status change
+        await this.recordStatusChange(
+          delivery.id,
+          newStatus,
+          webhookData.timestamp,
+          `Status updated by ${providerType} webhook`
+        );
+        
+        // For completed deliveries, update any additional data
+        if (newStatus === 'delivered') {
+          await storage.updateDeliveryOrder(delivery.id, {
+            actualDeliveryTime: webhookData.timestamp,
+            updatedAt: new Date()
+          });
+        }
+      }
+      
+      // For tracking additional webhook data
+      const additionalData = webhookData.additionalData;
+      if (additionalData) {
+        const currentData = delivery.providerData ? JSON.parse(delivery.providerData) : {};
+        const updatedData = {
+          ...currentData,
+          webhookEvents: [
+            ...(currentData.webhookEvents || []),
+            {
+              timestamp: webhookData.timestamp,
+              status: newStatus,
+              data: additionalData
+            }
+          ]
+        };
+        
+        await storage.updateDeliveryOrder(delivery.id, {
+          providerData: JSON.stringify(updatedData),
+          updatedAt: new Date()
+        });
+      }
+      
+      return {
+        deliveryId: delivery.id,
+        oldStatus,
+        newStatus,
+        driverInfo: webhookData.driverInfo
       };
-
-      // Update driver info if provided
-      if (driverInfo) {
-        if (driverInfo.id) updateData.driverId = driverInfo.id;
-        if (driverInfo.name) updateData.driverName = driverInfo.name;
-        if (driverInfo.phone) updateData.driverPhone = driverInfo.phone;
-        if (driverInfo.location) updateData.driverLocation = JSON.stringify(driverInfo.location);
-      }
-
-      // Update pickup and delivery times based on status
-      if (status === 'picked_up' && additionalData?.actualPickupTime) {
-        updateData.actualPickupTime = new Date(additionalData.actualPickupTime);
-      }
-
-      if (status === 'delivered' && additionalData?.actualDeliveryTime) {
-        updateData.actualDeliveryTime = new Date(additionalData.actualDeliveryTime);
-      }
-
-      // Update failure or cancellation reason if applicable
-      if (status === 'failed' && additionalData?.failureReason) {
-        updateData.failureReason = additionalData.failureReason;
-      }
-
-      if (status === 'cancelled' && additionalData?.cancelReason) {
-        updateData.cancelReason = additionalData.cancelReason;
-      }
-
-      // Update delivery in database
-      await db.update(deliveryOrders)
-        .set(updateData)
-        .where(eq(deliveryOrders.id, delivery.id));
-
-      return true;
     } catch (error) {
-      console.error(`Error updating delivery status for ${externalOrderId}:`, error);
+      console.error('Error processing webhook:', error);
+      throw new Error(`Failed to process webhook: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Update delivery status manually
+   */
+  async updateDeliveryStatus(
+    deliveryId: number,
+    newStatus: DeliveryStatus,
+    timestamp: Date = new Date()
+  ): Promise<{
+    oldStatus: DeliveryStatus;
+    newStatus: DeliveryStatus;
+  }> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
+    try {
+      // Get the delivery order
+      const delivery = await storage.getDeliveryOrder(deliveryId);
+      if (!delivery) {
+        throw new Error(`Delivery order with ID ${deliveryId} not found`);
+      }
+      
+      const oldStatus = delivery.status;
+      
+      // Skip if status hasn't changed
+      if (oldStatus === newStatus) {
+        return { oldStatus, newStatus };
+      }
+      
+      // Update status in our database
+      await storage.updateDeliveryOrderStatus(deliveryId, newStatus);
+      
+      // Record the status change
+      await this.recordStatusChange(
+        deliveryId,
+        newStatus,
+        timestamp,
+        'Status updated manually'
+      );
+      
+      // For completed deliveries, update actual delivery time
+      if (newStatus === 'delivered') {
+        await storage.updateDeliveryOrder(deliveryId, {
+          actualDeliveryTime: timestamp,
+          updatedAt: new Date()
+        });
+      }
+      
+      return { oldStatus, newStatus };
+    } catch (error) {
+      console.error('Error updating delivery status:', error);
       throw new Error(`Failed to update delivery status: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Process delivery provider payments for a date range
+   * Record a status change in the history
    */
-  async processProviderPayments(
-    startDate: Date,
-    endDate: Date,
-    providerId?: number
-  ) {
-    try {
-      let query = db
-        .select()
-        .from(deliveryOrders)
-        .where(
-          and(
-            sql`${deliveryOrders.createdAt} >= ${startDate}`,
-            sql`${deliveryOrders.createdAt} <= ${endDate}`,
-            eq(deliveryOrders.paymentSettled, false),
-            inArray(deliveryOrders.status, ['delivered', 'failed', 'cancelled'])
-          )
-        );
-
-      if (providerId) {
-        query = query.where(eq(deliveryOrders.providerId, providerId));
-      }
-
-      const deliveries = await query;
-
-      // Group deliveries by provider
-      const deliveriesByProvider: Record<number, typeof deliveries> = {};
-      for (const delivery of deliveries) {
-        if (!deliveriesByProvider[delivery.providerId]) {
-          deliveriesByProvider[delivery.providerId] = [];
-        }
-        deliveriesByProvider[delivery.providerId].push(delivery);
-      }
-
-      const results: any[] = [];
-
-      // Process each provider's deliveries
-      for (const [provId, providerDeliveries] of Object.entries(deliveriesByProvider)) {
-        const providerIdNum = parseInt(provId);
-        
-        // Calculate total amount to pay
-        let totalAmount = 0;
-        for (const delivery of providerDeliveries) {
-          // Only pay for delivered deliveries, not failed or cancelled
-          if (delivery.status === 'delivered') {
-            totalAmount += parseFloat(delivery.providerFee);
-          }
-        }
-
-        // Create payment record
-        const [payment] = await db.insert(deliveryPayments).values({
-          providerId: providerIdNum,
-          totalAmount: totalAmount.toString(),
-          ordersCount: providerDeliveries.length,
-          status: 'pending',
-          dateRangeStart: startDate,
-          dateRangeEnd: endDate,
-          paymentReference: `PAY-${uuidv4().slice(0, 8)}`,
-          notes: `Payment for ${providerDeliveries.length} deliveries from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`
-        }).returning();
-
-        // Create payment items
-        for (const delivery of providerDeliveries) {
-          await db.insert(deliveryPaymentItems).values({
-            paymentId: payment.id,
-            deliveryOrderId: delivery.id,
-            amount: delivery.status === 'delivered' ? delivery.providerFee : '0',
-          });
-
-          // Mark delivery as payment settled
-          await db.update(deliveryOrders)
-            .set({ paymentSettled: true })
-            .where(eq(deliveryOrders.id, delivery.id));
-        }
-
-        results.push({
-          providerId: providerIdNum,
-          paymentId: payment.id,
-          totalAmount,
-          ordersCount: providerDeliveries.length,
-        });
-      }
-
-      return results;
-    } catch (error) {
-      console.error('Error processing provider payments:', error);
-      throw new Error(`Failed to process provider payments: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Update payment status
-   */
-  async updatePaymentStatus(
-    paymentId: number,
-    status: 'pending' | 'processing' | 'paid' | 'failed' | 'sent' | 'settled',
+  private async recordStatusChange(
+    deliveryId: number,
+    status: DeliveryStatus,
+    timestamp: Date = new Date(),
     notes?: string
-  ) {
+  ): Promise<void> {
     try {
-      const updateData: Partial<InsertDeliveryPayment> = {
+      await storage.createDeliveryStatusHistory({
+        deliveryId,
         status,
-        updatedAt: new Date(),
-      };
-
-      if (notes) {
-        updateData.notes = notes;
-      }
-
-      if (status === 'paid' || status === 'settled') {
-        updateData.paidAt = new Date();
-      }
-
-      await db.update(deliveryPayments)
-        .set(updateData)
-        .where(eq(deliveryPayments.id, paymentId));
-
-      return true;
+        timestamp,
+        notes: notes || null,
+        createdAt: new Date()
+      });
     } catch (error) {
-      console.error(`Error updating payment status for payment ${paymentId}:`, error);
-      throw new Error(`Failed to update payment status: ${(error as Error).message}`);
+      console.error('Error recording delivery status change:', error);
+      // Don't throw error here, so the main operation can still succeed
     }
   }
 
   /**
-   * Get or create business delivery settings
+   * Find a provider ID by type (e.g., 'doordash')
    */
-  async getOrCreateBusinessDeliverySettings(businessId: number): Promise<BusinessDeliverySetting> {
-    try {
-      // Try to get existing settings
-      const [settings] = await db
-        .select()
-        .from(businessDeliverySettings)
-        .where(eq(businessDeliverySettings.businessId, businessId));
-
-      if (settings) {
-        return settings;
-      }
-
-      // Create default settings if none exist
-      const [newSettings] = await db.insert(businessDeliverySettings).values({
-        businessId,
-        isDeliveryEnabled: false,
-        deliveryRadius: '5.0',
-        minimumOrderValue: '10.00',
-        platformFeePercentage: '0.15',
-        platformFeeFixed: '1.00',
-        // Get all provider IDs
-        allowedProviders: Array.from(this.providerAdapters.keys()),
-      }).returning();
-
-      return newSettings;
-    } catch (error) {
-      console.error(`Error getting or creating business delivery settings for business ${businessId}:`, error);
-      throw new Error(`Failed to get or create business delivery settings: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Calculate distance between two coordinates
-   */
-  private calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    if (lat1 === 0 || lon1 === 0 || lat2 === 0 || lon2 === 0) {
-      return 0;
-    }
-
-    const R = 3958.8; // Earth radius in miles
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in miles
-    return Math.round(distance * 100) / 100;
-  }
-
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI / 180);
+  private async findProviderIdByType(type: string): Promise<number | null> {
+    const providers = await storage.getAllDeliveryProviders();
+    const provider = providers.find(p => p.type === type && p.isActive);
+    return provider ? provider.id : null;
   }
 }
 

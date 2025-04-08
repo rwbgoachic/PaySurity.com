@@ -1,188 +1,149 @@
-import { pgTable, pgEnum, serial, text, integer, boolean, timestamp, varchar, decimal, foreignKey, json, jsonb } from 'drizzle-orm/pg-core';
+/**
+ * Delivery System Database Schema
+ */
+
+import { integer, pgEnum, pgTable, serial, text, timestamp, boolean, json } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
-import { z } from 'zod';
 
-// Enums
-export const deliveryProviderTypeEnum = pgEnum('delivery_provider_type', ['internal', 'external']);
-
+/**
+ * Delivery status enum - all possible states a delivery can be in
+ */
 export const deliveryStatusEnum = pgEnum('delivery_status', [
-  'pending',
-  'accepted',
-  'assigned',
-  'picked_up',
-  'in_transit',
-  'delivered',
-  'failed',
-  'cancelled'
+  'pending',     // Delivery has been created but not yet accepted by the provider
+  'accepted',    // Delivery has been accepted by the provider
+  'assigned',    // Driver has been assigned to the delivery
+  'picked_up',   // Driver has picked up the order
+  'in_transit',  // Driver is en route to the customer
+  'delivered',   // Delivery has been successfully completed
+  'failed',      // Delivery failed (e.g., customer not found)
+  'cancelled'    // Delivery was cancelled
 ]);
 
-export const deliveryPaymentStatusEnum = pgEnum('delivery_payment_status', [
-  'pending',
-  'processing',
-  'paid',
-  'failed',
-  'sent',
-  'settled'
-]);
-
-// Delivery Regions
-export const deliveryRegions = pgTable('delivery_regions', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  country: text('country').notNull(),
-  state: text('state'),
-  city: text('city'),
-  postalCode: text('postal_code'),
-  radius: decimal('radius'),
-  centerLatitude: decimal('center_latitude'),
-  centerLongitude: decimal('center_longitude'),
-  polygonBoundary: json('polygon_boundary'),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
-});
-
-// Delivery Providers
+/**
+ * Delivery providers table - stores registered delivery services
+ */
 export const deliveryProviders = pgTable('delivery_providers', {
   id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  type: deliveryProviderTypeEnum('type').notNull(),
-  apiKey: text('api_key'),
-  apiSecret: text('api_secret'),
-  baseUrl: text('base_url'),
-  webhookSecret: text('webhook_secret'),
+  name: text('name').notNull(), // Provider name (e.g., "DoorDash", "Restaurant Staff")
+  type: text('type').notNull(), // Provider type (e.g., "internal", "doordash", "uber_eats")
+  apiKey: text('api_key'), // API key for external provider
+  apiSecret: text('api_secret'), // API secret for external provider
+  webhookKey: text('webhook_key'), // Secret key for webhook verification
   isActive: boolean('is_active').notNull().default(true),
-  baseFee: decimal('base_fee').notNull().default('3.00'),
-  perMileFee: decimal('per_mile_fee').notNull().default('0.50'),
-  minOrderValue: decimal('min_order_value').default('10.00'),
-  maxDeliveryDistance: decimal('max_delivery_distance'),
-  defaultTax: decimal('default_tax').default('0.00'),
-  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-  settings: jsonb('settings'),
+  settings: json('settings').default({}), // Provider-specific settings as JSON
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  updatedAt: timestamp('updated_at')
 });
 
-// Provider coverage by region
-export const deliveryProviderRegions = pgTable('delivery_provider_regions', {
+/**
+ * Delivery regions table - geographic areas where delivery is available
+ */
+export const deliveryRegions = pgTable('delivery_regions', {
   id: serial('id').primaryKey(),
-  providerId: integer('provider_id').references(() => deliveryProviders.id).notNull(),
-  regionId: integer('region_id').references(() => deliveryRegions.id).notNull(),
+  name: text('name').notNull(), // Region name (e.g., "Downtown", "North Side")
+  city: text('city').notNull(),
+  state: text('state').notNull(),
+  postalCodes: text('postal_codes').array(), // Array of postal codes in this region
+  providerId: integer('provider_id').references(() => deliveryProviders.id),
   isActive: boolean('is_active').notNull().default(true),
-  customFees: jsonb('custom_fees'),
+  maxDistance: integer('max_distance'), // Maximum delivery distance in miles
+  minimumOrderAmount: text('minimum_order_amount'), // Minimum order value for delivery
+  baseFee: text('base_fee'), // Base delivery fee for this region
+  feePerMile: text('fee_per_mile'), // Additional fee per mile
+  platformFee: text('platform_fee'), // Our platform fee or commission
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  updatedAt: timestamp('updated_at')
 });
 
-// Business delivery settings
+/**
+ * Business delivery settings table - configuration for each business
+ */
 export const businessDeliverySettings = pgTable('business_delivery_settings', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull(),
-  isDeliveryEnabled: boolean('is_delivery_enabled').notNull().default(false),
-  deliveryRadius: decimal('delivery_radius').default('5.0'),
-  minimumOrderValue: decimal('minimum_order_value').default('10.00'),
-  deliveryFeeCustomerOffset: decimal('delivery_fee_customer_offset').default('0.00'),
-  businessAbsorbsDeliveryFee: boolean('business_absorbs_delivery_fee').notNull().default(false),
-  platformFeePercentage: decimal('platform_fee_percentage').default('0.15'),
-  platformFeeFixed: decimal('platform_fee_fixed').default('1.00'),
-  allowedProviders: jsonb('allowed_providers'),
-  customDeliveryHours: jsonb('custom_delivery_hours'),
-  schedulingWindowMin: integer('scheduling_window_min').default(0),
-  schedulingWindowMax: integer('scheduling_window_max').default(14),
-  deliveryInstructions: text('delivery_instructions'),
+  isDeliveryEnabled: boolean('is_delivery_enabled').notNull().default(true),
+  defaultProviderId: integer('default_provider_id').references(() => deliveryProviders.id),
+  customFeeEnabled: boolean('custom_fee_enabled').notNull().default(false),
+  customBaseFee: text('custom_base_fee'), // Custom base fee if different from provider
+  customFeePerMile: text('custom_fee_per_mile'), // Custom per-mile fee
+  customPlatformFee: text('custom_platform_fee'), // Custom platform fee
+  customDeliveryRadius: integer('custom_delivery_radius'), // Custom delivery radius in miles
+  autoAcceptOrders: boolean('auto_accept_orders').notNull().default(true),
+  deliveryInstructions: text('delivery_instructions'), // Default instructions for drivers
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  updatedAt: timestamp('updated_at')
 });
 
-// Delivery Orders
+/**
+ * Delivery orders table - records of delivery orders
+ */
 export const deliveryOrders = pgTable('delivery_orders', {
   id: serial('id').primaryKey(),
-  orderId: integer('order_id').notNull(),
+  externalOrderId: text('external_order_id'), // ID assigned by external provider
   businessId: integer('business_id').notNull(),
   providerId: integer('provider_id').references(() => deliveryProviders.id).notNull(),
+  orderId: integer('order_id').notNull(), // Reference to the POS order
   status: deliveryStatusEnum('status').notNull().default('pending'),
-  externalOrderId: text('external_order_id'),
   customerName: text('customer_name').notNull(),
   customerPhone: text('customer_phone').notNull(),
-  customerAddress: text('customer_address').notNull(),
-  customerLatitude: text('customer_latitude'),
-  customerLongitude: text('customer_longitude'),
-  businessAddress: text('business_address').notNull(),
-  businessLatitude: text('business_latitude'),
-  businessLongitude: text('business_longitude'),
-  driverId: text('driver_id'),
+  customerAddress: text('customer_address').notNull(), // Stored as JSON string
+  businessAddress: text('business_address').notNull(), // Stored as JSON string
+  orderDetails: json('order_details').notNull(), // Order items, etc.
+  specialInstructions: text('special_instructions'),
+  estimatedPickupTime: timestamp('estimated_pickup_time'),
+  estimatedDeliveryTime: timestamp('estimated_delivery_time'),
+  actualPickupTime: timestamp('actual_pickup_time'),
+  actualDeliveryTime: timestamp('actual_delivery_time'),
+  driverId: text('driver_id'), // Driver ID from provider
   driverName: text('driver_name'),
   driverPhone: text('driver_phone'),
-  driverLocation: text('driver_location'),
-  estimatedPickupTime: timestamp('estimated_pickup_time'),
-  actualPickupTime: timestamp('actual_pickup_time'),
-  estimatedDeliveryTime: timestamp('estimated_delivery_time'),
-  actualDeliveryTime: timestamp('actual_delivery_time'),
-  providerFee: decimal('provider_fee').notNull(),
-  customerFee: decimal('customer_fee').notNull(),
-  platformFee: decimal('platform_fee').notNull(),
-  specialInstructions: text('special_instructions'),
-  statusHistory: jsonb('status_history'),
-  trackingUrl: text('tracking_url'),
-  failureReason: text('failure_reason'),
-  cancelReason: text('cancel_reason'),
-  paymentSettled: boolean('payment_settled').notNull().default(false),
-  providerData: jsonb('provider_data'),
+  trackingUrl: text('tracking_url'), // URL for tracking the delivery
+  distance: text('distance'), // Distance in miles
+  providerFee: text('provider_fee').notNull(), // Fee paid to provider
+  platformFee: text('platform_fee').notNull(), // Our platform fee
+  customerFee: text('customer_fee').notNull(), // Total fee charged to customer
+  providerResponse: json('provider_response'), // Raw response from provider
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  updatedAt: timestamp('updated_at')
 });
 
-// Delivery Payments
-export const deliveryPayments = pgTable('delivery_payments', {
+/**
+ * Delivery status history table - tracks all status changes
+ */
+export const deliveryStatusHistory = pgTable('delivery_status_history', {
   id: serial('id').primaryKey(),
-  providerId: integer('provider_id').references(() => deliveryProviders.id).notNull(),
-  totalAmount: decimal('total_amount').notNull(),
-  ordersCount: integer('orders_count').notNull(),
-  status: deliveryPaymentStatusEnum('status').notNull().default('pending'),
-  dateRangeStart: timestamp('date_range_start').notNull(),
-  dateRangeEnd: timestamp('date_range_end').notNull(),
-  paymentReference: text('payment_reference'),
-  paidAt: timestamp('paid_at'),
-  notes: text('notes'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
-});
-
-// Delivery Payment Items
-export const deliveryPaymentItems = pgTable('delivery_payment_items', {
-  id: serial('id').primaryKey(),
-  paymentId: integer('payment_id').references(() => deliveryPayments.id).notNull(),
   deliveryOrderId: integer('delivery_order_id').references(() => deliveryOrders.id).notNull(),
-  amount: decimal('amount').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  status: deliveryStatusEnum('status').notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  notes: text('notes'),
+  driverLatitude: text('driver_latitude'),
+  driverLongitude: text('driver_longitude'),
+  createdAt: timestamp('created_at').defaultNow()
 });
 
-// Export types
+export const insertDeliveryProviderSchema = createInsertSchema(deliveryProviders);
+export const insertDeliveryRegionSchema = createInsertSchema(deliveryRegions);
+export const insertBusinessDeliverySettingsSchema = createInsertSchema(businessDeliverySettings);
+export const insertDeliveryOrderSchema = createInsertSchema(deliveryOrders);
+export const insertDeliveryStatusHistorySchema = createInsertSchema(deliveryStatusHistory);
+
+// Extended schema for creating a new delivery with simplified fields
+export const createDeliverySchema = insertDeliveryOrderSchema.extend({
+  // Additional validation or transformation can be added here
+});
+
+// Types
 export type DeliveryProvider = typeof deliveryProviders.$inferSelect;
 export type InsertDeliveryProvider = typeof deliveryProviders.$inferInsert;
-export const insertDeliveryProviderSchema = createInsertSchema(deliveryProviders);
 
 export type DeliveryRegion = typeof deliveryRegions.$inferSelect;
 export type InsertDeliveryRegion = typeof deliveryRegions.$inferInsert;
-export const insertDeliveryRegionSchema = createInsertSchema(deliveryRegions);
-
-export type DeliveryProviderRegion = typeof deliveryProviderRegions.$inferSelect;
-export type InsertDeliveryProviderRegion = typeof deliveryProviderRegions.$inferInsert;
-export const insertDeliveryProviderRegionSchema = createInsertSchema(deliveryProviderRegions);
 
 export type BusinessDeliverySetting = typeof businessDeliverySettings.$inferSelect;
 export type InsertBusinessDeliverySetting = typeof businessDeliverySettings.$inferInsert;
-export const insertBusinessDeliverySettingsSchema = createInsertSchema(businessDeliverySettings);
 
 export type DeliveryOrder = typeof deliveryOrders.$inferSelect;
 export type InsertDeliveryOrder = typeof deliveryOrders.$inferInsert;
-export const insertDeliveryOrderSchema = createInsertSchema(deliveryOrders);
 
-export type DeliveryPayment = typeof deliveryPayments.$inferSelect;
-export type InsertDeliveryPayment = typeof deliveryPayments.$inferInsert;
-export const insertDeliveryPaymentSchema = createInsertSchema(deliveryPayments);
-
-export type DeliveryPaymentItem = typeof deliveryPaymentItems.$inferSelect;
-export type InsertDeliveryPaymentItem = typeof deliveryPaymentItems.$inferInsert;
-export const insertDeliveryPaymentItemSchema = createInsertSchema(deliveryPaymentItems);
+export type DeliveryStatusHistoryEntry = typeof deliveryStatusHistory.$inferSelect;
+export type InsertDeliveryStatusHistoryEntry = typeof deliveryStatusHistory.$inferInsert;
