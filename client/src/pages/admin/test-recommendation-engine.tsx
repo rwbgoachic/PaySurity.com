@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveLine } from "@nivo/line";
-import { Check, AlertTriangle, Clock, TrendingUp, Brain, Target, Search, LineChart, Zap, Gauge, Filter } from "lucide-react";
+import { Check, AlertTriangle, Clock, TrendingUp, Brain, Target, Search, LineChart, Zap, Gauge, Filter, RefreshCw } from "lucide-react";
 import { 
   Table,
   TableBody,
@@ -23,41 +23,20 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
-// Test type definitions
-interface TestSuite {
-  id: string;
-  name: string;
-  lastRun: string;
-  testCount: number;
-  passRate: number;
-  executionTime: number;
-  complexity: 'low' | 'medium' | 'high';
-  priority: number;
-  failureImpact: 'low' | 'medium' | 'high';
-  coverage: number;
-  trend: { x: string; y: number }[];
-  tags: string[];
-  dependencies: string[];
-  failureReason?: string;
-}
-
-interface TestRecommendation {
-  testSuiteId: string;
-  score: number;
-  reason: string;
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  predictedSuccessRate: number;
-  estimatedDuration: number;
-}
+// Import our new test recommendation service
+import { TestSuite, TestRecommendation, testRecommendationService } from "@/lib/test-recommendation-service";
 
 export default function TestRecommendationEngine() {
   const [testSuites, setTestSuites] = useState<TestSuite[]>([]);
   const [recommendations, setRecommendations] = useState<TestRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [selectedSuite, setSelectedSuite] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const { toast } = useToast();
   
   useEffect(() => {
     // In a real app, this would be an API call
@@ -347,8 +326,48 @@ export default function TestRecommendationEngine() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="default">
-            <Brain className="mr-2 h-4 w-4" /> Generate Recommendations
+          <Button 
+            variant="default" 
+            onClick={() => {
+              setGenerating(true);
+              
+              // Use our local recommendation engine
+              try {
+                const newRecommendations = testRecommendationService.generateRecommendations(testSuites);
+                setRecommendations(newRecommendations);
+                
+                // Also get anomalies and insights
+                const anomalies = testRecommendationService.detectAnomalies(testSuites);
+                const correlations = testRecommendationService.analyzeCorrelations(testSuites);
+                
+                // Show success toast
+                toast({
+                  title: "Recommendations Generated",
+                  description: `Generated ${newRecommendations.length} test recommendations with AI-powered analysis`,
+                  variant: "default"
+                });
+              } catch (error) {
+                console.error("Error generating recommendations:", error);
+                toast({
+                  title: "Error Generating Recommendations",
+                  description: "An error occurred while analyzing test data",
+                  variant: "destructive"
+                });
+              } finally {
+                setGenerating(false);
+              }
+            }}
+            disabled={generating}
+          >
+            {generating ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Analyzing...
+              </>
+            ) : (
+              <>
+                <Brain className="mr-2 h-4 w-4" /> Generate Recommendations
+              </>
+            )}
           </Button>
         </div>
         
