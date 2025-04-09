@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, useTheme } from 'react-native-paper';
 import { colors, walletColorSchemes } from '../utils/theme';
 import { WalletProvider } from '../hooks/useWallet';
+import { AnimationToolkitProvider } from '../components/animations';
 
 // Import screens
 // Auth screens
@@ -41,6 +42,7 @@ import TaskDetailsScreen from '../screens/wallet/TaskDetailsScreen';
 import AddSavingsGoalScreen from '../screens/wallet/AddSavingsGoalScreen';
 import SavingsGoalDetailsScreen from '../screens/wallet/SavingsGoalDetailsScreen';
 import EmployeeDetailsScreen from '../screens/wallet/EmployeeDetailsScreen';
+import AnimationDemoScreen from '../screens/wallet/AnimationDemoScreen';
 
 // Role-specific wallet screens
 import ParentWalletScreen from '../screens/wallet/ParentWalletScreen';
@@ -224,6 +226,11 @@ const WalletStack = () => {
         component={EmployeeDetailsScreen}
         options={{ title: "Employee Details" }}
       />
+      <Stack.Screen 
+        name="AnimationDemo" 
+        component={AnimationDemoScreen}
+        options={{ title: "Animation Toolkit" }}
+      />
     </Stack.Navigator>
   );
 };
@@ -315,7 +322,9 @@ const AppNavigator = () => {
   return (
     <NavigationContainer theme={navigationTheme}>
       <WalletProvider>
-        {isAuthenticated ? <TabNavigator /> : <AuthStack />}
+        <AnimationToolkitProvider>
+          {isAuthenticated ? <TabNavigator /> : <AuthStack />}
+        </AnimationToolkitProvider>
       </WalletProvider>
     </NavigationContainer>
   );
