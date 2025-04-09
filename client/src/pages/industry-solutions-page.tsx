@@ -36,7 +36,7 @@ export default function IndustrySolutionsPage() {
       {/* Industry Solutions Tabs */}
       <section className="py-12">
         <div className="container mx-auto px-4 md:px-6">
-          <Tabs defaultValue="restaurant" className="max-w-5xl mx-auto">
+          <Tabs defaultValue="hospitality" className="max-w-5xl mx-auto">
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-9 overflow-x-auto">
               <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
               <TabsTrigger value="retail">Retail</TabsTrigger>
