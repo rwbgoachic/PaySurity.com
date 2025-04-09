@@ -14,6 +14,14 @@ import PosSystemsPage from "@/pages/pos-systems-page";
 import ProductsPage from "@/pages/products-page";
 import PaymentPage from "@/pages/payment-page";
 import PaymentSuccessPage from "@/pages/payment-success-page";
+import PaymentsPage from "@/pages/payments-page";
+import DocumentationPage from "@/pages/documentation";
+import FAQPage from "@/pages/faq";
+import SupportPage from "@/pages/support-page";
+import AboutPage from "@/pages/about-page";
+import CareersPage from "@/pages/careers-page";
+import ContactPage from "@/pages/contact-page";
+import LegalPage from "@/pages/legal-page";
 import Partners from "@/pages/partners";
 import Affiliates from "@/pages/affiliates";
 import PartnerPortal from "@/pages/partner-portal";
@@ -83,6 +91,14 @@ function Router() {
       <Route path="/industry-solutions" component={IndustrySolutionsPage} />
       <Route path="/digital-wallet" component={DigitalWalletPage} />
       <Route path="/pos-systems" component={PosSystemsPage} />
+      <Route path="/payments" component={PaymentsPage} />
+      <Route path="/documentation" component={DocumentationPage} />
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/support" component={SupportPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/careers" component={CareersPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/legal" component={LegalPage} />
       <Route path="/partners" component={Partners} />
       <Route path="/affiliates" component={Affiliates} />
       <Route path="/partner-portal" component={PartnerPortal} />

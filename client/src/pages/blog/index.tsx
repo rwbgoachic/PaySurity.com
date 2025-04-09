@@ -436,55 +436,55 @@ export default function BlogPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-neutral-900 text-neutral-300 py-12">
+      <footer className="border-t border-gray-200 bg-gray-50 py-12 text-gray-600">
         <div className="container mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">PaySurity</h3>
+              <h3 className="text-gray-900 font-bold text-lg mb-4">PaySurity</h3>
               <p className="text-sm mb-4">
                 Comprehensive payment processing and business management solutions for businesses of all sizes.
               </p>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Solutions</h4>
+              <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Solutions</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">BistroBeast<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/pos-systems" className="hover:text-white transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/digital-wallet" className="hover:text-white transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></a></li>
-                <li><a href="/industry-solutions" className="hover:text-white transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></a></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity Merchant Services<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/pos-systems" className="text-gray-600 hover:text-gray-900 transition-colors">BistroBeast<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity ECom Ready<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity LegalEdge<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurityMedPay<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/pos-systems" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity POS Hardware<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity WebCon<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/digital-wallet" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity Wallet<sup className="text-xs">TM</sup></Link></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">PaySurity Affiliates<sup className="text-xs">TM</sup></Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Resources</h4>
+              <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Resources</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/blog" className="hover:text-white transition-colors">Blog Home</Link></li>
-                <li><Link href="/blog/payment-industry-news" className="hover:text-white transition-colors">Industry News</Link></li>
-                <li><Link href="/blog/industry/restaurant" className="hover:text-white transition-colors">Restaurants</Link></li>
-                <li><Link href="/blog/industry/retail" className="hover:text-white transition-colors">Retail</Link></li>
-                <li><Link href="/blog/industry/legal" className="hover:text-white transition-colors">Legal</Link></li>
-                <li><Link href="/blog/industry/healthcare" className="hover:text-white transition-colors">Healthcare</Link></li>
+                <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog Home</Link></li>
+                <li><Link to="/blog/payment-industry-news" className="text-gray-600 hover:text-gray-900 transition-colors">Industry News</Link></li>
+                <li><Link to="/blog/industry/restaurant" className="text-gray-600 hover:text-gray-900 transition-colors">Restaurants</Link></li>
+                <li><Link to="/blog/industry/retail" className="text-gray-600 hover:text-gray-900 transition-colors">Retail</Link></li>
+                <li><Link to="/blog/industry/legal" className="text-gray-600 hover:text-gray-900 transition-colors">Legal</Link></li>
+                <li><Link to="/blog/industry/healthcare" className="text-gray-600 hover:text-gray-900 transition-colors">Healthcare</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Company</h4>
+              <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/#" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link href="/#" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link href="/#" className="hover:text-white transition-colors">Careers</Link></li>
-                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+                <li><Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</Link></li>
+                <li><Link to="/careers" className="text-gray-600 hover:text-gray-900 transition-colors">Careers</Link></li>
+                <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <div className="border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm mb-4 md:mb-0">© 2023 PaySurity. All rights reserved.</p>
             <div className="flex gap-4">
-              <Link href="/#" className="text-neutral-400 hover:text-white transition-colors">Privacy Policy</Link>
-              <Link href="/#" className="text-neutral-400 hover:text-white transition-colors">Terms of Service</Link>
+              <Link to="/legal" className="text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</Link>
+              <Link to="/legal" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>
