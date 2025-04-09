@@ -11,6 +11,8 @@ import IndustrySolutionsPage from "@/pages/industry-solutions-page";
 import DigitalWalletPage from "@/pages/digital-wallet-page";
 import PosSystemsPage from "@/pages/pos-systems-page";
 import ProductsPage from "@/pages/products-page";
+import PaymentPage from "@/pages/payment-page";
+import PaymentSuccessPage from "@/pages/payment-success-page";
 import WalletPage from "@/pages/wallet";
 import PosPage from "@/pages/pos";
 import MerchantPage from "@/pages/merchant";
@@ -223,6 +225,14 @@ function Router() {
             </React.Suspense>
           );
         }}
+      </Route>
+
+      {/* Payment routes */}
+      <Route exact path="/payment">
+        <PaymentPage />
+      </Route>
+      <Route exact path="/payment-success">
+        <PaymentSuccessPage />
       </Route>
       
       {/* Admin routes */}

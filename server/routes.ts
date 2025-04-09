@@ -9,6 +9,7 @@ import { generateSitemap } from "./sitemap";
 import { z } from "zod";
 import { sendOrderStatusSms } from "./services/sms";
 import { deliveryService } from "./services/delivery/delivery-service";
+import { processPayment } from './services/payment.service';
 import { processOrderModifications } from "./services/orderModification";
 import { generateOrderModificationUrl } from "./services/qrcode";
 import { taxCalculationService } from "./services/payroll/tax-calculation-service";
@@ -2754,6 +2755,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // End of Health Check API
   // -------------------------------------------------
 
+  // Payment Processing API for merchant QR code payments
+  // -------------------------------------------------
+  
+  // Process a payment from a customer scanning a merchant QR code
+  app.post('/api/process-payment', async (req, res) => {
+    // Process the payment
+    await processPayment(req, res);
+  });
+  
+  // End of Payment Processing API
+  // -------------------------------------------------
+  
   const httpServer = createServer(app);
 
   // Public Payment Processing API Endpoint for Helcim
