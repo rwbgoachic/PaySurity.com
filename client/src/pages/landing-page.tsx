@@ -377,7 +377,7 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="mt-auto">
-                <Link href="/industry-solutions" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
+                <Link to="/industry-solutions" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
                   Learn more <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>
@@ -414,7 +414,7 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="mt-auto">
-                <Link href="/industry-solutions" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
+                <Link to="/industry-solutions" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
                   Learn more <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>
@@ -451,7 +451,7 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="mt-auto">
-                <Link href="/industry-solutions" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
+                <Link to="/industry-solutions" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
                   Learn more <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>
@@ -459,7 +459,7 @@ export default function LandingPage() {
           </div>
           
           <div className="text-center">
-            <Link href="/industry-solutions">
+            <Link to="/industry-solutions">
               <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
                 See all industry solutions
               </Button>
@@ -483,42 +483,42 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Products</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/payments" className="text-gray-600 hover:text-gray-900 transition-colors">Payments</Link></li>
-                <li><Link href="/pos-systems" className="text-gray-600 hover:text-gray-900 transition-colors">POS Systems</Link></li>
-                <li><Link href="/digital-wallet" className="text-gray-600 hover:text-gray-900 transition-colors">Digital Wallet</Link></li>
-                <li><Link href="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">Industry Solutions</Link></li>
-                <li><Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link></li>
+                <li><Link to="/payments" className="text-gray-600 hover:text-gray-900 transition-colors">Payments</Link></li>
+                <li><Link to="/pos-systems" className="text-gray-600 hover:text-gray-900 transition-colors">POS Systems</Link></li>
+                <li><Link to="/digital-wallet" className="text-gray-600 hover:text-gray-900 transition-colors">Digital Wallet</Link></li>
+                <li><Link to="/industry-solutions" className="text-gray-600 hover:text-gray-900 transition-colors">Industry Solutions</Link></li>
+                <li><Link to="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Resources</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
-                <li><Link href="/documentation" className="text-gray-600 hover:text-gray-900 transition-colors">Documentation</Link></li>
-                <li><Link href="/faq" className="text-gray-600 hover:text-gray-900 transition-colors">FAQ</Link></li>
-                <li><Link href="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Support</Link></li>
-                <li><Link href="/partners" className="text-gray-600 hover:text-gray-900 transition-colors">Partners</Link></li>
+                <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
+                <li><Link to="/documentation" className="text-gray-600 hover:text-gray-900 transition-colors">Documentation</Link></li>
+                <li><Link to="/faq" className="text-gray-600 hover:text-gray-900 transition-colors">FAQ</Link></li>
+                <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Support</Link></li>
+                <li><Link to="/partners" className="text-gray-600 hover:text-gray-900 transition-colors">Partners</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/about" className="text-gray-600 hover:text-gray-900 transition-colors">About Us</Link></li>
-                <li><Link href="/careers" className="text-gray-600 hover:text-gray-900 transition-colors">Careers</Link></li>
-                <li><Link href="/customers" className="text-gray-600 hover:text-gray-900 transition-colors">Customers</Link></li>
-                <li><Link href="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</Link></li>
+                <li><Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors">About Us</Link></li>
+                <li><Link to="/careers" className="text-gray-600 hover:text-gray-900 transition-colors">Careers</Link></li>
+                <li><Link to="/customers" className="text-gray-600 hover:text-gray-900 transition-colors">Customers</Link></li>
+                <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/compliance" className="text-gray-600 hover:text-gray-900 transition-colors">Compliance</Link></li>
-                <li><Link href="/security" className="text-gray-600 hover:text-gray-900 transition-colors">Security</Link></li>
+                <li><Link to="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/compliance" className="text-gray-600 hover:text-gray-900 transition-colors">Compliance</Link></li>
+                <li><Link to="/security" className="text-gray-600 hover:text-gray-900 transition-colors">Security</Link></li>
               </ul>
             </div>
           </div>

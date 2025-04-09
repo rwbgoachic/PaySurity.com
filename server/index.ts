@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
 import compression from "compression";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -197,14 +198,30 @@ app.use((req, res, next) => {
   });
 
   // Add a special route for client-side routing paths that should not be handled by the API
-  app.get(['/partners', '/affiliates', '/partner-portal', '/affiliate-portal'], (req, res, next) => {
+  app.get([
+    // Main routes
+    '/partners', '/affiliates', '/partner-portal', '/affiliate-portal',
+    '/products', '/pricing', '/industry-solutions', '/digital-wallet', '/pos-systems',
+    
+    // Blog and resource pages
+    '/blog', '/blog/*', '/documentation', '/faq', '/support',
+    
+    // Company pages
+    '/about', '/careers', '/customers', '/contact',
+    
+    // Legal pages
+    '/terms', '/privacy', '/compliance', '/security',
+    
+    // All other client-side routes that might be in the footer
+    '/payments'
+  ], (req, res, next) => {
     // Force these paths to be handled by Vite/client-side routing
     if (app.get("env") === "development") {
       // In development, let Vite handle it
       next();
     } else {
       // In production, serve the index.html
-      res.sendFile(path.resolve(import.meta.dirname, "public", "index.html"));
+      res.sendFile(path.join(import.meta.dirname, "public", "index.html"));
     }
   });
 
