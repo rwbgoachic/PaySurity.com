@@ -196,6 +196,18 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Add a special route for client-side routing paths that should not be handled by the API
+  app.get(['/partners', '/affiliates', '/partner-portal', '/affiliate-portal'], (req, res, next) => {
+    // Force these paths to be handled by Vite/client-side routing
+    if (app.get("env") === "development") {
+      // In development, let Vite handle it
+      next();
+    } else {
+      // In production, serve the index.html
+      res.sendFile(path.resolve(import.meta.dirname, "public", "index.html"));
+    }
+  });
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
