@@ -226,8 +226,12 @@ function Router() {
       }} />
 
       {/* Payment routes */}
-      <Route path="/payment" component={PaymentPage} />
-      <Route path="/payment-success" component={PaymentSuccessPage} />
+      <Route path="/payment">
+        <PaymentPage />
+      </Route>
+      <Route path="/payment-success">
+        <PaymentSuccessPage />
+      </Route>
       
       {/* Admin routes */}
       <Route path="/admin/sms-settings" component={() => {
