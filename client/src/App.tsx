@@ -1,4 +1,5 @@
 import React from "react";
+import RouteDebugComponent from "./lib/RouteDebugComponent";
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
@@ -226,22 +227,20 @@ function Router() {
       }} />
 
       {/* Payment routes */}
-      <Route path="/payment">
-        <PaymentPage />
-      </Route>
-      <Route path="/payment-success">
-        <PaymentSuccessPage />
-      </Route>
+      <Route path="/payment" component={PaymentPage} />
+      <Route path="/payment-success" component={PaymentSuccessPage} />
       
       {/* Admin routes */}
-      <Route path="/admin/sms-settings" component={() => {
-        const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <SmsSettings />
-          </React.Suspense>
-        );
-      }} />
+      <Route path="/admin/sms-settings">
+        {() => {
+          const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
+          return (
+            <React.Suspense fallback={<div>Loading...</div>}>
+              <SmsSettings />
+            </React.Suspense>
+          );
+        }}
+      </Route>
       
       {/* Catch-all route - must be last */}
       <Route component={NotFound} />
@@ -285,6 +284,7 @@ function App() {
       {/* WebSocketHandler for real-time notifications */}
       <WebSocketHandler />
       <Toaster />
+      <RouteDebugComponent />
     </AuthProvider>
   );
 }
