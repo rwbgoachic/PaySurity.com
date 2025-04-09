@@ -111,8 +111,8 @@ export default function LandingPage() {
           </div>
           
           {/* Animated cards */}
-          <div className="relative w-full h-80 md:h-96 overflow-hidden mb-20">
-            <div className="absolute left-1/2 transform -translate-x-1/2 grid grid-cols-3 gap-6 w-[140%] opacity-90">
+          <div className="relative w-full h-[550px] md:h-96 overflow-hidden mb-20">
+            <div className="absolute left-1/2 transform -translate-x-1/2 grid grid-cols-1 md:grid-cols-3 gap-6 w-[85%] md:w-[90%] lg:w-[85%] xl:w-[80%] opacity-90">
               {/* Row 1 */}
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <div className="rounded-full bg-purple-100 w-10 h-10 flex items-center justify-center mb-4">
@@ -139,7 +139,7 @@ export default function LandingPage() {
               </div>
               
               {/* Row 2 */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 translate-y-4">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 md:translate-y-4">
                 <div className="rounded-full bg-orange-100 w-10 h-10 flex items-center justify-center mb-4">
                   <ShieldCheck className="h-5 w-5 text-orange-600" />
                 </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
                 <p className="text-sm text-gray-600">AI-powered fraud detection that adapts to your business needs.</p>
               </div>
               
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 translate-y-4">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 md:translate-y-4">
                 <div className="rounded-full bg-indigo-100 w-10 h-10 flex items-center justify-center mb-4">
                   <BarChart className="h-5 w-5 text-indigo-600" />
                 </div>
@@ -155,7 +155,7 @@ export default function LandingPage() {
                 <p className="text-sm text-gray-600">Get instant insights into your payment performance and customer behavior.</p>
               </div>
               
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 translate-y-4">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 md:translate-y-4">
                 <div className="rounded-full bg-red-100 w-10 h-10 flex items-center justify-center mb-4">
                   <Smartphone className="h-5 w-5 text-red-600" />
                 </div>
