@@ -20,6 +20,14 @@ export default function RouteDebugComponent() {
   const handleGoToPaymentSuccess = () => {
     setLocation('/payment-success?reference=ORDER123&amount=54.99&currency=USD&merchant=MERCHANT001');
   };
+  
+  const handleGoToPartners = () => {
+    setLocation('/partners');
+  };
+
+  const handleGoToAffiliates = () => {
+    setLocation('/affiliates');
+  };
 
   return (
     <div style={{ 
@@ -60,6 +68,32 @@ export default function RouteDebugComponent() {
           }}
         >
           Go to Success
+        </button>
+        <button 
+          onClick={handleGoToPartners}
+          style={{ 
+            backgroundColor: 'purple', 
+            color: 'white', 
+            padding: '5px 10px', 
+            margin: '5px',
+            border: 'none',
+            borderRadius: '3px'
+          }}
+        >
+          Partners
+        </button>
+        <button 
+          onClick={handleGoToAffiliates}
+          style={{ 
+            backgroundColor: 'orange', 
+            color: 'white', 
+            padding: '5px 10px', 
+            margin: '5px',
+            border: 'none',
+            borderRadius: '3px'
+          }}
+        >
+          Affiliates
         </button>
       </div>
     </div>
