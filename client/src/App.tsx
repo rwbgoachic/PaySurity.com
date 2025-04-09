@@ -214,24 +214,28 @@ function Router() {
       }} />
       
       {/* Customer-facing routes */}
-      <Route path="/order-modify/:token" component={(props) => {
-        const OrderModify = React.lazy(() => import("./pages/customer/order-modify"));
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <OrderModify {...props} />
-          </React.Suspense>
-        );
-      }} />
+      <Route path="/order-modify/:token">
+        {(params) => {
+          const OrderModify = React.lazy(() => import("./pages/customer/order-modify"));
+          return (
+            <React.Suspense fallback={<div>Loading...</div>}>
+              <OrderModify params={params} />
+            </React.Suspense>
+          );
+        }}
+      </Route>
       
       {/* Admin routes */}
-      <Route path="/admin/sms-settings" component={(props) => {
-        const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <SmsSettings {...props} />
-          </React.Suspense>
-        );
-      }} />
+      <Route path="/admin/sms-settings">
+        {(params) => {
+          const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
+          return (
+            <React.Suspense fallback={<div>Loading...</div>}>
+              <SmsSettings params={params} />
+            </React.Suspense>
+          );
+        }}
+      </Route>
       
       {/* Catch-all route - must be last */}
       <Route component={NotFound} />

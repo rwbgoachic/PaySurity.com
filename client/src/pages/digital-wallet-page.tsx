@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +21,6 @@ import {
   FileText
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SiteLayout } from "@/components/layout/site-layout";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function DigitalWalletPage() {
@@ -38,7 +37,49 @@ export default function DigitalWalletPage() {
   };
 
   return (
-    <SiteLayout>
+    <div className="flex flex-col min-h-screen">
+      {/* Top Navigation */}
+      <header className="border-b border-gray-100 bg-white">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-8">
+            {/* Logo */}
+            <Link to="/">
+              <div className="flex items-center">
+                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">PaySurity</span>
+              </div>
+            </Link>
+            
+            {/* Main Navigation */}
+            <nav className="hidden md:flex space-x-6">
+              <Link to="/products">
+                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Products</span>
+              </Link>
+              <Link to="/digital-wallet">
+                <span className="text-sm text-gray-900 font-medium transition-colors">Digital Wallet</span>
+              </Link>
+              <Link to="/industry-solutions">
+                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Solutions</span>
+              </Link>
+              <Link to="/pos-systems">
+                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">POS Systems</span>
+              </Link>
+              <Link to="/pricing">
+                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</span>
+              </Link>
+            </nav>
+          </div>
+          
+          {/* Right Side Navigation */}
+          <div className="flex items-center space-x-4">
+            <Link to="/auth">
+              <Button variant="ghost" size="sm" className="hidden md:inline-flex">Login</Button>
+            </Link>
+            <Link to="/auth">
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/5 to-primary/10 pt-20 pb-12">
@@ -400,6 +441,6 @@ export default function DigitalWalletPage() {
         </div>
       </section>
       
-    </SiteLayout>
+    </div>
   );
 }
