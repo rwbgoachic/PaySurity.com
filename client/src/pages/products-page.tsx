@@ -12,6 +12,7 @@ import {
   Wallet,
   ChevronRight
 } from "lucide-react";
+import { SiteFooter } from "@/components/layout/site-footer";
 
 export default function ProductsPage() {
   return (
@@ -457,13 +458,7 @@ export default function ProductsPage() {
       </section>
       
       {/* Footer */}
-      <footer className="bg-gray-50 py-12 mt-auto">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center">
-            <p className="text-sm text-gray-500">&copy; 2025 PaySurity, Inc. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

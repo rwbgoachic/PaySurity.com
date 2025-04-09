@@ -219,7 +219,7 @@ function Router() {
           const OrderModify = React.lazy(() => import("./pages/customer/order-modify"));
           return (
             <React.Suspense fallback={<div>Loading...</div>}>
-              <OrderModify params={params} />
+              <OrderModify />
             </React.Suspense>
           );
         }}
@@ -227,11 +227,11 @@ function Router() {
       
       {/* Admin routes */}
       <Route path="/admin/sms-settings">
-        {(params) => {
+        {() => {
           const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
           return (
             <React.Suspense fallback={<div>Loading...</div>}>
-              <SmsSettings params={params} />
+              <SmsSettings />
             </React.Suspense>
           );
         }}
