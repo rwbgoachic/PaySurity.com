@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, DollarSign, LineChart, Users, Zap } from "lucide-react";
 
-export default function AffiliatesPage() {
+export default function Affiliates() {
   return (
     <>
       <MetaTags

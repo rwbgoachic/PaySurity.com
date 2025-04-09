@@ -3,7 +3,7 @@ import { MetaTags } from "@/components/seo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
 
-export default function PartnersPage() {
+export default function Partners() {
   return (
     <>
       <MetaTags

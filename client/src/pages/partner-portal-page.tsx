@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { Loader2, UserCircle } from "lucide-react";
 
-export default function PartnerPortalPage() {
+export default function PartnerPortal() {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {

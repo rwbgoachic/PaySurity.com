@@ -6,7 +6,7 @@ import { Redirect } from "wouter";
 import { Loader2, UserCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function AffiliatePortalPage() {
+export default function AffiliatePortal() {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
