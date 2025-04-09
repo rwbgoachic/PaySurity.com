@@ -14,6 +14,10 @@ import PosSystemsPage from "@/pages/pos-systems-page";
 import ProductsPage from "@/pages/products-page";
 import PaymentPage from "@/pages/payment-page";
 import PaymentSuccessPage from "@/pages/payment-success-page";
+import PartnersPage from "@/pages/partners-page";
+import AffiliatesPage from "@/pages/affiliates-page";
+import PartnerPortalPage from "@/pages/partner-portal-page";
+import AffiliatePortalPage from "@/pages/affiliate-portal-page";
 import WalletPage from "@/pages/wallet";
 import PosPage from "@/pages/pos";
 import MerchantPage from "@/pages/merchant";
@@ -79,6 +83,10 @@ function Router() {
       <Route path="/industry-solutions" component={IndustrySolutionsPage} />
       <Route path="/digital-wallet" component={DigitalWalletPage} />
       <Route path="/pos-systems" component={PosSystemsPage} />
+      <Route path="/partners" component={PartnersPage} />
+      <Route path="/affiliates" component={AffiliatesPage} />
+      <Route path="/partner-portal" component={PartnerPortalPage} />
+      <Route path="/affiliate-portal" component={AffiliatePortalPage} />
       <Route path="/auth" component={AuthPage} />
       
       {/* Blog routes */}
