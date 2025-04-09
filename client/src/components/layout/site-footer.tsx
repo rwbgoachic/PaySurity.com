@@ -25,13 +25,22 @@ export function SiteFooter() {
           </div>
           
           <div>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Partners & Affiliates</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link to="/partners" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">Become a Partner</Link></li>
+              <li><Link to="/affiliates" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">Join Affiliate Program</Link></li>
+              <li><Link to="/partner-portal" className="text-gray-600 hover:text-gray-900 transition-colors">Partner Portal</Link></li>
+              <li><Link to="/affiliate-portal" className="text-gray-600 hover:text-gray-900 transition-colors">Affiliate Portal</Link></li>
+            </ul>
+          </div>
+          
+          <div>
             <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase">Resources</h4>
             <ul className="space-y-2 text-sm">
               <li><Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">Blog</Link></li>
               <li><Link to="/documentation" className="text-gray-600 hover:text-gray-900 transition-colors">Documentation</Link></li>
               <li><Link to="/faq" className="text-gray-600 hover:text-gray-900 transition-colors">FAQ</Link></li>
               <li><Link to="/support" className="text-gray-600 hover:text-gray-900 transition-colors">Support</Link></li>
-              <li><Link to="/partners" className="text-gray-600 hover:text-gray-900 transition-colors">Partners</Link></li>
             </ul>
           </div>
           
