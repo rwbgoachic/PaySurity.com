@@ -49,7 +49,7 @@ export default function LandingPage() {
             
             {/* Main Navigation */}
             <nav className="hidden md:flex space-x-6">
-              <Link to="/">
+              <Link to="/products">
                 <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Products</span>
               </Link>
               <Link to="/digital-wallet">

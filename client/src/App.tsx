@@ -10,6 +10,7 @@ import PricingPage from "@/pages/pricing-page";
 import IndustrySolutionsPage from "@/pages/industry-solutions-page";
 import DigitalWalletPage from "@/pages/digital-wallet-page";
 import PosSystemsPage from "@/pages/pos-systems-page";
+import ProductsPage from "@/pages/products-page";
 import WalletPage from "@/pages/wallet";
 import PosPage from "@/pages/pos";
 import MerchantPage from "@/pages/merchant";
@@ -70,6 +71,7 @@ function Router() {
     <Switch>
       {/* Main marketing site routes */}
       <Route path="/" component={LandingPage} />
+      <Route path="/products" component={ProductsPage} />
       <Route path="/pricing" component={PricingPage} />
       <Route path="/industry-solutions" component={IndustrySolutionsPage} />
       <Route path="/digital-wallet" component={DigitalWalletPage} />
