@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { SiteFooter } from "@/components/layout/site-footer";
 
 export default function DigitalWalletPage() {
   const [, navigate] = useLocation();
@@ -441,6 +442,8 @@ export default function DigitalWalletPage() {
         </div>
       </section>
       
+      {/* Footer */}
+      <SiteFooter />
     </div>
   );
 }
