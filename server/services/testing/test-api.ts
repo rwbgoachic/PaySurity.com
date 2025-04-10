@@ -60,7 +60,7 @@ export class APITestService {
       passed: true
     };
     
-    const baseUrl = 'http://localhost:3000';
+    const baseUrl = 'http://localhost:5000';
     
     // Define endpoints to test
     const endpoints = [
@@ -215,7 +215,7 @@ export class APITestService {
       passed: true
     };
     
-    const baseUrl = 'http://localhost:3000';
+    const baseUrl = 'http://localhost:5000';
     
     // Define auth endpoints to test
     const authTests = [
@@ -285,7 +285,7 @@ export class APITestService {
       passed: true
     };
     
-    const baseUrl = 'http://localhost:3000';
+    const baseUrl = 'http://localhost:5000';
     
     // Define error scenarios to test
     const errorTests = [
