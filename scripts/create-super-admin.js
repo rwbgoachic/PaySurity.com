@@ -1,9 +1,13 @@
 // This script creates a super admin user in the system
-require('dotenv').config();
-const { Pool } = require('@neondatabase/serverless');
-const { drizzle } = require('drizzle-orm/neon-serverless');
-const crypto = require('crypto');
-const { promisify } = require('util');
+import 'dotenv/config';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import crypto from 'crypto';
+import { promisify } from 'util';
+import ws from 'ws';
+
+// Set up WebSocket for NeonDB
+neonConfig.webSocketConstructor = ws;
 
 const scryptAsync = promisify(crypto.scrypt);
 
@@ -42,7 +46,7 @@ async function createSuperAdmin() {
     console.log('Password:', password);
     console.log('User ID:', user.id);
     console.log('Role:', user.role);
-    console.log('\nURL: http://localhost:5000/super-admin');
+    console.log('\nURL: https://paysurity.com/super-admin');
     console.log('\nIMPORTANT: Save these credentials securely!');
     
   } catch (error) {
@@ -52,4 +56,5 @@ async function createSuperAdmin() {
   }
 }
 
+// Run the function
 createSuperAdmin();
