@@ -77,6 +77,7 @@ import HealthcareBlogPage from "./pages/blog/industry/healthcare";
 import LegalBlogPage from "./pages/blog/industry/legal";
 import RetailBlogPage from "./pages/blog/industry/retail";
 import PaymentIndustryNewsPage from "./pages/blog/payment-industry-news";
+import SuperAdminDashboard from "./pages/super-admin/dashboard";
 import { AuthProvider } from "./hooks/use-auth";
 import { MetaTags, OrganizationSchema } from "./components/seo";
 import { setupCSRFInterceptor, getCSRFToken } from "./lib/csrf";
@@ -269,6 +270,9 @@ function Router() {
           );
         }}
       </Route>
+      
+      {/* Super Admin routes */}
+      <ProtectedRoute path="/super-admin" component={SuperAdminDashboard} />
       
       {/* Catch-all route - must be last */}
       <Route component={NotFound} />

@@ -147,6 +147,8 @@ export interface IStorage {
   getEmployeesByEmployerId(employerId: number): Promise<User[]>;
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User>;
   updateLastLogin(id: number): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(id: number): Promise<void>;
   
   // HubSpot operations
   getHubSpotToken(userId: number): Promise<any | undefined>;
@@ -327,7 +329,7 @@ export interface IStorage {
   getTransaction(id: number): Promise<Transaction | undefined>;
   getTransactionsByUserId(userId: number): Promise<Transaction[]>;
   getTransactionsByWalletId(walletId: number): Promise<Transaction[]>;
-  getAllTransactions(): Promise<Transaction[]>;
+  getAllTransactions(limit?: number): Promise<Transaction[]>;
   getPendingApprovalTransactions(approverId: number): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransactionExpenseType(id: number, expenseType: string): Promise<Transaction>;
@@ -935,6 +937,95 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
+  // Placeholder for super admin functionality
+  async getUserRoles(): Promise<string[]> {
+    const result = await db.select({
+      role: users.role,
+    })
+    .from(users)
+    .groupBy(users.role);
+    
+    return result.map(r => r.role);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    const [deletedUser] = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!deletedUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+  }
+
+  async getAllMerchants(): Promise<MerchantProfile[]> {
+    return await db.select().from(merchantProfiles).orderBy(desc(merchantProfiles.createdAt));
+  }
+  
+  async getAllAffiliates(): Promise<AffiliateProfile[]> {
+    return await db.select().from(affiliateProfiles).orderBy(desc(affiliateProfiles.createdAt));
+  }
+  
+  async getAllIsoPartners(): Promise<IsoPartner[]> {
+    return await db.select().from(isoPartners).orderBy(desc(isoPartners.id));
+  }
+  
+  async getIsoPartnerByUserId(userId: number): Promise<IsoPartner | undefined> {
+    const [isoPartner] = await db.select().from(isoPartners).where(eq(isoPartners.userId, userId));
+    return isoPartner;
+  }
+
+  async getMerchantsByIsoPartnerId(isoPartnerId: number): Promise<MerchantProfile[]> {
+    return await db.select()
+      .from(merchantProfiles)
+      .where(eq(merchantProfiles.isoPartnerId, isoPartnerId));
+  }
+
+  async getCommissionsByIsoPartnerId(isoPartnerId: number): Promise<Commission[]> {
+    return await db.select()
+      .from(commissions)
+      .where(eq(commissions.isoPartnerId, isoPartnerId))
+      .orderBy(desc(commissions.createdAt));
+  }
+  
+  async getAllTrainingDocuments(): Promise<TrainingDocument[]> {
+    return await db.select()
+      .from(trainingDocuments)
+      .orderBy(desc(trainingDocuments.createdAt));
+  }
+  
+  async createTrainingDocument(documentData: InsertTrainingDocument): Promise<TrainingDocument> {
+    const [document] = await db
+      .insert(trainingDocuments)
+      .values(documentData)
+      .returning();
+    
+    return document;
+  }
+  
+  async createMerchant(merchantData: InsertMerchantProfile): Promise<MerchantProfile> {
+    const [merchant] = await db
+      .insert(merchantProfiles)
+      .values(merchantData)
+      .returning();
+    
+    return merchant;
+  }
+  
+  async createSupportTicket(ticketData: InsertSupportTicket): Promise<SupportTicket> {
+    const [ticket] = await db
+      .insert(supportTickets)
+      .values(ticketData)
+      .returning();
+    
+    return ticket;
+  }
+
   // Wallet operations
   async getWallet(id: number): Promise<Wallet | undefined> {
     const [wallet] = await db.select().from(wallets).where(eq(wallets.id, id));
@@ -1203,8 +1294,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(transactions).where(eq(transactions.walletId, walletId));
   }
 
-  async getAllTransactions(): Promise<Transaction[]> {
-    return await db.select().from(transactions);
+  async getAllTransactions(limit?: number): Promise<Transaction[]> {
+    if (limit) {
+      return await db.select().from(transactions).orderBy(desc(transactions.createdAt)).limit(limit);
+    }
+    
+    return await db.select().from(transactions).orderBy(desc(transactions.createdAt));
   }
   
   async getPendingApprovalTransactions(approverId: number): Promise<Transaction[]> {

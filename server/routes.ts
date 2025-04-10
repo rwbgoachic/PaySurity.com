@@ -6021,6 +6021,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Create a new training document
+  app.post("/api/training-documents", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    // Check if the user is an admin (you may need to adjust this based on your role system)
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: "Only administrators can add training documents" });
+    }
+    
+    try {
+      const newDocument = await storage.createTrainingDocument(req.body);
+      res.status(201).json(newDocument);
+    } catch (error) {
+      console.error("Error creating training document:", error);
+      res.status(500).json({ error: "Failed to create training document" });
+    }
+  });
+  
   // Enroll a new merchant
   app.post("/api/merchants", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -6358,6 +6378,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating Excel export:", error);
       res.status(500).json({ error: "Failed to generate Excel export" });
+    }
+  });
+
+  // Super Admin API routes
+  app.get('/api/super-admin/stats', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Verify that the user is a super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    try {
+      // Get system-wide statistics
+      const users = await storage.getAllUsers();
+      const merchants = await storage.getAllMerchants();
+      const affiliates = await storage.getAllAffiliates();
+      const isoPartners = await storage.getAllIsoPartners();
+      const transactions = await storage.getAllTransactions(100); // Get the most recent 100 transactions
+
+      res.json({
+        totalUsers: users.length,
+        totalMerchants: merchants.length,
+        totalAffiliates: affiliates.length,
+        totalIsoPartners: isoPartners.length,
+        totalTransactions: transactions.length
+      });
+    } catch (error) {
+      console.error('Error fetching super admin stats:', error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.get('/api/super-admin/users', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.patch('/api/super-admin/users/:id', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    try {
+      const updatedUser = await storage.updateUser(userId, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.delete('/api/super-admin/users/:id', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    try {
+      await storage.deleteUser(userId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: "Server error" });
     }
   });
 

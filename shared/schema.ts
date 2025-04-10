@@ -39,7 +39,7 @@ export type HubspotToken = typeof hubspotTokens.$inferSelect;
 export type InsertHubspotToken = typeof hubspotTokens.$inferInsert;
 
 // User roles enum
-export const userRoleEnum = pgEnum("user_role", ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"]);
+export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"]);
 
 // User schema
 export const users = pgTable("users", {
@@ -49,7 +49,7 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  role: text("role", { enum: ["admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"] }).notNull().default("executive"),
+  role: text("role", { enum: ["super_admin", "admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"] }).notNull().default("executive"),
   avatar: text("avatar"),
   department: text("department"),
   organizationId: integer("organization_id"),
@@ -830,6 +830,7 @@ export const merchantStatusEnum = pgEnum("merchant_status", ["pending", "active"
 export const merchantProfiles = pgTable("merchant_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(), // Link to the user who owns/manages this merchant
+  isoPartnerId: integer("iso_partner_id"), // The ISO Partner who acquired this merchant
   businessName: text("business_name").notNull(),
   businessType: text("business_type", { enum: ["retail", "restaurant", "service", "online", "healthcare", "education", "other"] }).notNull(),
   taxId: text("tax_id").notNull(),
@@ -863,6 +864,7 @@ export const merchantProfiles = pgTable("merchant_profiles", {
 
 export const insertMerchantProfileSchema = createInsertSchema(merchantProfiles).pick({
   userId: true,
+  isoPartnerId: true,
   businessName: true,
   businessType: true,
   taxId: true,
