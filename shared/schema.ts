@@ -3,6 +3,18 @@ import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ISO Partner status enum
+export const isoPartnerStatusEnum = pgEnum("iso_partner_status", ["pending", "active", "inactive", "suspended"]);
+
+// Commission status enum
+export const commissionStatusEnum = pgEnum("commission_status", ["pending", "paid"]);
+
+// Support ticket status enum
+export const supportTicketStatusEnum = pgEnum("support_ticket_status", ["open", "in_progress", "resolved", "closed"]);
+
+// Support ticket priority enum
+export const supportTicketPriorityEnum = pgEnum("support_ticket_priority", ["low", "medium", "high", "urgent"]);
+
 // HubSpot integration tokens
 export const hubspotTokens = pgTable("hubspot_tokens", {
   id: serial("id").primaryKey(),
@@ -416,6 +428,163 @@ export const insertExpenseReportSchema = createInsertSchema(expenseReports).pick
 export type ExpenseReport = typeof expenseReports.$inferSelect;
 export type InsertExpenseReport = typeof expenseReports.$inferInsert;
 
+// ISO Partners
+export const isoPartners = pgTable("iso_partners", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+  companyName: text("company_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  phone: text("phone").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  commissionRate: decimal("commission_rate").notNull(), // Percentage of revenue
+  totalCommissionEarned: decimal("total_commission_earned").notNull().default("0"),
+  status: text("status").notNull().default("active"), // active, inactive, suspended
+  merchantCount: integer("merchant_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIsoPartnerSchema = createInsertSchema(isoPartners).pick({
+  userId: true,
+  companyName: true,
+  contactName: true,
+  phone: true,
+  address: true,
+  city: true,
+  state: true,
+  zip: true,
+  commissionRate: true,
+  status: true,
+});
+
+export type IsoPartner = typeof isoPartners.$inferSelect;
+export type InsertIsoPartner = typeof isoPartners.$inferInsert;
+
+// Merchants (enrolled by ISO partners)
+export const merchants = pgTable("merchants", {
+  id: serial("id").primaryKey(),
+  isoPartnerId: integer("iso_partner_id").notNull(),
+  businessName: text("business_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  businessType: text("business_type").notNull(),
+  taxId: text("tax_id").notNull(),
+  processingVolume: decimal("processing_volume").notNull(),
+  status: text("status").notNull().default("pending"), // pending, approved, active, rejected, suspended
+  commissionRate: decimal("commission_rate").notNull(), // Rate assigned to this merchant
+  monthlyFee: decimal("monthly_fee").notNull().default("0"),
+  dateEnrolled: timestamp("date_enrolled").defaultNow(),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantSchema = createInsertSchema(merchants).pick({
+  isoPartnerId: true,
+  businessName: true,
+  contactName: true,
+  email: true,
+  phone: true,
+  address: true,
+  city: true,
+  state: true,
+  zip: true,
+  businessType: true,
+  taxId: true,
+  processingVolume: true,
+  status: true,
+  commissionRate: true,
+  monthlyFee: true,
+});
+
+export type Merchant = typeof merchants.$inferSelect;
+export type InsertMerchant = typeof merchants.$inferInsert;
+
+// Commissions earned by ISO partners
+export const commissions = pgTable("commissions", {
+  id: serial("id").primaryKey(),
+  isoPartnerId: integer("iso_partner_id").notNull(),
+  merchantId: integer("merchant_id").notNull(),
+  amount: decimal("amount").notNull(),
+  transactionVolume: decimal("transaction_volume").notNull(),
+  date: date("date").notNull(),
+  status: text("status").notNull().default("pending"), // pending, paid
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCommissionSchema = createInsertSchema(commissions).pick({
+  isoPartnerId: true,
+  merchantId: true,
+  amount: true,
+  transactionVolume: true,
+  date: true,
+  status: true,
+});
+
+export type Commission = typeof commissions.$inferSelect;
+export type InsertCommission = typeof commissions.$inferInsert;
+
+// Training documents for ISO partners
+export const trainingDocuments = pgTable("training_documents", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  link: text("link").notNull(),
+  documentType: text("document_type").notNull(), // manual, video, webinar, etc.
+  category: text("category").notNull(), // sales, technical, compliance, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTrainingDocumentSchema = createInsertSchema(trainingDocuments).pick({
+  title: true,
+  description: true,
+  link: true,
+  documentType: true,
+  category: true,
+});
+
+export type TrainingDocument = typeof trainingDocuments.$inferSelect;
+export type InsertTrainingDocument = typeof trainingDocuments.$inferInsert;
+
+// Support tickets for ISO partners
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  isoPartnerId: integer("iso_partner_id").notNull(),
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  status: text("status").notNull().default("open"), // open, in_progress, resolved, closed
+  assignedTo: integer("assigned_to"),
+  resolution: text("resolution"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).pick({
+  isoPartnerId: true,
+  subject: true,
+  description: true,
+  priority: true,
+  status: true,
+  assignedTo: true,
+  resolution: true,
+});
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = typeof supportTickets.$inferInsert;
+
 // Expense Line Items
 export const expenseLineItems = pgTable("expense_line_items", {
   id: serial("id").primaryKey(),
@@ -463,6 +632,45 @@ export type InsertExpenseLineItem = typeof expenseLineItems.$inferInsert;
 import { relations } from "drizzle-orm";
 
 // Create relations between entities
+export const isoPartnersRelations = relations(isoPartners, ({ one, many }) => ({
+  user: one(users, {
+    fields: [isoPartners.userId],
+    references: [users.id],
+  }),
+  merchants: many(merchants),
+  commissions: many(commissions),
+  supportTickets: many(supportTickets),
+}));
+
+export const merchantsRelations = relations(merchants, ({ one, many }) => ({
+  isoPartner: one(isoPartners, {
+    fields: [merchants.isoPartnerId],
+    references: [isoPartners.id],
+  }),
+  commissions: many(commissions),
+}));
+
+export const commissionsRelations = relations(commissions, ({ one }) => ({
+  isoPartner: one(isoPartners, {
+    fields: [commissions.isoPartnerId],
+    references: [isoPartners.id],
+  }),
+  merchant: one(merchants, {
+    fields: [commissions.merchantId],
+    references: [merchants.id],
+  }),
+}));
+
+export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
+  isoPartner: one(isoPartners, {
+    fields: [supportTickets.isoPartnerId],
+    references: [isoPartners.id],
+  }),
+  assignedToUser: one(users, {
+    fields: [supportTickets.assignedTo],
+    references: [users.id],
+  }),
+}));
 export const expenseReportsRelations = relations(expenseReports, ({ one, many }) => ({
   employee: one(users, {
     fields: [expenseReports.userId],
@@ -611,7 +819,7 @@ export const insertAccountingIntegrationSchema = createInsertSchema(accountingIn
 
 // Merchant Profile Schema
 export const merchantTypeEnum = pgEnum("merchant_type", ["retail", "restaurant", "service", "online", "healthcare", "education", "other"]);
-export const merchantStatusEnum = pgEnum("merchant_status", ["pending", "active", "suspended", "inactive"]);
+export const merchantStatusEnum = pgEnum("merchant_status", ["pending", "active", "suspended", "inactive", "rejected"]);
 
 export const merchantProfiles = pgTable("merchant_profiles", {
   id: serial("id").primaryKey(),
@@ -630,7 +838,7 @@ export const merchantProfiles = pgTable("merchant_profiles", {
   description: text("description"),
   logo: text("logo_url"),
   referralCode: text("referral_code"), // Affiliate referral code used during signup
-  status: text("status", { enum: ["pending", "active", "suspended", "inactive"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "active", "suspended", "inactive", "rejected"] }).notNull().default("pending"),
   verificationStatus: text("verification_status").notNull().default("pending"), // pending, verified, rejected
   verificationDocuments: jsonb("verification_documents"), // Document URLs and metadata
   processingFeePercentage: numeric("processing_fee_percentage"), // The percentage fee charged per transaction

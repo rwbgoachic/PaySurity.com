@@ -26,6 +26,7 @@ import Partners from "@/pages/partners";
 import Affiliates from "@/pages/affiliates";
 import PartnerPortal from "@/pages/partner-portal";
 import AffiliatePortal from "@/pages/affiliate-portal";
+import IsoDashboard from "@/pages/iso-dashboard";
 import WalletPage from "@/pages/wallet";
 import PosPage from "@/pages/pos";
 import MerchantPage from "@/pages/merchant";
@@ -103,6 +104,7 @@ function Router() {
       <Route path="/affiliates" component={Affiliates} />
       <Route path="/partner-portal" component={PartnerPortal} />
       <Route path="/affiliate-portal" component={AffiliatePortal} />
+      <Route path="/iso-dashboard" component={IsoDashboard} />
       <Route path="/auth" component={AuthPage} />
       
       {/* Blog routes */}

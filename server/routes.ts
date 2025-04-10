@@ -5945,6 +5945,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to create inventory transaction" });
     }
   });
+  
+  // ISO Partner API routes
+  
+  // Get ISO partner by user ID
+  app.get("/api/iso-partners/me", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    try {
+      const isoPartner = await storage.getIsoPartnerByUserId(req.user.id);
+      if (!isoPartner) {
+        return res.status(404).json({ error: "ISO partner not found" });
+      }
+      
+      res.json(isoPartner);
+    } catch (error) {
+      console.error("Error fetching ISO partner:", error);
+      res.status(500).json({ error: "Failed to fetch ISO partner data" });
+    }
+  });
+  
+  // Get merchants by ISO partner ID
+  app.get("/api/iso-partners/:id/merchants", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    try {
+      // Get the ISO partner first to verify ownership
+      const isoPartner = await storage.getIsoPartnerByUserId(req.user.id);
+      if (!isoPartner || isoPartner.id.toString() !== req.params.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const merchants = await storage.getMerchantsByIsoPartnerId(parseInt(req.params.id));
+      res.json(merchants);
+    } catch (error) {
+      console.error("Error fetching merchants:", error);
+      res.status(500).json({ error: "Failed to fetch merchant data" });
+    }
+  });
+  
+  // Get commissions by ISO partner ID
+  app.get("/api/iso-partners/:id/commissions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    try {
+      // Get the ISO partner first to verify ownership
+      const isoPartner = await storage.getIsoPartnerByUserId(req.user.id);
+      if (!isoPartner || isoPartner.id.toString() !== req.params.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const commissions = await storage.getCommissionsByIsoPartnerId(parseInt(req.params.id));
+      res.json(commissions);
+    } catch (error) {
+      console.error("Error fetching commissions:", error);
+      res.status(500).json({ error: "Failed to fetch commission data" });
+    }
+  });
+  
+  // Get all training documents
+  app.get("/api/training-documents", async (req, res) => {
+    try {
+      const documents = await storage.getAllTrainingDocuments();
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching training documents:", error);
+      res.status(500).json({ error: "Failed to fetch training documents" });
+    }
+  });
+  
+  // Enroll a new merchant
+  app.post("/api/merchants", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    try {
+      // Get the ISO partner first
+      const isoPartner = await storage.getIsoPartnerByUserId(req.user.id);
+      if (!isoPartner) {
+        return res.status(403).json({ error: "ISO partner not found" });
+      }
+      
+      // Validate and create the merchant with the ISO partner ID
+      const merchant = await storage.createMerchant({
+        ...req.body,
+        isoPartnerId: isoPartner.id,
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      res.status(201).json(merchant);
+    } catch (error) {
+      console.error("Error creating merchant:", error);
+      res.status(500).json({ error: "Failed to create merchant" });
+    }
+  });
+  
+  // Create a support ticket
+  app.post("/api/support-tickets", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    try {
+      // Get the ISO partner first
+      const isoPartner = await storage.getIsoPartnerByUserId(req.user.id);
+      if (!isoPartner) {
+        return res.status(403).json({ error: "ISO partner not found" });
+      }
+      
+      // Create the support ticket with the ISO partner ID
+      const ticket = await storage.createSupportTicket({
+        ...req.body,
+        isoPartnerId: isoPartner.id,
+        status: "open",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      res.status(201).json(ticket);
+    } catch (error) {
+      console.error("Error creating support ticket:", error);
+      res.status(500).json({ error: "Failed to create support ticket" });
+    }
+  });
 
   return httpServer;
 }

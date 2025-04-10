@@ -126,8 +126,8 @@ export default function Partners() {
                     <span>Dedicated account management team</span>
                   </li>
                 </ul>
-                <Button variant="outline" className="w-full mt-6">
-                  Become an ISO Partner
+                <Button variant="outline" className="w-full mt-6" asChild>
+                  <a href="/iso-dashboard">Access ISO Dashboard</a>
                 </Button>
               </CardContent>
             </Card>

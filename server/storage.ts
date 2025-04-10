@@ -3,6 +3,8 @@ import {
   payrollEntries, timeEntries, accountRequests, spendingControls, 
   educationalContent, savingsGoals, accountingIntegrations,
   expenseReports, expenseLineItems,
+  // ISO Partner entities
+  isoPartners, merchants, commissions, trainingDocuments, supportTickets,
   // New merchant and value-added service entities
   merchantProfiles, paymentGateways, pointOfSaleSystems, loyaltyPrograms, 
   customerLoyaltyAccounts, promotionalCampaigns, analyticsReports,
@@ -47,6 +49,13 @@ import {
   type AccountingIntegration, type InsertAccountingIntegration,
   type ExpenseReport, type InsertExpenseReport,
   type ExpenseLineItem, type InsertExpenseLineItem,
+  
+  // ISO Partner types
+  type IsoPartner, type InsertIsoPartner,
+  type Merchant, type InsertMerchant,
+  type Commission, type InsertCommission,
+  type TrainingDocument, type InsertTrainingDocument,
+  type SupportTicket, type InsertSupportTicket,
   
   // New merchant and value-added service types
   type MerchantProfile, type InsertMerchantProfile,
@@ -257,6 +266,46 @@ export interface IStorage {
   updatePosTenantStatus(id: number, status: string): Promise<PosTenant>;
   incrementPosTenantActiveInstances(id: number): Promise<PosTenant>;
   generatePosTenantInstance(id: number): Promise<{instanceUrl: string}>;
+  
+  // ISO Partner operations
+  getIsoPartner(id: number): Promise<IsoPartner | undefined>;
+  getIsoPartnerByUserId(userId: number): Promise<IsoPartner | undefined>;
+  getActiveIsoPartners(): Promise<IsoPartner[]>;
+  createIsoPartner(partner: InsertIsoPartner): Promise<IsoPartner>;
+  updateIsoPartner(id: number, data: Partial<InsertIsoPartner>): Promise<IsoPartner>;
+  updateIsoPartnerCommissionTotal(id: number, amount: string): Promise<IsoPartner>;
+  updateIsoPartnerMerchantCount(id: number): Promise<IsoPartner>;
+  
+  // Merchant operations (for ISO partners)
+  getMerchant(id: number): Promise<Merchant | undefined>;
+  getMerchantsByIsoPartnerId(isoPartnerId: number): Promise<Merchant[]>;
+  getMerchantsByStatus(isoPartnerId: number, status: string): Promise<Merchant[]>;
+  createMerchant(merchant: InsertMerchant): Promise<Merchant>;
+  updateMerchant(id: number, data: Partial<InsertMerchant>): Promise<Merchant>;
+  updateMerchantStatus(id: number, status: string, rejectionReason?: string): Promise<Merchant>;
+  
+  // Commission operations
+  getCommission(id: number): Promise<Commission | undefined>;
+  getCommissionsByIsoPartnerId(isoPartnerId: number): Promise<Commission[]>;
+  getCommissionsByMerchantId(merchantId: number): Promise<Commission[]>;
+  createCommission(commission: InsertCommission): Promise<Commission>;
+  updateCommissionStatus(id: number, status: string): Promise<Commission>;
+  
+  // Training Document operations
+  getTrainingDocument(id: number): Promise<TrainingDocument | undefined>;
+  getTrainingDocumentsByCategory(category: string): Promise<TrainingDocument[]>;
+  getAllTrainingDocuments(): Promise<TrainingDocument[]>;
+  createTrainingDocument(document: InsertTrainingDocument): Promise<TrainingDocument>;
+  updateTrainingDocument(id: number, data: Partial<InsertTrainingDocument>): Promise<TrainingDocument>;
+  deleteTrainingDocument(id: number): Promise<void>;
+  
+  // Support Ticket operations
+  getSupportTicket(id: number): Promise<SupportTicket | undefined>;
+  getSupportTicketsByIsoPartnerId(isoPartnerId: number): Promise<SupportTicket[]>;
+  getOpenSupportTickets(): Promise<SupportTicket[]>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  updateSupportTicketStatus(id: number, status: string, assignedTo?: number): Promise<SupportTicket>;
+  resolveSupportTicket(id: number, resolution: string): Promise<SupportTicket>;
   
   // Session store
   sessionStore: session.Store;
