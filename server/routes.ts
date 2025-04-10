@@ -6049,6 +6049,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Microsite routes for ISO partners and affiliates
+  
+  // Get ISO partner by subdomain for microsite
+  app.get("/api/microsites/iso/:subdomain", async (req, res) => {
+    try {
+      const partner = await storage.getIsoPartnerBySubdomain(req.params.subdomain);
+      if (!partner) {
+        return res.status(404).json({ error: "ISO partner not found" });
+      }
+      
+      res.json({
+        id: partner.id,
+        companyName: partner.companyName,
+        contactName: partner.contactName,
+        address: partner.address,
+        city: partner.city,
+        state: partner.state,
+        zip: partner.zip,
+        profilePhoto: partner.profilePhoto,
+        profileBio: partner.profileBio,
+        subdomain: partner.subdomain,
+        status: partner.status,
+        merchantCount: partner.merchantCount,
+        createdAt: partner.createdAt
+      });
+    } catch (error) {
+      console.error("Error fetching ISO partner microsite:", error);
+      res.status(500).json({ error: "Failed to fetch ISO partner data" });
+    }
+  });
+  
+  // Get affiliate by subdomain for microsite
+  app.get("/api/microsites/affiliate/:subdomain", async (req, res) => {
+    try {
+      const affiliate = await storage.getAffiliateBySubdomain(req.params.subdomain);
+      if (!affiliate) {
+        return res.status(404).json({ error: "Affiliate not found" });
+      }
+      
+      res.json({
+        id: affiliate.id,
+        companyName: affiliate.companyName,
+        websiteUrl: affiliate.websiteUrl,
+        profilePhoto: affiliate.profilePhoto,
+        profileBio: affiliate.profileBio,
+        subdomain: affiliate.subdomain,
+        socialMediaLinks: affiliate.socialMediaLinks,
+        marketingSpecialty: affiliate.marketingSpecialty,
+        referralCode: affiliate.referralCode,
+        isActive: affiliate.isActive,
+        createdAt: affiliate.createdAt
+      });
+    } catch (error) {
+      console.error("Error fetching affiliate microsite:", error);
+      res.status(500).json({ error: "Failed to fetch affiliate data" });
+    }
+  });
+  
   // Create a support ticket
   app.post("/api/support-tickets", async (req, res) => {
     if (!req.isAuthenticated()) {

@@ -535,11 +535,21 @@ export interface IStorage {
   getAffiliateProfile(id: number): Promise<AffiliateProfile | undefined>;
   getAffiliateProfileByUserId(userId: number): Promise<AffiliateProfile | undefined>;
   getAffiliateProfileByReferralCode(referralCode: string): Promise<AffiliateProfile | undefined>;
+  getAffiliateBySubdomain(subdomain: string): Promise<AffiliateProfile | undefined>;
   getAllAffiliateProfiles(): Promise<AffiliateProfile[]>;
   getActiveAffiliateProfiles(): Promise<AffiliateProfile[]>;
   createAffiliateProfile(profile: InsertAffiliateProfile): Promise<AffiliateProfile>;
   updateAffiliateProfile(id: number, data: Partial<InsertAffiliateProfile>): Promise<AffiliateProfile>;
   updateAffiliateStats(id: number, totalEarned?: string, pendingPayouts?: string, lifetimeReferrals?: number, activeReferrals?: number): Promise<AffiliateProfile>;
+  
+  // ISO Partner operations
+  getIsoPartner(id: number): Promise<IsoPartner | undefined>;
+  getIsoPartnerByUserId(userId: number): Promise<IsoPartner | undefined>;
+  getIsoPartnerBySubdomain(subdomain: string): Promise<IsoPartner | undefined>;
+  getActiveIsoPartners(): Promise<IsoPartner[]>;
+  createIsoPartner(partner: InsertIsoPartner): Promise<IsoPartner>;
+  updateIsoPartner(id: number, data: Partial<InsertIsoPartner>): Promise<IsoPartner>;
+  updateIsoPartnerStats(id: number, totalCommissionEarned?: string, merchantCount?: number): Promise<IsoPartner>;
   
   // Merchant Referral operations
   getMerchantReferral(id: number): Promise<MerchantReferral | undefined>;
@@ -2812,6 +2822,90 @@ export class DatabaseStorage implements IStorage {
     }
     
     return profile;
+  }
+  
+  // Function to get affiliate by subdomain for microsite
+  async getAffiliateBySubdomain(subdomain: string): Promise<AffiliateProfile | undefined> {
+    const [profile] = await db.select().from(affiliateProfiles).where(eq(affiliateProfiles.subdomain, subdomain));
+    return profile;
+  }
+  
+  // ISO Partner operations
+  async getIsoPartner(id: number): Promise<IsoPartner | undefined> {
+    const [partner] = await db.select().from(isoPartners).where(eq(isoPartners.id, id));
+    return partner;
+  }
+  
+  async getIsoPartnerByUserId(userId: number): Promise<IsoPartner | undefined> {
+    const [partner] = await db.select().from(isoPartners).where(eq(isoPartners.userId, userId));
+    return partner;
+  }
+  
+  async getIsoPartnerBySubdomain(subdomain: string): Promise<IsoPartner | undefined> {
+    const [partner] = await db.select().from(isoPartners).where(eq(isoPartners.subdomain, subdomain));
+    return partner;
+  }
+  
+  async getActiveIsoPartners(): Promise<IsoPartner[]> {
+    return await db.select().from(isoPartners).where(eq(isoPartners.status, "active"));
+  }
+  
+  async createIsoPartner(partner: InsertIsoPartner): Promise<IsoPartner> {
+    const [newPartner] = await db.insert(isoPartners).values({
+      ...partner,
+      totalCommissionEarned: "0",
+      merchantCount: 0,
+      updatedAt: new Date()
+    }).returning();
+    
+    return newPartner;
+  }
+  
+  async updateIsoPartner(id: number, data: Partial<InsertIsoPartner>): Promise<IsoPartner> {
+    const [partner] = await db
+      .update(isoPartners)
+      .set({ 
+        ...data,
+        updatedAt: new Date() 
+      })
+      .where(eq(isoPartners.id, id))
+      .returning();
+    
+    if (!partner) {
+      throw new Error(`ISO partner with id ${id} not found`);
+    }
+    
+    return partner;
+  }
+  
+  async updateIsoPartnerStats(
+    id: number,
+    totalCommissionEarned?: string,
+    merchantCount?: number
+  ): Promise<IsoPartner> {
+    const updateData: Partial<IsoPartner> = {
+      updatedAt: new Date()
+    };
+    
+    if (totalCommissionEarned !== undefined) {
+      updateData.totalCommissionEarned = totalCommissionEarned;
+    }
+    
+    if (merchantCount !== undefined) {
+      updateData.merchantCount = merchantCount;
+    }
+    
+    const [partner] = await db
+      .update(isoPartners)
+      .set(updateData)
+      .where(eq(isoPartners.id, id))
+      .returning();
+    
+    if (!partner) {
+      throw new Error(`ISO partner with id ${id} not found`);
+    }
+    
+    return partner;
   }
 
   // Merchant Referral operations

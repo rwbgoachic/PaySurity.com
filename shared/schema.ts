@@ -439,6 +439,9 @@ export const isoPartners = pgTable("iso_partners", {
   city: text("city").notNull(),
   state: text("state").notNull(),
   zip: text("zip").notNull(),
+  profilePhoto: text("profile_photo"), // URL to the ISO's profile photo
+  profileBio: text("profile_bio"), // Short bio/description of the ISO
+  subdomain: text("subdomain").notNull().unique(), // For their microsite (e.g., partner-name)
   commissionRate: decimal("commission_rate").notNull(), // Percentage of revenue
   totalCommissionEarned: decimal("total_commission_earned").notNull().default("0"),
   status: text("status").notNull().default("active"), // active, inactive, suspended
@@ -456,6 +459,9 @@ export const insertIsoPartnerSchema = createInsertSchema(isoPartners).pick({
   city: true,
   state: true,
   zip: true,
+  profilePhoto: true,
+  profileBio: true,
+  subdomain: true,
   commissionRate: true,
   status: true,
 });
@@ -1301,6 +1307,11 @@ export const affiliateProfiles = pgTable("affiliate_profiles", {
   bankAccountId: integer("bank_account_id"), // Link to bank account for payments
   nextOfKinName: text("next_of_kin_name"), // For payment continuity
   nextOfKinContact: text("next_of_kin_contact"),
+  profilePhoto: text("profile_photo"), // URL to the affiliate's profile photo or avatar
+  profileBio: text("profile_bio"), // Short bio/description of the affiliate
+  subdomain: text("subdomain").notNull().unique(), // For their microsite (e.g., affiliate-name)
+  socialMediaLinks: jsonb("social_media_links"), // JSON array of social media profiles
+  marketingSpecialty: text("marketing_specialty"), // SEO, content, social media, PPC, etc.
   totalEarned: numeric("total_earned").notNull().default("0"),
   pendingPayouts: numeric("pending_payouts").notNull().default("0"),
   lifetimeReferrals: integer("lifetime_referrals").notNull().default(0),
@@ -1320,6 +1331,11 @@ export const insertAffiliateProfileSchema = createInsertSchema(affiliateProfiles
   bankAccountId: true,
   nextOfKinName: true,
   nextOfKinContact: true,
+  profilePhoto: true,
+  profileBio: true,
+  subdomain: true,
+  socialMediaLinks: true,
+  marketingSpecialty: true,
   referralCode: true,
   isActive: true,
 });
