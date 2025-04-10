@@ -14,5 +14,5 @@ channel = "stable-22_11"
 [deployment]
 run = "node dist/index.js"
 deploymentTarget = "cloudrun"
-build = ["npm", "ci", "--production=false", "&&", "npm", "run", "build"]
+build = ["npm", "install", "&&", "npm", "run", "build"]
 ignorePorts = false

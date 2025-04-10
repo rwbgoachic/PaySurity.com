@@ -241,14 +241,24 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   
-  // Force development mode for now (we'll change this back for deployment)
-  // This ensures we use Vite's dev server in all environments until we do the actual deployment build
-  const forceDevMode = true; // Set to false for actual production deployment
+  // For deployment purposes, we'll set a safety mechanism
+  // This ensures the application starts even if built files aren't found
+  const forceDevMode = false; // Set to false for actual production deployment
   
-  if (forceDevMode || app.get("env") === "development") {
+  // Try to detect if we're in a deployment environment where built files might not be available yet
+  const isDeploymentBuild = process.env.NODE_ENV === 'production' && !forceDevMode;
+  
+  try {
+    if (forceDevMode || app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+  } catch (err: any) {
+    console.warn('Error serving static files:', err.message || 'Unknown error');
+    console.warn('Falling back to development mode');
+    // If serveStatic fails, fall back to development mode
     await setupVite(app, server);
-  } else {
-    serveStatic(app);
   }
 
   // Use PORT environment variable if available (for deployment) or default to 5000

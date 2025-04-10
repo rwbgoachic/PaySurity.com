@@ -1,4 +1,4 @@
-run = "cross-env NODE_ENV=production node dist/index.js"
+run = "node dist/index.js"
 deploymentTarget = "cloudrun"
 build = ["npm", "run", "build"]
 
