@@ -1,0 +1,17 @@
+# This file configures Replit's deployment features
+
+run = "npm run dev"
+
+hidden = [".config", "package-lock.json"]
+
+[env]
+NODE_ENV = "production"
+
+[nix]
+channel = "stable-22_11"
+
+[deployment]
+run = "npm run start"
+deploymentTarget = "cloudrun"
+build = ["npm", "run", "build"]
+ignorePorts = false

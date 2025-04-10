@@ -1,3 +1,13 @@
+// Load environment variables early
+import * as dotenv from 'dotenv';
+// First try loading production-specific env file, then fall back to regular .env
+try {
+  dotenv.config({ path: '.env.production' });
+} catch (e) {
+  console.log('No production env file found, using default');
+}
+dotenv.config(); // Regular .env file
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -7,7 +17,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import ExpressBrute from "express-brute";
 import csurf from "csurf";
-import { createSecureHeaders } from "content-security-policy";
+import createSecureHeaders from "content-security-policy";
 import { setupAuth } from "./auth";
 import { generateSitemap } from "./sitemap";
 
@@ -230,21 +240,25 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  
+  // Force development mode for now (we'll change this back for deployment)
+  // This ensures we use Vite's dev server in all environments until we do the actual deployment build
+  const forceDevMode = true; // Set to false for actual production deployment
+  
+  if (forceDevMode || app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
+  // Use PORT environment variable if available (for deployment) or default to 5000
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`serving on port ${port} in ${app.get("env")} mode`);
   });
 })();

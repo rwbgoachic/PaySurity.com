@@ -64,6 +64,7 @@
     "compression": "^1.8.0",
     "connect-pg-simple": "^10.0.0",
     "content-security-policy": "^0.3.4",
+    "cross-env": "^7.0.3",
     "crypto-random-string": "^5.0.0",
     "csurf": "^1.10.0",
     "date-fns": "^3.6.0",

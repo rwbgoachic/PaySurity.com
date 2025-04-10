@@ -8,7 +8,7 @@ interface AdminLayoutProps {
   title: string;
 }
 
-export function AdminLayout({ children, title }: AdminLayoutProps) {
+function AdminLayout({ children, title }: AdminLayoutProps) {
   // Use try-catch to handle potential auth hook errors
   let user: { 
     username: string; 
@@ -84,3 +84,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
     </div>
   );
 }
+
+// Export both as default and named export for backwards compatibility
+export { AdminLayout };
+export default AdminLayout;
