@@ -99,6 +99,43 @@ function notifyEmployer(employerId: number, message: any) {
   broadcast(`employer-${employerId}`, message);
 }
 
+// Fetch news from the NewsAPI
+async function fetchNewsFromApi(category: string = '', query: string = ''): Promise<any> {
+  try {
+    const apiKey = process.env.NEWS_API_KEY;
+    if (!apiKey) {
+      throw new Error('NEWS_API_KEY not found');
+    }
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (category) params.append('category', category);
+    
+    // Default parameters
+    params.append('language', 'en');
+    params.append('pageSize', '8');
+    params.append('sortBy', 'publishedAt');
+
+    const url = `https://newsapi.org/v2/everything?${params.toString()}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'X-Api-Key': apiKey
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`NewsAPI error: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching from NewsAPI:", error);
+    throw error;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Authentication Routes
   setupAuth(app);
@@ -1495,6 +1532,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Sitemap for SEO
   app.get("/sitemap.xml", generateSitemap);
+  
+  // News API for payment industry updates
+  app.get("/api/news/payment-industry", async (req, res) => {
+    try {
+      // Build a combined query of payment industry keywords
+      const query = 'payment processing OR fintech OR "payment industry" OR "credit card processing" OR "payment gateway" OR "merchant services"';
+      
+      const newsData = await fetchNewsFromApi('', query);
+      res.json(newsData);
+    } catch (error) {
+      console.error("Error fetching payment industry news:", error);
+      res.status(500).json({ error: "Failed to fetch news" });
+    }
+  });
 
   // Import payment gateway services
   const { paymentGatewayService, HelcimPaymentMethod, HelcimTransactionType } = await import('./services');

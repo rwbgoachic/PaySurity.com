@@ -7,29 +7,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Redirect } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Plus, DollarSign, FileText, LifeBuoy, UserPlus, UserCheck, CheckCircle2, XCircle } from "lucide-react";
+import { AlertCircle, FileQuestion, Loader2, Plus, DollarSign, FileText, LifeBuoy, Presentation, RotateCcw, UserPlus, UserCheck, CheckCircle2, Video, XCircle, Download, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Type definitions
-type Merchant = {
+type MerchantProfile = {
   id: number;
   businessName: string;
+  businessType: string;
   status: string;
-  processingVolume: string;
-  commission: string;
-  dateEnrolled: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  isoPartnerId: number;
+  estimatedMonthlyVolume?: string;
+  processingVolume?: string;
+  commission?: string;
+  dateEnrolled?: string;
+  createdAt: Date;
 };
 
 type Commission = {
   id: number;
+  merchantId: number;
   merchantName: string;
+  isoPartnerId: number;
   amount: string;
-  date: string;
+  date: string | Date;
   status: string;
+  createdAt: Date;
 };
 
 type TrainingDocument = {
@@ -37,45 +53,262 @@ type TrainingDocument = {
   title: string;
   description: string;
   link: string;
+  documentType: string;
+  category: string;
+  createdAt: Date;
 };
 
-// Mock data (will be replaced with API calls)
-const mockMerchants: Merchant[] = [
-  { id: 1, businessName: "Joe's Pizza", status: "active", processingVolume: "$12,500", commission: "$750", dateEnrolled: "02/15/2025" },
-  { id: 2, businessName: "Main Street Retail", status: "pending", processingVolume: "$0", commission: "$0", dateEnrolled: "04/01/2025" },
-  { id: 3, businessName: "City Dental Clinic", status: "active", processingVolume: "$28,900", commission: "$1,734", dateEnrolled: "01/10/2025" },
-  { id: 4, businessName: "The Grand Hotel", status: "active", processingVolume: "$45,200", commission: "$2,712", dateEnrolled: "03/05/2025" }
-];
+// Insert types
+type InsertMerchantProfile = Omit<MerchantProfile, 'id' | 'createdAt'>;
+type InsertSupportTicket = {
+  isoPartnerId?: number;
+  subject: string;
+  description: string;
+  priority: string;
+  status?: string;
+  merchantId?: number;
+};
 
-const mockCommissions: Commission[] = [
-  { id: 1, merchantName: "Joe's Pizza", amount: "$250", date: "04/01/2025", status: "paid" },
-  { id: 2, merchantName: "Joe's Pizza", amount: "$250", date: "03/01/2025", status: "paid" },
-  { id: 3, merchantName: "Joe's Pizza", amount: "$250", date: "02/01/2025", status: "paid" },
-  { id: 4, merchantName: "City Dental Clinic", amount: "$578", date: "04/01/2025", status: "paid" },
-  { id: 5, merchantName: "City Dental Clinic", amount: "$578", date: "03/01/2025", status: "paid" },
-  { id: 6, merchantName: "City Dental Clinic", amount: "$578", date: "02/01/2025", status: "paid" },
-  { id: 7, merchantName: "The Grand Hotel", amount: "$904", date: "04/01/2025", status: "paid" },
-  { id: 8, merchantName: "The Grand Hotel", amount: "$904", date: "03/01/2025", status: "paid" },
-  { id: 9, merchantName: "The Grand Hotel", amount: "$904", date: "02/01/2025", status: "paid" }
-];
+// Custom hooks
+function useMerchants() {
+  return useQuery({
+    queryKey: ['/api/iso-partner/merchants'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/iso-partner/merchants');
+      if (!response.ok) {
+        throw new Error('Failed to fetch merchants');
+      }
+      return response.json();
+    }
+  });
+}
 
-const mockTrainingDocs: TrainingDocument[] = [
-  { id: 1, title: "ISO Partner Onboarding Guide", description: "Complete guide to get started as a PaySurity ISO partner", link: "#" },
-  { id: 2, title: "Merchant Enrollment Process", description: "Step-by-step merchant application process", link: "#" },
-  { id: 3, title: "Industry-Specific Sales Guides", description: "Specialized guides for each vertical market", link: "#" },
-  { id: 4, title: "Payment Processing Overview", description: "Technical overview of the payment processing flow", link: "#" },
-  { id: 5, title: "Commission Structure", description: "Detailed explanation of the commission tiers and structure", link: "#" }
-];
+function useCommissions() {
+  return useQuery({
+    queryKey: ['/api/iso-partner/commissions'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/iso-partner/commissions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch commissions');
+      }
+      return response.json();
+    }
+  });
+}
+
+function useTrainingDocuments() {
+  return useQuery({
+    queryKey: ['/api/training-documents'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/training-documents');
+      if (!response.ok) {
+        throw new Error('Failed to fetch training documents');
+      }
+      return response.json();
+    }
+  });
+}
+
+function usePaymentNews() {
+  return useQuery({
+    queryKey: ['/api/news/payment-industry'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/news/payment-industry');
+        if (!response.ok) {
+          throw new Error('Failed to fetch payment industry news');
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching payment news:", error);
+        throw error;
+      }
+    }
+  });
+}
+
+function useCreateMerchant() {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (merchantData: Partial<InsertMerchantProfile>) => {
+      const response = await apiRequest('POST', '/api/merchants', merchantData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create merchant');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/iso-partner/merchants'] });
+      toast({
+        title: "Merchant Enrollment Successful",
+        description: "The merchant has been enrolled and is pending approval",
+        variant: "default",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Merchant Enrollment Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+}
+
+function useCreateSupportTicket() {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (ticketData: InsertSupportTicket) => {
+      const response = await apiRequest('POST', '/api/support-tickets', ticketData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create support ticket');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Support Ticket Created",
+        description: "Your support ticket has been submitted to our team",
+        variant: "default",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Support Ticket Creation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+}
+
+// Type definition for News item
+type NewsItem = {
+  title: string;
+  description: string;
+  url: string;
+  urlToImage: string | null;
+  publishedAt: string;
+  source: {
+    name: string;
+  };
+};
+
+// News Section Component
+function NewsSection() {
+  const { data: newsItems = [], isLoading, error } = usePaymentNews();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-10 text-muted-foreground">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive opacity-80" />
+        <p>Error loading news: {error.message}</p>
+        <p className="text-sm mt-2">Please try again later or contact support.</p>
+      </div>
+    );
+  }
+
+  if (newsItems.length === 0) {
+    return (
+      <div className="text-center py-10 text-muted-foreground">
+        <FileQuestion className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+        <p>No payment industry news available at the moment.</p>
+        <p className="text-sm mt-2">Check back soon for updates.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      {newsItems.map((item: NewsItem, index: number) => (
+        <Card key={index} className="hover:shadow-md transition-shadow">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-lg">{item.title}</CardTitle>
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <Badge variant="outline" className="mr-2">{item.source.name}</Badge>
+              <div className="flex items-center">
+                <Clock className="h-3 w-3 mr-1" />
+                {new Date(item.publishedAt).toLocaleDateString()}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-2">
+            <p className="text-sm text-muted-foreground line-clamp-3">
+              {item.description || "No description available"}
+            </p>
+          </CardContent>
+          <CardFooter className="p-4 pt-0">
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
+                Read More <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function IsoDashboard() {
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
-  const { toast } = useToast();
-  const { user, isLoading } = useAuth();
+  const [formData, setFormData] = useState({
+    businessName: '',
+    contactName: '',
+    email: '',
+    phone: '',
+    businessType: 'retail',
+    estimatedMonthlyVolume: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    notes: ''
+  });
+  const [ticketData, setTicketData] = useState({
+    subject: '',
+    merchantId: 'all',
+    priority: 'medium',
+    description: ''
+  });
 
-  // When integrated with API, these would be React Query hooks
-  // const { data: merchants, isLoading: merchantsLoading } = useQuery...
-  // const { data: commissions, isLoading: commissionsLoading } = useQuery...
+  const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
+
+  // React Query Hooks
+  const { 
+    data: merchants = [], 
+    isLoading: merchantsLoading 
+  } = useMerchants();
+  
+  const { 
+    data: commissions = [], 
+    isLoading: commissionsLoading 
+  } = useCommissions();
+  
+  const { 
+    data: trainingDocs = [], 
+    isLoading: docsLoading 
+  } = useTrainingDocuments();
+
+  const createMerchantMutation = useCreateMerchant();
+  const createTicketMutation = useCreateSupportTicket();
+
+  // Check if any data is still loading
+  const isLoading = authLoading || merchantsLoading || commissionsLoading || docsLoading;
 
   if (isLoading) {
     return (
@@ -91,32 +324,75 @@ export default function IsoDashboard() {
   }
 
   // We would normally verify the role here, but for now we'll display for everyone
-  // if (user.role !== "affiliate") {
+  // if (user.role !== "iso_partner") {
   //   return <Redirect to="/" />;
   // }
 
   // Handler for merchant enrollment form submission
   const handleMerchantSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Merchant Enrollment Started",
-      description: "Your merchant enrollment request has been submitted.",
+    
+    const merchantData = {
+      ...formData,
+      isoPartnerId: user.id,
+      status: 'pending'
+    };
+    
+    createMerchantMutation.mutate(merchantData, {
+      onSuccess: () => {
+        setFormData({
+          businessName: '',
+          contactName: '',
+          email: '',
+          phone: '',
+          businessType: 'retail',
+          estimatedMonthlyVolume: '',
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          notes: ''
+        });
+        setEnrollOpen(false);
+      }
     });
-    setEnrollOpen(false);
   };
 
   // Handler for support ticket submission
   const handleTicketSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Support Ticket Created",
-      description: "Your support ticket has been submitted to our team.",
+    
+    const ticketPayload = {
+      ...ticketData,
+      isoPartnerId: user.id,
+      status: 'open',
+      merchantId: ticketData.merchantId === 'all' ? undefined : parseInt(ticketData.merchantId)
+    };
+    
+    createTicketMutation.mutate(ticketPayload, {
+      onSuccess: () => {
+        setTicketData({
+          subject: '',
+          merchantId: 'all',
+          priority: 'medium',
+          description: ''
+        });
+        setTicketOpen(false);
+      }
     });
-    setTicketOpen(false);
+  };
+
+  // Form input change handlers
+  const handleMerchantFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleTicketFormChange = (field: string, value: string) => {
+    setTicketData(prev => ({ ...prev, [field]: value }));
   };
 
   // Calculate total commission for the dashboard
-  const totalCommission = mockCommissions.reduce((total, commission) => {
+  const totalCommission = commissions.reduce((total: number, commission: Commission) => {
     return total + parseFloat(commission.amount.replace('$', ''));
   }, 0);
 
@@ -239,7 +515,7 @@ export default function IsoDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Merchants</SelectItem>
-                        {mockMerchants.map(merchant => (
+                        {merchants.map((merchant) => (
                           <SelectItem key={merchant.id} value={merchant.id.toString()}>
                             {merchant.businessName}
                           </SelectItem>
@@ -288,10 +564,10 @@ export default function IsoDashboard() {
           <CardContent>
             <div className="flex items-center">
               <UserCheck className="h-6 w-6 text-blue-500 mr-2" />
-              <div className="text-2xl font-bold">{mockMerchants.length}</div>
+              <div className="text-2xl font-bold">{merchants.length}</div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {mockMerchants.filter(m => m.status === "active").length} active, {mockMerchants.filter(m => m.status === "pending").length} pending
+              {merchants.filter((m: MerchantProfile) => m.status === "active").length} active, {merchants.filter((m: MerchantProfile) => m.status === "pending").length} pending
             </p>
           </CardContent>
         </Card>
@@ -302,7 +578,9 @@ export default function IsoDashboard() {
           <CardContent>
             <div className="text-2xl font-bold flex items-center">
               <DollarSign className="h-6 w-6 text-green-500 mr-1" />
-              $86,600
+              ${merchants.reduce((total: number, merchant: MerchantProfile) => {
+                return total + (merchant.processingVolume ? parseFloat(merchant.processingVolume.replace(/[$,]/g, '')) : 0);
+              }, 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Across all active merchants
@@ -331,6 +609,7 @@ export default function IsoDashboard() {
           <TabsTrigger value="merchants">Merchants</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
           <TabsTrigger value="training">Training</TabsTrigger>
+          <TabsTrigger value="news">Industry News</TabsTrigger>
         </TabsList>
 
         {/* Merchants Tab */}
@@ -361,27 +640,48 @@ export default function IsoDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockMerchants.map((merchant) => (
-                      <tr key={merchant.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4">{merchant.businessName}</td>
-                        <td className="py-3 px-4">
-                          {merchant.status === "active" ? (
-                            <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Active
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs text-yellow-700">
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              Pending
-                            </span>
-                          )}
+                    {merchants.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                          No merchants found. Start by enrolling your first merchant.
                         </td>
-                        <td className="py-3 px-4 text-right">{merchant.processingVolume}</td>
-                        <td className="py-3 px-4 text-right">{merchant.commission}</td>
-                        <td className="py-3 px-4">{merchant.dateEnrolled}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      merchants.map((merchant: MerchantProfile) => (
+                        <tr key={merchant.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-4">{merchant.businessName}</td>
+                          <td className="py-3 px-4">
+                            {merchant.status === "active" ? (
+                              <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                Active
+                              </span>
+                            ) : merchant.status === "pending" ? (
+                              <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs text-yellow-700">
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Pending
+                              </span>
+                            ) : merchant.status === "suspended" ? (
+                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs text-red-700">
+                                <AlertCircle className="mr-1 h-3 w-3" />
+                                Suspended
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                                <XCircle className="mr-1 h-3 w-3" />
+                                {merchant.status.charAt(0).toUpperCase() + merchant.status.slice(1)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">{merchant.processingVolume || "$0"}</td>
+                          <td className="py-3 px-4 text-right">{merchant.commission || "0%"}</td>
+                          <td className="py-3 px-4">
+                            {merchant.dateEnrolled ? new Date(merchant.dateEnrolled).toLocaleDateString() : 
+                              new Date(merchant.createdAt || Date.now()).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -410,26 +710,48 @@ export default function IsoDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockCommissions.map((commission) => (
-                      <tr key={commission.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4">{commission.merchantName}</td>
-                        <td className="py-3 px-4 text-right">{commission.amount}</td>
-                        <td className="py-3 px-4">{commission.date}</td>
-                        <td className="py-3 px-4">
-                          {commission.status === "paid" ? (
-                            <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Paid
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs text-yellow-700">
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              Pending
-                            </span>
-                          )}
+                    {commissions.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                          No commissions found yet. Commissions will appear as merchants process payments.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      commissions.map((commission: Commission) => (
+                        <tr key={commission.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-4">{commission.merchantName}</td>
+                          <td className="py-3 px-4 text-right">{commission.amount}</td>
+                          <td className="py-3 px-4">
+                            {typeof commission.date === 'string' ? 
+                              new Date(commission.date).toLocaleDateString() :
+                              commission.date.toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            {commission.status === "paid" ? (
+                              <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                Paid
+                              </span>
+                            ) : commission.status === "pending" ? (
+                              <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs text-yellow-700">
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Pending
+                              </span>
+                            ) : commission.status === "clawed_back" ? (
+                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs text-red-700">
+                                <RotateCcw className="mr-1 h-3 w-3" />
+                                Clawed Back
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs text-gray-700">
+                                <XCircle className="mr-1 h-3 w-3" />
+                                {commission.status.charAt(0).toUpperCase() + commission.status.slice(1).replace('_', ' ')}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -448,24 +770,61 @@ export default function IsoDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {mockTrainingDocs.map((doc) => (
-                  <Card key={doc.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="p-4">
-                      <CardTitle className="text-lg flex items-center">
-                        <FileText className="mr-2 h-5 w-5 text-blue-500" />
-                        {doc.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <p className="text-sm text-muted-foreground">{doc.description}</p>
-                    </CardContent>
-                    <CardFooter className="p-4 pt-0">
-                      <Button variant="outline" size="sm" className="w-full" asChild>
-                        <a href={doc.link}>View Document</a>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                {trainingDocs.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileQuestion className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p>No training documents available yet.</p>
+                    <p className="text-sm mt-1">Check back soon for new training resources.</p>
+                  </div>
+                ) : (
+                  trainingDocs.map((doc: TrainingDocument) => (
+                    <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="p-4">
+                        <CardTitle className="text-lg flex items-center">
+                          {doc.documentType === 'video' ? (
+                            <Video className="mr-2 h-5 w-5 text-blue-500" />
+                          ) : doc.documentType === 'pdf' ? (
+                            <FileText className="mr-2 h-5 w-5 text-red-500" />
+                          ) : doc.documentType === 'presentation' ? (
+                            <Presentation className="mr-2 h-5 w-5 text-green-500" />
+                          ) : (
+                            <FileText className="mr-2 h-5 w-5 text-blue-500" />
+                          )}
+                          {doc.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <p className="text-sm text-muted-foreground">{doc.description}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-2">
+                          Category: {doc.category.charAt(0).toUpperCase() + doc.category.slice(1).replace('_', ' ')}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-0">
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <a href={doc.link} target="_blank" rel="noopener noreferrer">View Document</a>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Industry News Tab */}
+        <TabsContent value="news">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Industry News</CardTitle>
+              <CardDescription>
+                Stay up-to-date with the latest trends and developments in the payment processing industry
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6">
+                {/* Add the News Section */}
+                <NewsSection />
               </div>
             </CardContent>
           </Card>
