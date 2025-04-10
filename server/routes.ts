@@ -7,6 +7,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { z } from "zod";
+import { documentationService } from "./services/documentationService";
 import { sendOrderStatusSms } from "./services/sms";
 import { deliveryService } from "./services/delivery/delivery-service";
 import { processPayment } from './services/payment.service';
@@ -6171,6 +6172,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating support ticket:", error);
       res.status(500).json({ error: "Failed to create support ticket" });
+    }
+  });
+
+  // Documentation system API routes
+  app.get("/api/documentation/versions", async (req, res) => {
+    try {
+      const versions = await documentationService.getDocumentVersions();
+      res.json(versions);
+    } catch (error) {
+      console.error("Error fetching document versions:", error);
+      res.status(500).json({ error: "Failed to fetch document versions" });
+    }
+  });
+
+  app.post("/api/documentation/versions", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const version = await documentationService.createDocumentVersion({
+        ...req.body,
+        updatedBy: req.user.id
+      });
+      res.status(201).json(version);
+    } catch (error) {
+      console.error("Error creating document version:", error);
+      res.status(500).json({ error: "Failed to create document version" });
+    }
+  });
+
+  app.get("/api/documentation/sections/:documentType", async (req, res) => {
+    try {
+      const documentType = req.params.documentType;
+      const sections = await documentationService.getDocumentSections(documentType);
+      res.json(sections);
+    } catch (error) {
+      console.error("Error fetching document sections:", error);
+      res.status(500).json({ error: "Failed to fetch document sections" });
+    }
+  });
+
+  app.patch("/api/documentation/sections/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const sectionId = parseInt(req.params.id);
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+      
+      const updatedSection = await documentationService.updateDocumentSection(sectionId, content, req.user.id);
+      res.json(updatedSection);
+    } catch (error) {
+      console.error("Error updating document section:", error);
+      res.status(500).json({ error: "Failed to update document section" });
+    }
+  });
+
+  app.get("/api/documentation/tasks", async (req, res) => {
+    try {
+      const tasks = await documentationService.getPendingTasks();
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching pending tasks:", error);
+      res.status(500).json({ error: "Failed to fetch pending tasks" });
+    }
+  });
+
+  app.get("/api/documentation/tasks/:status", async (req, res) => {
+    try {
+      const status = req.params.status;
+      const tasks = await documentationService.getTasksByStatus(status);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks by status:", error);
+      res.status(500).json({ error: "Failed to fetch tasks" });
+    }
+  });
+
+  app.post("/api/documentation/tasks", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const task = await documentationService.createTask({
+        ...req.body,
+        assignedBy: req.user.id
+      });
+      res.status(201).json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ error: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/documentation/tasks/:id/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const taskId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+      
+      const updatedTask = await documentationService.updateTaskStatus(taskId, status, req.user.id);
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      res.status(500).json({ error: "Failed to update task status" });
+    }
+  });
+
+  app.post("/api/documentation/tasks/:id/complete", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    try {
+      const taskId = parseInt(req.params.id);
+      const completedTask = await documentationService.completeTask(taskId, req.user.id);
+      res.json(completedTask);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      res.status(500).json({ error: "Failed to complete task" });
+    }
+  });
+
+  app.get("/api/documentation/reports", async (req, res) => {
+    try {
+      const reports = await documentationService.getReportDefinitions();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching report definitions:", error);
+      res.status(500).json({ error: "Failed to fetch report definitions" });
+    }
+  });
+
+  app.post("/api/documentation/reports", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const report = await documentationService.createReportDefinition({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating report definition:", error);
+      res.status(500).json({ error: "Failed to create report definition" });
+    }
+  });
+
+  app.get("/api/documentation/commission-structures", async (req, res) => {
+    try {
+      const type = req.query.type as string | undefined;
+      const structures = await documentationService.getCommissionStructures(type);
+      res.json(structures);
+    } catch (error) {
+      console.error("Error fetching commission structures:", error);
+      res.status(500).json({ error: "Failed to fetch commission structures" });
+    }
+  });
+
+  app.get("/api/documentation/export", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.role || !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized: Admin access required" });
+    }
+    
+    try {
+      const exportUrl = await documentationService.generateExcelExport();
+      res.json(exportUrl);
+    } catch (error) {
+      console.error("Error generating Excel export:", error);
+      res.status(500).json({ error: "Failed to generate Excel export" });
     }
   });
 

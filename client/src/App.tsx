@@ -42,6 +42,7 @@ import EmployerExpenseReportDetail from "./pages/employer/expense-report-detail"
 import HubSpotSettings from "./pages/admin/hubspot-settings";
 import AnalyticsDashboard from "./pages/admin/analytics-dashboard";
 import TestRecommendationEngine from "./pages/admin/test-recommendation-engine";
+import ProjectDocumentation from "./pages/admin/project-documentation";
 import EmployeeDashboard from "./pages/employee/dashboard";
 import EmployeeTransactions from "./pages/employee/transactions";
 import EmployeeBanking from "./pages/employee/banking";
@@ -165,6 +166,7 @@ function Router() {
       {/* Admin Routes */}
       <Route path="/admin/analytics" component={AnalyticsDashboard} />
       <Route path="/admin/test-recommendation" component={TestRecommendationEngine} />
+      <Route path="/admin/project-documentation" component={ProjectDocumentation} />
       <Route path="/admin/test-management" component={() => {
         const TestManagement = React.lazy(() => import("./pages/admin/test-management"));
         return (

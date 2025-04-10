@@ -3433,3 +3433,133 @@ export const insertRestaurantInventoryTransactionSchema = createInsertSchema(res
 
 export type RestaurantInventoryTransaction = typeof restaurantInventoryTransactions.$inferSelect;
 export type InsertRestaurantInventoryTransaction = z.infer<typeof insertRestaurantInventoryTransactionSchema>;
+
+// Documentation System Schema
+export const documentVersions = pgTable("document_versions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id"),
+  documentType: text("document_type").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  updatedBy: integer("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  changeDescription: text("change_description"),
+  version: text("version")
+});
+
+export const insertDocumentVersionSchema = createInsertSchema(documentVersions).omit({
+  id: true,
+  createdAt: true
+});
+
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type InsertDocumentVersion = z.infer<typeof insertDocumentVersionSchema>;
+
+export const documentSections = pgTable("document_sections", {
+  id: serial("id").primaryKey(),
+  documentType: text("document_type").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  order: integer("order").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  updatedBy: integer("updated_by")
+});
+
+export const insertDocumentSectionSchema = createInsertSchema(documentSections).omit({
+  id: true,
+  createdAt: true
+});
+
+export type DocumentSection = typeof documentSections.$inferSelect;
+export type InsertDocumentSection = z.infer<typeof insertDocumentSectionSchema>;
+
+export const documentationTasks = pgTable("documentation_tasks", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("pending"),
+  priority: text("priority").notNull().default("medium"),
+  assignedTo: integer("assigned_to"),
+  isComplete: boolean("is_complete").notNull().default(false),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  updatedBy: integer("updated_by"),
+  completedAt: timestamp("completed_at"),
+  completedBy: integer("completed_by")
+});
+
+export const insertDocumentationTaskSchema = createInsertSchema(documentationTasks).omit({
+  id: true,
+  createdAt: true,
+  isComplete: true,
+  isDeleted: true,
+  completedAt: true,
+  completedBy: true
+});
+
+export type DocumentationTask = typeof documentationTasks.$inferSelect;
+export type InsertDocumentationTask = z.infer<typeof insertDocumentationTaskSchema>;
+
+export const reportDefinitions = pgTable("report_definitions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  sourceTable: text("source_table").notNull(),
+  targetTable: text("target_table").notNull(),
+  metadata: text("metadata"),
+  category: text("category").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  updatedBy: integer("updated_by")
+});
+
+export const insertReportDefinitionSchema = createInsertSchema(reportDefinitions).omit({
+  id: true,
+  createdAt: true
+});
+
+export type ReportDefinition = typeof reportDefinitions.$inferSelect;
+export type InsertReportDefinition = z.infer<typeof insertReportDefinitionSchema>;
+
+export const commissionStructures = pgTable("commission_structures", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  updatedBy: integer("updated_by")
+});
+
+export const insertCommissionStructureSchema = createInsertSchema(commissionStructures).omit({
+  id: true,
+  createdAt: true,
+  isActive: true
+});
+
+export type CommissionStructure = typeof commissionStructures.$inferSelect;
+export type InsertCommissionStructure = z.infer<typeof insertCommissionStructureSchema>;
+
+export const commissionMilestones = pgTable("commission_milestones", {
+  id: serial("id").primaryKey(),
+  structureId: integer("structure_id").notNull(),
+  name: text("name").notNull(),
+  days: integer("days").notNull(),
+  amount: text("amount"),
+  percentage: text("percentage"),
+  recurring: boolean("recurring").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertCommissionMilestoneSchema = createInsertSchema(commissionMilestones).omit({
+  id: true,
+  createdAt: true
+});
+
+export type CommissionMilestone = typeof commissionMilestones.$inferSelect;
+export type InsertCommissionMilestone = z.infer<typeof insertCommissionMilestoneSchema>;
