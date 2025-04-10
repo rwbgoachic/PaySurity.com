@@ -1,0 +1,123 @@
+{
+  "name": "API Integration Test",
+  "timestamp": "2025-04-10T23:54:14.548Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "Internal API Tests",
+      "tests": [
+        {
+          "name": "GET /api/health",
+          "description": "Should receive a valid response from /api/health",
+          "passed": false,
+          "result": "Error during request",
+          "expected": "Status 200 with valid body",
+          "actual": "Error: request to http://localhost:3000/api/health failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        },
+        {
+          "name": "GET /api/user",
+          "description": "Should receive a valid response from /api/user",
+          "passed": false,
+          "result": "Error during request",
+          "expected": "Status 200 with valid body",
+          "actual": "Error: request to http://localhost:3000/api/user failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "External API Tests",
+      "tests": [
+        {
+          "name": "News API Connectivity",
+          "description": "Test connection to News API",
+          "passed": true,
+          "result": "Successfully connected",
+          "expected": "Status 2xx with valid response body",
+          "actual": "Status 200, body validation: passed"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Authentication API Tests",
+      "tests": [
+        {
+          "name": "Access Protected Route Without Auth",
+          "description": "Test authentication behavior for http://localhost:3000/api/protected",
+          "passed": false,
+          "result": "Error during authentication test",
+          "expected": "Status 401",
+          "actual": "Error: request to http://localhost:3000/api/protected failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        },
+        {
+          "name": "Auth Status Check",
+          "description": "Test authentication behavior for http://localhost:3000/api/user",
+          "passed": false,
+          "result": "Error during authentication test",
+          "expected": "Status 200",
+          "actual": "Error: request to http://localhost:3000/api/user failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "API Error Handling Tests",
+      "tests": [
+        {
+          "name": "Not Found Error",
+          "description": "Test error handling for GET http://localhost:3000/api/non-existent-endpoint",
+          "passed": false,
+          "result": "Error during request",
+          "expected": "Status 404",
+          "actual": "Error: request to http://localhost:3000/api/non-existent-endpoint failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        },
+        {
+          "name": "Method Not Allowed",
+          "description": "Test error handling for PUT http://localhost:3000/api/health",
+          "passed": false,
+          "result": "Error during request",
+          "expected": "Status 405",
+          "actual": "Error: request to http://localhost:3000/api/health failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

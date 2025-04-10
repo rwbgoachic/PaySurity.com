@@ -1,0 +1,103 @@
+{
+  "name": "System Integration Test",
+  "timestamp": "2025-04-10T23:54:11.319Z",
+  "passed": true,
+  "testGroups": [
+    {
+      "name": "Database Connectivity Tests",
+      "tests": [
+        {
+          "name": "Database Connection",
+          "description": "Should connect to the database and execute a simple query",
+          "passed": true,
+          "result": "Successfully connected to database",
+          "expected": "Row with test = 1",
+          "actual": "Row with test = 1"
+        },
+        {
+          "name": "Complex Query Execution",
+          "description": "Should execute a more complex query against the database",
+          "passed": true,
+          "result": "Successfully executed complex query",
+          "expected": "Query execution without errors",
+          "actual": "Retrieved information about 241 tables"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "File System Access Tests",
+      "tests": [
+        {
+          "name": "Directory Creation",
+          "description": "Should create a test directory",
+          "passed": true,
+          "result": "Successfully created directory",
+          "expected": "Directory exists",
+          "actual": "Directory exists"
+        },
+        {
+          "name": "File Writing",
+          "description": "Should write content to a test file",
+          "passed": true,
+          "result": "Successfully wrote to file",
+          "expected": "File exists with content",
+          "actual": "File exists"
+        },
+        {
+          "name": "File Reading",
+          "description": "Should read content from a test file",
+          "passed": true,
+          "result": "Successfully read file",
+          "expected": "Test content: 2025-04-10T23:54:11.724Z",
+          "actual": "Test content: 2025-04-10T23:54:11.724Z"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Environment Variables Tests",
+      "tests": [
+        {
+          "name": "Environment Variable: DATABASE_URL",
+          "description": "Should have DATABASE_URL environment variable set",
+          "passed": true,
+          "result": "DATABASE_URL is set",
+          "expected": "Variable is set",
+          "actual": "Variable is set"
+        },
+        {
+          "name": "Environment Variable: NODE_ENV",
+          "description": "Should have NODE_ENV environment variable set",
+          "passed": true,
+          "result": "NODE_ENV is set",
+          "expected": "Variable is set",
+          "actual": "Variable is set"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "System Resources Tests",
+      "tests": [
+        {
+          "name": "CPU Information",
+          "description": "Should get CPU information",
+          "passed": true,
+          "result": "Found 8 CPUs",
+          "expected": "At least 1 CPU",
+          "actual": "8 CPUs"
+        },
+        {
+          "name": "Memory Information",
+          "description": "Should get memory information",
+          "passed": true,
+          "result": "Memory usage: 49%",
+          "expected": "Memory information",
+          "actual": "Total: 64313MB, Free: 32959MB"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

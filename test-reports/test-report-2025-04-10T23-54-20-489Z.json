@@ -1,0 +1,93 @@
+{
+  "name": "Performance Test",
+  "timestamp": "2025-04-10T23:54:20.173Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "API Response Time Tests",
+      "tests": [
+        {
+          "name": "GET /api/health Response Time",
+          "description": "Should respond within 200ms",
+          "passed": false,
+          "result": "Error testing endpoint",
+          "expected": "<= 200ms",
+          "actual": "Error: request to http://localhost:3000/api/health failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        },
+        {
+          "name": "GET /api/user Response Time",
+          "description": "Should respond within 200ms",
+          "passed": false,
+          "result": "Error testing endpoint",
+          "expected": "<= 200ms",
+          "actual": "Error: request to http://localhost:3000/api/user failed, reason: connect ECONNREFUSED 127.0.0.1:3000",
+          "error": {
+            "type": "system",
+            "errno": "ECONNREFUSED",
+            "code": "ECONNREFUSED",
+            "erroredSysCall": "connect"
+          }
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Database Performance Tests",
+      "tests": [
+        {
+          "name": "Simple SELECT Query Performance",
+          "description": "Should execute within 100ms",
+          "passed": true,
+          "result": "Execution time is acceptable (76ms)",
+          "expected": "<= 100ms",
+          "actual": "76ms"
+        },
+        {
+          "name": "Schema Information Query Performance",
+          "description": "Should execute within 200ms",
+          "passed": true,
+          "result": "Execution time is acceptable (75ms)",
+          "expected": "<= 200ms",
+          "actual": "75ms"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Memory Usage Tests",
+      "tests": [
+        {
+          "name": "Large Array Creation Memory Usage",
+          "description": "Should not increase heap usage by more than 50MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (33.47MB)",
+          "expected": "<= 50.00MB",
+          "actual": "33.47MB"
+        },
+        {
+          "name": "JSON Stringify/Parse Memory Usage",
+          "description": "Should not increase heap usage by more than 30MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (-1.35MB)",
+          "expected": "<= 30.00MB",
+          "actual": "-1.35MB"
+        },
+        {
+          "name": "Overall Memory Usage",
+          "description": "Total process memory usage should be reasonable",
+          "passed": false,
+          "result": "Memory usage is high (395.98MB RSS)",
+          "expected": "<= 300MB RSS",
+          "actual": "RSS: 395.98MB, Heap Total: 214.48MB, Heap Used: 177.99MB"
+        }
+      ],
+      "passed": false
+    }
+  ]
+}
