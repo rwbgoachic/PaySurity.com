@@ -844,6 +844,12 @@ export const merchantProfiles = pgTable("merchant_profiles", {
   description: text("description"),
   logo: text("logo_url"),
   referralCode: text("referral_code"), // Affiliate referral code used during signup
+  subdomain: text("subdomain").unique(), // For microsite [merchant-name].paysurity.com
+  useMicrosite: boolean("use_microsite").default(false), // Whether the merchant uses our microsite
+  integrationCode: text("integration_code"), // JS code for integration with existing site
+  profilePhoto: text("profile_photo"), // For microsite display
+  profileBio: text("profile_bio"), // Merchant's "About Us" text for microsite
+  customColors: jsonb("custom_colors"), // UI theme customization for microsite
   status: text("status", { enum: ["pending", "active", "suspended", "inactive", "rejected"] }).notNull().default("pending"),
   verificationStatus: text("verification_status").notNull().default("pending"), // pending, verified, rejected
   verificationDocuments: jsonb("verification_documents"), // Document URLs and metadata
@@ -871,6 +877,12 @@ export const insertMerchantProfileSchema = createInsertSchema(merchantProfiles).
   description: true,
   logo: true,
   referralCode: true,
+  subdomain: true,
+  useMicrosite: true,
+  integrationCode: true,
+  profilePhoto: true,
+  profileBio: true,
+  customColors: true,
   status: true,
   processingFeePercentage: true,
   monthlyFee: true,

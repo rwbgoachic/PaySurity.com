@@ -421,6 +421,7 @@ export interface IStorage {
   // Merchant Profile operations
   getMerchantProfile(id: number): Promise<MerchantProfile | undefined>;
   getMerchantProfileByUserId(userId: number): Promise<MerchantProfile | undefined>;
+  getMerchantProfileBySubdomain(subdomain: string): Promise<MerchantProfile | undefined>;
   getMerchantProfilesByStatus(status: string): Promise<MerchantProfile[]>;
   createMerchantProfile(merchantProfile: InsertMerchantProfile): Promise<MerchantProfile>;
   updateMerchantProfile(id: number, data: Partial<InsertMerchantProfile>): Promise<MerchantProfile>;
@@ -582,7 +583,7 @@ export interface IStorage {
   getAllPosTenants(): Promise<PosTenant[]>;
   updateAffiliatePayoutStatus(id: number, status: string): Promise<AffiliatePayout>;
   markAffiliatePayoutAsPaid(id: number, transactionId: string): Promise<AffiliatePayout>;
-  clawbackAffiliatePayout(id: number, notes?: string): Promise<AffiliatePayout>;
+  markAffiliatePayoutAsClawedBack(id: number, notes?: string): Promise<AffiliatePayout>;
   
   // Merchant Application operations
   createMerchantApplication(application: InsertMerchantApplication): Promise<MerchantApplication>;
@@ -2128,6 +2129,12 @@ export class DatabaseStorage implements IStorage {
     return merchantProfile;
   }
 
+  async getMerchantProfileBySubdomain(subdomain: string): Promise<MerchantProfile | undefined> {
+    // Ensure we're selecting from the correct column (subdomain matches schema.ts)
+    const [merchantProfile] = await db.select().from(merchantProfiles).where(eq(merchantProfiles.subdomain, subdomain));
+    return merchantProfile;
+  }
+
   async getMerchantProfilesByStatus(status: string): Promise<MerchantProfile[]> {
     return await db.select().from(merchantProfiles).where(eq(merchantProfiles.status as any, status));
   }
@@ -3114,11 +3121,81 @@ export class DatabaseStorage implements IStorage {
   async getAffiliatePayoutsByStatus(status: "pending" | "paid" | "clawed_back" | "canceled"): Promise<AffiliatePayout[]> {
     return await db.select().from(affiliatePayouts).where(eq(affiliatePayouts.status, status));
   }
-
+  
   async getAffiliatePayoutsByReferralId(referralId: number): Promise<AffiliatePayout[]> {
     return await db.select().from(affiliatePayouts).where(eq(affiliatePayouts.referralId, referralId));
   }
   
+  async getAllAffiliateProfiles(): Promise<AffiliateProfile[]> {
+    return await db.select().from(affiliateProfiles).where(eq(affiliateProfiles.isActive, true));
+  }
+  
+  async createAffiliatePayout(payout: InsertAffiliatePayout): Promise<AffiliatePayout> {
+    const [newPayout] = await db.insert(affiliatePayouts).values({
+      ...payout,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newPayout;
+  }
+  
+  async updateAffiliatePayout(id: number, data: Partial<InsertAffiliatePayout>): Promise<AffiliatePayout> {
+    const [updatedPayout] = await db
+      .update(affiliatePayouts)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(affiliatePayouts.id, id))
+      .returning();
+    
+    if (!updatedPayout) {
+      throw new Error(`Affiliate payout with id ${id} not found`);
+    }
+    
+    return updatedPayout;
+  }
+  
+  async updateAffiliateStats(
+    id: number, 
+    totalEarned?: string, 
+    pendingPayouts?: string,
+    lifetimeReferrals?: number,
+    activeReferrals?: number
+  ): Promise<AffiliateProfile> {
+    const updateData: Partial<AffiliateProfile> = {
+      updatedAt: new Date()
+    };
+    
+    if (totalEarned !== undefined) {
+      updateData.totalEarned = totalEarned;
+    }
+    
+    if (pendingPayouts !== undefined) {
+      updateData.pendingPayouts = pendingPayouts;
+    }
+    
+    if (lifetimeReferrals !== undefined) {
+      updateData.lifetimeReferrals = lifetimeReferrals;
+    }
+    
+    if (activeReferrals !== undefined) {
+      updateData.activeReferrals = activeReferrals;
+    }
+    
+    const [updatedProfile] = await db
+      .update(affiliateProfiles)
+      .set(updateData)
+      .where(eq(affiliateProfiles.id, id))
+      .returning();
+    
+    if (!updatedProfile) {
+      throw new Error(`Affiliate profile with id ${id} not found`);
+    }
+    
+    return updatedProfile;
+  }
+
   async getAffiliateStats(affiliateId: number, range: string): Promise<any> {
     // Calculate date cutoffs based on the range
     const now = new Date();
@@ -3353,7 +3430,7 @@ export class DatabaseStorage implements IStorage {
     return updatedPayout;
   }
 
-  async clawbackAffiliatePayout(id: number, notes?: string): Promise<AffiliatePayout> {
+  async markAffiliatePayoutAsClawedBack(id: number, notes?: string): Promise<AffiliatePayout> {
     const payout = await this.getAffiliatePayout(id);
     if (!payout) {
       throw new Error(`Affiliate payout with id ${id} not found`);

@@ -6107,6 +6107,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get merchant profile by subdomain for microsite
+  app.get("/api/microsites/merchant/:subdomain", async (req, res) => {
+    try {
+      const merchantProfile = await storage.getMerchantProfileBySubdomain(req.params.subdomain);
+      
+      if (!merchantProfile) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      
+      // We use snake_case in database but camelCase in code, so check both 
+      // to handle any possible mismatch during the database schema transition
+      if (!(merchantProfile.useMicrosite || merchantProfile.use_microsite)) {
+        return res.status(403).json({ error: "Merchant microsite not enabled" });
+      }
+
+      // Return only the public information needed for the microsite
+      res.json({
+        id: merchantProfile.id,
+        userId: merchantProfile.userId,
+        businessName: merchantProfile.businessName,
+        businessType: merchantProfile.businessType,
+        description: merchantProfile.description,
+        logo: merchantProfile.logo,
+        website: merchantProfile.website,
+        subdomain: merchantProfile.subdomain,
+        profilePhoto: merchantProfile.profilePhoto,
+        profileBio: merchantProfile.profileBio,
+        customColors: merchantProfile.customColors,
+        city: merchantProfile.city,
+        state: merchantProfile.state,
+        country: merchantProfile.country
+      });
+    } catch (error) {
+      console.error("Error fetching merchant by subdomain:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
   // Create a support ticket
   app.post("/api/support-tickets", async (req, res) => {
     if (!req.isAuthenticated()) {
