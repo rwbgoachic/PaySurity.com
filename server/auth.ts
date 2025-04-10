@@ -202,32 +202,42 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", loginBruteforce.prevent, (req, res, next) => {
-    // Sanitize login inputs
-    req.body.username = validator.escape(req.body.username);
-    // Don't sanitize password as it might contain special characters
+    // Check if username and password are provided
+    if (!req.body || !req.body.username || !req.body.password) {
+      return res.status(400).json({ error: "Username and password are required" });
+    }
     
-    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
-      if (err) return next(err);
+    // Sanitize login inputs - only if they exist
+    try {
+      req.body.username = validator.escape(String(req.body.username));
+      // Don't sanitize password as it might contain special characters
       
-      if (!user) {
-        return res.status(401).json({ error: info?.message || "Invalid username or password" });
-      }
-      
-      req.login(user, (loginErr) => {
-        if (loginErr) return next(loginErr);
+      passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
+        if (err) return next(err);
         
-        // Don't send back password hash or sensitive data in response
-        const { password, ...userWithoutPassword } = user;
+        if (!user) {
+          return res.status(401).json({ error: info?.message || "Invalid username or password" });
+        }
         
-        // Set login timestamp
-        storage.updateLastLogin(user.id)
-          .catch(error => {
-            console.error("Failed to update last login timestamp:", error);
-          });
-        
-        res.status(200).json(userWithoutPassword);
-      });
-    })(req, res, next);
+        req.login(user, (loginErr) => {
+          if (loginErr) return next(loginErr);
+          
+          // Don't send back password hash or sensitive data in response
+          const { password, ...userWithoutPassword } = user;
+          
+          // Set login timestamp
+          storage.updateLastLogin(user.id)
+            .catch(error => {
+              console.error("Failed to update last login timestamp:", error);
+            });
+          
+          res.status(200).json(userWithoutPassword);
+        });
+      })(req, res, next);
+    } catch (error) {
+      console.error("Login processing error:", error);
+      return res.status(500).json({ error: "An error occurred during login" });
+    }
   });
 
   app.post("/api/logout", (req, res, next) => {
