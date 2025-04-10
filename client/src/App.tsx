@@ -327,7 +327,8 @@ function App() {
       {/* WebSocketHandler for real-time notifications */}
       <WebSocketHandler />
       <Toaster />
-      <RouteDebugComponent />
+      {/* Route debugger - only visible in development mode */}
+      {import.meta.env.DEV && <RouteDebugComponent />}
     </AuthProvider>
   );
 }
