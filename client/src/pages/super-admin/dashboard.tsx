@@ -1,308 +1,286 @@
-import { useState, useEffect } from "react";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
-import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import {
+  BellRing,
+  Briefcase,
+  Building,
+  CreditCard,
+  DollarSign,
+  LineChart,
+  ShoppingCart,
+  Store,
+  Truck,
+  Users,
+  Wallet
+} from "lucide-react";
+import { useState } from "react";
 
 export default function SuperAdminDashboard() {
-  const { user, isLoading, logoutMutation } = useAuth();
-  const { toast } = useToast();
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalMerchants: 0,
-    totalAffiliates: 0,
-    totalIsoPartners: 0,
-    totalTransactions: 0,
-  });
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // Load stats
-  useEffect(() => {
-    if (!user || user.role !== "super_admin") return;
+  // Summary statistics data
+  const stats = [
+    {
+      title: "Total Merchants",
+      value: "1,258",
+      change: "+12%",
+      icon: <Store className="h-5 w-5 text-neutral-500" />,
+    },
+    {
+      title: "ISO Partners",
+      value: "142",
+      change: "+8%",
+      icon: <Briefcase className="h-5 w-5 text-neutral-500" />,
+    },
+    {
+      title: "Affiliates",
+      value: "305",
+      change: "+24%",
+      icon: <Users className="h-5 w-5 text-neutral-500" />,
+    },
+    {
+      title: "Monthly Revenue",
+      value: "$485,290",
+      change: "+18%",
+      icon: <DollarSign className="h-5 w-5 text-neutral-500" />,
+    },
+    {
+      title: "Transaction Volume",
+      value: "$3.8M",
+      change: "+14%",
+      icon: <CreditCard className="h-5 w-5 text-neutral-500" />,
+    },
+    {
+      title: "Active POS Systems",
+      value: "948",
+      change: "+22%",
+      icon: <ShoppingCart className="h-5 w-5 text-neutral-500" />,
+    },
+  ];
 
-    async function loadStats() {
-      try {
-        setIsLoadingStats(true);
-        // This is a placeholder - the actual endpoint will be implemented in the backend
-        // For now, we'll use dummy data
-        setStats({
-          totalUsers: 127,
-          totalMerchants: 42,
-          totalAffiliates: 18,
-          totalIsoPartners: 7,
-          totalTransactions: 5382,
-        });
-      } catch (error) {
-        console.error("Failed to load statistics:", error);
-        toast({
-          title: "Failed to load statistics",
-          description: "Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingStats(false);
-      }
-    }
-
-    loadStats();
-  }, [user, toast]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Only allow super_admin access
-  if (!user || user.role !== "super_admin") {
-    toast({
-      title: "Access Denied",
-      description: "You do not have permission to view this page.",
-      variant: "destructive",
-    });
-    return <Redirect to="/auth" />;
-  }
+  // Recent activities data
+  const activities = [
+    {
+      title: "New Merchant Onboarded",
+      description: "Coastal Cafe completed their onboarding process",
+      timestamp: "2 hours ago",
+      icon: <Store className="h-4 w-4" />,
+    },
+    {
+      title: "Payment Processing Issue",
+      description: "Error in payment gateway for JNL Retail",
+      timestamp: "3 hours ago",
+      icon: <BellRing className="h-4 w-4" />,
+    },
+    {
+      title: "New ISO Partner",
+      description: "MidWest Financial joined as an ISO partner",
+      timestamp: "5 hours ago",
+      icon: <Building className="h-4 w-4" />,
+    },
+    {
+      title: "System Maintenance",
+      description: "Scheduled maintenance completed for BistroBeast POS",
+      timestamp: "Yesterday",
+      icon: <Truck className="h-4 w-4" />,
+    },
+    {
+      title: "Large Transaction Alert",
+      description: "Unusual transaction volume from Century Health",
+      timestamp: "Yesterday",
+      icon: <Wallet className="h-4 w-4" />,
+    },
+  ];
 
   return (
-    <div className="bg-background min-h-screen">
-      <header className="bg-card border-b">
-        <div className="container py-4 px-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-primary">
-              PaySurity - Super Admin Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              System administration and monitoring
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-muted-foreground">
-              Welcome, {user.firstName} {user.lastName}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logoutMutation.mutate()}
-            >
-              Logout
-            </Button>
-          </div>
+    <AdminLayout title="Super Admin Dashboard">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-neutral-500">Welcome,</span>
+          <span className="font-medium">{user?.username}</span>
         </div>
-      </header>
+      </div>
 
-      <main className="container py-8 px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* System Stats */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="merchants">Merchants</TabsTrigger>
+          <TabsTrigger value="partners">ISO Partners</TabsTrigger>
+          <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          {/* Stats Overview */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {stats.map((stat, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-neutral-500">
+                    {stat.title}
+                  </CardTitle>
+                  {stat.icon}
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    <span className="text-emerald-500">{stat.change}</span> vs. last month
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Main Dashboard Content */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Recent Activity */}
+            <Card className="col-span-1 md:col-span-2 lg:col-span-1">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>Latest system events and activities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {activities.map((activity, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="rounded-full bg-neutral-100 p-2 dark:bg-neutral-800">
+                        {activity.icon}
+                      </div>
+                      <div>
+                        <p className="font-medium">{activity.title}</p>
+                        <p className="text-sm text-neutral-500">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {activity.timestamp}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Revenue Chart */}
+            <Card className="col-span-1 md:col-span-2">
+              <CardHeader>
+                <CardTitle>Revenue Overview</CardTitle>
+                <CardDescription>Monthly revenue breakdown by category</CardDescription>
+              </CardHeader>
+              <CardContent className="h-80">
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <LineChart className="h-12 w-12 text-neutral-300 mx-auto mb-2" />
+                    <h3 className="text-lg font-medium">Revenue Analytics</h3>
+                    <p className="text-sm text-neutral-500 mt-1">
+                      Interactive charts for detailed revenue analysis
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="merchants">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>System Statistics</CardTitle>
+            <CardHeader>
+              <CardTitle>Merchant Management</CardTitle>
               <CardDescription>
-                Overview of system metrics and usage
+                View and manage all registered merchants
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingStats ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <Store className="h-12 w-12 text-neutral-300 mx-auto mb-2" />
+                  <h3 className="text-lg font-medium">Merchant Data</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    Complete merchant management interface with filtering and detailed reports
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Users:</span>
-                    <span className="font-medium">{stats.totalUsers}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Merchants:</span>
-                    <span className="font-medium">{stats.totalMerchants}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Affiliates:</span>
-                    <span className="font-medium">{stats.totalAffiliates}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total ISO Partners:</span>
-                    <span className="font-medium">{stats.totalIsoPartners}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Transactions:</span>
-                    <span className="font-medium">{stats.totalTransactions}</span>
-                  </div>
-                </div>
-              )}
+              </div>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full">
-                View Detailed Stats
-              </Button>
-            </CardFooter>
           </Card>
+        </TabsContent>
 
-          {/* System Health */}
+        <TabsContent value="partners">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>System Health</CardTitle>
+            <CardHeader>
+              <CardTitle>ISO Partner Network</CardTitle>
               <CardDescription>
-                Current system performance metrics
+                Manage partnerships and commissions
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Database</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Healthy
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">API Services</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Online
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">WebSocket Server</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Connected
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Task Queue</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Processing
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Cache</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    OK
-                  </span>
+              <div className="h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <Building className="h-12 w-12 text-neutral-300 mx-auto mb-2" />
+                  <h3 className="text-lg font-medium">ISO Partner Dashboard</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    View partner performance, commission structures, and referral tracking
+                  </p>
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full">
-                View System Logs
-              </Button>
-            </CardFooter>
           </Card>
+        </TabsContent>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="secondary" size="sm" className="w-full mb-2">
-                Manage Users
-              </Button>
-              <Button variant="secondary" size="sm" className="w-full mb-2">
-                System Configuration
-              </Button>
-              <Button variant="secondary" size="sm" className="w-full mb-2">
-                Security Settings
-              </Button>
-              <Button variant="secondary" size="sm" className="w-full mb-2">
-                Database Management
-              </Button>
-              <Button variant="secondary" size="sm" className="w-full">
-                API Documentation
-              </Button>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full">
-                View All Actions
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Recent Activity */}
+        <TabsContent value="affiliates">
           <Card>
             <CardHeader>
-              <CardTitle>Recent System Activity</CardTitle>
-              <CardDescription>Latest events and actions</CardDescription>
+              <CardTitle>Affiliate Program Management</CardTitle>
+              <CardDescription>
+                Track and manage the affiliate marketing program
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="border-l-4 border-blue-500 pl-4 py-1">
-                  <p className="text-sm font-medium">Database Backup Completed</p>
-                  <p className="text-xs text-muted-foreground">Today at 4:30 AM</p>
-                </div>
-                <div className="border-l-4 border-green-500 pl-4 py-1">
-                  <p className="text-sm font-medium">New Merchant Registered</p>
-                  <p className="text-xs text-muted-foreground">Yesterday at 2:15 PM</p>
-                </div>
-                <div className="border-l-4 border-yellow-500 pl-4 py-1">
-                  <p className="text-sm font-medium">System Update Scheduled</p>
-                  <p className="text-xs text-muted-foreground">Tomorrow at 1:00 AM</p>
-                </div>
-                <div className="border-l-4 border-purple-500 pl-4 py-1">
-                  <p className="text-sm font-medium">New ISO Partner Application</p>
-                  <p className="text-xs text-muted-foreground">2 days ago</p>
-                </div>
-                <div className="border-l-4 border-red-500 pl-4 py-1">
-                  <p className="text-sm font-medium">Security Alert Resolved</p>
-                  <p className="text-xs text-muted-foreground">3 days ago</p>
+              <div className="h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <Users className="h-12 w-12 text-neutral-300 mx-auto mb-2" />
+                  <h3 className="text-lg font-medium">Affiliate Dashboard</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    Commission tracking, performance metrics, and affiliate management
+                  </p>
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full">
-                View All Activity
-              </Button>
-            </CardFooter>
           </Card>
+        </TabsContent>
 
-          {/* Alerts & Notifications */}
+        <TabsContent value="analytics">
           <Card>
             <CardHeader>
-              <CardTitle>System Alerts</CardTitle>
-              <CardDescription>Important notifications requiring attention</CardDescription>
+              <CardTitle>System Analytics</CardTitle>
+              <CardDescription>
+                Comprehensive data analytics and reporting
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-1">System Update Required</h4>
-                  <p className="text-xs text-yellow-700">
-                    New security updates available for deployment.
-                  </p>
-                </div>
-                <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
-                  <h4 className="text-sm font-medium text-blue-800 mb-1">Database Optimization</h4>
-                  <p className="text-xs text-blue-700">
-                    Regular database maintenance scheduled for tonight.
-                  </p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-md border border-green-200">
-                  <h4 className="text-sm font-medium text-green-800 mb-1">API Usage Spike</h4>
-                  <p className="text-xs text-green-700">
-                    Increased API traffic detected from merchant portals.
+              <div className="h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <LineChart className="h-12 w-12 text-neutral-300 mx-auto mb-2" />
+                  <h3 className="text-lg font-medium">Analytics Dashboard</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    Financial performance, user growth, and system health metrics
                   </p>
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full">
-                Manage Alerts
-              </Button>
-            </CardFooter>
           </Card>
-        </div>
-      </main>
-    </div>
+        </TabsContent>
+      </Tabs>
+    </AdminLayout>
   );
 }

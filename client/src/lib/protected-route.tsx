@@ -5,16 +5,15 @@ import { Redirect, Route } from "wouter";
 export function ProtectedRoute({
   path,
   component: Component,
+  requiredRole = undefined,
 }: {
   path: string;
-  component: () => React.JSX.Element | null;
+  component: React.ComponentType<any>;
+  requiredRole?: string;
 }) {
   const { user, isLoading } = useAuth();
-  
-  // Special handling for BistroBeast kitchen route for demo purposes
-  const isBistroBeastKitchenRoute = path.includes("/merchant/pos/bistro/kitchen");
-  
-  if (isLoading && !isBistroBeastKitchenRoute) {
+
+  if (isLoading) {
     return (
       <Route path={path}>
         <div className="flex items-center justify-center min-h-screen">
@@ -24,8 +23,7 @@ export function ProtectedRoute({
     );
   }
 
-  // For demo purposes, we're bypassing auth for BistroBeast kitchen route
-  if (!user && !isBistroBeastKitchenRoute) {
+  if (!user) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -33,5 +31,22 @@ export function ProtectedRoute({
     );
   }
 
-  return <Route path={path} component={Component} />;
+  if (requiredRole && user.role !== requiredRole) {
+    return (
+      <Route path={path}>
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+          <h1 className="text-2xl font-bold">Access Denied</h1>
+          <p className="text-neutral-600">
+            You don't have permission to access this page.
+          </p>
+        </div>
+      </Route>
+    );
+  }
+
+  return (
+    <Route path={path}>
+      <Component />
+    </Route>
+  );
 }
