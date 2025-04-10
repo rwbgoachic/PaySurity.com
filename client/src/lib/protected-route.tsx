@@ -5,10 +5,10 @@ import { Redirect, Route } from "wouter";
 export function ProtectedRoute({
   path,
   component: Component,
-  requiredRole = undefined,
+  requiredRole,
 }: {
   path: string;
-  component: React.ComponentType<any>;
+  component: React.FC<any>;
   requiredRole?: string;
 }) {
   const { user, isLoading } = useAuth();
@@ -31,22 +31,14 @@ export function ProtectedRoute({
     );
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  // Check for role-based access if requiredRole is specified
+  if (requiredRole && user.role !== requiredRole && user.role !== 'super_admin') {
     return (
       <Route path={path}>
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="text-neutral-600">
-            You don't have permission to access this page.
-          </p>
-        </div>
+        <Redirect to="/unauthorized" />
       </Route>
     );
   }
 
-  return (
-    <Route path={path}>
-      <Component />
-    </Route>
-  );
+  return <Route path={path} component={Component} />;
 }
