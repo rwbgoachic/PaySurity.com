@@ -27,12 +27,18 @@ export function AdminNavigation() {
   const [location] = useLocation();
   
   // Handle potential auth hook errors
-  let user;
-  let logoutMutation;
+  let user: { username: string; role?: string } | null = null;
+  let logoutMutation: { mutate: () => void };
   
   try {
     const auth = useAuth();
-    user = auth.user;
+    // If user is not null, use it
+    if (auth.user) {
+      user = {
+        username: auth.user.username,
+        role: auth.user.role
+      };
+    }
     logoutMutation = auth.logoutMutation;
   } catch (error) {
     console.error("Auth hook error:", error);

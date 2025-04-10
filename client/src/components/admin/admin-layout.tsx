@@ -10,7 +10,12 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children, title }: AdminLayoutProps) {
   // Use try-catch to handle potential auth hook errors
-  let user;
+  let user: { 
+    username: string; 
+    firstName?: string; 
+    lastName?: string; 
+    role?: string;
+  } | null = null;
   let isLoading = false;
   
   try {
