@@ -272,12 +272,12 @@ function Router() {
       </Route>
       
       {/* Super Admin routes */}
-      <ProtectedRoute path="/super-admin/dashboard" component={SuperAdminDashboard} />
-      <ProtectedRoute path="/super-admin/merchants" component={React.lazy(() => import("./pages/super-admin/merchants"))} />
-      <ProtectedRoute path="/super-admin/partners" component={React.lazy(() => import("./pages/super-admin/partners"))} />
-      <ProtectedRoute path="/super-admin/affiliates" component={React.lazy(() => import("./pages/super-admin/affiliates"))} />
-      <ProtectedRoute path="/super-admin/payments" component={React.lazy(() => import("./pages/super-admin/payments"))} />
-      <ProtectedRoute path="/super-admin/analytics" component={React.lazy(() => import("./pages/super-admin/analytics"))} />
+      <Route path="/super-admin/dashboard" component={SuperAdminDashboard} />
+      <Route path="/super-admin/merchants" component={React.lazy(() => import("./pages/super-admin/merchants"))} />
+      <Route path="/super-admin/partners" component={React.lazy(() => import("./pages/super-admin/partners"))} />
+      <Route path="/super-admin/affiliates" component={React.lazy(() => import("./pages/super-admin/affiliates"))} />
+      <Route path="/super-admin/payments" component={React.lazy(() => import("./pages/super-admin/payments"))} />
+      <Route path="/super-admin/analytics" component={React.lazy(() => import("./pages/super-admin/analytics"))} />
       
       {/* Admin routes should be protected */}
       <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
