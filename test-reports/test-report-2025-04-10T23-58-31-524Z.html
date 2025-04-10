@@ -1,0 +1,228 @@
+
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Test Report: API Integration Test</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+          }
+          h1, h2 {
+            color: #2c3e50;
+          }
+          .summary {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+          .progress-container {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            margin: 10px 0;
+          }
+          .progress-bar {
+            height: 100%;
+            border-radius: 10px;
+            background-color: #dc3545;
+          }
+          .test-group {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+          }
+          .group-header {
+            padding: 10px 15px;
+            background-color: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+          }
+          .test-list {
+            padding: 0;
+            margin: 0;
+            list-style-type: none;
+          }
+          .test-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+          }
+          .test-item:last-child {
+            border-bottom: none;
+          }
+          .test-name {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+          }
+          .test-result {
+            margin-left: 10px;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+          }
+          .pass {
+            background-color: #d4edda;
+            color: #155724;
+          }
+          .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+          }
+          .test-details {
+            margin-top: 10px;
+            padding-left: 20px;
+            font-size: 14px;
+            color: #666;
+          }
+          .test-detail {
+            margin: 5px 0;
+          }
+          .stack-trace {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+          }
+          .timestamp {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Test Report: API Integration Test</h1>
+        <div class="timestamp">Generated on: 4/10/2025, 11:58:31 PM</div>
+        
+        <div class="summary">
+          <h2>Summary</h2>
+          <p>Overall Result: <strong class="fail">FAILED</strong></p>
+          <p>Test Groups: 1/4 passed (25%)</p>
+          <p>Individual Tests: 2/7 passed (29%)</p>
+          
+          <div class="progress-container">
+            <div class="progress-bar" style="width: 29%"></div>
+          </div>
+        </div>
+        
+        <h2>Detailed Results</h2>
+    
+        <div class="test-group">
+          <div class="group-header">
+            ✗ Internal API Tests (50% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✓ GET /api/health
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          <li class="test-item">
+            <div class="test-name">
+              ✗ GET /api/user
+              <span class="test-result fail">FAIL</span>
+            </div>
+        
+            <div class="test-details">
+              <div class="test-detail"><strong>Description:</strong> Should receive a valid response from /api/user</div>
+              <div class="test-detail"><strong>Expected:</strong> Status 200 with valid body</div>
+              <div class="test-detail"><strong>Actual:</strong> Status 401, body is invalid</div>
+          </div></li>
+          </ul>
+        </div>
+      
+        <div class="test-group">
+          <div class="group-header">
+            ✓ External API Tests (100% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✓ News API Connectivity
+              <span class="test-result pass">PASS</span>
+            </div>
+        </li>
+          </ul>
+        </div>
+      
+        <div class="test-group">
+          <div class="group-header">
+            ✗ Authentication API Tests (0% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✗ Access Protected Route Without Auth
+              <span class="test-result fail">FAIL</span>
+            </div>
+        
+            <div class="test-details">
+              <div class="test-detail"><strong>Description:</strong> Test authentication behavior for http://localhost:5000/api/protected</div>
+              <div class="test-detail"><strong>Expected:</strong> Status 401</div>
+              <div class="test-detail"><strong>Actual:</strong> Status 200</div>
+          </div></li>
+          <li class="test-item">
+            <div class="test-name">
+              ✗ Auth Status Check
+              <span class="test-result fail">FAIL</span>
+            </div>
+        
+            <div class="test-details">
+              <div class="test-detail"><strong>Description:</strong> Test authentication behavior for http://localhost:5000/api/user</div>
+              <div class="test-detail"><strong>Expected:</strong> Status 200</div>
+              <div class="test-detail"><strong>Actual:</strong> Status 401</div>
+          </div></li>
+          </ul>
+        </div>
+      
+        <div class="test-group">
+          <div class="group-header">
+            ✗ API Error Handling Tests (0% passed)
+          </div>
+          <ul class="test-list">
+      
+          <li class="test-item">
+            <div class="test-name">
+              ✗ Not Found Error
+              <span class="test-result fail">FAIL</span>
+            </div>
+        
+            <div class="test-details">
+              <div class="test-detail"><strong>Description:</strong> Test error handling for GET http://localhost:5000/api/non-existent-endpoint</div>
+              <div class="test-detail"><strong>Expected:</strong> Status 404</div>
+              <div class="test-detail"><strong>Actual:</strong> Status 200</div>
+          </div></li>
+          <li class="test-item">
+            <div class="test-name">
+              ✗ Method Not Allowed
+              <span class="test-result fail">FAIL</span>
+            </div>
+        
+            <div class="test-details">
+              <div class="test-detail"><strong>Description:</strong> Test error handling for PUT http://localhost:5000/api/health</div>
+              <div class="test-detail"><strong>Expected:</strong> Status 405</div>
+              <div class="test-detail"><strong>Actual:</strong> Status 403</div>
+          </div></li>
+          </ul>
+        </div>
+      
+      </body>
+      </html>
+    
