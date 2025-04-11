@@ -3750,6 +3750,10 @@ export const ioltaTrustAccounts = pgTable("iolta_trust_accounts", {
   accountStatus: text("account_status", { enum: ["active", "inactive", "pending_verification", "suspended"] }).notNull().default("pending_verification"),
   balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
   lastReconcileDate: timestamp("last_reconcile_date"),
+  lastReconciledBalance: decimal("last_reconciled_balance", { precision: 12, scale: 2 }),
+  lastReconciledDate: timestamp("last_reconciled_date"),
+  lastBankStatementDate: date("last_bank_statement_date"),
+  reconciliationNotes: text("reconciliation_notes"),
   interestBeneficiary: text("interest_beneficiary").default("state_bar_foundation"),
   barAssociationId: text("bar_association_id"),
   notes: text("notes"),
@@ -3808,6 +3812,9 @@ export const ioltaTransactions = pgTable("iolta_transactions", {
   approvedBy: integer("approved_by"), // User ID who approved the transaction
   status: text("status").notNull().default("pending"), // pending, completed, rejected, voided
   earningDate: timestamp("earning_date"), // When funds are considered earned (for transfers from trust to operating)
+  clearedDate: timestamp("cleared_date"), // Date when the transaction cleared the bank (for reconciliation)
+  reconciliationId: integer("reconciliation_id"), // Reference to the reconciliation record when this transaction was reconciled
+  bankReference: text("bank_reference"), // Bank's reference number for this transaction
   createdAt: timestamp("created_at").defaultNow(),
   processedAt: timestamp("processed_at"),
 });
@@ -3820,6 +3827,62 @@ export const insertIoltaTransactionSchema = createInsertSchema(ioltaTransactions
 
 export type IoltaTransaction = typeof ioltaTransactions.$inferSelect;
 export type InsertIoltaTransaction = z.infer<typeof insertIoltaTransactionSchema>;
+
+// IOLTA Bank Reconciliation Records
+export const ioltaReconciliations = pgTable("iolta_reconciliations", {
+  id: serial("id").primaryKey(),
+  trustAccountId: integer("trust_account_id").notNull(),
+  merchantId: integer("merchant_id").notNull(),
+  reconciliationDate: date("reconciliation_date").notNull(),
+  bookBalance: decimal("book_balance", { precision: 12, scale: 2 }).notNull(),
+  bankBalance: decimal("bank_balance", { precision: 12, scale: 2 }).notNull(),
+  adjustedBookBalance: decimal("adjusted_book_balance", { precision: 12, scale: 2 }).notNull(),
+  adjustedBankBalance: decimal("adjusted_bank_balance", { precision: 12, scale: 2 }).notNull(),
+  isBalanced: boolean("is_balanced").notNull().default(false),
+  difference: decimal("difference", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  reconciliationNotes: text("reconciliation_notes"),
+  outstandingDeposits: jsonb("outstanding_deposits").default("[]"),
+  outstandingChecks: jsonb("outstanding_checks").default("[]"),
+  bankFeesAdjustment: decimal("bank_fees_adjustment", { precision: 12, scale: 2 }).default("0.00"),
+  interestEarnedAdjustment: decimal("interest_earned_adjustment", { precision: 12, scale: 2 }).default("0.00"),
+  otherAdjustments: jsonb("other_adjustments").default("[]"),
+  bankStatementId: integer("bank_statement_id"),
+  createdById: integer("created_by_id").notNull(),
+  reviewedById: integer("reviewed_by_id"),
+  reviewedAt: timestamp("reviewed_at"),
+  status: text("status", { enum: ["draft", "completed", "reviewed", "discrepancy"] }).notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIoltaReconciliationSchema = createInsertSchema(ioltaReconciliations);
+
+export type IoltaReconciliation = typeof ioltaReconciliations.$inferSelect;
+export type InsertIoltaReconciliation = z.infer<typeof insertIoltaReconciliationSchema>;
+
+// IOLTA Bank Statements
+export const ioltaBankStatements = pgTable("iolta_bank_statements", {
+  id: serial("id").primaryKey(),
+  trustAccountId: integer("trust_account_id").notNull(),
+  merchantId: integer("merchant_id").notNull(),
+  statementDate: date("statement_date").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  startingBalance: decimal("starting_balance", { precision: 12, scale: 2 }).notNull(),
+  endingBalance: decimal("ending_balance", { precision: 12, scale: 2 }).notNull(),
+  statementFileName: text("statement_file_name"),
+  statementFileLocation: text("statement_file_location"),
+  uploadedById: integer("uploaded_by_id").notNull(),
+  processingStatus: text("processing_status", { enum: ["pending", "processing", "completed", "error"] }).notNull().default("pending"),
+  processingNotes: text("processing_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIoltaBankStatementSchema = createInsertSchema(ioltaBankStatements);
+
+export type IoltaBankStatement = typeof ioltaBankStatements.$inferSelect;
+export type InsertIoltaBankStatement = z.infer<typeof insertIoltaBankStatementSchema>;
 
 // Legal Time and Expense Tracking
 
