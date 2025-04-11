@@ -122,7 +122,7 @@ export class IoltaTestService implements TestService {
     
     // Test 1: Create IOLTA account
     try {
-      const account = await ioltaService.createIoltaAccount(this.testAccountData);
+      const account = await ioltaService.createTrustAccount(this.testAccountData);
       
       // Update the account ID for later tests
       this.testClientData.ioltaAccountId = account.id;
