@@ -137,15 +137,14 @@ export class ClientPortalTestService implements TestService {
     // Create IOLTA account
     const account = await ioltaService.createTrustAccount({
       merchantId: this.testMerchantId,
-      clientId: this.testClientId.toString(), // Add clientId to fix null constraint
+      clientId: this.testClientId,
       accountNumber: 'PORTAL12345',
       accountName: 'Test Portal IOLTA Account',
       bankName: 'First National Test Bank',
       routingNumber: '123456789',
-      accountType: 'iolta' as const, // Add required accountType
-      accountStatus: 'active' as const, // Replace status with accountStatus
-      balance: '10000.00',
-      taxId: '98-7654321' // Add taxId to fix missing column error
+      accountType: 'iolta' as const,
+      status: 'active',
+      balance: '10000.00'
     });
     
     this.testAccountId = account.id;

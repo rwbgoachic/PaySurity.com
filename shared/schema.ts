@@ -3742,13 +3742,18 @@ export const transactionFundTypeEnum = pgEnum("transaction_fund_type", ["earned"
 export const ioltaTrustAccounts = pgTable("iolta_trust_accounts", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(), // Law firm/attorney profile
-  accountName: text("account_name").notNull(),
-  accountType: text("account_type", { enum: ["attorney_trust", "escrow", "iolta", "iola", "general_client_trust"] }).notNull(),
-  bankName: text("bank_name").notNull(),
+  clientId: integer("client_id").notNull(), // Client associated with this trust account
+  matterId: integer("matter_id"), // Optional matter association
+  accountName: text("account_name"),
+  accountType: text("account_type", { enum: ["attorney_trust", "escrow", "iolta", "iola", "general_client_trust"] }),
+  bankName: text("bank_name"),
   accountNumber: text("account_number").notNull(),
-  routingNumber: text("routing_number").notNull(),
-  accountStatus: text("account_status", { enum: ["active", "inactive", "pending_verification", "suspended"] }).notNull().default("pending_verification"),
+  routingNumber: text("routing_number"),
+  description: text("description"),
+  accountStatus: text("account_status", { enum: ["active", "inactive", "pending_verification", "suspended"] }),
+  status: text("status").notNull(), // Legacy status field
   balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  lastActivityDate: date("last_activity_date"),
   lastReconcileDate: timestamp("last_reconcile_date"),
   lastReconciledBalance: decimal("last_reconciled_balance", { precision: 12, scale: 2 }),
   lastReconciledDate: timestamp("last_reconciled_date"),
@@ -3757,8 +3762,8 @@ export const ioltaTrustAccounts = pgTable("iolta_trust_accounts", {
   interestBeneficiary: text("interest_beneficiary").default("state_bar_foundation"),
   barAssociationId: text("bar_association_id"),
   notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at"),
+  updatedAt: timestamp("updated_at"),
 });
 
 export const insertIoltaTrustAccountSchema = createInsertSchema(ioltaTrustAccounts).omit({

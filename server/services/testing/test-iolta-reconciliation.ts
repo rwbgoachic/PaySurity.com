@@ -152,15 +152,14 @@ export class IoltaReconciliationTestService implements TestService {
     // Create test account
     const account = await ioltaService.createTrustAccount({
       merchantId: this.testMerchantId,
-      clientId: this.testClientId.toString(), // Add clientId to fix null constraint
+      clientId: this.testClientId,
       accountNumber: 'RECTEST12345',
       accountName: 'Test Reconciliation IOLTA Account',
       bankName: 'First National Test Bank',
       routingNumber: '123456789',
-      accountType: 'iolta' as const, // Add required accountType
-      accountStatus: 'active' as const, // Replace status with accountStatus
-      balance: '10000.00',
-      taxId: '12-3456789' // Add taxId to fix missing column error
+      accountType: 'iolta' as const,
+      status: 'active',
+      balance: '10000.00'
     });
     
     this.testAccountId = account.id;
