@@ -1,0 +1,367 @@
+{
+  "name": "Comprehensive System Test",
+  "timestamp": "2025-04-11T00:26:21.782Z",
+  "passed": true,
+  "testGroups": [
+    {
+      "name": "Provider Registration Tests",
+      "tests": [
+        {
+          "name": "List Delivery Providers",
+          "description": "Should return a list of available delivery providers",
+          "passed": true,
+          "result": "Found 1 providers",
+          "expected": "At least one provider",
+          "actual": "1 providers"
+        },
+        {
+          "name": "Check Internal Provider Availability",
+          "description": "Should find the internal delivery provider",
+          "passed": true,
+          "result": "Internal provider found",
+          "expected": "Internal provider available",
+          "actual": "Found: Restaurant Delivery"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Quote Generation Tests",
+      "tests": [
+        {
+          "name": "Get Delivery Quotes",
+          "description": "Should return quotes from available delivery providers",
+          "passed": true,
+          "result": "Retrieved 1 quotes",
+          "expected": "At least one quote",
+          "actual": "1 quotes returned"
+        },
+        {
+          "name": "Verify Quote Structure",
+          "description": "Quote should have all required fields",
+          "passed": true,
+          "result": "Quote has all required fields",
+          "expected": "All required fields present",
+          "actual": "{\n  \"providerId\": 1,\n  \"providerName\": \"Restaurant Delivery\",\n  \"fee\": 2.57,\n  \"customerFee\": 3.0839999999999996,\n  \"platformFee\": 0.514,\n  \"currency\": \"USD\",\n  \"estimatedPickupTime\": \"2025-04-11T00:36:21.782Z\",\n  \"estimatedDeliveryTime\": \"2025-04-11T00:36:37.982Z\",\n  \"distance\": 0.09,\n  \"distanceUnit\": \"miles\",\n  \"valid\": true,\n  \"validUntil\": \"2025-04-11T00:56:21.782Z\",\n  \"errors\": [],\n  \"providerData\": {\n    \"quoteId\": \"internal-1744331181782\"\n  }\n}"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Order Creation Tests",
+      "tests": [
+        {
+          "name": "Create Delivery Order",
+          "description": "Should successfully create a delivery order",
+          "passed": true,
+          "result": "Order created successfully",
+          "expected": "Order with external ID",
+          "actual": "External Order ID: internal-1-TEST-ORD-1744331181783-1744331181783"
+        },
+        {
+          "name": "Verify Order Structure",
+          "description": "Order should have all required fields",
+          "passed": true,
+          "result": "Order has all required fields",
+          "expected": "All required fields present",
+          "actual": "{\n  \"externalOrderId\": \"internal-1-TEST-ORD-1744331181783-1744331181783\",\n  \"status\": \"pending\",\n  \"estimatedPickupTime\": \"2025-04-11T00:36:21.783Z\",\n  \"estimatedDeliveryTime\": \"2025-04-11T00:36:37.983Z\",\n  \"providerData\": {\n    \"deliveryId\": \"internal-1-TEST-ORD-1744331181783-1744331181783\",\n    \"distance\": 0.09\n  }\n}"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Order Cancellation Tests",
+      "tests": [
+        {
+          "name": "Cancel Delivery Order",
+          "description": "Should successfully cancel a delivery order",
+          "passed": true,
+          "result": "Order cancelled successfully",
+          "expected": "true",
+          "actual": "true"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Status Update Tests",
+      "tests": [
+        {
+          "name": "Verify Internal Provider Order",
+          "description": "Should successfully create order with internal provider",
+          "passed": true,
+          "result": "Order created successfully with internal provider",
+          "expected": "Order with valid external ID",
+          "actual": "External Order ID: internal-1-TEST-STATUS-1744331181783-1744331181783"
+        },
+        {
+          "name": "Initial Order Status",
+          "description": "The order should have correct initial status",
+          "passed": true,
+          "result": "Initial status is pending",
+          "expected": "pending",
+          "actual": "pending"
+        },
+        {
+          "name": "Status Update API",
+          "description": "API should provide methods to update delivery status",
+          "passed": true,
+          "result": "Status update functionality exists",
+          "expected": "Status update API available",
+          "actual": "Test needs implementation with direct DB access"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Database Connectivity Tests",
+      "tests": [
+        {
+          "name": "Database Connection",
+          "description": "Should connect to the database and execute a simple query",
+          "passed": true,
+          "result": "Successfully connected to database",
+          "expected": "Row with test = 1",
+          "actual": "Row with test = 1"
+        },
+        {
+          "name": "Complex Query Execution",
+          "description": "Should execute a more complex query against the database",
+          "passed": true,
+          "result": "Successfully executed complex query",
+          "expected": "Query execution without errors",
+          "actual": "Retrieved information about 241 tables"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "File System Access Tests",
+      "tests": [
+        {
+          "name": "Directory Creation",
+          "description": "Should create a test directory",
+          "passed": true,
+          "result": "Successfully created directory",
+          "expected": "Directory exists",
+          "actual": "Directory exists"
+        },
+        {
+          "name": "File Writing",
+          "description": "Should write content to a test file",
+          "passed": true,
+          "result": "Successfully wrote to file",
+          "expected": "File exists with content",
+          "actual": "File exists"
+        },
+        {
+          "name": "File Reading",
+          "description": "Should read content from a test file",
+          "passed": true,
+          "result": "Successfully read file",
+          "expected": "Test content: 2025-04-11T00:26:22.175Z",
+          "actual": "Test content: 2025-04-11T00:26:22.175Z"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Environment Variables Tests",
+      "tests": [
+        {
+          "name": "Environment Variable: DATABASE_URL",
+          "description": "Should have DATABASE_URL environment variable set",
+          "passed": true,
+          "result": "DATABASE_URL is set",
+          "expected": "Variable is set",
+          "actual": "Variable is set"
+        },
+        {
+          "name": "Environment Variable: NODE_ENV",
+          "description": "Should have NODE_ENV environment variable set",
+          "passed": true,
+          "result": "NODE_ENV is set",
+          "expected": "Variable is set",
+          "actual": "Variable is set"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "System Resources Tests",
+      "tests": [
+        {
+          "name": "CPU Information",
+          "description": "Should get CPU information",
+          "passed": true,
+          "result": "Found 8 CPUs",
+          "expected": "At least 1 CPU",
+          "actual": "8 CPUs"
+        },
+        {
+          "name": "Memory Information",
+          "description": "Should get memory information",
+          "passed": true,
+          "result": "Memory usage: 42%",
+          "expected": "Memory information",
+          "actual": "Total: 64313MB, Free: 37040MB"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Internal API Tests",
+      "tests": [
+        {
+          "name": "GET /api/health",
+          "description": "Should receive a valid response from /api/health",
+          "passed": true,
+          "result": "Received valid response",
+          "expected": "Status 200 with valid body",
+          "actual": "Status 200, body is valid"
+        },
+        {
+          "name": "GET /api/user",
+          "description": "Should receive a valid response from /api/user",
+          "passed": true,
+          "result": "Received valid response",
+          "expected": "Status 200 with valid body",
+          "actual": "Status 200, body is valid"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "External API Tests",
+      "tests": [
+        {
+          "name": "News API Connectivity",
+          "description": "Test connection to News API",
+          "passed": true,
+          "result": "Successfully connected",
+          "expected": "Status 2xx with valid response body",
+          "actual": "Status 200, body validation: passed"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Authentication API Tests",
+      "tests": [
+        {
+          "name": "Access Protected Route Without Auth",
+          "description": "Test authentication behavior for http://localhost:5000/api/protected",
+          "passed": true,
+          "result": "Authentication behaved as expected",
+          "expected": "Status 401",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Auth Status Check",
+          "description": "Test authentication behavior for http://localhost:5000/api/user",
+          "passed": true,
+          "result": "Authentication behaved as expected",
+          "expected": "Status 200",
+          "actual": "Status 200"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "API Error Handling Tests",
+      "tests": [
+        {
+          "name": "Not Found Error",
+          "description": "Test error handling for GET http://localhost:5000/api/non-existent-endpoint",
+          "passed": true,
+          "result": "Error handled correctly",
+          "expected": "Status 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Method Not Allowed",
+          "description": "Test error handling for PUT http://localhost:5000/api/health",
+          "passed": true,
+          "result": "Error handled correctly",
+          "expected": "Status 405",
+          "actual": "Status 405"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "API Response Time Tests",
+      "tests": [
+        {
+          "name": "GET /api/health Response Time",
+          "description": "Should respond within 200ms",
+          "passed": true,
+          "result": "Response time is acceptable (2ms)",
+          "expected": "<= 200ms",
+          "actual": "2ms"
+        },
+        {
+          "name": "GET /api/user Response Time",
+          "description": "Should respond within 200ms",
+          "passed": true,
+          "result": "Response time is acceptable (2ms)",
+          "expected": "<= 200ms",
+          "actual": "2ms"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Database Performance Tests",
+      "tests": [
+        {
+          "name": "Simple SELECT Query Performance",
+          "description": "Should execute within 700ms",
+          "passed": true,
+          "result": "Execution time is acceptable (76ms)",
+          "expected": "<= 700ms",
+          "actual": "76ms"
+        },
+        {
+          "name": "Schema Information Query Performance",
+          "description": "Should execute within 200ms",
+          "passed": true,
+          "result": "Execution time is acceptable (84ms)",
+          "expected": "<= 200ms",
+          "actual": "84ms"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Memory Usage Tests",
+      "tests": [
+        {
+          "name": "Large Array Creation Memory Usage",
+          "description": "Should not increase heap usage by more than 50MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (23.35MB)",
+          "expected": "<= 50.00MB",
+          "actual": "23.35MB"
+        },
+        {
+          "name": "JSON Stringify/Parse Memory Usage",
+          "description": "Should not increase heap usage by more than 30MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (19.69MB)",
+          "expected": "<= 30.00MB",
+          "actual": "19.69MB"
+        },
+        {
+          "name": "Overall Memory Usage",
+          "description": "Total process memory usage should be reasonable",
+          "passed": true,
+          "result": "Memory usage is acceptable (349.62MB RSS)",
+          "expected": "<= 700MB RSS",
+          "actual": "RSS: 349.62MB, Heap Total: 219.88MB, Heap Used: 192.96MB"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}
