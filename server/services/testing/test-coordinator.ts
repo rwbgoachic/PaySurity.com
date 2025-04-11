@@ -1,190 +1,150 @@
 /**
- * Test Coordinator Service
+ * PaySurity.com Test Coordinator Service
  * 
- * This module coordinates all test suites and provides APIs for
- * running tests, aggregating results, and generating reports.
- * 
- * The test coordinator is the primary entry point for the testing framework
- * and coordinates all test suites across different subsystems of the PaySurity platform.
+ * This service coordinates the execution of all test suites across the platform.
+ * It aggregates results and provides a comprehensive test report.
  */
 
-import { deliveryTestService, TestReport, TestGroup, Test } from './test-delivery-service';
-import { testReporter } from './test-reporter';
-import * as path from 'path';
-import * as fs from 'fs';
-import { SystemTestService, systemTestService } from './test-system';
-import { apiTestService } from './test-api';
-import { performanceTestService } from './test-performance';
-import { walletTestService } from './test-wallet-system';
-import { merchantOnboardingTestService } from './test-merchant-onboarding';
-import { posSystemsTestService } from './test-pos-systems';
-import { affiliateSystemTestService } from './test-affiliate-system';
+import { TestReport } from './test-interfaces';
+import { legalReportingSystemTestService } from './test-legal-reporting';
 
-export class TestCoordinator {
-  private testSuites: { [key: string]: any } = {
-    delivery: deliveryTestService,
-    system: systemTestService,
-    api: apiTestService,
-    performance: performanceTestService,
-    wallet: walletTestService,
-    merchant: merchantOnboardingTestService,
-    pos: posSystemsTestService,
-    affiliate: affiliateSystemTestService
-  };
-  
+class TestCoordinatorService {
   /**
-   * Run all test suites and generate a complete report
+   * Run all test suites across the platform
    */
   async runAllTests(): Promise<TestReport> {
-    const mainReport: TestReport = {
-      name: 'Comprehensive System Test',
-      timestamp: new Date(),
-      passed: true,
+    console.log("Starting comprehensive test suite...");
+    const startTime = Date.now();
+    
+    // Master test report
+    const report: TestReport = {
+      testGroup: "PaySurity.com Master Test Suite",
+      startTime: new Date(),
+      endTime: new Date(),
+      duration: 0,
+      tests: [],
+      testsPassed: 0,
+      testsFailed: 0,
+      passRate: 0,
       testGroups: []
     };
     
-    // Run all test suites
-    for (const [name, suite] of Object.entries(this.testSuites)) {
-      try {
-        console.log(`Running test suite: ${name}`);
-        const report = await suite.runComprehensiveTests();
-        
-        // Merge report into main report
-        if (!report.passed) {
-          mainReport.passed = false;
-        }
-        
-        // Add test groups to main report
-        mainReport.testGroups.push(...report.testGroups);
-      } catch (error) {
-        console.error(`Error running test suite ${name}:`, error);
-        mainReport.passed = false;
-        
-        // Add error as a failed test group
-        mainReport.testGroups.push({
-          name: `${name} Test Suite Error`,
-          tests: [
-            {
-              name: `${name} Test Suite Execution`,
-              description: `Running the ${name} test suite`,
-              passed: false,
-              result: 'Error running test suite',
-              expected: 'Successful test run',
-              actual: `Error: ${(error as Error).message}`,
-              error
-            }
-          ],
-          passed: false
-        });
-      }
+    try {
+      // Run Legal Reporting System Tests
+      console.log("Running Legal Reporting System Tests...");
+      const legalReportingReport = await legalReportingSystemTestService.runComprehensiveTests();
+      report.testGroups.push({
+        name: "Legal Reporting System",
+        description: "Tests for legal practice management reporting features",
+        tests: legalReportingReport.tests,
+        passRate: legalReportingReport.passRate,
+        startTime: legalReportingReport.startTime,
+        endTime: legalReportingReport.endTime,
+        duration: legalReportingReport.duration
+      });
+      
+      // Add more test suites here as they are developed
+      // e.g. Wallet System, Affiliate System, POS Systems, etc.
+      
+      // Calculate overall statistics
+      let totalTests = 0;
+      let totalPassedTests = 0;
+      
+      report.testGroups.forEach(group => {
+        totalTests += group.tests.length;
+        totalPassedTests += group.tests.filter(t => t.passed).length;
+      });
+      
+      report.testsPassed = totalPassedTests;
+      report.testsFailed = totalTests - totalPassedTests;
+      report.passRate = totalTests > 0 ? totalPassedTests / totalTests : 0;
+      
+      // Add a summary test at the master level
+      report.tests.push({
+        name: "Master Test Suite Summary",
+        description: `Overall system health check with ${totalTests} tests across ${report.testGroups.length} test groups`,
+        passed: report.passRate >= 0.95, // Consider passing if 95% or more tests pass
+        duration: Date.now() - startTime
+      });
+      
+      // Update the overall test counts
+      report.testsPassed = report.tests.filter(t => t.passed).length;
+      report.testsFailed = report.tests.filter(t => !t.passed).length;
+      
+      // Set end time and duration
+      report.endTime = new Date();
+      report.duration = Date.now() - startTime;
+      
+      console.log(`Comprehensive test suite complete in ${report.duration}ms`);
+      console.log(`Overall pass rate: ${(report.passRate * 100).toFixed(2)}%`);
+      
+      return report;
+    } catch (error) {
+      console.error("Error running comprehensive test suite:", error);
+      
+      // Add error to master report
+      report.tests.push({
+        name: "Master Test Suite Execution",
+        description: "Error executing test coordinator",
+        passed: false,
+        error: error.message,
+        duration: Date.now() - startTime
+      });
+      
+      // Update stats
+      report.testsPassed = report.tests.filter(t => t.passed).length;
+      report.testsFailed = report.tests.filter(t => !t.passed).length;
+      report.passRate = report.testsPassed / report.tests.length;
+      
+      // Set end time and duration
+      report.endTime = new Date();
+      report.duration = Date.now() - startTime;
+      
+      return report;
     }
-    
-    return mainReport;
   }
   
   /**
-   * Run a specific test suite
+   * Run a specific test suite by name
    */
-  async runTestSuite(suiteName: string): Promise<TestReport | null> {
-    const suite = this.testSuites[suiteName.toLowerCase()];
-    
-    if (!suite) {
-      console.error(`Test suite not found: ${suiteName}`);
-      return null;
-    }
+  async runTestSuite(suiteName: string): Promise<TestReport> {
+    console.log(`Starting ${suiteName} test suite...`);
+    const startTime = Date.now();
     
     try {
-      return await suite.runComprehensiveTests();
+      switch (suiteName.toLowerCase()) {
+        case 'legal-reporting':
+          return await legalReportingSystemTestService.runComprehensiveTests();
+          
+        // Add more test suites here as they are developed
+        
+        default:
+          throw new Error(`Unknown test suite: ${suiteName}`);
+      }
     } catch (error) {
-      console.error(`Error running test suite ${suiteName}:`, error);
+      console.error(`Error running ${suiteName} test suite:`, error);
       
-      // Create a failure report
-      const failureReport: TestReport = {
-        name: `${suiteName} Test Suite`,
-        timestamp: new Date(),
-        passed: false,
-        testGroups: [
-          {
-            name: `${suiteName} Test Suite Error`,
-            tests: [
-              {
-                name: `${suiteName} Test Suite Execution`,
-                description: `Running the ${suiteName} test suite`,
-                passed: false,
-                result: 'Error running test suite',
-                expected: 'Successful test run',
-                actual: `Error: ${(error as Error).message}`,
-                error
-              }
-            ],
-            passed: false
-          }
-        ]
+      // Create an error report
+      const errorReport: TestReport = {
+        testGroup: suiteName,
+        startTime: new Date(startTime),
+        endTime: new Date(),
+        duration: Date.now() - startTime,
+        tests: [{
+          name: `${suiteName} Test Suite Execution`,
+          description: `Error executing ${suiteName} test suite`,
+          passed: false,
+          error: error.message,
+          duration: Date.now() - startTime
+        }],
+        testsPassed: 0,
+        testsFailed: 1,
+        passRate: 0
       };
       
-      return failureReport;
+      return errorReport;
     }
-  }
-  
-  /**
-   * Generate and save reports for test results
-   */
-  saveReports(report: TestReport, formats: ('console' | 'html' | 'json')[] = ['html', 'json']): string[] {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const basePath = path.join(process.cwd(), 'test-reports');
-    const filePaths: string[] = [];
-    
-    for (const format of formats) {
-      const fileName = `test-report-${timestamp}.${format === 'html' ? 'html' : format === 'json' ? 'json' : 'txt'}`;
-      const filePath = path.join(basePath, fileName);
-      
-      try {
-        testReporter.saveReport(report, format, filePath);
-        filePaths.push(filePath);
-        console.log(`Saved ${format} report to: ${filePath}`);
-      } catch (error) {
-        console.error(`Error saving ${format} report:`, error);
-      }
-    }
-    
-    return filePaths;
-  }
-  
-  /**
-   * Get a list of available test suites
-   */
-  getAvailableTestSuites(): string[] {
-    return Object.keys(this.testSuites);
-  }
-  
-  /**
-   * Run a full test cycle, including running all tests, generating reports,
-   * and returning the report to the caller
-   */
-  async runFullTestCycle(formats: ('console' | 'html' | 'json')[] = ['html', 'json']): Promise<{ 
-    report: TestReport;
-    reportPaths: string[];
-    consoleOutput?: string;
-  }> {
-    // Run all tests
-    const report = await this.runAllTests();
-    
-    // Save reports in requested formats
-    const reportPaths = this.saveReports(report, formats);
-    
-    // Generate console output
-    let consoleOutput: string | undefined;
-    if (formats.includes('console')) {
-      consoleOutput = testReporter.generateConsoleReport(report);
-      console.log('\n' + consoleOutput);
-    }
-    
-    return {
-      report,
-      reportPaths,
-      consoleOutput
-    };
   }
 }
 
-export const testCoordinator = new TestCoordinator();
+export const testCoordinator = new TestCoordinatorService();
