@@ -203,6 +203,14 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
   
+  // Log all registered routes
+  console.log('Registered routes:');
+  app._router.stack.forEach((middleware: any) => {
+    if (middleware.route) {
+      console.log(`${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
+    }
+  });
+  
   // Add a special route for API testing authentication bypass
   app.get('/api/user', (req, res) => {
     // Debug the headers to see what's being received
