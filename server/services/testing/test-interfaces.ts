@@ -1,62 +1,43 @@
 /**
- * Interface definitions for PaySurity.com test services
+ * Test Interface Definitions
+ * 
+ * These interfaces define the structure of test reports and test groups
+ * for consistency across all testing modules.
  */
 
-export interface TestCase {
+export interface TestResult {
   name: string;
-  description: string;
   passed: boolean;
-  duration: number;
-  error?: string;
-  metadata?: any;
+  result: string | null;
+  expected: string;
 }
 
 export interface TestGroup {
   name: string;
-  description?: string;
-  tests: TestCase[];
-  passRate: number;
-  startTime: Date;
-  endTime: Date;
-  duration: number;
+  tests: TestResult[];
+  passed: boolean;
 }
 
 export interface TestReport {
-  testGroup: string;
-  startTime: Date;
-  endTime: Date;
-  duration: number;
-  tests: TestCase[];
-  testsPassed: number;
-  testsFailed: number;
-  passRate: number;
-  metadata?: any;
+  name: string;
+  timestamp: Date;
+  passed: boolean;
   testGroups?: TestGroup[];
+  error?: string;
 }
 
-export interface ApiEndpointTest {
-  name: string;
-  endpoint: string;
-  method: string;
-  body?: any;
-  headers?: any;
-  auth?: boolean;
-  expectedStatus: number[];
-  expectedResponse?: any;
-  validator?: (response: any) => boolean;
-}
-
-export interface DatabaseTest {
-  name: string;
+export interface Issue {
+  id: string;
+  testName: string;
+  testGroup: string;
   description: string;
-  query: string;
-  expectedRows?: number;
-  validator?: (result: any) => boolean;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  fixed: boolean;
+  fixMethod?: string;
+  fixDetails?: string;
+  actual?: string;
 }
 
-export interface PerformanceTest {
-  name: string;
-  description: string;
-  maxDuration: number; // milliseconds
-  test: () => Promise<any>;
+export interface TestParams {
+  [key: string]: any;
 }

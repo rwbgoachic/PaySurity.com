@@ -3934,6 +3934,38 @@ export const insertLegalInvoiceSchema = createInsertSchema(legalInvoices).omit({
 export type LegalInvoice = typeof legalInvoices.$inferSelect;
 export type InsertLegalInvoice = z.infer<typeof insertLegalInvoiceSchema>;
 
+// Invoice-Time Entry Junction Table
+export const legalInvoiceTimeEntries = pgTable("legal_invoice_time_entries", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull(),
+  timeEntryId: integer("time_entry_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLegalInvoiceTimeEntrySchema = createInsertSchema(legalInvoiceTimeEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LegalInvoiceTimeEntry = typeof legalInvoiceTimeEntries.$inferSelect;
+export type InsertLegalInvoiceTimeEntry = z.infer<typeof insertLegalInvoiceTimeEntrySchema>;
+
+// Invoice-Expense Entry Junction Table
+export const legalInvoiceExpenseEntries = pgTable("legal_invoice_expense_entries", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull(),
+  expenseEntryId: integer("expense_entry_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLegalInvoiceExpenseEntrySchema = createInsertSchema(legalInvoiceExpenseEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LegalInvoiceExpenseEntry = typeof legalInvoiceExpenseEntries.$inferSelect;
+export type InsertLegalInvoiceExpenseEntry = z.infer<typeof insertLegalInvoiceExpenseEntrySchema>;
+
 // Payment Plans
 export const recurringFrequencyEnum = pgEnum("recurring_frequency", [
   "weekly", "biweekly", "monthly", "quarterly", "semiannual", "annual"

@@ -1,448 +1,624 @@
+/**
+ * Legal Time and Expense Service
+ * 
+ * This service provides functionality for tracking billable time entries,
+ * expenses, and generating invoices for legal services.
+ */
+
 import { db } from "../../db";
 import { 
   legalTimeEntries, 
-  legalExpenseEntries,
+  legalExpenseEntries, 
   legalInvoices,
-  InsertLegalTimeEntry,
-  InsertLegalExpenseEntry,
-  InsertLegalInvoice
+  legalInvoiceTimeEntries,
+  legalInvoiceExpenseEntries,
+  insertLegalTimeEntrySchema, 
+  insertLegalExpenseEntrySchema,
+  insertLegalInvoiceSchema,
+  type InsertLegalTimeEntry,
+  type InsertLegalExpenseEntry,
+  type InsertLegalInvoice,
+  type LegalTimeEntry,
+  type LegalExpenseEntry,
+  type LegalInvoice
 } from "@shared/schema";
-import { eq, and, desc, between, sql } from "drizzle-orm";
+import { and, eq, between, gte, lte, sql, desc, isNull, not } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
 /**
- * Legal Time and Expense Tracking Service
- * 
- * Provides functionality for tracking and managing billable time entries,
- * expenses, and invoicing for legal professionals.
+ * Interface for date range filters
  */
-export class LegalTimeExpenseService {
-  
+interface DateRangeFilter {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+/**
+ * Interface for billable summary
+ */
+interface BillableSummary {
+  totalHours: string;
+  totalBillableAmount: string;
+  totalExpenses: string;
+  totalBillable: string;
+  timeEntryCount: number;
+  expenseEntryCount: number;
+  periodStart?: Date;
+  periodEnd?: Date;
+}
+
+/**
+ * Invoice creation options
+ */
+interface InvoiceCreationOptions {
+  timeEntryIds: number[];
+  expenseEntryIds: number[];
+  autoCalculateSubtotal?: boolean;
+}
+
+/**
+ * Invoice entries (time and expense)
+ */
+interface InvoiceEntries {
+  invoice: LegalInvoice;
+  timeEntries: LegalTimeEntry[];
+  expenseEntries: LegalExpenseEntry[];
+}
+
+class LegalTimeExpenseService {
   /**
-   * Creates a new time entry
+   * Create a new time entry
    */
-  async createTimeEntry(data: InsertLegalTimeEntry) {
-    // Calculate the total amount if billing rate is provided
-    let totalAmount = null;
-    if (data.billingRate && data.duration) {
-      totalAmount = new Decimal(data.billingRate).times(data.duration).toString();
+  async createTimeEntry(data: InsertLegalTimeEntry): Promise<LegalTimeEntry> {
+    try {
+      const validatedData = insertLegalTimeEntrySchema.parse(data);
+      
+      // Calculate billable amount - will be stored in totalAmount field
+      const billingRate = validatedData.billingRate || new Decimal(0);
+      const duration = new Decimal(validatedData.duration);
+      const totalAmount = duration.mul(billingRate);
+      
+      // Insert the time entry
+      const [timeEntry] = await db
+        .insert(legalTimeEntries)
+        .values({
+          ...validatedData,
+          totalAmount: totalAmount.toString(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return timeEntry;
+    } catch (error) {
+      console.error("Error creating time entry:", error);
+      throw error;
     }
-    
-    const [entry] = await db.insert(legalTimeEntries).values({
-      ...data,
-      totalAmount
-    }).returning();
-    
-    return entry;
   }
   
   /**
-   * Gets a time entry by ID
+   * Get time entries by merchant ID
    */
-  async getTimeEntry(id: number) {
-    const [entry] = await db.select().from(legalTimeEntries).where(eq(legalTimeEntries.id, id));
-    return entry;
-  }
-  
-  /**
-   * Gets time entries for a merchant
-   */
-  async getTimeEntriesByMerchant(merchantId: number, options: {
-    clientId?: number,
-    matterNumber?: string,
-    startDate?: Date,
-    endDate?: Date,
-    unbilledOnly?: boolean
-  } = {}) {
-    let query = db.select().from(legalTimeEntries)
-      .where(eq(legalTimeEntries.merchantId, merchantId));
-    
-    if (options.clientId) {
-      query = query.where(eq(legalTimeEntries.clientId, options.clientId));
-    }
-    
-    if (options.matterNumber) {
-      query = query.where(eq(legalTimeEntries.matterNumber, options.matterNumber));
-    }
-    
-    if (options.startDate && options.endDate) {
-      query = query.where(
-        between(legalTimeEntries.dateOfWork, options.startDate, options.endDate)
-      );
-    } else if (options.startDate) {
-      query = query.where(legalTimeEntries.dateOfWork >= options.startDate);
-    } else if (options.endDate) {
-      query = query.where(legalTimeEntries.dateOfWork <= options.endDate);
-    }
-    
-    if (options.unbilledOnly) {
-      query = query.where(eq(legalTimeEntries.invoiced, false));
-    }
-    
-    return await query.orderBy(desc(legalTimeEntries.dateOfWork));
-  }
-  
-  /**
-   * Updates a time entry
-   */
-  async updateTimeEntry(id: number, data: Partial<InsertLegalTimeEntry>) {
-    // Calculate total amount if billing rate or duration is updated
-    let updates: any = { ...data, updatedAt: new Date() };
-    
-    if (data.billingRate || data.duration) {
-      // Get the current entry to use existing values if not provided
-      const [currentEntry] = await db.select().from(legalTimeEntries).where(eq(legalTimeEntries.id, id));
-      if (!currentEntry) {
-        throw new Error("Time entry not found");
+  async getTimeEntriesByMerchant(merchantId: number, filter?: DateRangeFilter): Promise<LegalTimeEntry[]> {
+    try {
+      let query = db
+        .select()
+        .from(legalTimeEntries)
+        .where(eq(legalTimeEntries.merchantId, merchantId));
+      
+      // Add date filters if provided
+      if (filter) {
+        if (filter.startDate) {
+          query = query.where(gte(legalTimeEntries.dateOfWork, filter.startDate.toISOString().split('T')[0]));
+        }
+        
+        if (filter.endDate) {
+          query = query.where(lte(legalTimeEntries.dateOfWork, filter.endDate.toISOString().split('T')[0]));
+        }
       }
       
-      const billingRate = data.billingRate || currentEntry.billingRate;
-      const duration = data.duration || currentEntry.duration;
+      // Only return active time entries (not deleted)
+      query = query.where(eq(legalTimeEntries.status, "active"));
       
-      if (billingRate && duration) {
-        updates.totalAmount = new Decimal(billingRate).times(duration).toString();
-      }
-    }
-    
-    const [updatedEntry] = await db.update(legalTimeEntries)
-      .set(updates)
-      .where(eq(legalTimeEntries.id, id))
-      .returning();
+      // Order by date descending
+      query = query.orderBy(desc(legalTimeEntries.dateOfWork));
       
-    return updatedEntry;
+      return await query;
+    } catch (error) {
+      console.error("Error retrieving time entries:", error);
+      throw error;
+    }
   }
   
   /**
-   * Deletes a time entry (soft delete)
+   * Get a specific time entry by ID
    */
-  async deleteTimeEntry(id: number) {
-    const [deletedEntry] = await db.update(legalTimeEntries)
-      .set({ status: "deleted", updatedAt: new Date() })
-      .where(eq(legalTimeEntries.id, id))
-      .returning();
+  async getTimeEntryById(id: number): Promise<LegalTimeEntry | undefined> {
+    try {
+      const [timeEntry] = await db
+        .select()
+        .from(legalTimeEntries)
+        .where(eq(legalTimeEntries.id, id));
       
-    return deletedEntry;
+      return timeEntry;
+    } catch (error) {
+      console.error("Error retrieving time entry:", error);
+      throw error;
+    }
   }
   
   /**
-   * Creates a new expense entry
+   * Update a time entry
    */
-  async createExpenseEntry(data: InsertLegalExpenseEntry) {
-    // Calculate the total billable amount if markup is provided
-    let totalBillableAmount = null;
-    if (data.amount) {
-      const amount = new Decimal(data.amount);
-      if (data.markupPercentage) {
-        const markup = amount.times(new Decimal(data.markupPercentage).dividedBy(100));
-        totalBillableAmount = amount.plus(markup).toString();
-      } else {
-        totalBillableAmount = amount.toString();
-      }
-    }
-    
-    const [entry] = await db.insert(legalExpenseEntries).values({
-      ...data,
-      totalBillableAmount
-    }).returning();
-    
-    return entry;
-  }
-  
-  /**
-   * Gets an expense entry by ID
-   */
-  async getExpenseEntry(id: number) {
-    const [entry] = await db.select().from(legalExpenseEntries).where(eq(legalExpenseEntries.id, id));
-    return entry;
-  }
-  
-  /**
-   * Gets expense entries for a merchant
-   */
-  async getExpenseEntriesByMerchant(merchantId: number, options: {
-    clientId?: number,
-    matterNumber?: string,
-    startDate?: Date,
-    endDate?: Date,
-    unbilledOnly?: boolean
-  } = {}) {
-    let query = db.select().from(legalExpenseEntries)
-      .where(eq(legalExpenseEntries.merchantId, merchantId));
-    
-    if (options.clientId) {
-      query = query.where(eq(legalExpenseEntries.clientId, options.clientId));
-    }
-    
-    if (options.matterNumber) {
-      query = query.where(eq(legalExpenseEntries.matterNumber, options.matterNumber));
-    }
-    
-    if (options.startDate && options.endDate) {
-      query = query.where(
-        between(legalExpenseEntries.expenseDate, options.startDate, options.endDate)
-      );
-    } else if (options.startDate) {
-      query = query.where(legalExpenseEntries.expenseDate >= options.startDate);
-    } else if (options.endDate) {
-      query = query.where(legalExpenseEntries.expenseDate <= options.endDate);
-    }
-    
-    if (options.unbilledOnly) {
-      query = query.where(eq(legalExpenseEntries.invoiced, false));
-    }
-    
-    return await query.orderBy(desc(legalExpenseEntries.expenseDate));
-  }
-  
-  /**
-   * Updates an expense entry
-   */
-  async updateExpenseEntry(id: number, data: Partial<InsertLegalExpenseEntry>) {
-    // Calculate total billable amount if amount or markup is updated
-    let updates: any = { ...data, updatedAt: new Date() };
-    
-    if (data.amount || data.markupPercentage) {
-      // Get the current entry to use existing values if not provided
-      const [currentEntry] = await db.select().from(legalExpenseEntries).where(eq(legalExpenseEntries.id, id));
-      if (!currentEntry) {
-        throw new Error("Expense entry not found");
+  async updateTimeEntry(id: number, data: Partial<LegalTimeEntry>): Promise<LegalTimeEntry | undefined> {
+    try {
+      // Get existing time entry
+      const [timeEntry] = await db
+        .select()
+        .from(legalTimeEntries)
+        .where(eq(legalTimeEntries.id, id));
+      
+      if (!timeEntry) {
+        return undefined;
       }
       
-      const amount = data.amount || currentEntry.amount;
-      const markupPercentage = data.markupPercentage || currentEntry.markupPercentage || "0.00";
+      // If duration or billing rate is updated, recalculate total amount
+      let totalAmount = timeEntry.totalAmount;
       
-      const decimalAmount = new Decimal(amount);
-      const markup = decimalAmount.times(new Decimal(markupPercentage).dividedBy(100));
-      updates.totalBillableAmount = decimalAmount.plus(markup).toString();
+      if (data.duration || data.billingRate) {
+        const duration = new Decimal(data.duration || timeEntry.duration);
+        const billingRate = new Decimal(data.billingRate || timeEntry.billingRate || 0);
+        totalAmount = duration.mul(billingRate).toString();
+      }
+      
+      // Update the time entry
+      const [updatedTimeEntry] = await db
+        .update(legalTimeEntries)
+        .set({
+          ...data,
+          totalAmount,
+          updatedAt: new Date()
+        })
+        .where(eq(legalTimeEntries.id, id))
+        .returning();
+      
+      return updatedTimeEntry;
+    } catch (error) {
+      console.error("Error updating time entry:", error);
+      throw error;
     }
-    
-    const [updatedEntry] = await db.update(legalExpenseEntries)
-      .set(updates)
-      .where(eq(legalExpenseEntries.id, id))
-      .returning();
-      
-    return updatedEntry;
   }
   
   /**
-   * Deletes an expense entry (soft delete)
+   * Delete a time entry (soft delete)
    */
-  async deleteExpenseEntry(id: number) {
-    const [deletedEntry] = await db.update(legalExpenseEntries)
-      .set({ status: "deleted", updatedAt: new Date() })
-      .where(eq(legalExpenseEntries.id, id))
-      .returning();
+  async deleteTimeEntry(id: number): Promise<LegalTimeEntry | undefined> {
+    try {
+      // Soft delete by setting status to "deleted"
+      const [deletedTimeEntry] = await db
+        .update(legalTimeEntries)
+        .set({
+          status: "deleted",
+          updatedAt: new Date()
+        })
+        .where(eq(legalTimeEntries.id, id))
+        .returning();
       
-    return deletedEntry;
+      return deletedTimeEntry;
+    } catch (error) {
+      console.error("Error deleting time entry:", error);
+      throw error;
+    }
   }
   
   /**
-   * Gets a summary of billable time and expenses for a matter
+   * Create a new expense entry
    */
-  async getBillableSummary(merchantId: number, options: {
-    clientId?: number,
-    matterNumber?: string,
-    startDate?: Date,
-    endDate?: Date
-  } = {}) {
-    let timeQuery = db.select({
-      totalHours: sql<string>`SUM(${legalTimeEntries.duration})`,
-      totalAmount: sql<string>`SUM(${legalTimeEntries.totalAmount})`
-    }).from(legalTimeEntries)
-      .where(and(
-        eq(legalTimeEntries.merchantId, merchantId),
-        eq(legalTimeEntries.entryType, "billable"),
-        eq(legalTimeEntries.status, "active"),
-        eq(legalTimeEntries.invoiced, false)
-      ));
-    
-    let expenseQuery = db.select({
-      totalExpenses: sql<string>`SUM(${legalExpenseEntries.totalBillableAmount})`
-    }).from(legalExpenseEntries)
-      .where(and(
-        eq(legalExpenseEntries.merchantId, merchantId),
-        eq(legalExpenseEntries.billable, true),
-        eq(legalExpenseEntries.status, "active"),
-        eq(legalExpenseEntries.invoiced, false)
-      ));
-    
-    // Apply filters
-    if (options.clientId) {
-      timeQuery = timeQuery.where(eq(legalTimeEntries.clientId, options.clientId));
-      expenseQuery = expenseQuery.where(eq(legalExpenseEntries.clientId, options.clientId));
+  async createExpenseEntry(data: InsertLegalExpenseEntry): Promise<LegalExpenseEntry> {
+    try {
+      const validatedData = insertLegalExpenseEntrySchema.parse(data);
+      
+      // Calculate total billable amount including markup
+      const amount = new Decimal(validatedData.amount);
+      const markupPercentage = validatedData.markupPercentage 
+        ? new Decimal(validatedData.markupPercentage) 
+        : new Decimal(0);
+      
+      const markupMultiplier = markupPercentage.div(100).plus(1);
+      const totalBillableAmount = amount.mul(markupMultiplier);
+      
+      // Insert the expense entry
+      const [expenseEntry] = await db
+        .insert(legalExpenseEntries)
+        .values({
+          ...validatedData,
+          totalBillableAmount: totalBillableAmount.toString(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return expenseEntry;
+    } catch (error) {
+      console.error("Error creating expense entry:", error);
+      throw error;
     }
-    
-    if (options.matterNumber) {
-      timeQuery = timeQuery.where(eq(legalTimeEntries.matterNumber, options.matterNumber));
-      expenseQuery = expenseQuery.where(eq(legalExpenseEntries.matterNumber, options.matterNumber));
-    }
-    
-    if (options.startDate && options.endDate) {
-      timeQuery = timeQuery.where(
-        between(legalTimeEntries.dateOfWork, options.startDate, options.endDate)
-      );
-      expenseQuery = expenseQuery.where(
-        between(legalExpenseEntries.expenseDate, options.startDate, options.endDate)
-      );
-    } else if (options.startDate) {
-      timeQuery = timeQuery.where(legalTimeEntries.dateOfWork >= options.startDate);
-      expenseQuery = expenseQuery.where(legalExpenseEntries.expenseDate >= options.startDate);
-    } else if (options.endDate) {
-      timeQuery = timeQuery.where(legalTimeEntries.dateOfWork <= options.endDate);
-      expenseQuery = expenseQuery.where(legalExpenseEntries.expenseDate <= options.endDate);
-    }
-    
-    // Execute queries
-    const [timeResult] = await timeQuery;
-    const [expenseResult] = await expenseQuery;
-    
-    // Calculate totals
-    const totalHours = timeResult.totalHours || "0";
-    const totalTimeAmount = timeResult.totalAmount || "0";
-    const totalExpenseAmount = expenseResult.totalExpenses || "0";
-    const totalBillable = new Decimal(totalTimeAmount).plus(totalExpenseAmount).toString();
-    
-    return {
-      totalHours,
-      totalTimeAmount,
-      totalExpenseAmount,
-      totalBillable,
-      filters: options,
-      generatedAt: new Date()
-    };
   }
   
   /**
-   * Creates an invoice from unbilled time and expense entries
+   * Get expense entries by merchant ID
    */
-  async createInvoiceFromEntries(data: InsertLegalInvoice, options: {
-    timeEntryIds?: number[],
-    expenseEntryIds?: number[],
-    autoCalculateSubtotal?: boolean
-  } = {}) {
+  async getExpenseEntriesByMerchant(merchantId: number, filter?: DateRangeFilter): Promise<LegalExpenseEntry[]> {
+    try {
+      let query = db
+        .select()
+        .from(legalExpenseEntries)
+        .where(eq(legalExpenseEntries.merchantId, merchantId));
+      
+      // Add date filters if provided
+      if (filter) {
+        if (filter.startDate) {
+          query = query.where(gte(legalExpenseEntries.expenseDate, filter.startDate.toISOString().split('T')[0]));
+        }
+        
+        if (filter.endDate) {
+          query = query.where(lte(legalExpenseEntries.expenseDate, filter.endDate.toISOString().split('T')[0]));
+        }
+      }
+      
+      // Only return active expense entries (not deleted)
+      query = query.where(eq(legalExpenseEntries.status, "active"));
+      
+      // Order by date descending
+      query = query.orderBy(desc(legalExpenseEntries.expenseDate));
+      
+      return await query;
+    } catch (error) {
+      console.error("Error retrieving expense entries:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get a specific expense entry by ID
+   */
+  async getExpenseEntryById(id: number): Promise<LegalExpenseEntry | undefined> {
+    try {
+      const [expenseEntry] = await db
+        .select()
+        .from(legalExpenseEntries)
+        .where(eq(legalExpenseEntries.id, id));
+      
+      return expenseEntry;
+    } catch (error) {
+      console.error("Error retrieving expense entry:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Update an expense entry
+   */
+  async updateExpenseEntry(id: number, data: Partial<LegalExpenseEntry>): Promise<LegalExpenseEntry | undefined> {
+    try {
+      // Get existing expense entry
+      const [expenseEntry] = await db
+        .select()
+        .from(legalExpenseEntries)
+        .where(eq(legalExpenseEntries.id, id));
+      
+      if (!expenseEntry) {
+        return undefined;
+      }
+      
+      // If amount or markup percentage is updated, recalculate total billable amount
+      let totalBillableAmount = expenseEntry.totalBillableAmount;
+      
+      if (data.amount || data.markupPercentage !== undefined) {
+        const amount = new Decimal(data.amount || expenseEntry.amount);
+        const markupPercentage = data.markupPercentage !== undefined
+          ? new Decimal(data.markupPercentage)
+          : new Decimal(expenseEntry.markupPercentage || 0);
+        
+        const markupMultiplier = markupPercentage.div(100).plus(1);
+        totalBillableAmount = amount.mul(markupMultiplier).toString();
+      }
+      
+      // Update the expense entry
+      const [updatedExpenseEntry] = await db
+        .update(legalExpenseEntries)
+        .set({
+          ...data,
+          totalBillableAmount,
+          updatedAt: new Date()
+        })
+        .where(eq(legalExpenseEntries.id, id))
+        .returning();
+      
+      return updatedExpenseEntry;
+    } catch (error) {
+      console.error("Error updating expense entry:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Delete an expense entry (soft delete)
+   */
+  async deleteExpenseEntry(id: number): Promise<LegalExpenseEntry | undefined> {
+    try {
+      // Soft delete by setting status to "deleted"
+      const [deletedExpenseEntry] = await db
+        .update(legalExpenseEntries)
+        .set({
+          status: "deleted",
+          updatedAt: new Date()
+        })
+        .where(eq(legalExpenseEntries.id, id))
+        .returning();
+      
+      return deletedExpenseEntry;
+    } catch (error) {
+      console.error("Error deleting expense entry:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get billable summary for a merchant
+   */
+  async getBillableSummary(merchantId: number, filter?: DateRangeFilter): Promise<BillableSummary> {
+    try {
+      // Base query conditions
+      const baseTimeConditions = [eq(legalTimeEntries.merchantId, merchantId), eq(legalTimeEntries.status, "active")];
+      const baseExpenseConditions = [eq(legalExpenseEntries.merchantId, merchantId), eq(legalExpenseEntries.status, "active")];
+      
+      // Add date filters if provided
+      if (filter) {
+        if (filter.startDate) {
+          baseTimeConditions.push(gte(legalTimeEntries.dateOfWork, filter.startDate.toISOString().split('T')[0]));
+          baseExpenseConditions.push(gte(legalExpenseEntries.expenseDate, filter.startDate.toISOString().split('T')[0]));
+        }
+        
+        if (filter.endDate) {
+          baseTimeConditions.push(lte(legalTimeEntries.dateOfWork, filter.endDate.toISOString().split('T')[0]));
+          baseExpenseConditions.push(lte(legalExpenseEntries.expenseDate, filter.endDate.toISOString().split('T')[0]));
+        }
+      }
+      
+      // Get sum of time entry hours and billable amount
+      const [timeResult] = await db
+        .select({
+          totalHours: sql<string>`SUM(${legalTimeEntries.duration})`,
+          totalAmount: sql<string>`SUM(${legalTimeEntries.totalAmount})`
+        })
+        .from(legalTimeEntries)
+        .where(and(...baseTimeConditions));
+      
+      // Get sum of expense entry billable amount
+      const [expenseResult] = await db
+        .select({
+          totalExpenses: sql<string>`SUM(${legalExpenseEntries.totalBillableAmount})`
+        })
+        .from(legalExpenseEntries)
+        .where(and(...baseExpenseConditions));
+      
+      // Count number of entries
+      const [timeCountResult] = await db
+        .select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(legalTimeEntries)
+        .where(and(...baseTimeConditions));
+      
+      const [expenseCountResult] = await db
+        .select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(legalExpenseEntries)
+        .where(and(...baseExpenseConditions));
+      
+      // Calculate total billable amounts
+      const totalHours = timeResult.totalHours || "0";
+      const totalBillableAmount = timeResult.totalAmount || "0";
+      const totalExpenses = expenseResult.totalExpenses || "0";
+      
+      const totalBillable = new Decimal(totalBillableAmount).plus(new Decimal(totalExpenses)).toString();
+      
+      return {
+        totalHours,
+        totalBillableAmount,
+        totalExpenses,
+        totalBillable,
+        timeEntryCount: timeCountResult.count || 0,
+        expenseEntryCount: expenseCountResult.count || 0,
+        periodStart: filter?.startDate,
+        periodEnd: filter?.endDate
+      };
+    } catch (error) {
+      console.error("Error retrieving billable summary:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Create an invoice from time and expense entries
+   */
+  async createInvoiceFromEntries(
+    invoiceData: InsertLegalInvoice,
+    options: InvoiceCreationOptions
+  ): Promise<LegalInvoice> {
     return await db.transaction(async (tx) => {
-      let subtotal = new Decimal(data.subtotal || "0");
-      
-      // If timeEntryIds are provided, include them in the invoice
-      if (options.timeEntryIds && options.timeEntryIds.length > 0) {
-        // Get the time entries
-        const timeEntries = await tx.select().from(legalTimeEntries)
-          .where(and(
-            eq(legalTimeEntries.merchantId, data.merchantId),
-            eq(legalTimeEntries.status, "active"),
-            eq(legalTimeEntries.invoiced, false),
-            sql`${legalTimeEntries.id} = ANY(${options.timeEntryIds})`
-          ));
+      try {
+        const validatedData = insertLegalInvoiceSchema.parse(invoiceData);
         
-        // Calculate the subtotal from time entries if auto-calculate is enabled
+        let finalInvoiceData = validatedData;
+        
+        // Auto-calculate subtotal from time and expense entries if needed
         if (options.autoCalculateSubtotal) {
-          for (const entry of timeEntries) {
-            if (entry.totalAmount) {
-              subtotal = subtotal.plus(entry.totalAmount);
+          let subtotal = new Decimal(0);
+          
+          // Get time entries
+          const timeEntries = await Promise.all(
+            options.timeEntryIds.map(async (id) => {
+              const [entry] = await tx
+                .select()
+                .from(legalTimeEntries)
+                .where(eq(legalTimeEntries.id, id));
+              return entry;
+            })
+          );
+          
+          // Get expense entries
+          const expenseEntries = await Promise.all(
+            options.expenseEntryIds.map(async (id) => {
+              const [entry] = await tx
+                .select()
+                .from(legalExpenseEntries)
+                .where(eq(legalExpenseEntries.id, id));
+              return entry;
+            })
+          );
+          
+          // Calculate subtotal
+          timeEntries.forEach((entry) => {
+            if (entry && entry.totalAmount) {
+              subtotal = subtotal.plus(new Decimal(entry.totalAmount));
             }
+          });
+          
+          expenseEntries.forEach((entry) => {
+            if (entry && entry.billable && entry.totalBillableAmount) {
+              subtotal = subtotal.plus(new Decimal(entry.totalBillableAmount));
+            }
+          });
+          
+          finalInvoiceData = {
+            ...validatedData,
+            subtotal: subtotal.toString(),
+            totalAmount: subtotal.toString(),
+            balanceDue: subtotal.toString()
+          };
+        }
+        
+        // Create the invoice
+        const [invoice] = await tx
+          .insert(legalInvoices)
+          .values({
+            ...finalInvoiceData,
+            status: "draft",
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        
+        // Link time entries to the invoice
+        if (options.timeEntryIds.length > 0) {
+          await tx
+            .insert(legalInvoiceTimeEntries)
+            .values(
+              options.timeEntryIds.map((timeEntryId) => ({
+                invoiceId: invoice.id,
+                timeEntryId,
+                createdAt: new Date()
+              }))
+            );
+          
+          // Mark time entries as invoiced
+          for (const timeEntryId of options.timeEntryIds) {
+            await tx
+              .update(legalTimeEntries)
+              .set({
+                invoiced: true,
+                updatedAt: new Date()
+              })
+              .where(eq(legalTimeEntries.id, timeEntryId));
           }
         }
         
-        // Mark time entries as invoiced
-        if (timeEntries.length > 0) {
-          await tx.update(legalTimeEntries)
-            .set({ invoiced: true, invoiceId: null, updatedAt: new Date() })
-            .where(sql`${legalTimeEntries.id} = ANY(${options.timeEntryIds})`);
-        }
-      }
-      
-      // If expenseEntryIds are provided, include them in the invoice
-      if (options.expenseEntryIds && options.expenseEntryIds.length > 0) {
-        // Get the expense entries
-        const expenseEntries = await tx.select().from(legalExpenseEntries)
-          .where(and(
-            eq(legalExpenseEntries.merchantId, data.merchantId),
-            eq(legalExpenseEntries.status, "active"),
-            eq(legalExpenseEntries.invoiced, false),
-            sql`${legalExpenseEntries.id} = ANY(${options.expenseEntryIds})`
-          ));
-        
-        // Calculate the subtotal from expense entries if auto-calculate is enabled
-        if (options.autoCalculateSubtotal) {
-          for (const entry of expenseEntries) {
-            if (entry.totalBillableAmount) {
-              subtotal = subtotal.plus(entry.totalBillableAmount);
-            }
+        // Link expense entries to the invoice
+        if (options.expenseEntryIds.length > 0) {
+          await tx
+            .insert(legalInvoiceExpenseEntries)
+            .values(
+              options.expenseEntryIds.map((expenseEntryId) => ({
+                invoiceId: invoice.id,
+                expenseEntryId,
+                createdAt: new Date()
+              }))
+            );
+          
+          // Mark expense entries as invoiced
+          for (const expenseEntryId of options.expenseEntryIds) {
+            await tx
+              .update(legalExpenseEntries)
+              .set({
+                invoiced: true,
+                updatedAt: new Date()
+              })
+              .where(eq(legalExpenseEntries.id, expenseEntryId));
           }
         }
         
-        // Mark expense entries as invoiced
-        if (expenseEntries.length > 0) {
-          await tx.update(legalExpenseEntries)
-            .set({ invoiced: true, invoiceId: null, updatedAt: new Date() })
-            .where(sql`${legalExpenseEntries.id} = ANY(${options.expenseEntryIds})`);
-        }
+        return invoice;
+      } catch (error) {
+        console.error("Error creating invoice:", error);
+        throw error;
       }
-      
-      // Calculate final invoice amounts
-      const invoiceData = { ...data };
-      
-      if (options.autoCalculateSubtotal) {
-        invoiceData.subtotal = subtotal.toString();
-        
-        // Calculate tax if rate is provided
-        let taxAmount = new Decimal(0);
-        if (data.taxRate && parseFloat(data.taxRate) > 0) {
-          taxAmount = subtotal.times(new Decimal(data.taxRate).dividedBy(100));
-          invoiceData.taxAmount = taxAmount.toString();
-        }
-        
-        // Calculate discount if rate is provided
-        let discountAmount = new Decimal(0);
-        if (data.discountRate && parseFloat(data.discountRate) > 0) {
-          discountAmount = subtotal.times(new Decimal(data.discountRate).dividedBy(100));
-          invoiceData.discountAmount = discountAmount.toString();
-        }
-        
-        // Calculate total amount
-        const totalAmount = subtotal.plus(taxAmount).minus(discountAmount);
-        invoiceData.totalAmount = totalAmount.toString();
-        
-        // Set balance due (initially equals total amount)
-        invoiceData.balanceDue = totalAmount.toString();
-      }
-      
-      // Insert the invoice
-      const [invoice] = await tx.insert(legalInvoices).values(invoiceData).returning();
-      
-      // Update the time and expense entries with the invoice ID
-      if (options.timeEntryIds && options.timeEntryIds.length > 0) {
-        await tx.update(legalTimeEntries)
-          .set({ invoiceId: invoice.id })
-          .where(sql`${legalTimeEntries.id} = ANY(${options.timeEntryIds})`);
-      }
-      
-      if (options.expenseEntryIds && options.expenseEntryIds.length > 0) {
-        await tx.update(legalExpenseEntries)
-          .set({ invoiceId: invoice.id })
-          .where(sql`${legalExpenseEntries.id} = ANY(${options.expenseEntryIds})`);
-      }
-      
-      return invoice;
     });
   }
   
   /**
-   * Gets all time and expense entries for an invoice
+   * Get entries linked to an invoice
    */
-  async getInvoiceEntries(invoiceId: number) {
-    const timeEntries = await db.select().from(legalTimeEntries)
-      .where(eq(legalTimeEntries.invoiceId, invoiceId))
-      .orderBy(legalTimeEntries.dateOfWork);
+  async getInvoiceEntries(invoiceId: number): Promise<InvoiceEntries | undefined> {
+    try {
+      // Get the invoice
+      const [invoice] = await db
+        .select()
+        .from(legalInvoices)
+        .where(eq(legalInvoices.id, invoiceId));
       
-    const expenseEntries = await db.select().from(legalExpenseEntries)
-      .where(eq(legalExpenseEntries.invoiceId, invoiceId))
-      .orderBy(legalExpenseEntries.expenseDate);
+      if (!invoice) {
+        return undefined;
+      }
       
-    return {
-      timeEntries,
-      expenseEntries
-    };
+      // Get time entries linked to the invoice
+      const timeEntriesJoin = await db
+        .select({
+          timeEntry: legalTimeEntries
+        })
+        .from(legalInvoiceTimeEntries)
+        .innerJoin(
+          legalTimeEntries,
+          eq(legalInvoiceTimeEntries.timeEntryId, legalTimeEntries.id)
+        )
+        .where(eq(legalInvoiceTimeEntries.invoiceId, invoiceId));
+      
+      // Get expense entries linked to the invoice
+      const expenseEntriesJoin = await db
+        .select({
+          expenseEntry: legalExpenseEntries
+        })
+        .from(legalInvoiceExpenseEntries)
+        .innerJoin(
+          legalExpenseEntries,
+          eq(legalInvoiceExpenseEntries.expenseEntryId, legalExpenseEntries.id)
+        )
+        .where(eq(legalInvoiceExpenseEntries.invoiceId, invoiceId));
+      
+      const timeEntries = timeEntriesJoin.map(row => row.timeEntry);
+      const expenseEntries = expenseEntriesJoin.map(row => row.expenseEntry);
+      
+      return {
+        invoice,
+        timeEntries,
+        expenseEntries
+      };
+    } catch (error) {
+      console.error("Error retrieving invoice entries:", error);
+      throw error;
+    }
   }
 }
 
