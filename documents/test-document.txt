@@ -1,0 +1,5 @@
+This is a sample test document for the Legal Document Management System.
+
+It contains basic text content to test the file upload, storage, and retrieval functionalities.
+
+CONFIDENTIAL: Attorney-Client Privileged Communication

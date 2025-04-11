@@ -1,0 +1,26 @@
+LEGAL DOCUMENT TEMPLATE
+==========================
+
+[CLIENT_NAME]
+[CLIENT_ADDRESS]
+[DATE]
+
+RE: [MATTER_DESCRIPTION]
+
+Dear [CLIENT_NAME],
+
+This document serves as a template for the {{DOCUMENT_TYPE}} related to the matter referenced above.
+
+The following variables can be replaced with specific information:
+- {{ATTORNEY_NAME}} - The name of the attorney handling the case
+- {{CASE_NUMBER}} - The internal or court case number
+- {{JURISDICTION}} - The relevant jurisdiction
+- {{FILING_DATE}} - The date when the document will be filed
+
+This template is provided as part of the Legal Document Management System and demonstrates
+the template functionality for document generation.
+
+Sincerely,
+
+{{ATTORNEY_NAME}}
+Attorney at Law

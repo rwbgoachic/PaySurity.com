@@ -1,11 +1,12 @@
 /**
- * Register all legal payment features routes
+ * Register all legal practice management system routes
  */
 
 import { Express, Request, Response, NextFunction } from "express";
 import { legalTimeExpenseService } from "./time-expense-service";
 import { z } from "zod";
 import { insertLegalTimeEntrySchema, insertLegalExpenseEntrySchema, insertLegalInvoiceSchema } from "@shared/schema";
+import { documentRouter } from "./document-routes";
 
 /**
  * Helper to ensure user is authenticated
@@ -32,6 +33,8 @@ const ensureLegalMerchant = (req: Request, res: Response, next: Function) => {
 };
 
 export function registerLegalRoutes(app: Express) {
+  // Document Management Routes
+  app.use('/api/legal/documents', documentRouter);
   // Time Entries APIs
   
   // Create time entry

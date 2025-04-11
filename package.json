@@ -86,6 +86,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
+    "multer": "^1.4.5-lts.2",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "openai": "^4.92.1",
