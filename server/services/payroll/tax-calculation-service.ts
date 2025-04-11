@@ -334,7 +334,7 @@ export class TaxCalculationService {
 
     // Sum up all gross income
     const totalEarnings = calculations.reduce(
-      (sum, calc) => sum.plus(calc.grossIncome),
+      (sum: Decimal, calc: PayrollTaxCalculation) => sum.plus(calc.grossIncome),
       new Decimal(0)
     );
 
@@ -358,7 +358,7 @@ export class TaxCalculationService {
       and(
         eq(payrollTaxCalculations.employeeId, employeeId),
         eq(payrollTaxCalculations.jurisdictionId, jurisdictionId),
-        eq(payrollTaxCalculations.taxType, taxType),
+        eq(payrollTaxCalculations.taxType, taxType as "income" | "social_security" | "medicare" | "sui" | "sdi" | "futa" | "suta" | "local_income" | "transit" | "occupational"),
         gte(payrollTaxCalculations.calculatedAt, startOfYear),
         lte(payrollTaxCalculations.calculatedAt, asOfDate)
       )
@@ -370,7 +370,7 @@ export class TaxCalculationService {
 
     // Sum up all tax amounts
     const totalWithholding = calculations.reduce(
-      (sum, calc) => sum.plus(calc.taxAmount),
+      (sum: Decimal, calc: PayrollTaxCalculation) => sum.plus(calc.taxAmount),
       new Decimal(0)
     );
 
@@ -443,10 +443,9 @@ export class TaxCalculationService {
     ytdWithholding?: string
   ): Promise<PayrollTaxCalculation> {
     // Get tax brackets for this tax table
-    const brackets = await db.query.taxBrackets.findMany({
-      where: eq(taxBrackets.taxTableId, taxTable.id),
-      orderBy: asc(taxBrackets.lowerBound)
-    });
+    const brackets = await db.select().from(taxBrackets)
+      .where(eq(taxBrackets.taxTableId, taxTable.id))
+      .orderBy(asc(taxBrackets.lowerBound));
 
     if (brackets.length === 0) {
       throw new Error(`No tax brackets found for tax table ID ${taxTable.id}`);
@@ -782,7 +781,7 @@ export class TaxCalculationService {
     employeeId: number,
     jurisdictionId: number,
     taxTableId: number,
-    taxType: string,
+    taxType: "income" | "social_security" | "medicare" | "sui" | "sdi" | "futa" | "suta" | "local_income" | "transit" | "occupational",
     grossIncome: string,
     calculationDetails: any = { method: 'exempt', reason: 'Employee exemption' }
   ): Promise<PayrollTaxCalculation> {
@@ -818,8 +817,8 @@ export class TaxCalculationService {
     payPeriodEnd: Date
   ): Promise<void> {
     // Get any special tax situations for this employee
-    const specialSituations = await db.query.specialTaxSituations.findMany({
-      where: and(
+    const specialSituations = await db.select().from(specialTaxSituations).where(
+      and(
         eq(specialTaxSituations.employeeId, employeeId),
         lte(specialTaxSituations.effectiveDate, payPeriodEnd),
         or(
@@ -827,7 +826,7 @@ export class TaxCalculationService {
           gte(specialTaxSituations.expirationDate, payPeriodStart)
         )
       )
-    });
+    );
 
     if (specialSituations.length === 0) {
       return;
@@ -843,13 +842,12 @@ export class TaxCalculationService {
               .set({
                 taxableIncome: '0',
                 taxAmount: '0',
-                calculationDetails: {
-                  ...calculation.calculationDetails,
+                calculationDetails: Object.assign({}, calculation.calculationDetails, {
                   specialSituation: {
                     type: situation.situationType,
                     description: situation.description
                   }
-                }
+                })
               })
               .where(eq(payrollTaxCalculations.id, calculation.id));
           }
@@ -864,14 +862,13 @@ export class TaxCalculationService {
               await db.update(payrollTaxCalculations)
                 .set({
                   taxAmount: reducedAmount.toString(),
-                  calculationDetails: {
-                    ...calculation.calculationDetails,
+                  calculationDetails: Object.assign({}, calculation.calculationDetails, {
                     specialSituation: {
                       type: situation.situationType,
                       description: situation.description,
                       reductionPercent: reductionPercent
                     }
-                  }
+                  })
                 })
                 .where(eq(payrollTaxCalculations.id, calculation.id));
             }
