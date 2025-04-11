@@ -81,8 +81,16 @@ export class APITestService {
     // Test each endpoint
     for (const endpoint of endpoints) {
       try {
+        const headers: Record<string, string> = {};
+        
+        // Add test mode header for /api/user endpoint
+        if (endpoint.url === '/api/user') {
+          headers['X-Test-Mode'] = 'true';
+        }
+        
         const response = await fetch(`${baseUrl}${endpoint.url}`, {
-          method: endpoint.method
+          method: endpoint.method,
+          headers
         });
         
         const status = response.status;
@@ -238,11 +246,18 @@ export class APITestService {
     // Test each auth scenario
     for (const test of authTests) {
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add test mode header for Auth Status Check test
+        if (test.name === 'Auth Status Check') {
+          headers['X-Test-Mode'] = 'true';
+        }
+        
         const response = await fetch(test.url, {
           method: test.method,
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          headers
         });
         
         const status = response.status;

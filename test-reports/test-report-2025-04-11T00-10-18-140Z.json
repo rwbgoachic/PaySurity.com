@@ -1,0 +1,87 @@
+{
+  "name": "API Integration Test",
+  "timestamp": "2025-04-11T00:10:17.931Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "Internal API Tests",
+      "tests": [
+        {
+          "name": "GET /api/health",
+          "description": "Should receive a valid response from /api/health",
+          "passed": true,
+          "result": "Received valid response",
+          "expected": "Status 200 with valid body",
+          "actual": "Status 200, body is valid"
+        },
+        {
+          "name": "GET /api/user",
+          "description": "Should receive a valid response from /api/user",
+          "passed": false,
+          "result": "Failed to validate response",
+          "expected": "Status 200 with valid body",
+          "actual": "Status 401, body is invalid"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "External API Tests",
+      "tests": [
+        {
+          "name": "News API Connectivity",
+          "description": "Test connection to News API",
+          "passed": true,
+          "result": "Successfully connected",
+          "expected": "Status 2xx with valid response body",
+          "actual": "Status 200, body validation: passed"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Authentication API Tests",
+      "tests": [
+        {
+          "name": "Access Protected Route Without Auth",
+          "description": "Test authentication behavior for http://localhost:5000/api/protected",
+          "passed": true,
+          "result": "Authentication behaved as expected",
+          "expected": "Status 401",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Auth Status Check",
+          "description": "Test authentication behavior for http://localhost:5000/api/user",
+          "passed": false,
+          "result": "Unexpected authentication behavior",
+          "expected": "Status 200",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "API Error Handling Tests",
+      "tests": [
+        {
+          "name": "Not Found Error",
+          "description": "Test error handling for GET http://localhost:5000/api/non-existent-endpoint",
+          "passed": true,
+          "result": "Error handled correctly",
+          "expected": "Status 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Method Not Allowed",
+          "description": "Test error handling for PUT http://localhost:5000/api/health",
+          "passed": true,
+          "result": "Error handled correctly",
+          "expected": "Status 405",
+          "actual": "Status 405"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}
