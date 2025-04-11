@@ -38,7 +38,7 @@ export class IoltaReconciliationTestService implements TestService {
   // Test reconciliation data
   private testReconciliationData = {
     merchantId: this.testMerchantId,
-    trustAccountId: 0, // Will be set during test
+    ioltaAccountId: 0, // Will be set during test
     reconciliationDate: new Date(),
     bookBalance: '10000.00',
     bankBalance: '10000.00',
@@ -52,7 +52,7 @@ export class IoltaReconciliationTestService implements TestService {
   // Test bank statement data
   private testBankStatementData = {
     merchantId: this.testMerchantId,
-    trustAccountId: 0, // Will be set during test
+    ioltaAccountId: 0, // Will be set during test
     statementDate: new Date(),
     beginningBalance: '7500.00',
     endingBalance: '10000.00',
@@ -163,8 +163,8 @@ export class IoltaReconciliationTestService implements TestService {
     });
     
     this.testAccountId = account.id;
-    this.testReconciliationData.trustAccountId = account.id;
-    this.testBankStatementData.trustAccountId = account.id;
+    this.testReconciliationData.ioltaAccountId = account.id;
+    this.testBankStatementData.ioltaAccountId = account.id;
     
     // First ensure the client exists in legal_clients
     const existingClient = await db.query.legalClients.findFirst({
@@ -208,7 +208,7 @@ export class IoltaReconciliationTestService implements TestService {
     await ioltaService.createClientLedger({
       merchantId: this.testMerchantId,
       clientId: this.testClientId,
-      trustAccountId: account.id,
+      ioltaAccountId: account.id,
       balance: '5000.00',
       status: 'active'
     });
@@ -217,7 +217,7 @@ export class IoltaReconciliationTestService implements TestService {
     const transactions = [
       {
         merchantId: this.testMerchantId,
-        trustAccountId: account.id,
+        ioltaAccountId: account.id,
         clientId: this.testClientId,
         matterId: this.testMatterId,
         amount: '2500.00',
@@ -229,7 +229,7 @@ export class IoltaReconciliationTestService implements TestService {
       },
       {
         merchantId: this.testMerchantId,
-        trustAccountId: account.id,
+        ioltaAccountId: account.id,
         clientId: this.testClientId,
         matterId: this.testMatterId,
         amount: '500.00',
@@ -241,7 +241,7 @@ export class IoltaReconciliationTestService implements TestService {
       },
       {
         merchantId: this.testMerchantId,
-        trustAccountId: account.id,
+        ioltaAccountId: account.id,
         clientId: this.testClientId,
         matterId: this.testMatterId,
         amount: '500.00',
@@ -253,7 +253,7 @@ export class IoltaReconciliationTestService implements TestService {
       },
       {
         merchantId: this.testMerchantId,
-        trustAccountId: account.id,
+        ioltaAccountId: account.id,
         clientId: this.testClientId,
         matterId: this.testMatterId,
         amount: '1000.00',
@@ -280,28 +280,28 @@ export class IoltaReconciliationTestService implements TestService {
       await db.delete(ioltaReconciliations)
         .where(and(
           eq(ioltaReconciliations.merchantId, this.testMerchantId),
-          eq(ioltaReconciliations.trustAccountId, this.testAccountId)
+          eq(ioltaReconciliations.ioltaAccountId, this.testAccountId)
         ));
       
       // Delete bank statements
       await db.delete(ioltaBankStatements)
         .where(and(
           eq(ioltaBankStatements.merchantId, this.testMerchantId),
-          eq(ioltaBankStatements.trustAccountId, this.testAccountId)
+          eq(ioltaBankStatements.ioltaAccountId, this.testAccountId)
         ));
       
       // Delete transactions
       await db.delete(ioltaTransactions)
         .where(and(
           eq(ioltaTransactions.merchantId, this.testMerchantId),
-          eq(ioltaTransactions.trustAccountId, this.testAccountId)
+          eq(ioltaTransactions.ioltaAccountId, this.testAccountId)
         ));
       
       // Delete client ledger
       await db.delete(ioltaClientLedgers)
         .where(and(
           eq(ioltaClientLedgers.merchantId, this.testMerchantId),
-          eq(ioltaClientLedgers.trustAccountId, this.testAccountId),
+          eq(ioltaClientLedgers.ioltaAccountId, this.testAccountId),
           eq(ioltaClientLedgers.clientId, this.testClientId)
         ));
       
@@ -336,7 +336,7 @@ export class IoltaReconciliationTestService implements TestService {
         description: 'Should create a new IOLTA reconciliation record',
         passed: !!reconciliation && 
                 reconciliation.merchantId === this.testMerchantId &&
-                reconciliation.trustAccountId === this.testAccountId,
+                reconciliation.ioltaAccountId === this.testAccountId,
         error: null,
         expected: this.testReconciliationData,
         actual: reconciliation
@@ -344,7 +344,7 @@ export class IoltaReconciliationTestService implements TestService {
       
       if (!reconciliation || 
           reconciliation.merchantId !== this.testMerchantId || 
-          reconciliation.trustAccountId !== this.testAccountId) {
+          reconciliation.ioltaAccountId !== this.testAccountId) {
         groupPassed = false;
       }
     } catch (e) {
@@ -494,7 +494,7 @@ export class IoltaReconciliationTestService implements TestService {
         name: 'Generate client reconciliation report',
         description: 'Should generate a client-specific IOLTA reconciliation report',
         passed: !!clientReport && 
-                clientReport.clientId === this.testClientId.toString() &&
+                clientReport.clientId === this.testClientId &&
                 clientReport.accountId === this.testAccountId &&
                 Array.isArray(clientReport.transactions) &&
                 clientReport.transactions.length > 0,
@@ -514,7 +514,7 @@ export class IoltaReconciliationTestService implements TestService {
       });
       
       if (!clientReport || 
-          clientReport.clientId !== this.testClientId.toString() || 
+          clientReport.clientId !== this.testClientId || 
           clientReport.accountId !== this.testAccountId || 
           !Array.isArray(clientReport.transactions) || 
           clientReport.transactions.length === 0) {
@@ -560,7 +560,7 @@ export class IoltaReconciliationTestService implements TestService {
         description: 'Should import a bank statement for reconciliation',
         passed: !!bankStatement && 
                 bankStatement.merchantId === this.testMerchantId &&
-                bankStatement.trustAccountId === this.testAccountId,
+                bankStatement.ioltaAccountId === this.testAccountId,
         error: null,
         expected: this.testBankStatementData,
         actual: bankStatement
@@ -568,7 +568,7 @@ export class IoltaReconciliationTestService implements TestService {
       
       if (!bankStatement || 
           bankStatement.merchantId !== this.testMerchantId || 
-          bankStatement.trustAccountId !== this.testAccountId) {
+          bankStatement.ioltaAccountId !== this.testAccountId) {
         groupPassed = false;
       }
     } catch (e) {

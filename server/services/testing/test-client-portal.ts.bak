@@ -153,7 +153,7 @@ export class ClientPortalTestService implements TestService {
     await ioltaService.createClientLedger({
       merchantId: this.testMerchantId,
       clientId: this.testClientId.toString(), // Ensure clientId is a string to match schema
-      trustAccountId: account.id, // Use trustAccountId instead of trustAccountId
+      trustAccountId: account.id, // Use trustAccountId instead of ioltaAccountId
       clientName: 'Test PortalUser', // Add required clientName
       matterName: 'Test Portal Matter', // Add required matterName
       matterNumber: 'TPM-001', // Add required matterNumber
@@ -279,7 +279,7 @@ export class ClientPortalTestService implements TestService {
         description: 'Should create a new portal user account',
         passed: !!portalUser && 
                 portalUser.email === this.testPortalUserEmail &&
-                portalUser.clientId === this.testClientId.toString(),
+                portalUser.clientId === this.testClientId,
         error: null,
         expected: {
           email: this.testPortalUserEmail,
@@ -294,7 +294,7 @@ export class ClientPortalTestService implements TestService {
       
       if (!portalUser || 
           portalUser.email !== this.testPortalUserEmail || 
-          portalUser.clientId !== this.testClientId.toString()) {
+          portalUser.clientId !== this.testClientId) {
         groupPassed = false;
       }
     } catch (e) {
