@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, numeric, timestamp, pgEnum, date, jsonb, varchar, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, numeric, timestamp, pgEnum, date, jsonb, varchar, decimal, time } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -4011,6 +4011,146 @@ export const legalFinancingStatusEnum = pgEnum("legal_financing_status", [
   "pending_application", "approved", "active", "rejected", "completed", "defaulted", "cancelled"
 ]);
 
+// Client Onboarding and Matter Management Schemas
+
+// Client type enum
+export const legalClientTypeEnum = pgEnum("legal_client_type", ["individual", "corporate"]);
+
+// Client status enum
+export const legalClientStatusEnum = pgEnum("legal_client_status", ["prospect", "active", "inactive", "former"]);
+
+// Conflict check status enum
+export const conflictCheckStatusEnum = pgEnum("conflict_check_status", ["pending", "passed", "failed", "waived"]);
+
+// Matter status enum
+export const legalMatterStatusEnum = pgEnum("legal_matter_status", ["open", "pending", "closed", "archived"]);
+
+// Practice area enum
+export const legalPracticeAreaEnum = pgEnum("legal_practice_area", [
+  "corporate", "litigation", "real_estate", "intellectual_property", "family", "estate_planning", 
+  "tax", "bankruptcy", "immigration", "employment", "criminal", "personal_injury", 
+  "environmental", "other"
+]);
+
+// Legal clients
+export const legalClients = pgTable("legal_clients", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientType: legalClientTypeEnum("client_type").notNull(),
+  status: legalClientStatusEnum("status").notNull().default("prospect"),
+  firstName: text("first_name"),  // For individual clients
+  lastName: text("last_name"),    // For individual clients
+  companyName: text("company_name"), // For corporate clients
+  email: text("email").notNull(),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  taxId: text("tax_id"), // SSN or EIN (stored securely)
+  notes: text("notes"),
+  referralSource: text("referral_source"),
+  conflictCheckStatus: conflictCheckStatusEnum("conflict_check_status").notNull().default("pending"),
+  conflictCheckNotes: text("conflict_check_notes"),
+  retainerAgreementSigned: boolean("retainer_agreement_signed").default(false),
+  retainerAgreementDate: date("retainer_agreement_date"),
+  retainerAgreementDocumentId: integer("retainer_agreement_document_id"), // Reference to document in document management system
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const insertLegalClientSchema = createInsertSchema(legalClients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalClient = typeof legalClients.$inferSelect;
+export type InsertLegalClient = z.infer<typeof insertLegalClientSchema>;
+
+// Related parties (for conflict checks)
+export const legalRelatedParties = pgTable("legal_related_parties", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientId: integer("client_id").notNull(), // The client this party is related to
+  name: text("name").notNull(),
+  relationship: text("relationship").notNull(), // E.g., "opposing party", "co-defendant", "family member"
+  contact: text("contact"), // Contact information
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const insertLegalRelatedPartySchema = createInsertSchema(legalRelatedParties).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalRelatedParty = typeof legalRelatedParties.$inferSelect;
+export type InsertLegalRelatedParty = z.infer<typeof insertLegalRelatedPartySchema>;
+
+// Legal matters
+export const legalMatters = pgTable("legal_matters", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientId: integer("client_id").notNull(), // Client associated with this matter
+  matterNumber: text("matter_number").notNull(), // Unique identifier for the matter (often used in legal billing)
+  title: text("title").notNull(),
+  description: text("description"),
+  practiceArea: legalPracticeAreaEnum("practice_area").notNull(),
+  status: legalMatterStatusEnum("status").notNull().default("open"),
+  openDate: date("open_date").notNull(),
+  closeDate: date("close_date"),
+  responsibleAttorneyId: integer("responsible_attorney_id").notNull(), // User ID of the attorney
+  jurisdiction: text("jurisdiction"), // Court jurisdiction
+  courtCaseNumber: text("court_case_number"),
+  opposingParty: text("opposing_party"),
+  opposingCounsel: text("opposing_counsel"),
+  billingType: text("billing_type").notNull(), // "hourly", "fixed", "contingency"
+  billingRate: numeric("billing_rate"), // For hourly billing
+  fixedFeeAmount: numeric("fixed_fee_amount"), // For fixed fee billing
+  contingencyPercentage: integer("contingency_percentage"), // For contingency billing
+  estimatedHours: integer("estimated_hours"),
+  estimatedFees: numeric("estimated_fees"),
+  statuteOfLimitations: date("statute_of_limitations"),
+  notes: text("notes"),
+  conflictCheckComplete: boolean("conflict_check_complete").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const insertLegalMatterSchema = createInsertSchema(legalMatters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalMatter = typeof legalMatters.$inferSelect;
+export type InsertLegalMatter = z.infer<typeof insertLegalMatterSchema>;
+
+// Matter team members (attorneys, paralegals, etc.)
+export const legalMatterTeamMembers = pgTable("legal_matter_team_members", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  matterId: integer("matter_id").notNull(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull(), // "lead_attorney", "associate", "paralegal", etc.
+  rateOverride: numeric("rate_override"), // Override standard billing rate for this matter
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const insertLegalMatterTeamMemberSchema = createInsertSchema(legalMatterTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalMatterTeamMember = typeof legalMatterTeamMembers.$inferSelect;
+export type InsertLegalMatterTeamMember = z.infer<typeof insertLegalMatterTeamMemberSchema>;
+
 // Client Financing Applications
 export const clientFinancingApplications = pgTable("client_financing_applications", {
   id: serial("id").primaryKey(),
@@ -4174,3 +4314,585 @@ export const insertCommissionMilestoneSchema = createInsertSchema(commissionMile
 
 export type CommissionMilestone = typeof commissionMilestones.$inferSelect;
 export type InsertCommissionMilestone = z.infer<typeof insertCommissionMilestoneSchema>;
+
+// Legal Document Management System Schemas
+
+// Document type enum
+export const legalDocumentTypeEnum = pgEnum("legal_document_type", [
+  "pleading", "contract", "correspondence", "motion", "brief", 
+  "discovery", "evidence", "billing", "client_communication", 
+  "internal_memo", "court_order", "retainer_agreement", "other"
+]);
+
+// Document status enum
+export const legalDocumentStatusEnum = pgEnum("legal_document_status", [
+  "draft", "final", "filed", "signed", "archived"
+]);
+
+// Confidentiality level enum
+export const confidentialityLevelEnum = pgEnum("confidentiality_level", [
+  "public", "client_confidential", "attorney_eyes_only", "privileged", "sealed"
+]);
+
+// Legal documents
+export const legalDocuments = pgTable("legal_documents", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  matterId: integer("matter_id").notNull(),
+  clientId: integer("client_id"),  // Optional if document is not client-specific
+  title: text("title").notNull(),
+  documentType: legalDocumentTypeEnum("document_type").notNull(),
+  status: legalDocumentStatusEnum("document_status").notNull().default("draft"),
+  confidentialityLevel: confidentialityLevelEnum("confidentiality_level").notNull().default("client_confidential"),
+  description: text("description"),
+  fileLocation: text("file_location").notNull(), // Path or URL to document
+  fileSize: integer("file_size"), // Size in bytes
+  fileType: text("file_type"), // MIME type or extension
+  versionNumber: text("version_number").default("1.0"),
+  authorId: integer("author_id").notNull(), // User who created the document
+  lastModifiedById: integer("last_modified_by_id"), // User who last modified the document
+  createdAt: timestamp("created_at").defaultNow(),
+  lastModifiedAt: timestamp("last_modified_at"),
+  signedAt: timestamp("signed_at"),
+  signedById: integer("signed_by_id"),
+  expirationDate: date("expiration_date"),
+  tags: text("tags").array(), // Array of tags for categorization
+  metaData: jsonb("metadata"), // Additional metadata (custom fields, etc.)
+  batesNumberPrefix: text("bates_number_prefix"), // For litigation documents
+  batesNumberStart: integer("bates_number_start"), // Starting Bates number
+  batesNumberEnd: integer("bates_number_end"), // Ending Bates number
+  isTemplate: boolean("is_template").default(false), // If document is a reusable template
+  parentDocumentId: integer("parent_document_id"), // For document versions
+  eFilingStatus: text("e_filing_status"), // Status if document has been e-filed
+  eFilingId: text("e_filing_id"), // E-filing system ID
+  eFilingDate: timestamp("e_filing_date"),
+  courtDocumentId: text("court_document_id"), // Court-assigned document ID
+});
+
+export const insertLegalDocumentSchema = createInsertSchema(legalDocuments).omit({
+  id: true,
+  createdAt: true
+});
+
+export type LegalDocument = typeof legalDocuments.$inferSelect;
+export type InsertLegalDocument = z.infer<typeof insertLegalDocumentSchema>;
+
+// Document versions (for version control)
+export const legalDocumentVersions = pgTable("legal_document_versions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  versionNumber: text("version_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdById: integer("created_by_id").notNull(),
+  fileLocation: text("file_location").notNull(),
+  fileSize: integer("file_size"),
+  changeDescription: text("change_description"),
+  metaData: jsonb("metadata")
+});
+
+export const insertLegalDocumentVersionSchema = createInsertSchema(legalDocumentVersions).omit({
+  id: true,
+  createdAt: true
+});
+
+export type LegalDocumentVersion = typeof legalDocumentVersions.$inferSelect;
+export type InsertLegalDocumentVersion = z.infer<typeof insertLegalDocumentVersionSchema>;
+
+// Document templates
+export const legalDocumentTemplates = pgTable("legal_document_templates", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  title: text("title").notNull(),
+  description: text("description"),
+  documentType: legalDocumentTypeEnum("document_type").notNull(),
+  practiceArea: legalPracticeAreaEnum("practice_area").notNull(),
+  fileLocation: text("file_location").notNull(),
+  variables: jsonb("variables"), // Template variables/placeholders
+  createdAt: timestamp("created_at").defaultNow(),
+  createdById: integer("created_by_id").notNull(),
+  lastModifiedAt: timestamp("last_modified_at"),
+  lastModifiedById: integer("last_modified_by_id"),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0)
+});
+
+export const insertLegalDocumentTemplateSchema = createInsertSchema(legalDocumentTemplates).omit({
+  id: true,
+  createdAt: true,
+  usageCount: true
+});
+
+export type LegalDocumentTemplate = typeof legalDocumentTemplates.$inferSelect;
+export type InsertLegalDocumentTemplate = z.infer<typeof insertLegalDocumentTemplateSchema>;
+
+// Legal Calendar and Deadlines System
+
+// Calendar event type enum
+export const calendarEventTypeEnum = pgEnum("calendar_event_type", [
+  "deadline", "court_date", "meeting", "reminder", "deposition", "hearing", 
+  "trial", "filing", "appointment", "task", "statute_of_limitations", "other"
+]);
+
+// Deadline calculation rule type enum
+export const ruleFrequencyEnum = pgEnum("rule_frequency", [
+  "one_time", "daily", "weekly", "bi_weekly", "monthly", "yearly", "custom"
+]);
+
+// Calendar event status enum
+export const calendarEventStatusEnum = pgEnum("calendar_event_status", [
+  "pending", "confirmed", "completed", "cancelled", "rescheduled"
+]);
+
+// Calendar events
+export const legalCalendarEvents = pgTable("legal_calendar_events", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  title: text("title").notNull(),
+  description: text("description"),
+  eventType: calendarEventTypeEnum("event_type").notNull(),
+  status: calendarEventStatusEnum("status").notNull().default("pending"),
+  startDate: date("start_date").notNull(),
+  startTime: text("start_time"), // Time in HH:MM:SS format
+  endDate: date("end_date"),
+  endTime: text("end_time"), // Time in HH:MM:SS format
+  allDay: boolean("all_day").default(false),
+  location: text("location"),
+  isDeadline: boolean("is_deadline").default(false),
+  matterId: integer("matter_id"), // Associated legal matter
+  clientId: integer("client_id"), // Associated client
+  assignedToId: integer("assigned_to_id"), // Assigned attorney or staff
+  reminderMinutes: integer("reminder_minutes"), // Minutes before event for reminder
+  reminderSent: boolean("reminder_sent").default(false),
+  priority: text("priority").default("medium"), // low, medium, high, urgent
+  recurrenceRule: text("recurrence_rule"), // iCalendar RFC-5545 format
+  parentEventId: integer("parent_event_id"), // For recurring events
+  externalCalendarId: text("external_calendar_id"), // For sync with external calendars
+  externalCalendarType: text("external_calendar_type"), // google, outlook, etc.
+  notes: text("notes"),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  completedAt: timestamp("completed_at"),
+  completedById: integer("completed_by_id")
+});
+
+export const insertLegalCalendarEventSchema = createInsertSchema(legalCalendarEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true
+});
+
+export type LegalCalendarEvent = typeof legalCalendarEvents.$inferSelect;
+export type InsertLegalCalendarEvent = z.infer<typeof insertLegalCalendarEventSchema>;
+
+// Court rules (for automatic deadline calculations)
+export const courtRules = pgTable("court_rules", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  ruleCode: text("rule_code").notNull(), // e.g., "FRCP_26f"
+  ruleName: text("rule_name").notNull(), // e.g., "Rule 26(f) Conference"
+  jurisdiction: text("jurisdiction").notNull(), // e.g., "federal", "CA", "NY"
+  practiceArea: legalPracticeAreaEnum("practice_area").notNull(),
+  courtType: text("court_type"), // e.g., "district", "appellate", "supreme"
+  triggerEvent: text("trigger_event").notNull(), // e.g., "case_filed", "complaint_served"
+  dueDays: integer("due_days").notNull(), // Days from trigger
+  description: text("description"),
+  calculationNotes: text("calculation_notes"),
+  citations: text("citations"),
+  isActive: boolean("is_active").default(true),
+  excludeWeekends: boolean("exclude_weekends").default(true),
+  excludeHolidays: boolean("exclude_holidays").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertCourtRuleSchema = createInsertSchema(courtRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type CourtRule = typeof courtRules.$inferSelect;
+export type InsertCourtRule = z.infer<typeof insertCourtRuleSchema>;
+
+// Court holidays (for deadline calculations)
+export const courtHolidays = pgTable("court_holidays", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  holidayName: text("holiday_name").notNull(),
+  holidayDate: date("holiday_date").notNull(),
+  jurisdiction: text("jurisdiction").notNull(), // e.g., "federal", "CA", "NY"
+  courtType: text("court_type"), // e.g., "all", "district", "appellate"
+  isRecurring: boolean("is_recurring").default(true),
+  recurrenceRule: text("recurrence_rule"), // for recurring holidays (e.g., "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1")
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertCourtHolidaySchema = createInsertSchema(courtHolidays).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type CourtHoliday = typeof courtHolidays.$inferSelect;
+export type InsertCourtHoliday = z.infer<typeof insertCourtHolidaySchema>;
+
+// Calendar event dependencies (for cascading deadlines)
+export const calendarEventDependencies = pgTable("calendar_event_dependencies", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  parentEventId: integer("parent_event_id").notNull(),
+  childEventId: integer("child_event_id").notNull(),
+  dependencyType: text("dependency_type").notNull(), // "hard" (moves with parent) or "soft" (notification only)
+  offsetDays: integer("offset_days"), // Days from parent event
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertCalendarEventDependencySchema = createInsertSchema(calendarEventDependencies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type CalendarEventDependency = typeof calendarEventDependencies.$inferSelect;
+export type InsertCalendarEventDependency = z.infer<typeof insertCalendarEventDependencySchema>;
+
+// Legal Client Portal System
+
+// Client portal access status enum
+export const clientPortalStatusEnum = pgEnum("client_portal_status", [
+  "active", "inactive", "pending", "locked"
+]);
+
+// Client portal access level enum
+export const clientPortalAccessLevelEnum = pgEnum("client_portal_access_level", [
+  "basic", "standard", "full", "custom"
+]);
+
+// Client portal accounts
+export const clientPortalAccounts = pgTable("client_portal_accounts", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientId: integer("client_id").notNull(), // Reference to legal client
+  email: text("email").notNull(),
+  username: text("username").notNull(),
+  password: text("password").notNull(), // Hashed password
+  status: clientPortalStatusEnum("status").notNull().default("pending"),
+  accessLevel: clientPortalAccessLevelEnum("access_level").notNull().default("basic"),
+  lastLoginAt: timestamp("last_login_at"),
+  loginCount: integer("login_count").default(0),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
+  activationToken: text("activation_token"),
+  activationExpires: timestamp("activation_expires"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  twoFactorSecret: text("two_factor_secret"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertClientPortalAccountSchema = createInsertSchema(clientPortalAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+  loginCount: true
+});
+
+export type ClientPortalAccount = typeof clientPortalAccounts.$inferSelect;
+export type InsertClientPortalAccount = z.infer<typeof insertClientPortalAccountSchema>;
+
+// Client portal access permissions (for custom access)
+export const clientPortalPermissions = pgTable("client_portal_permissions", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientPortalAccountId: integer("client_portal_account_id").notNull(),
+  resourceType: text("resource_type").notNull(), // documents, billing, calendar, messages, etc.
+  resourceId: integer("resource_id"), // Specific resource ID if applicable
+  canView: boolean("can_view").default(false),
+  canEdit: boolean("can_edit").default(false),
+  canCreate: boolean("can_create").default(false),
+  canDelete: boolean("can_delete").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertClientPortalPermissionSchema = createInsertSchema(clientPortalPermissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type ClientPortalPermission = typeof clientPortalPermissions.$inferSelect;
+export type InsertClientPortalPermission = z.infer<typeof insertClientPortalPermissionSchema>;
+
+// Client messages
+export const clientMessages = pgTable("client_messages", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientId: integer("client_id").notNull(),
+  senderId: integer("sender_id").notNull(), // User ID or client portal ID
+  receiverId: integer("receiver_id").notNull(), // User ID or client portal ID
+  senderType: text("sender_type").notNull(), // "attorney", "staff", "client"
+  receiverType: text("receiver_type").notNull(), // "attorney", "staff", "client"
+  subject: text("subject").notNull(),
+  messageText: text("message_text").notNull(),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  attachmentCount: integer("attachment_count").default(0),
+  parentMessageId: integer("parent_message_id"), // For threaded messages
+  isPrivate: boolean("is_private").default(false), // If true, only specified users can see it
+  isArchived: boolean("is_archived").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertClientMessageSchema = createInsertSchema(clientMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  readAt: true,
+  isRead: true
+});
+
+export type ClientMessage = typeof clientMessages.$inferSelect;
+export type InsertClientMessage = z.infer<typeof insertClientMessageSchema>;
+
+// Client message attachments
+export const clientMessageAttachments = pgTable("client_message_attachments", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  messageId: integer("message_id").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileType: text("file_type").notNull(),
+  filePath: text("file_path").notNull(),
+  isAccessible: boolean("is_accessible").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertClientMessageAttachmentSchema = createInsertSchema(clientMessageAttachments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type ClientMessageAttachment = typeof clientMessageAttachments.$inferSelect;
+export type InsertClientMessageAttachment = z.infer<typeof insertClientMessageAttachmentSchema>;
+
+// Client portal shared documents
+export const clientPortalSharedDocuments = pgTable("client_portal_shared_documents", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  documentId: integer("document_id").notNull(), // Reference to legal document
+  clientId: integer("client_id").notNull(), // Reference to legal client
+  isViewable: boolean("is_viewable").default(true),
+  isDownloadable: boolean("is_downloadable").default(true),
+  requiresSignature: boolean("requires_signature").default(false),
+  isSigned: boolean("is_signed").default(false),
+  signedAt: timestamp("signed_at"),
+  signedByIp: text("signed_by_ip"),
+  signatureMethod: text("signature_method"), // "electronic", "digital_certificate", etc.
+  expiresAt: timestamp("expires_at"),
+  shareNotes: text("share_notes"),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertClientPortalSharedDocumentSchema = createInsertSchema(clientPortalSharedDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  signedAt: true,
+  isSigned: true
+});
+
+export type ClientPortalSharedDocument = typeof clientPortalSharedDocuments.$inferSelect;
+export type InsertClientPortalSharedDocument = z.infer<typeof insertClientPortalSharedDocumentSchema>;
+
+// Client portal activity logs
+export const clientPortalLogs = pgTable("client_portal_logs", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  clientId: integer("client_id").notNull(),
+  clientPortalAccountId: integer("client_portal_account_id").notNull(),
+  activityType: text("activity_type").notNull(), // login, logout, view_document, etc.
+  resourceType: text("resource_type"), // document, invoice, message, etc.
+  resourceId: integer("resource_id"), // ID of the resource
+  details: jsonb("details"), // Additional details about the activity
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const insertClientPortalLogSchema = createInsertSchema(clientPortalLogs).omit({
+  id: true,
+  createdAt: true
+});
+
+export type ClientPortalLog = typeof clientPortalLogs.$inferSelect;
+export type InsertClientPortalLog = z.infer<typeof insertClientPortalLogSchema>;
+
+// Legal Practice Reporting System
+
+// Report type enum
+export const legalReportTypeEnum = pgEnum("legal_report_type", [
+  "financial", "time_tracking", "activity", "productivity", "client", 
+  "case_status", "billing", "trust_accounting", "custom"
+]);
+
+// Report frequency enum
+export const legalReportFrequencyEnum = pgEnum("legal_report_frequency", [
+  "one_time", "daily", "weekly", "bi_weekly", "monthly", "quarterly", "yearly"
+]);
+
+// Report format enum
+export const legalReportFormatEnum = pgEnum("legal_report_format", [
+  "pdf", "excel", "csv", "html", "json"
+]);
+
+// Legal practice report definitions
+export const legalReportDefinitions = pgTable("legal_report_definitions", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  name: text("name").notNull(),
+  description: text("description"),
+  reportType: legalReportTypeEnum("report_type").notNull(),
+  parameters: jsonb("parameters").notNull(), // JSON containing report parameters
+  sqlQuery: text("sql_query"), // Custom SQL query if applicable
+  createdById: integer("created_by_id").notNull(),
+  isSystem: boolean("is_system").default(false), // True for built-in reports
+  isActive: boolean("is_active").default(true),
+  isPublic: boolean("is_public").default(false), // Whether visible to all firm users
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalReportDefinitionSchema = createInsertSchema(legalReportDefinitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalReportDefinition = typeof legalReportDefinitions.$inferSelect;
+export type InsertLegalReportDefinition = z.infer<typeof insertLegalReportDefinitionSchema>;
+
+// Scheduled legal reports
+export const legalScheduledReports = pgTable("legal_scheduled_reports", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  reportDefinitionId: integer("report_definition_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  frequency: legalReportFrequencyEnum("frequency").notNull(),
+  format: legalReportFormatEnum("format").notNull().default("pdf"),
+  parameters: jsonb("parameters"), // Override report parameters
+  scheduledTime: time("scheduled_time"), // Time of day to run
+  scheduledDayOfWeek: integer("scheduled_day_of_week"), // 0-6 for weekly reports
+  scheduledDayOfMonth: integer("scheduled_day_of_month"), // 1-31 for monthly reports
+  nextRunAt: timestamp("next_run_at"),
+  lastRunAt: timestamp("last_run_at"),
+  recipientEmails: text("recipient_emails").array(),
+  isActive: boolean("is_active").default(true),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalScheduledReportSchema = createInsertSchema(legalScheduledReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalScheduledReport = typeof legalScheduledReports.$inferSelect;
+export type InsertLegalScheduledReport = z.infer<typeof insertLegalScheduledReportSchema>;
+
+// Generated legal reports
+export const legalGeneratedReports = pgTable("legal_generated_reports", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  reportDefinitionId: integer("report_definition_id").notNull(),
+  scheduledReportId: integer("scheduled_report_id"), // If generated from a scheduled report
+  name: text("name").notNull(),
+  format: legalReportFormatEnum("format").notNull(),
+  parameters: jsonb("parameters"), // Parameters used for generation
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size"),
+  startDate: date("start_date"), // Report period start
+  endDate: date("end_date"), // Report period end
+  generationTime: integer("generation_time"), // Milliseconds to generate
+  generatedById: integer("generated_by_id").notNull(),
+  isPublic: boolean("is_public").default(false), // Whether visible to all firm users
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const insertLegalGeneratedReportSchema = createInsertSchema(legalGeneratedReports).omit({
+  id: true,
+  createdAt: true,
+  generationTime: true
+});
+
+export type LegalGeneratedReport = typeof legalGeneratedReports.$inferSelect;
+export type InsertLegalGeneratedReport = z.infer<typeof insertLegalGeneratedReportSchema>;
+
+// Legal report templates
+export const legalReportTemplates = pgTable("legal_report_templates", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  name: text("name").notNull(),
+  description: text("description"),
+  headerHtml: text("header_html"),
+  footerHtml: text("footer_html"),
+  cssStyles: text("css_styles"),
+  logoPath: text("logo_path"),
+  isDefault: boolean("is_default").default(false),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalReportTemplateSchema = createInsertSchema(legalReportTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalReportTemplate = typeof legalReportTemplates.$inferSelect;
+export type InsertLegalReportTemplate = z.infer<typeof insertLegalReportTemplateSchema>;
+
+// Legal dashboard widgets
+export const legalDashboardWidgets = pgTable("legal_dashboard_widgets", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm
+  reportDefinitionId: integer("report_definition_id"),
+  userId: integer("user_id").notNull(), // The user whose dashboard this is
+  name: text("name").notNull(),
+  type: text("type").notNull(), // chart, metric, list, calendar, etc.
+  parameters: jsonb("parameters"), // Widget configuration
+  refreshInterval: integer("refresh_interval"), // Seconds between refreshes
+  position: integer("position"), // Order on dashboard
+  width: integer("width").notNull().default(1), // Widget width (1-4)
+  height: integer("height").notNull().default(1), // Widget height (1-4)
+  isVisible: boolean("is_visible").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalDashboardWidgetSchema = createInsertSchema(legalDashboardWidgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalDashboardWidget = typeof legalDashboardWidgets.$inferSelect;
+export type InsertLegalDashboardWidget = z.infer<typeof insertLegalDashboardWidgetSchema>;

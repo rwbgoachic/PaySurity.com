@@ -1,0 +1,69 @@
+Here's a structured list of common legal billing line-item nomenclatures used by law firms, categorized by practice area and billing type. These are standardized terms compliant with IOLTA/trust accounting requirements:
+
+Time-Based Billing Line Items
+Line Item Name	Description	Common Practice Areas
+Legal Consultation	Initial case evaluation or client meetings	All
+Document Drafting/Review	Creation or analysis of contracts, pleadings, motions, or legal correspondence	Corporate, Litigation, Family
+Court Appearance	Time spent in hearings, trials, or depositions	Litigation, Criminal, Family
+Legal Research	Case law/statutory research (often billed in 0.1-0.5hr increments)	All
+Client Communication	Calls, emails, or letters (often itemized by method)	All
+Discovery Process	Document production, interrogatories, e-discovery	Litigation, Corporate
+Settlement Negotiation	Mediation or negotiation hours	Family, Personal Injury, Corporate
+Flat-Fee Services
+Line Item Name	Description	Common Practice Areas
+Business Formation	LLC/Corporation setup	Corporate
+Will/Trust Preparation	Estate planning document creation	Estate Planning
+Trademark Filing	USPTO registration process	IP Law
+Closing Services	Real estate transaction completion	Real Estate
+Immigration Petition	Visa/green card application filing	Immigration
+Retainer & Trust Accounting
+Line Item Name	Description	Compliance Notes
+Retainer Deposit	Initial funds deposited to trust account	Must track as "unearned"
+Earned Fees Allocation	Transfer from trust to operating account as fees accrue	Requires detailed audit trail
+Retainer Replenishment	Client recharge of depleted retainer	Separate from original deposit
+Trust Account Refund	Return of unearned funds	Requires written authorization
+Expense Reimbursements
+Line Item Name	Description	Examples
+Court Filing Fees	Government fees for case initiation	$450 for Summons & Complaint
+Process Server Fees	Cost to serve legal documents	$75/service attempt
+Expert Witness Fees	Payments to third-party specialists	$200/hr for medical testimony
+Travel Expenses	Mileage (IRS rate), flights, hotels	$0.67/mile × 120 miles
+Document Production	Printing, binding, or certified mail costs	$250 for trial exhibit binders
+Legal Software Subscription	Practice-specific tools (e-discovery, research databases)	$300/mo for Westlaw
+Specialized Practice Area Items
+Practice Area	Unique Line Items
+Criminal Law	Bail Bond Coordination, Plea Bargain Negotiation, Sentencing Memo
+Family Law	Child Custody Evaluation, Spousal Support Calculation, QDRO Preparation
+IP Law	Patent Search, Infringement Analysis, Licensing Agreement Drafting
+Personal Injury	Medical Record Review, Settlement Demand Package, PIP Negotiation
+Compliance-Critical Labels
+"Advance Fee" (instead of "Retainer" for non-refundable fees)
+
+"Non-Refundable Engagement Fee" (if permitted by state bar)
+
+"Earned Upon Receipt" (for flat fees treated as earned immediately)
+
+"Trust Balance: $X.XX" (required on all invoices per ABA Rule 1.15)
+
+Key Technical Requirements for Developers
+Trust Accounting Safeguards:
+
+Auto-label transactions as "Trust" or "Operating"
+
+Prevent negative trust balances with real-time validation
+
+Generate 3-way reconciliation reports (client ledger ⇨ trust ledger ⇨ bank statement)
+
+Billing Precision:
+
+Time tracking in 6-minute increments (0.1 hours)
+
+Auto-apply jurisdictional tax rules (e.g., NY exempts legal services from sales tax)
+
+Ethical Walls:
+
+Matter-based access controls
+
+Conflict check logging
+
+This list aligns with ABA Model Rules and the Uniform Task-Based Management System (UTBMS) codes used in legal e-billing. Always include a customizable "Custom Service" field, as 23% of firms use practice-specific line items (Clio Legal Trends Report).
