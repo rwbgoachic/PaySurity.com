@@ -59,18 +59,14 @@ export class TaxCalculationService {
       }
 
       // Get payroll run data
-      const payrollRun = await db.query.payrollRuns.findFirst({
-        where: eq(schema.payrollRuns.id, payrollRunId)
-      });
+      const [payrollRun] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, payrollRunId));
 
       if (!payrollRun) {
         throw new Error(`Payroll run with ID ${payrollRunId} not found`);
       }
 
       // Get merchant's tax settings
-      const taxSettings = await db.query.payrollTaxSettings.findFirst({
-        where: eq(payrollTaxSettings.merchantId, employee.merchantId)
-      });
+      const [taxSettings] = await db.select().from(payrollTaxSettings).where(eq(payrollTaxSettings.merchantId, employee.merchantId));
 
       // Get employee's work location jurisdiction(s)
       const workJurisdictions = await this.getEmployeeJurisdictions(
@@ -79,8 +75,8 @@ export class TaxCalculationService {
       );
 
       // Get employee's tax elections for all applicable jurisdictions
-      const taxElections = await db.query.employeeTaxElections.findMany({
-        where: and(
+      const taxElections = await db.select().from(employeeTaxElections).where(
+        and(
           eq(employeeTaxElections.employeeId, employeeId),
           lte(employeeTaxElections.effectiveDate, payPeriodEnd),
           or(
@@ -88,7 +84,7 @@ export class TaxCalculationService {
             gte(employeeTaxElections.expirationDate, payPeriodStart)
           )
         )
-      });
+      );
 
       // Get YTD earnings to handle wage bases and caps
       const ytdEarnings = await this.getYTDEarnings(
@@ -102,8 +98,8 @@ export class TaxCalculationService {
       // Calculate each type of tax based on applicable jurisdictions
       for (const jurisdiction of workJurisdictions) {
         // Get applicable tax tables for this jurisdiction
-        const taxTablesList = await db.query.taxTables.findMany({
-          where: and(
+        const taxTablesList = await db.select().from(taxTables).where(
+          and(
             eq(taxTables.jurisdictionId, jurisdiction.id),
             eq(taxTables.isActive, true),
             lte(taxTables.effectiveDate, payPeriodEnd),
@@ -116,7 +112,7 @@ export class TaxCalculationService {
               eq(taxTables.payFrequency, payrollRun.payFrequency)
             )
           )
-        });
+        );
 
         for (const taxTable of taxTablesList) {
           // Check if employee is exempt from this tax
@@ -258,22 +254,20 @@ export class TaxCalculationService {
     asOfDate: Date
   ): Promise<TaxJurisdiction[]> {
     // Get employee data including work location
-    const employee = await db.query.employees.findFirst({
-      where: eq(employees.id, employeeId)
-    });
+    const [employee] = await db.select().from(employees).where(eq(employees.id, employeeId));
 
     if (!employee) {
       throw new Error(`Employee with ID ${employeeId} not found`);
     }
 
     // Always include Federal jurisdiction
-    const federalJurisdiction = await db.query.taxJurisdictions.findFirst({
-      where: and(
+    const [federalJurisdiction] = await db.select().from(taxJurisdictions).where(
+      and(
         eq(taxJurisdictions.type, 'federal'),
         eq(taxJurisdictions.code, 'US'),
         eq(taxJurisdictions.isActive, true)
       )
-    });
+    );
 
     if (!federalJurisdiction) {
       throw new Error('Federal tax jurisdiction not found');
@@ -283,21 +277,21 @@ export class TaxCalculationService {
 
     // Add state jurisdiction based on work state
     if (employee.workState) {
-      const stateJurisdiction = await db.query.taxJurisdictions.findFirst({
-        where: and(
+      const [stateJurisdiction] = await db.select().from(taxJurisdictions).where(
+        and(
           eq(taxJurisdictions.type, 'state'),
           eq(taxJurisdictions.code, employee.workState),
           eq(taxJurisdictions.isActive, true)
         )
-      });
+      );
 
       if (stateJurisdiction) {
         result.push(stateJurisdiction);
 
         // Add local jurisdictions if applicable
         if (employee.workCity || employee.workCounty) {
-          const localJurisdictions = await db.query.taxJurisdictions.findMany({
-            where: and(
+          const localJurisdictions = await db.select().from(taxJurisdictions).where(
+            and(
               eq(taxJurisdictions.parentJurisdictionId, stateJurisdiction.id),
               eq(taxJurisdictions.isActive, true),
               or(
@@ -305,7 +299,7 @@ export class TaxCalculationService {
                 employee.workCounty ? eq(taxJurisdictions.name, employee.workCounty) : undefined
               )
             )
-          });
+          );
 
           result.push(...localJurisdictions);
         }
@@ -326,13 +320,13 @@ export class TaxCalculationService {
     const year = asOfDate.getFullYear();
     const startOfYear = new Date(year, 0, 1);
 
-    const calculations = await db.query.payrollTaxCalculations.findMany({
-      where: and(
+    const calculations = await db.select().from(payrollTaxCalculations).where(
+      and(
         eq(payrollTaxCalculations.employeeId, employeeId),
         gte(payrollTaxCalculations.calculatedAt, startOfYear),
         lte(payrollTaxCalculations.calculatedAt, asOfDate)
       )
-    });
+    );
 
     if (calculations.length === 0) {
       return '0';
@@ -360,15 +354,15 @@ export class TaxCalculationService {
     const year = asOfDate.getFullYear();
     const startOfYear = new Date(year, 0, 1);
 
-    const calculations = await db.query.payrollTaxCalculations.findMany({
-      where: and(
+    const calculations = await db.select().from(payrollTaxCalculations).where(
+      and(
         eq(payrollTaxCalculations.employeeId, employeeId),
         eq(payrollTaxCalculations.jurisdictionId, jurisdictionId),
         eq(payrollTaxCalculations.taxType, taxType),
         gte(payrollTaxCalculations.calculatedAt, startOfYear),
         lte(payrollTaxCalculations.calculatedAt, asOfDate)
       )
-    });
+    );
 
     if (calculations.length === 0) {
       return '0';
