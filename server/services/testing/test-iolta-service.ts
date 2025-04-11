@@ -33,15 +33,19 @@ export class IoltaTestService implements TestService {
     accountName: 'Test IOLTA Account',
     bankName: 'First National Test Bank',
     routingNumber: '123456789',
-    balance: '10000.00',
-    status: 'active' as const
+    accountType: 'iolta' as const,
+    accountStatus: 'active' as const,
+    balance: '10000.00'
   };
   
   // Test data for client ledger
   private testClientData = {
     merchantId: this.testMerchantId,
-    clientId: this.testClientId,
-    ioltaAccountId: 0, // Will be set during test
+    clientId: this.testClientId.toString(),
+    trustAccountId: 0, // Will be set during test
+    clientName: 'Test Client',
+    matterName: 'Test Matter',
+    matterNumber: 'MAT-001',
     balance: '5000.00',
     status: 'active' as const
   };
