@@ -2799,9 +2799,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       res.json(healthCheck);
     } catch (error) {
-      healthCheck.status = 'ERROR';
-      res.status(503).json(healthCheck);
+      res.status(500).json({ error: 'Health check failed' });
     }
+  });
+  
+  // Protected route that requires authentication
+  app.get("/api/protected", (req, res, next) => {
+    // Check if user is authenticated
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    res.json({ message: 'You have access to protected data', user: req.user });
+  });
+    
+  // Method not allowed test for PUT on health
+  app.put("/api/health", (req, res) => {
+    res.status(405).json({ error: 'Method not allowed' });
   });
   
   // End of Health Check API
