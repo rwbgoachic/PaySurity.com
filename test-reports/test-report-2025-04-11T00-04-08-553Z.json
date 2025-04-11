@@ -1,0 +1,81 @@
+{
+  "name": "Performance Test",
+  "timestamp": "2025-04-11T00:04:07.631Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "API Response Time Tests",
+      "tests": [
+        {
+          "name": "GET /api/health Response Time",
+          "description": "Should respond within 200ms",
+          "passed": true,
+          "result": "Response time is acceptable (3ms)",
+          "expected": "<= 200ms",
+          "actual": "3ms"
+        },
+        {
+          "name": "GET /api/user Response Time",
+          "description": "Should respond within 200ms",
+          "passed": true,
+          "result": "Response time is acceptable (2ms)",
+          "expected": "<= 200ms",
+          "actual": "2ms"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Database Performance Tests",
+      "tests": [
+        {
+          "name": "Simple SELECT Query Performance",
+          "description": "Should execute within 400ms",
+          "passed": false,
+          "result": "Execution time is too slow (679ms)",
+          "expected": "<= 400ms",
+          "actual": "679ms"
+        },
+        {
+          "name": "Schema Information Query Performance",
+          "description": "Should execute within 200ms",
+          "passed": true,
+          "result": "Execution time is acceptable (80ms)",
+          "expected": "<= 200ms",
+          "actual": "80ms"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Memory Usage Tests",
+      "tests": [
+        {
+          "name": "Large Array Creation Memory Usage",
+          "description": "Should not increase heap usage by more than 50MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (32.68MB)",
+          "expected": "<= 50.00MB",
+          "actual": "32.68MB"
+        },
+        {
+          "name": "JSON Stringify/Parse Memory Usage",
+          "description": "Should not increase heap usage by more than 30MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (-2.74MB)",
+          "expected": "<= 30.00MB",
+          "actual": "-2.74MB"
+        },
+        {
+          "name": "Overall Memory Usage",
+          "description": "Total process memory usage should be reasonable",
+          "passed": true,
+          "result": "Memory usage is acceptable (356.31MB RSS)",
+          "expected": "<= 700MB RSS",
+          "actual": "RSS: 356.31MB, Heap Total: 208.77MB, Heap Used: 170.70MB"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}
