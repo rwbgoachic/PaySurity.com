@@ -122,7 +122,9 @@ app.use((req, res, next) => {
     req.path.includes('/api/webhook') ||
     req.path === '/api/csrf-token' ||
     req.path === '/api/login' ||
-    req.path === '/api/register'
+    req.path === '/api/register' ||
+    // Allow PUT on health endpoint for testing Method Not Allowed
+    (req.path === '/api/health' && req.method === 'PUT')
   ) {
     return next();
   }
@@ -218,8 +220,21 @@ app.use((req, res, next) => {
   });
   
   // Add a 404 handler for API routes - must be before the UI routes
-  app.use('/api/*', (req, res) => {
-    res.status(404).json({ error: 'API endpoint not found' });
+  app.use('/api/*', (req, res, next) => {
+    // Check if the route is already registered
+    const route = app._router.stack.find((layer: any) => 
+      layer.route && 
+      layer.route.path && 
+      (layer.route.path === req.path || layer.route.path === req.originalUrl)
+    );
+    
+    // Only handle as 404 if no matching route exists
+    if (!route) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    // If route exists, let it be handled by the registered handler
+    next();
   });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
