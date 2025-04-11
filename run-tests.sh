@@ -49,6 +49,7 @@ test_scripts=(
   "POS System Tests:scripts/test-pos-systems.ts"
   "Merchant Onboarding Tests:scripts/test-merchant-onboarding.ts"
   "Affiliate Program Tests:scripts/test-affiliate-marketing.ts"
+  "Payroll Pricing Tests:scripts/test-payroll-pricing.ts"
 )
 
 # Run each test script

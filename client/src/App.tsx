@@ -292,6 +292,14 @@ function Router() {
       <ProtectedRoute path="/admin/test-recommendation" component={TestRecommendationEngine} />
       <ProtectedRoute path="/admin/project-documentation" component={ProjectDocumentation} />
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
+      <ProtectedRoute path="/admin/payroll-pricing" component={() => {
+        const AdminPayrollPricing = React.lazy(() => import("./pages/admin-payroll-pricing"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <AdminPayrollPricing />
+          </React.Suspense>
+        );
+      }} />
       
       {/* Catch-all route - must be last */}
       <Route component={NotFound} />
