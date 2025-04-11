@@ -498,4 +498,106 @@ clientPortalRouter.post('/messages', ensurePortalAuthenticated, async (req: Requ
   }
 });
 
+// Trust Account APIs
+
+// Get client trust accounts
+clientPortalRouter.get('/trust-accounts', ensurePortalAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { clientId, merchantId, id: portalUserId } = req.portalUser;
+    
+    // Get all trust accounts for this client
+    const trustAccounts = await clientPortalService.getClientTrustAccounts(clientId, merchantId);
+    
+    // Log the activity (portalUserId is already attached by ensurePortalAuthenticated)
+    await clientPortalService.logPortalActivity({
+      portalUserId,
+      clientId,
+      merchantId,
+      activityType: 'document_viewed',
+      description: 'Viewed trust accounts',
+      details: { trustAccountCount: trustAccounts.length }
+    });
+    
+    res.json(trustAccounts);
+  } catch (error) {
+    console.error('Error getting trust accounts:', error);
+    res.status(500).json({ error: error.message || 'Failed to retrieve trust accounts' });
+  }
+});
+
+// Get client ledgers for a specific trust account
+clientPortalRouter.get('/trust-accounts/:trustAccountId/ledgers', ensurePortalAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const trustAccountId = parseInt(req.params.trustAccountId);
+    const { clientId, merchantId, id: portalUserId } = req.portalUser;
+    
+    if (isNaN(trustAccountId)) {
+      return res.status(400).json({ error: 'Invalid trust account ID' });
+    }
+    
+    // Get client ledgers for this trust account
+    const ledgers = await clientPortalService.getClientTrustLedgers(clientId, merchantId, trustAccountId);
+    
+    res.json(ledgers);
+  } catch (error) {
+    console.error('Error getting trust ledgers:', error);
+    res.status(500).json({ error: error.message || 'Failed to retrieve trust ledgers' });
+  }
+});
+
+// Get transactions for a specific client ledger
+clientPortalRouter.get('/trust-ledgers/:ledgerId/transactions', ensurePortalAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const ledgerId = parseInt(req.params.ledgerId);
+    const { clientId, merchantId, id: portalUserId } = req.portalUser;
+    
+    if (isNaN(ledgerId)) {
+      return res.status(400).json({ error: 'Invalid ledger ID' });
+    }
+    
+    // Get transactions for this ledger
+    const transactions = await clientPortalService.getLedgerTransactions(clientId, merchantId, ledgerId);
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error getting ledger transactions:', error);
+    res.status(500).json({ error: error.message || 'Failed to retrieve ledger transactions' });
+  }
+});
+
+// Get a comprehensive trust statement
+clientPortalRouter.get('/trust-statement', ensurePortalAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { clientId, merchantId, id: portalUserId } = req.portalUser;
+    
+    // Parse date query parameters if provided
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    
+    if (req.query.startDate) {
+      startDate = new Date(req.query.startDate as string);
+      
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid start date format' });
+      }
+    }
+    
+    if (req.query.endDate) {
+      endDate = new Date(req.query.endDate as string);
+      
+      if (isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid end date format' });
+      }
+    }
+    
+    // Generate the statement
+    const statement = await clientPortalService.getClientTrustStatement(clientId, merchantId, startDate, endDate);
+    
+    res.json(statement);
+  } catch (error) {
+    console.error('Error generating trust statement:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate trust statement' });
+  }
+});
+
 export { clientPortalRouter };

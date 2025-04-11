@@ -6,10 +6,16 @@ import {
   legalInvoices, 
   legalTimeEntries,
   legalExpenseEntries,
+  ioltaTrustAccounts,
+  ioltaClientLedgers,
+  ioltaTransactions,
   type LegalClient,
   type LegalMatter,
   type LegalDocument,
-  type LegalInvoice
+  type LegalInvoice,
+  type IoltaTrustAccount,
+  type IoltaClientLedger,
+  type IoltaTransaction
 } from '@shared/schema';
 
 import {
@@ -888,6 +894,253 @@ export class ClientPortalService {
     } catch (error) {
       console.error('Error getting unread message count:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Get client trust accounts (IOLTA)
+   */
+  async getClientTrustAccounts(clientId: number, merchantId: number): Promise<IoltaTrustAccount[]> {
+    try {
+      // Get all trust accounts for this merchant
+      const trustAccounts = await db.select()
+        .from(ioltaTrustAccounts)
+        .where(
+          eq(ioltaTrustAccounts.merchantId, merchantId)
+        );
+      
+      // Get all client ledgers for this client
+      const clientLedgers = await db.select()
+        .from(ioltaClientLedgers)
+        .where(and(
+          eq(ioltaClientLedgers.clientId, clientId),
+          eq(ioltaClientLedgers.merchantId, merchantId)
+        ));
+      
+      // Filter to only include trust accounts that have ledgers for this client
+      const trustAccountIds = new Set(clientLedgers.map(ledger => ledger.trustAccountId));
+      const filteredTrustAccounts = trustAccounts.filter(account => 
+        trustAccountIds.has(account.id) && account.accountStatus === 'active'
+      );
+      
+      // Log trust account view activity
+      await this.logPortalActivity({
+        portalUserId: 0, // Will be replaced in the route handler
+        clientId,
+        merchantId,
+        activityType: 'document_viewed',
+        description: 'Viewed trust accounts',
+        details: { trustAccountCount: filteredTrustAccounts.length }
+      });
+      
+      return filteredTrustAccounts;
+    } catch (error) {
+      console.error('Error getting client trust accounts:', error);
+      throw new Error('Failed to retrieve client trust accounts');
+    }
+  }
+
+  /**
+   * Get client ledgers for a specific trust account
+   */
+  async getClientTrustLedgers(clientId: number, merchantId: number, trustAccountId: number): Promise<IoltaClientLedger[]> {
+    try {
+      // Verify the trust account exists and belongs to the merchant
+      const [trustAccount] = await db.select()
+        .from(ioltaTrustAccounts)
+        .where(and(
+          eq(ioltaTrustAccounts.id, trustAccountId),
+          eq(ioltaTrustAccounts.merchantId, merchantId)
+        ));
+      
+      if (!trustAccount) {
+        throw new Error('Trust account not found or not accessible');
+      }
+      
+      // Get client ledgers for this client and trust account
+      const clientLedgers = await db.select()
+        .from(ioltaClientLedgers)
+        .where(and(
+          eq(ioltaClientLedgers.clientId, clientId),
+          eq(ioltaClientLedgers.merchantId, merchantId),
+          eq(ioltaClientLedgers.trustAccountId, trustAccountId),
+          eq(ioltaClientLedgers.status, 'active')
+        ));
+      
+      // Log ledger view activity
+      await this.logPortalActivity({
+        portalUserId: 0, // Will be replaced in the route handler
+        clientId,
+        merchantId,
+        activityType: 'document_viewed',
+        description: `Viewed trust account ledgers for account ${trustAccount.accountName}`,
+        details: { trustAccountId, ledgerCount: clientLedgers.length }
+      });
+      
+      return clientLedgers;
+    } catch (error) {
+      console.error('Error getting client trust ledgers:', error);
+      throw new Error('Failed to retrieve client trust ledgers');
+    }
+  }
+
+  /**
+   * Get transactions for a specific client ledger
+   */
+  async getLedgerTransactions(clientId: number, merchantId: number, ledgerId: number): Promise<IoltaTransaction[]> {
+    try {
+      // Verify the ledger exists and belongs to the client
+      const [clientLedger] = await db.select()
+        .from(ioltaClientLedgers)
+        .where(and(
+          eq(ioltaClientLedgers.id, ledgerId),
+          eq(ioltaClientLedgers.clientId, clientId),
+          eq(ioltaClientLedgers.merchantId, merchantId)
+        ));
+      
+      if (!clientLedger) {
+        throw new Error('Client ledger not found or not accessible');
+      }
+      
+      // Get transactions for this ledger
+      const transactions = await db.select()
+        .from(ioltaTransactions)
+        .where(and(
+          eq(ioltaTransactions.clientLedgerId, ledgerId),
+          eq(ioltaTransactions.merchantId, merchantId)
+        ))
+        .orderBy(desc(ioltaTransactions.transactionDate));
+      
+      // Log transaction view activity
+      await this.logPortalActivity({
+        portalUserId: 0, // Will be replaced in the route handler
+        clientId,
+        merchantId,
+        activityType: 'document_viewed',
+        description: `Viewed transactions for trust account ledger ${clientLedger.matterName}`,
+        details: { ledgerId, transactionCount: transactions.length }
+      });
+      
+      return transactions;
+    } catch (error) {
+      console.error('Error getting ledger transactions:', error);
+      throw new Error('Failed to retrieve ledger transactions');
+    }
+  }
+
+  /**
+   * Get a combined client trust statement with all ledgers and transactions
+   */
+  async getClientTrustStatement(clientId: number, merchantId: number, startDate?: Date, endDate?: Date): Promise<any> {
+    try {
+      // Default date range if not provided
+      const now = new Date();
+      const defaultEndDate = new Date(now);
+      const defaultStartDate = new Date(now);
+      defaultStartDate.setMonth(defaultStartDate.getMonth() - 3); // Default to 3 months ago
+      
+      const effectiveStartDate = startDate || defaultStartDate;
+      const effectiveEndDate = endDate || defaultEndDate;
+      
+      // Get all trust accounts the client has ledgers in
+      const trustAccounts = await this.getClientTrustAccounts(clientId, merchantId);
+      
+      const statement: any = {
+        clientId,
+        merchantId,
+        startDate: effectiveStartDate,
+        endDate: effectiveEndDate,
+        generatedDate: new Date(),
+        accounts: []
+      };
+      
+      // For each trust account, get client ledgers and transactions
+      for (const account of trustAccounts) {
+        const ledgers = await this.getClientTrustLedgers(clientId, merchantId, account.id);
+        
+        const accountData: any = {
+          trustAccount: account,
+          ledgers: []
+        };
+        
+        for (const ledger of ledgers) {
+          // Get transactions in the date range
+          const transactions = await db.select()
+            .from(ioltaTransactions)
+            .where(and(
+              eq(ioltaTransactions.clientLedgerId, ledger.id),
+              eq(ioltaTransactions.merchantId, merchantId),
+              gte(ioltaTransactions.transactionDate, effectiveStartDate),
+              lte(ioltaTransactions.transactionDate, effectiveEndDate)
+            ))
+            .orderBy(desc(ioltaTransactions.transactionDate));
+          
+          // Calculate the running balance
+          let runningBalance = 0;
+          
+          // Get previous balance (all transactions before start date)
+          const previousTransactions = await db.select()
+            .from(ioltaTransactions)
+            .where(and(
+              eq(ioltaTransactions.clientLedgerId, ledger.id),
+              eq(ioltaTransactions.merchantId, merchantId),
+              lt(ioltaTransactions.transactionDate, effectiveStartDate)
+            ));
+          
+          // Calculate opening balance
+          for (const transaction of previousTransactions) {
+            if (transaction.transactionType === 'deposit') {
+              runningBalance += parseFloat(transaction.amount);
+            } else if (transaction.transactionType === 'withdrawal') {
+              runningBalance -= parseFloat(transaction.amount);
+            }
+          }
+          
+          const openingBalance = runningBalance;
+          
+          // Add running balance to each transaction
+          const transactionsWithBalance = transactions.map(transaction => {
+            if (transaction.transactionType === 'deposit') {
+              runningBalance += parseFloat(transaction.amount);
+            } else if (transaction.transactionType === 'withdrawal') {
+              runningBalance -= parseFloat(transaction.amount);
+            }
+            
+            return {
+              ...transaction,
+              runningBalance: runningBalance.toFixed(2)
+            };
+          });
+          
+          accountData.ledgers.push({
+            ledger,
+            openingBalance: openingBalance.toFixed(2),
+            closingBalance: runningBalance.toFixed(2),
+            transactions: transactionsWithBalance
+          });
+        }
+        
+        statement.accounts.push(accountData);
+      }
+      
+      // Log statement view activity
+      await this.logPortalActivity({
+        portalUserId: 0, // Will be replaced in the route handler
+        clientId,
+        merchantId,
+        activityType: 'document_viewed',
+        description: 'Generated trust account statement',
+        details: { 
+          startDate: effectiveStartDate,
+          endDate: effectiveEndDate,
+          accountCount: statement.accounts.length
+        }
+      });
+      
+      return statement;
+    } catch (error) {
+      console.error('Error generating client trust statement:', error);
+      throw new Error('Failed to generate client trust statement');
     }
   }
 }
