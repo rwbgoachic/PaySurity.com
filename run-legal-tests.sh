@@ -1,126 +1,47 @@
 #!/bin/bash
 
-# Legal Practice Management System Test Runner
-# This script runs tests for the Legal Practice Management System
+# Run Legal Tests
+# This script runs the legal system tests and generates a report
 
-# Color definitions
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Ensure we're in the project directory
+cd "$(dirname "$0")"
 
-# Function to print a header
-function print_header() {
-  echo -e "\n${MAGENTA}==============================================${NC}"
-  echo -e "${MAGENTA}$1${NC}"
-  echo -e "${MAGENTA}==============================================${NC}\n"
-}
-
-# Function to print a section
-function print_section() {
-  echo -e "\n${BLUE}----------------------------------------------${NC}"
-  echo -e "${BLUE}$1${NC}"
-  echo -e "${BLUE}----------------------------------------------${NC}\n"
-}
-
-# Function to print success message
-function print_success() {
-  echo -e "${GREEN}✓ $1${NC}"
-}
-
-# Function to print error message
-function print_error() {
-  echo -e "${RED}✗ $1${NC}"
-}
-
-# Function to print info message
-function print_info() {
-  echo -e "${CYAN}$1${NC}"
-}
-
-# Function to print warning message
-function print_warning() {
-  echo -e "${YELLOW}$1${NC}"
-}
-
-# Display help message
-function show_help() {
-  print_header "Legal Practice Management System Test Runner"
-  echo "Usage: $0 [options]"
-  echo ""
-  echo "Options:"
-  echo "  -h, --help            Show this help message"
-  echo "  -s, --service SERVICE Run a specific test service"
-  echo "  -l, --list            List available test services"
-  echo ""
-  echo "Available services: Users, Clients, Matters, Documents, TimeTracking,"
-  echo "                   ExpenseTracking, IOLTA, Reconciliation, Billing,"
-  echo "                   PaymentPlans, ClientPortal, Reporting"
-  exit 0
-}
-
-# List available test services
-function list_services() {
-  print_header "Available Test Services"
-  echo "Users - User management and authentication tests"
-  echo "Clients - Client management tests"
-  echo "Matters - Legal matter management tests"
-  echo "Documents - Document management tests"
-  echo "TimeTracking - Time entry and tracking tests"
-  echo "ExpenseTracking - Expense tracking tests"
-  echo "IOLTA - Trust accounting tests"
-  echo "Reconciliation - Account reconciliation tests"
-  echo "Billing - Billing and invoicing tests"
-  echo "PaymentPlans - Payment plan tests"
-  echo "ClientPortal - Client portal tests"
-  echo "Reporting - Reporting system tests"
-  exit 0
-}
-
-# Parse command line arguments
-SERVICE=""
-
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -h|--help)
-      show_help
-      ;;
-    -l|--list)
-      list_services
-      ;;
-    -s|--service)
-      SERVICE="$2"
-      shift
-      shift
-      ;;
-    *)
-      print_error "Unknown option: $1"
-      echo "Use -h or --help to see available options"
-      exit 1
-      ;;
-  esac
-done
-
-# Run the tests
-print_header "Running Legal Practice Management System Tests"
-
-if [ -n "$SERVICE" ]; then
-  print_info "Running specific test service: $SERVICE"
-  npx tsx scripts/test-legal-system.ts --service=$SERVICE
-else
-  print_info "Running all test services"
-  npx tsx scripts/test-legal-system.ts
+# Check if tsx is installed
+if ! command -v npx &> /dev/null; then
+  echo "npx is not installed. Please install Node.js and npm."
+  exit 1
 fi
 
-# Check the exit code
-EXIT_CODE=$?
-if [ $EXIT_CODE -eq 0 ]; then
-  print_header "All Tests Passed Successfully"
+# Define colors for better visibility
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}=== Running Legal System Tests ===${NC}"
+echo "Started at $(date)"
+
+# Create test-reports directory if it doesn't exist
+mkdir -p test-reports
+
+# Run the tests
+if [ "$1" == "--json" ]; then
+  echo -e "${YELLOW}Generating JSON report...${NC}"
+  npx tsx scripts/generate-legal-test-report.ts json
+elif [ "$1" == "--csv" ]; then
+  echo -e "${YELLOW}Generating CSV report...${NC}"
+  npx tsx scripts/generate-legal-test-report.ts csv
+else
+  echo -e "${YELLOW}Running tests with console output...${NC}"
+  npx tsx scripts/run-legal-system-tests.ts
+fi
+
+# Check if the tests were successful
+if [ $? -eq 0 ]; then
+  echo -e "${GREEN}All tests passed!${NC}"
   exit 0
 else
-  print_header "Tests Failed"
+  echo -e "${RED}Some tests failed. Check the report for details.${NC}"
   exit 1
 fi

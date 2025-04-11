@@ -1,16 +1,16 @@
 /**
- * Test Interfaces
+ * Test Interfaces Module
  * 
- * This file defines the interfaces used by the testing framework
- * to ensure consistent test reporting and coordination.
+ * This module defines the interfaces and types used for testing across the system.
+ * These interfaces provide a consistent structure for test services, reports, and results.
  */
 
 /**
- * Represents the result of an individual test
+ * TestResult represents the outcome of a single test
  */
 export interface TestResult {
   name: string;
-  description?: string;
+  description: string;
   passed: boolean;
   error: string | null;
   expected?: any;
@@ -18,17 +18,17 @@ export interface TestResult {
 }
 
 /**
- * Represents a group of related tests
+ * TestGroup represents a logical grouping of related tests
  */
 export interface TestGroup {
   name: string;
-  description?: string;
+  description: string;
   tests: TestResult[];
   passed: boolean;
 }
 
 /**
- * Represents a comprehensive test report
+ * TestReport represents the outcome of a suite of tests
  */
 export interface TestReport {
   serviceName: string;
@@ -41,16 +41,16 @@ export interface TestReport {
 }
 
 /**
- * Interface that all test services must implement
+ * TestService interface that all test service implementations must follow
  */
 export interface TestService {
   /**
-   * Run all tests provided by this service
+   * Run all tests managed by this service
    */
   runTests(): Promise<TestReport>;
   
   /**
-   * Create a deliberate test failure (used for testing the test infrastructure)
+   * Create a deliberate test failure (for testing the test framework)
    */
   createDeliberateTestFailure(): Promise<TestReport>;
 }

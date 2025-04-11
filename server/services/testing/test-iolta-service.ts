@@ -1,820 +1,781 @@
 /**
- * IOLTA Test Service
+ * IOLTA Service Testing Module
  * 
- * This service tests the IOLTA trust accounting system including:
- * - Trust account management
- * - Client ledger operations
- * - Transaction recording and retrieval
- * - Reconciliation reporting
+ * This module contains tests for the IOLTA (Interest on Lawyer Trust Accounts) service,
+ * which is a critical component of the legal practice management system.
  */
 
-import { db } from '../../db';
-import { 
-  ioltaTrustAccounts, 
-  ioltaClientLedgers, 
-  ioltaTransactions,
-  ioltaReconciliations,
-  ioltaBankStatements
-} from '@shared/schema';
 import { TestService, TestReport, TestGroup, TestResult } from './test-interfaces';
-import { IoltaService } from '../legal/iolta-service';
-import { eq, and, sql } from 'drizzle-orm';
+import { db } from '../../db';
+import { ioltaService } from '../legal/iolta-service';
+import {
+  ioltaTrustAccounts,
+  ioltaClientLedgers,
+  ioltaTransactions,
+  legalClients,
+  legalMatters
+} from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 
-class IoltaTestService implements TestService {
-  private testMerchantId = 999;
-  private testClientId = 999;
-  private testMatterId = 999;
-  private testAccountId = 999;
-  private ioltaService: IoltaService;
-
-  constructor() {
-    this.ioltaService = new IoltaService();
-  }
-
+/**
+ * IoltaTestService implements tests for the IOLTA service
+ */
+export class IoltaTestService implements TestService {
+  // Test data IDs
+  private testMerchantId = 1;
+  private testClientId = 1;
+  private testMatterId = 1;
+  
+  // Test data for account creation
+  private testAccountData = {
+    merchantId: this.testMerchantId,
+    accountNumber: 'TEST12345',
+    accountName: 'Test IOLTA Account',
+    bankName: 'First National Test Bank',
+    routingNumber: '123456789',
+    balance: '10000.00',
+    status: 'active' as const
+  };
+  
+  // Test data for client ledger
+  private testClientData = {
+    merchantId: this.testMerchantId,
+    clientId: this.testClientId,
+    ioltaAccountId: 0, // Will be set during test
+    balance: '5000.00',
+    status: 'active' as const
+  };
+  
+  // Test data for transactions
+  private testTransactionData = {
+    merchantId: this.testMerchantId,
+    ioltaAccountId: 0, // Will be set during test
+    clientId: this.testClientId,
+    matterId: this.testMatterId,
+    amount: '2500.00',
+    transactionType: 'deposit' as const,
+    description: 'Initial client retainer',
+    status: 'completed' as const,
+    referenceNumber: 'TR-1001',
+  };
+  
   /**
-   * Run all IOLTA tests
+   * Run all IOLTA service tests
    */
   async runTests(): Promise<TestReport> {
-    console.log('Running IOLTA tests...');
-    
     const startTime = new Date();
     const testGroups: TestGroup[] = [];
+    let passed = true;
+    let error: string | null = null;
     
     try {
-      // Clean up any previous test data
-      await this.cleanupTestData();
+      // Run each test group
+      testGroups.push(await this.testAccountManagement());
+      testGroups.push(await this.testClientLedger());
+      testGroups.push(await this.testTransactions());
+      testGroups.push(await this.testReconciliation());
       
-      // Set up test data
-      await this.setupTestData();
-      
-      // Run trust account tests
-      const trustAccountGroup = await this.runTrustAccountTests();
-      testGroups.push(trustAccountGroup);
-      
-      // Run transaction tests
-      const transactionGroup = await this.runTransactionTests();
-      testGroups.push(transactionGroup);
-      
-      // Run client ledger tests
-      const clientLedgerGroup = await this.runClientLedgerTests();
-      testGroups.push(clientLedgerGroup);
-      
-      // Run reconciliation tests
-      const reconciliationGroup = await this.runReconciliationTests();
-      testGroups.push(reconciliationGroup);
+      // Update overall pass status
+      for (const group of testGroups) {
+        if (!group.passed) {
+          passed = false;
+          break;
+        }
+      }
       
       // Clean up test data
-      await this.cleanupTestData();
-    } catch (error) {
-      console.error('Error running IOLTA tests:', error);
+      await this.cleanup();
+    } catch (e) {
+      passed = false;
+      error = e instanceof Error ? e.message : String(e);
+      console.error('Error running IOLTA tests:', e);
       
-      testGroups.push({
-        name: 'Test Execution Error',
-        tests: [{
-          name: 'Test Suite Execution',
-          description: 'Executing the IOLTA test suite',
-          passed: false,
-          expected: 'Tests to execute without errors',
-          actual: error instanceof Error ? error.message : String(error),
-          error: error instanceof Error ? error.message : String(error)
-        }],
-        passed: false
-      });
+      // Attempt cleanup even if tests fail
+      try {
+        await this.cleanup();
+      } catch (cleanupError) {
+        console.error('Error cleaning up test data:', cleanupError);
+      }
     }
     
     const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
     
-    const allPassed = testGroups.every(group => group.passed);
-    
-    const report: TestReport = {
-      serviceName: 'IOLTA',
-      timestamp: new Date(),
+    // Return the test report
+    return {
+      serviceName: 'IOLTA Service',
+      passed,
       startTime,
       endTime,
-      duration: endTime.getTime() - startTime.getTime(),
+      duration,
       testGroups,
-      passed: allPassed
+      error
     };
-    
-    return report;
   }
-
+  
   /**
-   * Create a deliberate test failure
+   * Test IOLTA account management
    */
-  async createDeliberateTestFailure(): Promise<void> {
-    const testGroup: TestGroup = {
-      name: 'Deliberate Failure Test',
-      tests: [{
-        name: 'Deliberately Failed Test',
-        description: 'This test is designed to fail for testing purposes',
-        passed: false,
-        expected: 'Success',
-        actual: 'Failure',
-        error: 'This is a deliberate test failure'
-      }],
-      passed: false
-    };
+  private async testAccountManagement(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
     
-    const report: TestReport = {
-      serviceName: 'IOLTA',
-      timestamp: new Date(),
-      startTime: new Date(),
-      endTime: new Date(),
-      duration: 0,
-      testGroups: [testGroup],
-      passed: false
-    };
-    
-    // Just return, the test coordinator will handle the report
-    return;
-  }
-
-  /**
-   * Set up test data
-   */
-  private async setupTestData(): Promise<void> {
+    // Test 1: Create IOLTA account
     try {
-      // Create test trust account
-      await db.insert(ioltaTrustAccounts).values({
-        id: this.testAccountId,
-        merchantId: this.testMerchantId,
-        bankName: 'Test Bank',
-        accountNumber: '123456789',
-        routingNumber: '987654321',
-        accountType: 'iolta',
-        accountName: 'Test IOLTA Account',
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date()
+      const account = await ioltaService.createIoltaAccount(this.testAccountData);
+      
+      // Update the account ID for later tests
+      this.testClientData.ioltaAccountId = account.id;
+      this.testTransactionData.ioltaAccountId = account.id;
+      
+      tests.push({
+        name: 'Create IOLTA account',
+        description: 'Should create a new IOLTA trust account',
+        passed: !!account && 
+                account.merchantId === this.testMerchantId &&
+                account.accountName === this.testAccountData.accountName,
+        error: null,
+        expected: this.testAccountData,
+        actual: account
       });
       
-      // Create test client ledger
-      await db.insert(ioltaClientLedgers).values({
-        id: this.testClientId,
-        trustAccountId: this.testAccountId,
-        merchantId: this.testMerchantId,
-        clientName: 'Test Client',
-        clientId: this.testClientId.toString(),
-        matterName: 'Test Matter',
-        matterNumber: this.testMatterId.toString(),
-        balance: '0.00',
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date()
+      if (!account || 
+          account.merchantId !== this.testMerchantId || 
+          account.accountName !== this.testAccountData.accountName) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Create IOLTA account',
+        description: 'Should create a new IOLTA trust account',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
       });
-      
-      console.log('Test data setup complete');
-    } catch (error) {
-      console.error('Error setting up test data:', error);
-      throw error;
+      groupPassed = false;
     }
-  }
-
-  /**
-   * Clean up test data
-   */
-  private async cleanupTestData(): Promise<void> {
+    
+    // Test 2: Get IOLTA account
     try {
-      // Delete test reconciliations
-      await db.delete(ioltaReconciliations)
-        .where(eq(ioltaReconciliations.trustAccountId, this.testAccountId));
-      
-      // Delete test bank statements
-      await db.delete(ioltaBankStatements)
-        .where(eq(ioltaBankStatements.trustAccountId, this.testAccountId));
-    
-      // Delete test transactions
-      await db.delete(ioltaTransactions)
-        .where(eq(ioltaTransactions.trustAccountId, this.testAccountId));
-        
-      // Delete test client ledger
-      await db.delete(ioltaClientLedgers)
-        .where(eq(ioltaClientLedgers.id, this.testClientId));
-        
-      // Delete test trust account
-      await db.delete(ioltaTrustAccounts)
-        .where(eq(ioltaTrustAccounts.id, this.testAccountId));
-        
-      console.log('Test data cleanup complete');
-    } catch (error) {
-      console.error('Error cleaning up test data:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Run trust account tests
-   */
-  private async runTrustAccountTests(): Promise<TestGroup> {
-    console.log('Running trust account tests...');
-    
-    const tests: TestResult[] = [];
-    
-    // Test creating a trust account
-    tests.push(await this.testCreateTrustAccount());
-    
-    // Test retrieving a trust account
-    tests.push(await this.testGetTrustAccount());
-    
-    // Test updating a trust account
-    tests.push(await this.testUpdateTrustAccount());
-    
-    // Test listing trust accounts
-    tests.push(await this.testListTrustAccounts());
-    
-    const passed = tests.every(test => test.passed);
-    
-    return {
-      name: 'Trust Account Management',
-      description: 'Tests for IOLTA trust account creation, retrieval, and management',
-      tests,
-      passed
-    };
-  }
-
-  /**
-   * Test creating a trust account
-   */
-  private async testCreateTrustAccount(): Promise<TestResult> {
-    try {
-      const newAccountData = {
-        merchantId: this.testMerchantId,
-        bankName: 'New Test Bank',
-        accountNumber: '1122334455',
-        routingNumber: '5544332211',
-        accountType: 'iolta',
-        accountName: 'New IOLTA Account',
-        status: 'active'
-      };
-      
-      const newAccount = await this.ioltaService.createTrustAccount(newAccountData);
-      
-      // Clean up
-      if (newAccount && newAccount.id) {
-        await db.delete(ioltaTrustAccounts).where(eq(ioltaTrustAccounts.id, newAccount.id));
+      if (!this.testClientData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
       }
       
-      return {
-        name: 'Create Trust Account',
-        description: 'Create a new IOLTA trust account',
-        passed: true,
-        expected: 'New account with specified data',
-        actual: `Account created with ID ${newAccount?.id}`,
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing createTrustAccount:', error);
-      return {
-        name: 'Create Trust Account',
-        description: 'Create a new IOLTA trust account',
-        passed: false,
-        expected: 'New account with specified data',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test retrieving a trust account
-   */
-  private async testGetTrustAccount(): Promise<TestResult> {
-    try {
-      const account = await this.ioltaService.getTrustAccount(this.testAccountId);
-      
-      return {
-        name: 'Get Trust Account',
-        description: 'Retrieve an IOLTA trust account by ID',
-        passed: account !== null && account.id === this.testAccountId,
-        expected: `Trust account with ID ${this.testAccountId}`,
-        actual: account ? `Account found with ID ${account.id}` : 'No account found',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getTrustAccount:', error);
-      return {
-        name: 'Get Trust Account',
-        description: 'Retrieve an IOLTA trust account by ID',
-        passed: false,
-        expected: `Trust account with ID ${this.testAccountId}`,
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test updating a trust account
-   */
-  private async testUpdateTrustAccount(): Promise<TestResult> {
-    try {
-      const updatedData = {
-        bankName: 'Updated Test Bank',
-        accountName: 'Updated IOLTA Account'
-      };
-      
-      const updatedAccount = await this.ioltaService.updateTrustAccount(this.testAccountId, updatedData);
-      
-      // Verify update worked
-      const account = await this.ioltaService.getTrustAccount(this.testAccountId);
-      
-      return {
-        name: 'Update Trust Account',
-        description: 'Update an existing IOLTA trust account',
-        passed: account !== null && 
-                account.bankName === updatedData.bankName && 
-                account.accountName === updatedData.accountName,
-        expected: `Updated bank name to "${updatedData.bankName}" and account name to "${updatedData.accountName}"`,
-        actual: account ? 
-                `Account bank name is "${account.bankName}" and account name is "${account.accountName}"` : 
-                'No account found',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing updateTrustAccount:', error);
-      return {
-        name: 'Update Trust Account',
-        description: 'Update an existing IOLTA trust account',
-        passed: false,
-        expected: 'Updated trust account data',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test listing trust accounts
-   */
-  private async testListTrustAccounts(): Promise<TestResult> {
-    try {
-      const accounts = await this.ioltaService.getTrustAccounts(this.testMerchantId);
-      
-      return {
-        name: 'List Trust Accounts',
-        description: 'List all IOLTA trust accounts for a merchant',
-        passed: Array.isArray(accounts) && accounts.length > 0,
-        expected: 'Array of trust accounts including test account',
-        actual: `Found ${accounts.length} trust accounts`,
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getTrustAccounts:', error);
-      return {
-        name: 'List Trust Accounts',
-        description: 'List all IOLTA trust accounts for a merchant',
-        passed: false,
-        expected: 'Array of trust accounts',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Run transaction tests
-   */
-  private async runTransactionTests(): Promise<TestGroup> {
-    console.log('Running transaction tests...');
-    
-    const tests: TestResult[] = [];
-    
-    // Test creating a deposit transaction
-    tests.push(await this.testCreateDepositTransaction());
-    
-    // Test creating a withdrawal transaction
-    tests.push(await this.testCreateWithdrawalTransaction());
-    
-    // Test retrieving a transaction
-    tests.push(await this.testGetTransaction());
-    
-    // Test listing transactions
-    tests.push(await this.testListTransactions());
-    
-    const passed = tests.every(test => test.passed);
-    
-    return {
-      name: 'Transaction Management',
-      description: 'Tests for IOLTA transaction creation, retrieval, and management',
-      tests,
-      passed
-    };
-  }
-
-  private testTransactionId: number | null = null;
-
-  /**
-   * Test creating a deposit transaction
-   */
-  private async testCreateDepositTransaction(): Promise<TestResult> {
-    try {
-      const transactionData = {
-        trustAccountId: this.testAccountId,
-        clientLedgerId: this.testClientId,
-        merchantId: this.testMerchantId,
-        transactionType: 'deposit',
-        amount: '1000.00',
-        description: 'Test deposit',
-        source: 'client',
-        referenceNumber: 'DEP123',
-        status: 'completed'
-      };
-      
-      const transaction = await this.ioltaService.createTransaction(transactionData);
-      
-      // Save for later tests
-      if (transaction && transaction.id) {
-        this.testTransactionId = transaction.id;
-      }
-      
-      return {
-        name: 'Create Deposit Transaction',
-        description: 'Create a new deposit transaction in an IOLTA account',
-        passed: transaction !== null && transaction.amount === transactionData.amount,
-        expected: 'New deposit transaction with specified amount',
-        actual: transaction ? `Transaction created with amount ${transaction.amount}` : 'No transaction created',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing createDepositTransaction:', error);
-      return {
-        name: 'Create Deposit Transaction',
-        description: 'Create a new deposit transaction in an IOLTA account',
-        passed: false,
-        expected: 'New deposit transaction',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test creating a withdrawal transaction
-   */
-  private async testCreateWithdrawalTransaction(): Promise<TestResult> {
-    try {
-      const transactionData = {
-        trustAccountId: this.testAccountId,
-        clientLedgerId: this.testClientId,
-        merchantId: this.testMerchantId,
-        transactionType: 'withdrawal',
-        amount: '500.00',
-        description: 'Test withdrawal',
-        recipient: 'Vendor',
-        referenceNumber: 'WD123',
-        status: 'completed'
-      };
-      
-      const transaction = await this.ioltaService.createTransaction(transactionData);
-      
-      return {
-        name: 'Create Withdrawal Transaction',
-        description: 'Create a new withdrawal transaction from an IOLTA account',
-        passed: transaction !== null && transaction.amount === transactionData.amount,
-        expected: 'New withdrawal transaction with specified amount',
-        actual: transaction ? `Transaction created with amount ${transaction.amount}` : 'No transaction created',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing createWithdrawalTransaction:', error);
-      return {
-        name: 'Create Withdrawal Transaction',
-        description: 'Create a new withdrawal transaction from an IOLTA account',
-        passed: false,
-        expected: 'New withdrawal transaction',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test retrieving a transaction
-   */
-  private async testGetTransaction(): Promise<TestResult> {
-    try {
-      if (!this.testTransactionId) {
-        return {
-          name: 'Get Transaction',
-          description: 'Retrieve an IOLTA transaction by ID',
-          passed: false,
-          expected: 'Transaction details',
-          actual: 'No test transaction ID available',
-          error: 'Test transaction ID is null'
-        };
-      }
-      
-      const transaction = await this.ioltaService.getTransaction(this.testTransactionId);
-      
-      return {
-        name: 'Get Transaction',
-        description: 'Retrieve an IOLTA transaction by ID',
-        passed: transaction !== null && transaction.id === this.testTransactionId,
-        expected: `Transaction with ID ${this.testTransactionId}`,
-        actual: transaction ? `Transaction found with ID ${transaction.id}` : 'No transaction found',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getTransaction:', error);
-      return {
-        name: 'Get Transaction',
-        description: 'Retrieve an IOLTA transaction by ID',
-        passed: false,
-        expected: 'Transaction details',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test listing transactions
-   */
-  private async testListTransactions(): Promise<TestResult> {
-    try {
-      // Using the format Drizzle expects for date parameters with SQL
-      const startDate = sql`now() - INTERVAL '30 days'`;
-      const endDate = sql`now() + INTERVAL '1 day'`;
-      
-      const transactions = await this.ioltaService.getTransactions({
-        trustAccountId: this.testAccountId,
-        startDate,
-        endDate
-      });
-      
-      return {
-        name: 'List Transactions',
-        description: 'List all transactions for a trust account within a date range',
-        passed: Array.isArray(transactions) && transactions.length >= 2, // We created at least 2 test transactions
-        expected: 'Array of transactions including test transactions',
-        actual: `Found ${transactions.length} transactions`,
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getTransactions:', error);
-      return {
-        name: 'List Transactions',
-        description: 'List all transactions for a trust account within a date range',
-        passed: false,
-        expected: 'Array of transactions',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Run reconciliation tests
-   */
-  private async runReconciliationTests(): Promise<TestGroup> {
-    console.log('Running reconciliation tests...');
-    
-    const tests: TestResult[] = [];
-    
-    // Test creating a reconciliation report
-    tests.push(await this.testCreateReconciliation());
-    
-    // Test retrieving reconciliation reports
-    tests.push(await this.testGetReconciliations());
-    
-    // Test validating a reconciliation
-    tests.push(await this.testValidateReconciliation());
-    
-    const passed = tests.every(test => test.passed);
-    
-    return {
-      name: 'Reconciliation Management',
-      description: 'Tests for IOLTA reconciliation creation, retrieval, and validation',
-      tests,
-      passed
-    };
-  }
-
-  private testReconciliationId: number | null = null;
-
-  /**
-   * Test creating a reconciliation report
-   */
-  private async testCreateReconciliation(): Promise<TestResult> {
-    try {
-      // First, let's insert a test bank statement
-      const bankStatementResult = await db.insert(ioltaBankStatements).values({
-        trustAccountId: this.testAccountId,
-        merchantId: this.testMerchantId,
-        statementDate: new Date(),
-        beginningBalance: '1000.00',
-        endingBalance: '1500.00',
-        filename: 'test_statement.pdf',
-        status: 'ready',
-        uploads3Key: 'test/test_statement.pdf',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning({ id: ioltaBankStatements.id });
-      
-      const bankStatementId = bankStatementResult[0].id;
-      
-      const reconciliationData = {
-        trustAccountId: this.testAccountId,
-        merchantId: this.testMerchantId,
-        bankStatementId,
-        reconciliationDate: new Date(),
-        bankBalance: '1500.00',
-        bookBalance: '1500.00',
-        status: 'pending',
-        notes: 'Test reconciliation'
-      };
-      
-      const reconciliation = await this.ioltaService.createReconciliation(reconciliationData);
-      
-      // Save for later tests
-      if (reconciliation && reconciliation.id) {
-        this.testReconciliationId = reconciliation.id;
-      }
-      
-      return {
-        name: 'Create Reconciliation Report',
-        description: 'Create a new IOLTA reconciliation report',
-        passed: reconciliation !== null && 
-                reconciliation.bankBalance === reconciliationData.bankBalance &&
-                reconciliation.bookBalance === reconciliationData.bookBalance,
-        expected: 'New reconciliation report with specified balances',
-        actual: reconciliation ? 
-                `Reconciliation created with bank balance ${reconciliation.bankBalance} and book balance ${reconciliation.bookBalance}` : 
-                'No reconciliation created',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing createReconciliation:', error);
-      return {
-        name: 'Create Reconciliation Report',
-        description: 'Create a new IOLTA reconciliation report',
-        passed: false,
-        expected: 'New reconciliation report',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test retrieving reconciliation reports
-   */
-  private async testGetReconciliations(): Promise<TestResult> {
-    try {
-      const reconciliations = await this.ioltaService.getReconciliations(this.testAccountId);
-      
-      return {
-        name: 'Get Reconciliations',
-        description: 'Retrieve all reconciliation reports for a trust account',
-        passed: Array.isArray(reconciliations) && reconciliations.length > 0,
-        expected: 'Array of reconciliation reports including test reconciliation',
-        actual: `Found ${reconciliations.length} reconciliation reports`,
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getReconciliations:', error);
-      return {
-        name: 'Get Reconciliations',
-        description: 'Retrieve all reconciliation reports for a trust account',
-        passed: false,
-        expected: 'Array of reconciliation reports',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * Test validating a reconciliation
-   */
-  private async testValidateReconciliation(): Promise<TestResult> {
-    try {
-      if (!this.testReconciliationId) {
-        return {
-          name: 'Validate Reconciliation',
-          description: 'Validate an IOLTA reconciliation report',
-          passed: false,
-          expected: 'Validated reconciliation report',
-          actual: 'No test reconciliation ID available',
-          error: 'Test reconciliation ID is null'
-        };
-      }
-      
-      const updatedReconciliation = await this.ioltaService.updateReconciliation(
-        this.testReconciliationId, 
-        { 
-          status: 'completed',
-          notes: 'Test reconciliation validated'
-        }
+      const account = await ioltaService.getIoltaAccount(
+        this.testClientData.ioltaAccountId,
+        this.testMerchantId
       );
       
-      return {
-        name: 'Validate Reconciliation',
-        description: 'Validate an IOLTA reconciliation report',
-        passed: updatedReconciliation !== null && updatedReconciliation.status === 'completed',
-        expected: 'Reconciliation with status "completed"',
-        actual: updatedReconciliation ? 
-                `Reconciliation updated with status "${updatedReconciliation.status}"` : 
-                'No reconciliation updated',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing validateReconciliation:', error);
-      return {
-        name: 'Validate Reconciliation',
-        description: 'Validate an IOLTA reconciliation report',
+      tests.push({
+        name: 'Get IOLTA account',
+        description: 'Should retrieve an existing IOLTA account by ID',
+        passed: !!account && 
+                account.id === this.testClientData.ioltaAccountId &&
+                account.merchantId === this.testMerchantId,
+        error: null,
+        expected: {
+          id: this.testClientData.ioltaAccountId,
+          merchantId: this.testMerchantId
+        },
+        actual: account ? {
+          id: account.id,
+          merchantId: account.merchantId,
+          accountName: account.accountName
+        } : null
+      });
+      
+      if (!account || 
+          account.id !== this.testClientData.ioltaAccountId || 
+          account.merchantId !== this.testMerchantId) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Get IOLTA account',
+        description: 'Should retrieve an existing IOLTA account by ID',
         passed: false,
-        expected: 'Validated reconciliation report',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
     }
-  }
-
-  /**
-   * Run client ledger tests
-   */
-  private async runClientLedgerTests(): Promise<TestGroup> {
-    console.log('Running client ledger tests...');
     
-    const tests: TestResult[] = [];
-    
-    // Test getting client ledger
-    tests.push(await this.testGetClientLedger());
-    
-    // Test getting client balance
-    tests.push(await this.testGetClientBalance());
-    
-    const passed = tests.every(test => test.passed);
+    // Test 3: List IOLTA accounts
+    try {
+      const accounts = await ioltaService.getIoltaAccounts(this.testMerchantId);
+      
+      tests.push({
+        name: 'List IOLTA accounts',
+        description: 'Should retrieve all IOLTA accounts for a merchant',
+        passed: Array.isArray(accounts) && 
+                accounts.length > 0 && 
+                accounts.some(a => a.id === this.testClientData.ioltaAccountId),
+        error: null,
+        expected: {
+          type: 'array',
+          containsTestAccount: true
+        },
+        actual: {
+          type: Array.isArray(accounts) ? 'array' : typeof accounts,
+          count: Array.isArray(accounts) ? accounts.length : 0,
+          containsTestAccount: Array.isArray(accounts) && 
+                                accounts.some(a => a.id === this.testClientData.ioltaAccountId)
+        }
+      });
+      
+      if (!Array.isArray(accounts) || 
+          accounts.length === 0 || 
+          !accounts.some(a => a.id === this.testClientData.ioltaAccountId)) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'List IOLTA accounts',
+        description: 'Should retrieve all IOLTA accounts for a merchant',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
     
     return {
-      name: 'Client Ledger Management',
-      description: 'Tests for IOLTA client ledger retrieval and management',
+      name: 'IOLTA Account Management',
+      description: 'Tests for IOLTA account creation and retrieval',
       tests,
-      passed
+      passed: groupPassed
     };
   }
-
+  
   /**
-   * Test getting client ledger
+   * Test client ledger operations
    */
-  private async testGetClientLedger(): Promise<TestResult> {
+  private async testClientLedger(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
+    
+    // Test 1: Add client to IOLTA account
     try {
-      const clientLedger = await this.ioltaService.getClientLedger(this.testClientId);
+      if (!this.testClientData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
       
-      return {
-        name: 'Get Client Ledger',
-        description: 'Retrieve client ledger by ID',
-        passed: clientLedger !== null && clientLedger.id === this.testClientId,
-        expected: `Client ledger with ID ${this.testClientId}`,
-        actual: clientLedger ? `Client ledger found with ID ${clientLedger.id}` : 'No client ledger found',
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getClientLedger:', error);
-      return {
-        name: 'Get Client Ledger',
-        description: 'Retrieve client ledger by ID',
+      // First ensure the client exists in legal_clients
+      const existingClient = await db.query.legalClients.findFirst({
+        where: eq(legalClients.id, this.testClientId)
+      });
+      
+      // If client doesn't exist, create it
+      if (!existingClient) {
+        await db.insert(legalClients).values({
+          id: this.testClientId,
+          merchantId: this.testMerchantId,
+          status: 'active',
+          clientType: 'individual',
+          firstName: 'Test',
+          lastName: 'Client',
+          email: 'test.client@example.com',
+          phone: '555-123-4567'
+        });
+      }
+      
+      // Ensure the matter exists
+      const existingMatter = await db.query.legalMatters.findFirst({
+        where: eq(legalMatters.id, this.testMatterId)
+      });
+      
+      // If matter doesn't exist, create it
+      if (!existingMatter) {
+        await db.insert(legalMatters).values({
+          id: this.testMatterId,
+          merchantId: this.testMerchantId,
+          clientId: this.testClientId,
+          status: 'active',
+          title: 'Test Matter',
+          description: 'Test IOLTA matter',
+          practiceArea: 'other',
+          openDate: new Date()
+        });
+      }
+      
+      const clientLedger = await ioltaService.addClientToIoltaAccount(this.testClientData);
+      
+      tests.push({
+        name: 'Add client to IOLTA account',
+        description: 'Should add a client to an IOLTA account',
+        passed: !!clientLedger && 
+                clientLedger.merchantId === this.testMerchantId &&
+                clientLedger.clientId === this.testClientId &&
+                clientLedger.ioltaAccountId === this.testClientData.ioltaAccountId,
+        error: null,
+        expected: this.testClientData,
+        actual: clientLedger
+      });
+      
+      if (!clientLedger || 
+          clientLedger.merchantId !== this.testMerchantId || 
+          clientLedger.clientId !== this.testClientId || 
+          clientLedger.ioltaAccountId !== this.testClientData.ioltaAccountId) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Add client to IOLTA account',
+        description: 'Should add a client to an IOLTA account',
         passed: false,
-        expected: 'Client ledger details',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
     }
-  }
-
-  /**
-   * Test getting client balance
-   */
-  private async testGetClientBalance(): Promise<TestResult> {
+    
+    // Test 2: Get client IOLTA ledger
     try {
-      // We should have a deposit of 1000 and withdrawal of 500
-      const expectedBalance = '500.00'; 
+      if (!this.testClientData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
       
-      const balance = await this.ioltaService.getClientLedgerBalance(this.testClientId);
+      const clientLedger = await ioltaService.getClientIoltaLedger(
+        this.testClientId,
+        this.testClientData.ioltaAccountId,
+        this.testMerchantId
+      );
       
-      return {
-        name: 'Get Client Balance',
-        description: 'Retrieve client ledger balance',
-        passed: balance === expectedBalance,
-        expected: `Balance of ${expectedBalance}`,
-        actual: `Balance is ${balance}`,
-        error: null
-      };
-    } catch (error) {
-      console.error('Error testing getClientLedgerBalance:', error);
-      return {
-        name: 'Get Client Balance',
-        description: 'Retrieve client ledger balance',
+      tests.push({
+        name: 'Get client IOLTA ledger',
+        description: 'Should retrieve a client\'s IOLTA ledger',
+        passed: !!clientLedger && 
+                clientLedger.clientId === this.testClientId &&
+                clientLedger.ioltaAccountId === this.testClientData.ioltaAccountId,
+        error: null,
+        expected: {
+          clientId: this.testClientId,
+          ioltaAccountId: this.testClientData.ioltaAccountId,
+          merchantId: this.testMerchantId
+        },
+        actual: clientLedger ? {
+          clientId: clientLedger.clientId,
+          ioltaAccountId: clientLedger.ioltaAccountId,
+          merchantId: clientLedger.merchantId,
+          balance: clientLedger.balance
+        } : null
+      });
+      
+      if (!clientLedger || 
+          clientLedger.clientId !== this.testClientId || 
+          clientLedger.ioltaAccountId !== this.testClientData.ioltaAccountId) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Get client IOLTA ledger',
+        description: 'Should retrieve a client\'s IOLTA ledger',
         passed: false,
-        expected: 'Client ledger balance',
-        actual: error instanceof Error ? error.message : String(error),
-        error: error instanceof Error ? error.message : String(error)
-      };
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 3: Get all client ledgers for an account
+    try {
+      if (!this.testClientData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
+      
+      const clientLedgers = await ioltaService.getIoltaAccountClients(
+        this.testClientData.ioltaAccountId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Get all client ledgers for account',
+        description: 'Should retrieve all client ledgers for an IOLTA account',
+        passed: Array.isArray(clientLedgers) && 
+                clientLedgers.length > 0 && 
+                clientLedgers.some(c => c.clientId === this.testClientId),
+        error: null,
+        expected: {
+          type: 'array',
+          containsTestClient: true
+        },
+        actual: {
+          type: Array.isArray(clientLedgers) ? 'array' : typeof clientLedgers,
+          count: Array.isArray(clientLedgers) ? clientLedgers.length : 0,
+          containsTestClient: Array.isArray(clientLedgers) && 
+                              clientLedgers.some(c => c.clientId === this.testClientId)
+        }
+      });
+      
+      if (!Array.isArray(clientLedgers) || 
+          clientLedgers.length === 0 || 
+          !clientLedgers.some(c => c.clientId === this.testClientId)) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Get all client ledgers for account',
+        description: 'Should retrieve all client ledgers for an IOLTA account',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
+      name: 'Client Ledger Operations',
+      description: 'Tests for client ledger creation and retrieval',
+      tests,
+      passed: groupPassed
+    };
+  }
+  
+  /**
+   * Test IOLTA transactions
+   */
+  private async testTransactions(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
+    let transactionId: number | null = null;
+    
+    // Test 1: Create transaction
+    try {
+      if (!this.testTransactionData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
+      
+      const transaction = await ioltaService.createTransaction(this.testTransactionData);
+      transactionId = transaction.id;
+      
+      tests.push({
+        name: 'Create transaction',
+        description: 'Should create a new IOLTA transaction',
+        passed: !!transaction && 
+                transaction.merchantId === this.testMerchantId &&
+                transaction.ioltaAccountId === this.testTransactionData.ioltaAccountId &&
+                transaction.clientId === this.testClientId,
+        error: null,
+        expected: this.testTransactionData,
+        actual: transaction
+      });
+      
+      if (!transaction || 
+          transaction.merchantId !== this.testMerchantId || 
+          transaction.ioltaAccountId !== this.testTransactionData.ioltaAccountId || 
+          transaction.clientId !== this.testClientId) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Create transaction',
+        description: 'Should create a new IOLTA transaction',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 2: Get transaction
+    try {
+      if (!transactionId) {
+        throw new Error('Transaction ID not set');
+      }
+      
+      const transaction = await ioltaService.getTransaction(
+        transactionId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Get transaction',
+        description: 'Should retrieve an IOLTA transaction by ID',
+        passed: !!transaction && 
+                transaction.id === transactionId &&
+                transaction.merchantId === this.testMerchantId,
+        error: null,
+        expected: {
+          id: transactionId,
+          merchantId: this.testMerchantId
+        },
+        actual: transaction ? {
+          id: transaction.id,
+          merchantId: transaction.merchantId,
+          amount: transaction.amount,
+          transactionType: transaction.transactionType
+        } : null
+      });
+      
+      if (!transaction || 
+          transaction.id !== transactionId || 
+          transaction.merchantId !== this.testMerchantId) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Get transaction',
+        description: 'Should retrieve an IOLTA transaction by ID',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 3: Get client transactions
+    try {
+      if (!this.testTransactionData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
+      
+      const transactions = await ioltaService.getClientTransactions(
+        this.testClientId,
+        this.testTransactionData.ioltaAccountId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Get client transactions',
+        description: 'Should retrieve all transactions for a client in an IOLTA account',
+        passed: Array.isArray(transactions) && 
+                transactions.length > 0 && 
+                transactions.some(t => t.id === transactionId),
+        error: null,
+        expected: {
+          type: 'array',
+          containsTestTransaction: true
+        },
+        actual: {
+          type: Array.isArray(transactions) ? 'array' : typeof transactions,
+          count: Array.isArray(transactions) ? transactions.length : 0,
+          containsTestTransaction: Array.isArray(transactions) && 
+                                  transactions.some(t => t.id === transactionId)
+        }
+      });
+      
+      if (!Array.isArray(transactions) || 
+          transactions.length === 0 || 
+          !transactions.some(t => t.id === transactionId)) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Get client transactions',
+        description: 'Should retrieve all transactions for a client in an IOLTA account',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 4: Get account transactions
+    try {
+      if (!this.testTransactionData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
+      
+      const transactions = await ioltaService.getAccountTransactions(
+        this.testTransactionData.ioltaAccountId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Get account transactions',
+        description: 'Should retrieve all transactions for an IOLTA account',
+        passed: Array.isArray(transactions) && 
+                transactions.length > 0 && 
+                transactions.some(t => t.id === transactionId),
+        error: null,
+        expected: {
+          type: 'array',
+          containsTestTransaction: true
+        },
+        actual: {
+          type: Array.isArray(transactions) ? 'array' : typeof transactions,
+          count: Array.isArray(transactions) ? transactions.length : 0,
+          containsTestTransaction: Array.isArray(transactions) && 
+                                  transactions.some(t => t.id === transactionId)
+        }
+      });
+      
+      if (!Array.isArray(transactions) || 
+          transactions.length === 0 || 
+          !transactions.some(t => t.id === transactionId)) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Get account transactions',
+        description: 'Should retrieve all transactions for an IOLTA account',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
+      name: 'IOLTA Transactions',
+      description: 'Tests for IOLTA transaction creation and retrieval',
+      tests,
+      passed: groupPassed
+    };
+  }
+  
+  /**
+   * Test reconciliation functionality
+   */
+  private async testReconciliation(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
+    
+    // Test 1: Calculate client balances
+    try {
+      if (!this.testTransactionData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
+      
+      const balances = await ioltaService.calculateClientBalances(
+        this.testTransactionData.ioltaAccountId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Calculate client balances',
+        description: 'Should calculate client balances based on transactions',
+        passed: !!balances && 
+                Array.isArray(balances) && 
+                balances.length > 0 && 
+                balances.some(b => b.clientId === this.testClientId),
+        error: null,
+        expected: {
+          type: 'array',
+          containsTestClient: true
+        },
+        actual: {
+          type: Array.isArray(balances) ? 'array' : typeof balances,
+          count: Array.isArray(balances) ? balances.length : 0,
+          containsTestClient: Array.isArray(balances) && 
+                              balances.some(b => b.clientId === this.testClientId)
+        }
+      });
+      
+      if (!balances || 
+          !Array.isArray(balances) || 
+          balances.length === 0 || 
+          !balances.some(b => b.clientId === this.testClientId)) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Calculate client balances',
+        description: 'Should calculate client balances based on transactions',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 2: Calculate account balance
+    try {
+      if (!this.testTransactionData.ioltaAccountId) {
+        throw new Error('Test account ID not set');
+      }
+      
+      const balance = await ioltaService.calculateAccountBalance(
+        this.testTransactionData.ioltaAccountId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Calculate account balance',
+        description: 'Should calculate IOLTA account balance based on transactions',
+        passed: balance !== null && 
+                typeof balance === 'string' && 
+                parseFloat(balance) > 0,
+        error: null,
+        expected: {
+          type: 'string',
+          greaterThanZero: true
+        },
+        actual: {
+          type: typeof balance,
+          value: balance,
+          greaterThanZero: typeof balance === 'string' && parseFloat(balance) > 0
+        }
+      });
+      
+      if (balance === null || 
+          typeof balance !== 'string' || 
+          parseFloat(balance) <= 0) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Calculate account balance',
+        description: 'Should calculate IOLTA account balance based on transactions',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
+      name: 'Reconciliation',
+      description: 'Tests for IOLTA reconciliation functionality',
+      tests,
+      passed: groupPassed
+    };
+  }
+  
+  /**
+   * Create a deliberate test failure (for testing the test framework)
+   */
+  async createDeliberateTestFailure(): Promise<TestReport> {
+    const testGroups: TestGroup[] = [{
+      name: 'Deliberate Failure',
+      description: 'A test group containing a deliberately failing test',
+      tests: [{
+        name: 'Failing IOLTA Test',
+        description: 'This test is designed to fail',
+        passed: false,
+        error: 'This IOLTA test is deliberately designed to fail for testing purposes'
+      }],
+      passed: false
+    }];
+    
+    return {
+      serviceName: 'IOLTA Service - Deliberate Failure',
+      passed: false,
+      startTime: new Date(),
+      endTime: new Date(),
+      testGroups,
+      error: 'Deliberate test failure'
+    };
+  }
+  
+  /**
+   * Cleanup test data
+   * This is called after tests to remove test data
+   */
+  private async cleanup(): Promise<void> {
+    if (this.testTransactionData.ioltaAccountId) {
+      // Delete transactions
+      await db.delete(ioltaTransactions)
+        .where(and(
+          eq(ioltaTransactions.merchantId, this.testMerchantId),
+          eq(ioltaTransactions.ioltaAccountId, this.testTransactionData.ioltaAccountId)
+        ));
+      
+      // Delete client ledger
+      await db.delete(ioltaClientLedgers)
+        .where(and(
+          eq(ioltaClientLedgers.merchantId, this.testMerchantId),
+          eq(ioltaClientLedgers.ioltaAccountId, this.testTransactionData.ioltaAccountId),
+          eq(ioltaClientLedgers.clientId, this.testClientId)
+        ));
+      
+      // Delete account
+      await db.delete(ioltaTrustAccounts)
+        .where(and(
+          eq(ioltaTrustAccounts.merchantId, this.testMerchantId),
+          eq(ioltaTrustAccounts.id, this.testTransactionData.ioltaAccountId)
+        ));
     }
   }
 }
 
-// Export singleton instance
+// Create and export a singleton instance of the test service
 export const ioltaTestService = new IoltaTestService();

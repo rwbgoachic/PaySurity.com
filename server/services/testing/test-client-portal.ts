@@ -1,659 +1,642 @@
-import { TestService, TestReport, TestGroup } from './test-interfaces';
+/**
+ * Client Portal Testing Module
+ * 
+ * This module contains tests for the client portal functionality,
+ * which allows clients to access their documents, invoices, and trust account information.
+ */
+
+import { TestService, TestReport, TestGroup, TestResult } from './test-interfaces';
 import { db } from '../../db';
-import { 
-  legalPortalUsers,
+import { clientPortalService } from '../legal/client-portal-service';
+import { ioltaService } from '../legal/iolta-service';
+import {
   legalClients,
   legalMatters,
-  legalDocuments,
-  legalInvoices,
   ioltaTrustAccounts,
   ioltaClientLedgers,
-  merchants,
-  users,
-  insertLegalClientSchema,
-  insertLegalPortalUserSchema,
-  insertLegalMatterSchema,
-  insertLegalDocumentSchema,
-  insertLegalInvoiceSchema,
-  insertIoltaTrustAccountSchema,
-  insertIoltaClientLedgerSchema
+  legalInvoices,
+  legalDocuments
 } from '@shared/schema';
+import { legalPortalUsers } from '@shared/schema-portal';
 import { eq, and } from 'drizzle-orm';
-import { ClientPortalService } from '../legal/client-portal-service';
-import * as crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Test service for Legal Client Portal functionality
+ * ClientPortalTestService implements tests for the client portal functionality
  */
 export class ClientPortalTestService implements TestService {
-  private clientPortalService: ClientPortalService;
-  private merchantId: number | null = null;
-  private userId: number | null = null;
-  private clientId: number | null = null;
-  private portalUserId: number | null = null;
-  private matterId: number | null = null;
-  private documentId: number | null = null;
-  private invoiceId: number | null = null;
-  private trustAccountId: number | null = null;
-  private clientLedgerId: number | null = null;
-
-  constructor() {
-    this.clientPortalService = new ClientPortalService();
-  }
-
+  // Test data
+  private testMerchantId = 1;
+  private testClientId = 1;
+  private testMatterId = 1;
+  private testAccountId: number | null = null;
+  private testPortalUserId: number | null = null;
+  private testPortalUserEmail = `test.portal.${Date.now()}@example.com`;
+  private testPortalUserPassword = 'P@ssw0rd123!';
+  
   /**
-   * Run all tests for client portal
+   * Run all client portal tests
    */
   async runTests(): Promise<TestReport> {
-    console.log('Starting Legal Client Portal Tests...');
+    const startTime = new Date();
+    const testGroups: TestGroup[] = [];
+    let passed = true;
+    let error: string | null = null;
     
-    const report: TestReport = {
-      name: 'Legal Client Portal Tests',
-      testGroups: [],
-      startTime: new Date(),
-      endTime: new Date(),
-      passed: true
-    };
-
     try {
-      // Set up test environment
-      await this.setupTestEnvironment();
+      // Setup test data
+      await this.setupTestData();
       
-      // Test portal authentication
-      await this.testPortalAuthentication(report);
+      // Run test groups
+      testGroups.push(await this.testPortalUserManagement());
+      testGroups.push(await this.testDocumentAccess());
+      testGroups.push(await this.testInvoiceAccess());
+      testGroups.push(await this.testTrustAccountAccess());
       
-      // Test document access
-      await this.testDocumentAccess(report);
+      // Update overall pass status
+      for (const group of testGroups) {
+        if (!group.passed) {
+          passed = false;
+          break;
+        }
+      }
       
-      // Test invoice access
-      await this.testInvoiceAccess(report);
+      // Clean up test data
+      await this.cleanupTestData();
+    } catch (e) {
+      passed = false;
+      error = e instanceof Error ? e.message : String(e);
+      console.error('Error running client portal tests:', e);
       
-      // Test trust account viewing
-      await this.testTrustAccountViewing(report);
-      
-      // Clean up
-      await this.cleanupTestEnvironment();
-      
-      // Calculate final stats
-      report.endTime = new Date();
-      report.passed = report.testGroups?.every(group => group.passed) ?? false;
-      
-      return report;
-    } catch (error) {
-      console.error('Error running Legal Client Portal tests:', error);
-      report.passed = false;
-      report.endTime = new Date();
-      return report;
+      // Attempt cleanup even if tests fail
+      try {
+        await this.cleanupTestData();
+      } catch (cleanupError) {
+        console.error('Error cleaning up test data:', cleanupError);
+      }
     }
+    
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    
+    // Return the test report
+    return {
+      serviceName: 'Client Portal',
+      passed,
+      startTime,
+      endTime,
+      duration,
+      testGroups,
+      error
+    };
   }
   
   /**
-   * Set up test environment with necessary data
+   * Setup test data needed for client portal tests
    */
-  private async setupTestEnvironment() {
-    console.log('Setting up test environment for Legal Client Portal tests...');
+  private async setupTestData(): Promise<void> {
+    // First ensure the client exists in legal_clients
+    const existingClient = await db.query.legalClients.findFirst({
+      where: eq(legalClients.id, this.testClientId)
+    });
     
-    // Create test merchant
-    const [merchant] = await db.insert(merchants)
-      .values({
-        businessName: 'Test Law Firm LLP',
-        contactName: 'Test Contact',
-        email: 'test@example.com',
-        phone: '555-123-4567',
-        address: '123 Test St',
-        city: 'Test City',
-        state: 'TS',
-        zip: '12345',
-        businessType: 'legal',
-        taxId: '12-3456789',
-        website: 'https://testlawfirm.example.com',
-        isoPartnerId: 1,
-        status: 'active'
-      })
-      .returning();
-    
-    this.merchantId = merchant.id;
-    
-    // Create test user (attorney)
-    const [user] = await db.insert(users)
-      .values({
-        email: 'testattorney@example.com',
-        password: 'hashedpassword',
-        firstName: 'Test',
-        lastName: 'Attorney',
-        role: 'merchant',
+    // If client doesn't exist, create it
+    if (!existingClient) {
+      await db.insert(legalClients).values({
+        id: this.testClientId,
+        merchantId: this.testMerchantId,
         status: 'active',
-        merchantId: this.merchantId
-      })
-      .returning();
+        clientType: 'individual',
+        firstName: 'Test',
+        lastName: 'PortalUser',
+        email: 'test.portal@example.com',
+        phone: '555-123-4567'
+      });
+    }
     
-    this.userId = user.id;
-    
-    // Create test client
-    const clientData = insertLegalClientSchema.parse({
-      merchantId: this.merchantId,
-      clientType: 'individual',
-      status: 'active',
-      firstName: 'Test',
-      lastName: 'Client',
-      email: 'testclient@example.com',
-      phone: '555-987-6543',
-      address: '456 Client St',
-      city: 'Client City',
-      state: 'CS',
-      zip: '54321'
+    // Ensure the matter exists
+    const existingMatter = await db.query.legalMatters.findFirst({
+      where: eq(legalMatters.id, this.testMatterId)
     });
     
-    const [client] = await db.insert(legalClients)
-      .values(clientData)
-      .returning();
+    // If matter doesn't exist, create it
+    if (!existingMatter) {
+      await db.insert(legalMatters).values({
+        id: this.testMatterId,
+        merchantId: this.testMerchantId,
+        clientId: this.testClientId,
+        status: 'active',
+        title: 'Test Portal Matter',
+        description: 'Test client portal matter',
+        practiceArea: 'other',
+        openDate: new Date()
+      });
+    }
     
-    this.clientId = client.id;
-    
-    // Create test portal user
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync('clientpassword', salt, 1000, 64, 'sha512').toString('hex');
-    
-    const portalUserData = insertLegalPortalUserSchema.parse({
-      merchantId: this.merchantId,
-      clientId: this.clientId,
-      email: 'testclient@example.com',
-      passwordHash: `${hash}.${salt}`,
-      firstName: 'Test',
-      lastName: 'Client',
-      status: 'active',
-      lastLogin: null
+    // Create IOLTA account
+    const account = await ioltaService.createIoltaAccount({
+      merchantId: this.testMerchantId,
+      accountNumber: 'PORTAL12345',
+      accountName: 'Test Portal IOLTA Account',
+      bankName: 'First National Test Bank',
+      routingNumber: '123456789',
+      balance: '10000.00',
+      status: 'active'
     });
     
-    const [portalUser] = await db.insert(legalPortalUsers)
-      .values(portalUserData)
-      .returning();
+    this.testAccountId = account.id;
     
-    this.portalUserId = portalUser.id;
-    
-    // Create test matter
-    const matterData = insertLegalMatterSchema.parse({
-      merchantId: this.merchantId,
-      clientId: this.clientId,
-      matterName: 'Test Matter',
-      matterNumber: 'M-12345',
-      status: 'active',
-      practiceArea: 'general',
-      responsibleAttorneyId: this.userId,
-      openDate: new Date().toISOString().split('T')[0],
-      billingType: 'hourly'
+    // Add client to IOLTA account
+    await ioltaService.addClientToIoltaAccount({
+      merchantId: this.testMerchantId,
+      clientId: this.testClientId,
+      ioltaAccountId: account.id,
+      balance: '5000.00',
+      status: 'active'
     });
     
-    const [matter] = await db.insert(legalMatters)
-      .values(matterData)
-      .returning();
-    
-    this.matterId = matter.id;
+    // Create some sample transactions
+    await ioltaService.createTransaction({
+      merchantId: this.testMerchantId,
+      ioltaAccountId: account.id,
+      clientId: this.testClientId,
+      matterId: this.testMatterId,
+      amount: '5000.00',
+      transactionType: 'deposit',
+      description: 'Initial client retainer',
+      status: 'completed',
+      referenceNumber: 'TPORTAL-1001',
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 15))
+    });
     
     // Create test document
-    const documentData = insertLegalDocumentSchema.parse({
-      merchantId: this.merchantId,
-      clientId: this.clientId,
-      matterId: this.matterId,
-      documentName: 'Test Document.pdf',
-      documentType: 'client_document',
-      filePath: '/test/documents/test-document.pdf',
+    await db.insert(legalDocuments).values({
+      merchantId: this.testMerchantId,
+      title: 'Test Portal Document',
+      documentType: 'client_communication',
+      documentStatus: 'final',
+      clientId: this.testClientId,
+      matterId: this.testMatterId,
+      filePath: '/test/portal/document.pdf',
       fileSize: 1024,
-      uploadedBy: this.userId,
-      isClientVisible: true
+      mimeType: 'application/pdf',
+      showInClientPortal: true,
+      createdById: 1
     });
-    
-    const [document] = await db.insert(legalDocuments)
-      .values(documentData)
-      .returning();
-    
-    this.documentId = document.id;
     
     // Create test invoice
-    const invoiceData = insertLegalInvoiceSchema.parse({
-      merchantId: this.merchantId,
-      clientId: this.clientId,
-      matterId: this.matterId,
-      invoiceNumber: 'INV-12345',
-      total: '500.00',
-      subtotal: '500.00',
-      tax: '0.00',
+    await db.insert(legalInvoices).values({
+      merchantId: this.testMerchantId,
+      clientId: this.testClientId,
+      matterId: this.testMatterId,
+      invoiceNumber: `TEST-PORTAL-${Date.now()}`,
+      invoiceDate: new Date(),
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
       status: 'sent',
-      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0],
-      notes: 'Test invoice'
+      totalAmount: '500.00',
+      notes: 'Test portal invoice',
+      showInClientPortal: true
     });
-    
-    const [invoice] = await db.insert(legalInvoices)
-      .values(invoiceData)
-      .returning();
-    
-    this.invoiceId = invoice.id;
-    
-    // Create test trust account
-    const trustAccountData = insertIoltaTrustAccountSchema.parse({
-      merchantId: this.merchantId,
-      accountName: 'Test IOLTA Account',
-      accountNumber: 'TRUST123456',
-      bankName: 'Test Bank',
-      routingNumber: '123456789',
-      status: 'active'
-    });
-    
-    const [trustAccount] = await db.insert(ioltaTrustAccounts)
-      .values(trustAccountData)
-      .returning();
-    
-    this.trustAccountId = trustAccount.id;
-    
-    // Create test client ledger
-    const clientLedgerData = insertIoltaClientLedgerSchema.parse({
-      merchantId: this.merchantId,
-      trustAccountId: this.trustAccountId,
-      clientId: this.clientId,
-      clientName: 'Test Client',
-      description: 'Client trust account ledger',
-      status: 'active'
-    });
-    
-    const [clientLedger] = await db.insert(ioltaClientLedgers)
-      .values(clientLedgerData)
-      .returning();
-    
-    this.clientLedgerId = clientLedger.id;
-    
-    console.log('Test environment setup complete.');
   }
   
   /**
-   * Clean up test environment
+   * Clean up test data
    */
-  private async cleanupTestEnvironment() {
-    console.log('Cleaning up test environment...');
-    
-    // Clean up client ledger
-    if (this.clientLedgerId) {
-      await db.delete(ioltaClientLedgers)
-        .where(eq(ioltaClientLedgers.id, this.clientLedgerId));
-    }
-    
-    // Clean up trust account
-    if (this.trustAccountId) {
-      await db.delete(ioltaTrustAccounts)
-        .where(eq(ioltaTrustAccounts.id, this.trustAccountId));
-    }
-    
-    // Clean up invoice
-    if (this.invoiceId) {
-      await db.delete(legalInvoices)
-        .where(eq(legalInvoices.id, this.invoiceId));
-    }
-    
-    // Clean up document
-    if (this.documentId) {
-      await db.delete(legalDocuments)
-        .where(eq(legalDocuments.id, this.documentId));
-    }
-    
-    // Clean up matter
-    if (this.matterId) {
-      await db.delete(legalMatters)
-        .where(eq(legalMatters.id, this.matterId));
-    }
-    
-    // Clean up portal user
-    if (this.portalUserId) {
+  private async cleanupTestData(): Promise<void> {
+    // Delete portal user if created
+    if (this.testPortalUserId) {
       await db.delete(legalPortalUsers)
-        .where(eq(legalPortalUsers.id, this.portalUserId));
+        .where(eq(legalPortalUsers.id, this.testPortalUserId));
     }
     
-    // Clean up client
-    if (this.clientId) {
-      await db.delete(legalClients)
-        .where(eq(legalClients.id, this.clientId));
-    }
+    // Delete test invoice
+    await db.delete(legalInvoices)
+      .where(and(
+        eq(legalInvoices.merchantId, this.testMerchantId),
+        eq(legalInvoices.clientId, this.testClientId)
+      ));
     
-    // Clean up user
-    if (this.userId) {
-      await db.delete(users)
-        .where(eq(users.id, this.userId));
-    }
+    // Delete test document
+    await db.delete(legalDocuments)
+      .where(and(
+        eq(legalDocuments.merchantId, this.testMerchantId),
+        eq(legalDocuments.clientId, this.testClientId),
+        eq(legalDocuments.title, 'Test Portal Document')
+      ));
     
-    // Clean up merchant
-    if (this.merchantId) {
-      await db.delete(merchants)
-        .where(eq(merchants.id, this.merchantId));
+    // Delete IOLTA data if account was created
+    if (this.testAccountId) {
+      // Delete client ledger
+      await db.delete(ioltaClientLedgers)
+        .where(and(
+          eq(ioltaClientLedgers.merchantId, this.testMerchantId),
+          eq(ioltaClientLedgers.ioltaAccountId, this.testAccountId),
+          eq(ioltaClientLedgers.clientId, this.testClientId)
+        ));
+      
+      // Delete account
+      await db.delete(ioltaTrustAccounts)
+        .where(and(
+          eq(ioltaTrustAccounts.merchantId, this.testMerchantId),
+          eq(ioltaTrustAccounts.id, this.testAccountId)
+        ));
     }
-    
-    console.log('Test environment cleanup complete.');
   }
   
   /**
-   * Test portal authentication
+   * Test portal user management functionality
    */
-  private async testPortalAuthentication(report: TestReport) {
-    console.log('Testing portal authentication...');
+  private async testPortalUserManagement(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
     
-    const testGroup: TestGroup = {
-      name: 'Portal Authentication',
-      description: 'Tests for client portal authentication functionality',
-      tests: [],
-      passed: true
-    };
-    
-    // Test authenticating a portal user
+    // Test 1: Create portal user
     try {
-      const authResult = await this.clientPortalService.authenticateUser(
-        'testclient@example.com',
-        'clientpassword'
-      );
+      const portalUser = await clientPortalService.createPortalUser({
+        email: this.testPortalUserEmail,
+        password: this.testPortalUserPassword,
+        clientId: this.testClientId,
+        merchantId: this.testMerchantId,
+        firstName: 'Test',
+        lastName: 'Portal',
+        status: 'active'
+      });
       
-      testGroup.tests.push({
-        name: 'Authenticate User',
-        description: 'Test that a portal user can authenticate with correct credentials',
-        passed: !!authResult && authResult.clientId === this.clientId,
-        error: (!!authResult && authResult.clientId === this.clientId) ? null : 'Failed to authenticate portal user'
-      });
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Authenticate User',
-        description: 'Test that a portal user can authenticate with correct credentials',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    // Test failed authentication with incorrect password
-    try {
-      const authResult = await this.clientPortalService.authenticateUser(
-        'testclient@example.com',
-        'wrongpassword'
-      );
+      this.testPortalUserId = portalUser.id;
       
-      testGroup.tests.push({
-        name: 'Failed Authentication',
-        description: 'Test that authentication fails with incorrect password',
-        passed: !authResult,
-        error: !authResult ? null : 'Authentication succeeded with incorrect password'
+      tests.push({
+        name: 'Create portal user',
+        description: 'Should create a new portal user account',
+        passed: !!portalUser && 
+                portalUser.email === this.testPortalUserEmail &&
+                portalUser.clientId === this.testClientId,
+        error: null,
+        expected: {
+          email: this.testPortalUserEmail,
+          clientId: this.testClientId
+        },
+        actual: portalUser ? {
+          id: portalUser.id,
+          email: portalUser.email,
+          clientId: portalUser.clientId
+        } : null
       });
-    } catch (error) {
-      // If the function throws on failed auth, that's also acceptable
-      testGroup.tests.push({
-        name: 'Failed Authentication',
-        description: 'Test that authentication fails with incorrect password',
-        passed: true,
-        error: null
-      });
-    }
-    
-    // Test updating last login timestamp
-    try {
-      if (this.portalUserId) {
-        const updatedUser = await this.clientPortalService.updateLastLogin(this.portalUserId);
-        
-        testGroup.tests.push({
-          name: 'Update Last Login',
-          description: 'Test that last login timestamp can be updated',
-          passed: !!updatedUser && updatedUser.lastLogin !== null,
-          error: (!!updatedUser && updatedUser.lastLogin !== null) ? null : 'Failed to update last login timestamp'
-        });
+      
+      if (!portalUser || 
+          portalUser.email !== this.testPortalUserEmail || 
+          portalUser.clientId !== this.testClientId) {
+        groupPassed = false;
       }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Update Last Login',
-        description: 'Test that last login timestamp can be updated',
+    } catch (e) {
+      tests.push({
+        name: 'Create portal user',
+        description: 'Should create a new portal user account',
         passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
+        error: e instanceof Error ? e.message : String(e)
       });
+      groupPassed = false;
     }
     
-    testGroup.passed = testGroup.tests.every(test => test.passed);
-    report.testGroups!.push(testGroup);
+    // Test 2: Authenticate portal user
+    try {
+      const authResult = await clientPortalService.authenticatePortalUser(
+        this.testPortalUserEmail,
+        this.testPortalUserPassword
+      );
+      
+      tests.push({
+        name: 'Authenticate portal user',
+        description: 'Should authenticate portal user with correct credentials',
+        passed: !!authResult && 
+                authResult.authenticated &&
+                !!authResult.user &&
+                authResult.user.email === this.testPortalUserEmail,
+        error: null,
+        expected: {
+          authenticated: true,
+          userEmail: this.testPortalUserEmail
+        },
+        actual: authResult ? {
+          authenticated: authResult.authenticated,
+          userEmail: authResult.user?.email
+        } : null
+      });
+      
+      if (!authResult || 
+          !authResult.authenticated || 
+          !authResult.user ||
+          authResult.user.email !== this.testPortalUserEmail) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Authenticate portal user',
+        description: 'Should authenticate portal user with correct credentials',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 3: Reject incorrect authentication
+    try {
+      const authResult = await clientPortalService.authenticatePortalUser(
+        this.testPortalUserEmail,
+        'WrongPassword123!'
+      );
+      
+      tests.push({
+        name: 'Reject incorrect authentication',
+        description: 'Should reject authentication with incorrect credentials',
+        passed: !!authResult && 
+                !authResult.authenticated &&
+                !authResult.user,
+        error: null,
+        expected: {
+          authenticated: false,
+          user: null
+        },
+        actual: authResult ? {
+          authenticated: authResult.authenticated,
+          user: authResult.user
+        } : null
+      });
+      
+      if (!authResult || 
+          authResult.authenticated || 
+          authResult.user) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Reject incorrect authentication',
+        description: 'Should reject authentication with incorrect credentials',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
+      name: 'Portal User Management',
+      description: 'Tests for creating and authenticating portal users',
+      tests,
+      passed: groupPassed
+    };
   }
   
   /**
-   * Test document access
+   * Test document access functionality
    */
-  private async testDocumentAccess(report: TestReport) {
-    console.log('Testing document access...');
+  private async testDocumentAccess(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
     
-    const testGroup: TestGroup = {
+    // Test 1: Access client documents
+    try {
+      if (!this.testPortalUserId) {
+        throw new Error('Test portal user ID not set');
+      }
+      
+      const documents = await clientPortalService.getClientDocuments(
+        this.testClientId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Access client documents',
+        description: 'Should retrieve documents accessible to the client',
+        passed: Array.isArray(documents) && 
+                documents.length > 0 &&
+                documents.some(doc => doc.title === 'Test Portal Document'),
+        error: null,
+        expected: {
+          hasDocuments: true,
+          hasTestDocument: true
+        },
+        actual: {
+          hasDocuments: Array.isArray(documents) && documents.length > 0,
+          hasTestDocument: Array.isArray(documents) && documents.some(doc => doc.title === 'Test Portal Document'),
+          count: Array.isArray(documents) ? documents.length : 0
+        }
+      });
+      
+      if (!Array.isArray(documents) || 
+          documents.length === 0 ||
+          !documents.some(doc => doc.title === 'Test Portal Document')) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Access client documents',
+        description: 'Should retrieve documents accessible to the client',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
       name: 'Document Access',
-      description: 'Tests for client document access functionality',
-      tests: [],
-      passed: true
+      description: 'Tests for accessing client documents via the portal',
+      tests,
+      passed: groupPassed
     };
-    
-    // Test getting client documents
-    try {
-      if (this.clientId) {
-        const documents = await this.clientPortalService.getClientDocuments(this.clientId);
-        
-        testGroup.tests.push({
-          name: 'Get Client Documents',
-          description: 'Test that client documents can be retrieved',
-          passed: Array.isArray(documents) && documents.length === 1,
-          error: (Array.isArray(documents) && documents.length === 1) ? null : 'Failed to retrieve client documents'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Client Documents',
-        description: 'Test that client documents can be retrieved',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    // Test getting document details
-    try {
-      if (this.documentId) {
-        const document = await this.clientPortalService.getDocumentDetails(this.documentId, this.clientId!);
-        
-        testGroup.tests.push({
-          name: 'Get Document Details',
-          description: 'Test that document details can be retrieved',
-          passed: !!document && document.id === this.documentId,
-          error: (!!document && document.id === this.documentId) ? null : 'Failed to retrieve document details'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Document Details',
-        description: 'Test that document details can be retrieved',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    // Test document access permission check
-    try {
-      if (this.documentId && this.clientId) {
-        const hasAccess = await this.clientPortalService.checkDocumentAccess(this.documentId, this.clientId);
-        
-        testGroup.tests.push({
-          name: 'Check Document Access',
-          description: 'Test that document access permissions are enforced',
-          passed: hasAccess === true,
-          error: hasAccess === true ? null : 'Failed to verify document access'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Check Document Access',
-        description: 'Test that document access permissions are enforced',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    testGroup.passed = testGroup.tests.every(test => test.passed);
-    report.testGroups!.push(testGroup);
   }
   
   /**
-   * Test invoice access
+   * Test invoice access functionality
    */
-  private async testInvoiceAccess(report: TestReport) {
-    console.log('Testing invoice access...');
+  private async testInvoiceAccess(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
     
-    const testGroup: TestGroup = {
+    // Test 1: Access client invoices
+    try {
+      if (!this.testPortalUserId) {
+        throw new Error('Test portal user ID not set');
+      }
+      
+      const invoices = await clientPortalService.getClientInvoices(
+        this.testClientId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Access client invoices',
+        description: 'Should retrieve invoices accessible to the client',
+        passed: Array.isArray(invoices) && 
+                invoices.length > 0 &&
+                invoices.some(inv => inv.notes === 'Test portal invoice'),
+        error: null,
+        expected: {
+          hasInvoices: true,
+          hasTestInvoice: true
+        },
+        actual: {
+          hasInvoices: Array.isArray(invoices) && invoices.length > 0,
+          hasTestInvoice: Array.isArray(invoices) && invoices.some(inv => inv.notes === 'Test portal invoice'),
+          count: Array.isArray(invoices) ? invoices.length : 0
+        }
+      });
+      
+      if (!Array.isArray(invoices) || 
+          invoices.length === 0 ||
+          !invoices.some(inv => inv.notes === 'Test portal invoice')) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Access client invoices',
+        description: 'Should retrieve invoices accessible to the client',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
       name: 'Invoice Access',
-      description: 'Tests for client invoice access functionality',
-      tests: [],
-      passed: true
+      description: 'Tests for accessing client invoices via the portal',
+      tests,
+      passed: groupPassed
     };
-    
-    // Test getting client invoices
-    try {
-      if (this.clientId) {
-        const invoices = await this.clientPortalService.getClientInvoices(this.clientId);
-        
-        testGroup.tests.push({
-          name: 'Get Client Invoices',
-          description: 'Test that client invoices can be retrieved',
-          passed: Array.isArray(invoices) && invoices.length === 1,
-          error: (Array.isArray(invoices) && invoices.length === 1) ? null : 'Failed to retrieve client invoices'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Client Invoices',
-        description: 'Test that client invoices can be retrieved',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    // Test getting invoice details
-    try {
-      if (this.invoiceId) {
-        const invoice = await this.clientPortalService.getInvoiceDetails(this.invoiceId, this.clientId!);
-        
-        testGroup.tests.push({
-          name: 'Get Invoice Details',
-          description: 'Test that invoice details can be retrieved',
-          passed: !!invoice && invoice.id === this.invoiceId,
-          error: (!!invoice && invoice.id === this.invoiceId) ? null : 'Failed to retrieve invoice details'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Invoice Details',
-        description: 'Test that invoice details can be retrieved',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    // Test invoice access permission check
-    try {
-      if (this.invoiceId && this.clientId) {
-        const hasAccess = await this.clientPortalService.checkInvoiceAccess(this.invoiceId, this.clientId);
-        
-        testGroup.tests.push({
-          name: 'Check Invoice Access',
-          description: 'Test that invoice access permissions are enforced',
-          passed: hasAccess === true,
-          error: hasAccess === true ? null : 'Failed to verify invoice access'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Check Invoice Access',
-        description: 'Test that invoice access permissions are enforced',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    testGroup.passed = testGroup.tests.every(test => test.passed);
-    report.testGroups!.push(testGroup);
   }
   
   /**
-   * Test trust account viewing
+   * Test trust account access functionality
    */
-  private async testTrustAccountViewing(report: TestReport) {
-    console.log('Testing trust account viewing...');
+  private async testTrustAccountAccess(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
     
-    const testGroup: TestGroup = {
-      name: 'Trust Account Viewing',
-      description: 'Tests for client trust account viewing functionality',
-      tests: [],
-      passed: true
+    // Test 1: Access trust account information
+    try {
+      if (!this.testPortalUserId || !this.testAccountId) {
+        throw new Error('Test portal user ID or account ID not set');
+      }
+      
+      const trustInfo = await clientPortalService.getClientTrustAccountInfo(
+        this.testClientId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Access trust account information',
+        description: 'Should retrieve trust account information for the client',
+        passed: !!trustInfo && 
+                Array.isArray(trustInfo.accounts) &&
+                trustInfo.accounts.length > 0 &&
+                trustInfo.accounts.some(acc => acc.ioltaAccountId === this.testAccountId),
+        error: null,
+        expected: {
+          hasAccounts: true,
+          hasTestAccount: true
+        },
+        actual: trustInfo ? {
+          hasAccounts: Array.isArray(trustInfo.accounts) && trustInfo.accounts.length > 0,
+          hasTestAccount: this.testAccountId !== null && 
+                          Array.isArray(trustInfo.accounts) && 
+                          trustInfo.accounts.some(acc => acc.ioltaAccountId === this.testAccountId),
+          accountCount: Array.isArray(trustInfo.accounts) ? trustInfo.accounts.length : 0
+        } : null
+      });
+      
+      if (!trustInfo || 
+          !Array.isArray(trustInfo.accounts) ||
+          trustInfo.accounts.length === 0 ||
+          !trustInfo.accounts.some(acc => acc.ioltaAccountId === this.testAccountId)) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Access trust account information',
+        description: 'Should retrieve trust account information for the client',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    // Test 2: Access trust account transactions
+    try {
+      if (!this.testPortalUserId || !this.testAccountId) {
+        throw new Error('Test portal user ID or account ID not set');
+      }
+      
+      const transactions = await clientPortalService.getClientTrustAccountTransactions(
+        this.testClientId,
+        this.testAccountId,
+        this.testMerchantId
+      );
+      
+      tests.push({
+        name: 'Access trust account transactions',
+        description: 'Should retrieve trust account transactions for the client',
+        passed: Array.isArray(transactions) && 
+                transactions.length > 0 &&
+                transactions.some(tr => tr.description === 'Initial client retainer'),
+        error: null,
+        expected: {
+          hasTransactions: true,
+          hasTestTransaction: true
+        },
+        actual: {
+          hasTransactions: Array.isArray(transactions) && transactions.length > 0,
+          hasTestTransaction: Array.isArray(transactions) && 
+                             transactions.some(tr => tr.description === 'Initial client retainer'),
+          transactionCount: Array.isArray(transactions) ? transactions.length : 0
+        }
+      });
+      
+      if (!Array.isArray(transactions) || 
+          transactions.length === 0 ||
+          !transactions.some(tr => tr.description === 'Initial client retainer')) {
+        groupPassed = false;
+      }
+    } catch (e) {
+      tests.push({
+        name: 'Access trust account transactions',
+        description: 'Should retrieve trust account transactions for the client',
+        passed: false,
+        error: e instanceof Error ? e.message : String(e)
+      });
+      groupPassed = false;
+    }
+    
+    return {
+      name: 'Trust Account Access',
+      description: 'Tests for accessing client trust account information via the portal',
+      tests,
+      passed: groupPassed
     };
-    
-    // Test getting client trust accounts
-    try {
-      if (this.clientId) {
-        const trustAccounts = await this.clientPortalService.getClientTrustAccounts(this.clientId);
-        
-        testGroup.tests.push({
-          name: 'Get Client Trust Accounts',
-          description: 'Test that client trust accounts can be retrieved',
-          passed: Array.isArray(trustAccounts) && trustAccounts.length === 1,
-          error: (Array.isArray(trustAccounts) && trustAccounts.length === 1) ? null : 'Failed to retrieve client trust accounts'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Client Trust Accounts',
-        description: 'Test that client trust accounts can be retrieved',
+  }
+  
+  /**
+   * Create a deliberate test failure (for testing the test framework)
+   */
+  async createDeliberateTestFailure(): Promise<TestReport> {
+    const testGroups: TestGroup[] = [{
+      name: 'Deliberate Failure',
+      description: 'A test group containing a deliberately failing test',
+      tests: [{
+        name: 'Failing Portal User Test',
+        description: 'This test is designed to fail',
         passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
+        error: 'This client portal test is deliberately designed to fail for testing purposes'
+      }],
+      passed: false
+    }];
     
-    // Test getting trust account balance
-    try {
-      if (this.clientId && this.trustAccountId) {
-        const balance = await this.clientPortalService.getTrustAccountBalance(this.clientId, this.trustAccountId);
-        
-        testGroup.tests.push({
-          name: 'Get Trust Account Balance',
-          description: 'Test that trust account balance can be retrieved',
-          passed: balance !== null && typeof balance === 'string',
-          error: (balance !== null && typeof balance === 'string') ? null : 'Failed to retrieve trust account balance'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Trust Account Balance',
-        description: 'Test that trust account balance can be retrieved',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    // Test getting trust account transactions
-    try {
-      if (this.clientId && this.trustAccountId) {
-        const transactions = await this.clientPortalService.getTrustAccountTransactions(
-          this.clientId,
-          this.trustAccountId,
-          { 
-            startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-            endDate: new Date().toISOString().split('T')[0]
-          }
-        );
-        
-        testGroup.tests.push({
-          name: 'Get Trust Account Transactions',
-          description: 'Test that trust account transactions can be retrieved',
-          passed: Array.isArray(transactions),
-          error: Array.isArray(transactions) ? null : 'Failed to retrieve trust account transactions'
-        });
-      }
-    } catch (error) {
-      testGroup.tests.push({
-        name: 'Get Trust Account Transactions',
-        description: 'Test that trust account transactions can be retrieved',
-        passed: false,
-        error: `Error: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
-    
-    testGroup.passed = testGroup.tests.every(test => test.passed);
-    report.testGroups!.push(testGroup);
+    return {
+      serviceName: 'Client Portal - Deliberate Failure',
+      passed: false,
+      startTime: new Date(),
+      endTime: new Date(),
+      testGroups,
+      error: 'Deliberate test failure'
+    };
   }
 }
+
+// Don't create a singleton instance yet - we'll handle this in the test-legal-system.ts file
