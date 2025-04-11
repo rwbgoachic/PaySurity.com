@@ -7,6 +7,7 @@
 
 import { TestReport } from './test-interfaces';
 import { legalReportingSystemTestService } from './test-legal-reporting';
+import { testLegalIoltaSystem } from './test-legal-iolta';
 
 class TestCoordinatorService {
   /**
@@ -41,6 +42,19 @@ class TestCoordinatorService {
         startTime: legalReportingReport.startTime,
         endTime: legalReportingReport.endTime,
         duration: legalReportingReport.duration
+      });
+      
+      // Run Legal IOLTA System Tests
+      console.log("Running Legal IOLTA System Tests...");
+      const legalIoltaReport = await testLegalIoltaSystem();
+      report.testGroups.push({
+        name: "Legal IOLTA Trust Accounting System",
+        description: "Tests for IOLTA trust accounting features",
+        tests: legalIoltaReport.tests,
+        passRate: legalIoltaReport.passRate,
+        startTime: legalIoltaReport.startTime,
+        endTime: legalIoltaReport.endTime,
+        duration: legalIoltaReport.duration
       });
       
       // Add more test suites here as they are developed
@@ -115,6 +129,11 @@ class TestCoordinatorService {
       switch (suiteName.toLowerCase()) {
         case 'legal-reporting':
           return await legalReportingSystemTestService.runComprehensiveTests();
+        
+        case 'legal-iolta':
+        case 'iolta':
+        case 'trust-accounting':
+          return await testLegalIoltaSystem();
           
         // Add more test suites here as they are developed
         
