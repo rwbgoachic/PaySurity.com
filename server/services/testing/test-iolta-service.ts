@@ -52,15 +52,15 @@ export class IoltaTestService implements TestService {
   
   // Test data for transactions
   private testTransactionData = {
-    merchantId: this.testMerchantId,
-    ioltaAccountId: 0, // Will be set during test
-    clientId: this.testClientId,
-    matterId: this.testMatterId,
     amount: '2500.00',
-    transactionType: 'deposit' as const,
     description: 'Initial client retainer',
+    transactionType: 'deposit' as const,
+    createdBy: 1,
+    trustAccountId: 0, // Will be set during test
+    clientLedgerId: 0, // Will be set during client ledger test
+    fundType: 'retainer' as const,
     status: 'completed' as const,
-    referenceNumber: 'TR-1001',
+    referenceNumber: 'TR-1001'
   };
   
   /**
@@ -129,8 +129,8 @@ export class IoltaTestService implements TestService {
       const account = await ioltaService.createTrustAccount(this.testAccountData);
       
       // Update the account ID for later tests
-      this.testClientData.ioltaAccountId = account.id;
-      this.testTransactionData.ioltaAccountId = account.id;
+      this.testClientData.trustAccountId = account.id;
+      this.testTransactionData.trustAccountId = account.id;
       
       tests.push({
         name: 'Create IOLTA account',
@@ -160,24 +160,23 @@ export class IoltaTestService implements TestService {
     
     // Test 2: Get IOLTA account
     try {
-      if (!this.testClientData.ioltaAccountId) {
+      if (!this.testClientData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       const account = await ioltaService.getTrustAccount(
-        this.testClientData.ioltaAccountId,
-        this.testMerchantId
+        this.testClientData.trustAccountId
       );
       
       tests.push({
         name: 'Get IOLTA account',
         description: 'Should retrieve an existing IOLTA account by ID',
         passed: !!account && 
-                account.id === this.testClientData.ioltaAccountId &&
+                account.id === this.testClientData.trustAccountId &&
                 account.merchantId === this.testMerchantId,
         error: null,
         expected: {
-          id: this.testClientData.ioltaAccountId,
+          id: this.testClientData.trustAccountId,
           merchantId: this.testMerchantId
         },
         actual: account ? {
@@ -188,7 +187,7 @@ export class IoltaTestService implements TestService {
       });
       
       if (!account || 
-          account.id !== this.testClientData.ioltaAccountId || 
+          account.id !== this.testClientData.trustAccountId || 
           account.merchantId !== this.testMerchantId) {
         groupPassed = false;
       }
@@ -211,7 +210,7 @@ export class IoltaTestService implements TestService {
         description: 'Should retrieve all IOLTA accounts for a merchant',
         passed: Array.isArray(accounts) && 
                 accounts.length > 0 && 
-                accounts.some(a => a.id === this.testClientData.ioltaAccountId),
+                accounts.some(a => a.id === this.testClientData.trustAccountId),
         error: null,
         expected: {
           type: 'array',
@@ -221,13 +220,13 @@ export class IoltaTestService implements TestService {
           type: Array.isArray(accounts) ? 'array' : typeof accounts,
           count: Array.isArray(accounts) ? accounts.length : 0,
           containsTestAccount: Array.isArray(accounts) && 
-                                accounts.some(a => a.id === this.testClientData.ioltaAccountId)
+                                accounts.some(a => a.id === this.testClientData.trustAccountId)
         }
       });
       
       if (!Array.isArray(accounts) || 
           accounts.length === 0 || 
-          !accounts.some(a => a.id === this.testClientData.ioltaAccountId)) {
+          !accounts.some(a => a.id === this.testClientData.trustAccountId)) {
         groupPassed = false;
       }
     } catch (e) {
@@ -257,7 +256,7 @@ export class IoltaTestService implements TestService {
     
     // Test 1: Add client to IOLTA account
     try {
-      if (!this.testClientData.ioltaAccountId) {
+      if (!this.testClientData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
@@ -269,7 +268,6 @@ export class IoltaTestService implements TestService {
       // If client doesn't exist, create it
       if (!existingClient) {
         await db.insert(legalClients).values({
-          id: this.testClientId,
           merchantId: this.testMerchantId,
           status: 'active',
           clientType: 'individual',
@@ -288,7 +286,6 @@ export class IoltaTestService implements TestService {
       // If matter doesn't exist, create it
       if (!existingMatter) {
         await db.insert(legalMatters).values({
-          id: this.testMatterId,
           merchantId: this.testMerchantId,
           clientId: this.testClientId,
           status: 'active',
@@ -307,7 +304,7 @@ export class IoltaTestService implements TestService {
         passed: !!clientLedger && 
                 clientLedger.merchantId === this.testMerchantId &&
                 clientLedger.clientId === this.testClientId &&
-                clientLedger.ioltaAccountId === this.testClientData.ioltaAccountId,
+                clientLedger.trustAccountId === this.testClientData.trustAccountId,
         error: null,
         expected: this.testClientData,
         actual: clientLedger
@@ -316,7 +313,7 @@ export class IoltaTestService implements TestService {
       if (!clientLedger || 
           clientLedger.merchantId !== this.testMerchantId || 
           clientLedger.clientId !== this.testClientId || 
-          clientLedger.ioltaAccountId !== this.testClientData.ioltaAccountId) {
+          clientLedger.trustAccountId !== this.testClientData.trustAccountId) {
         groupPassed = false;
       }
     } catch (e) {
@@ -331,14 +328,12 @@ export class IoltaTestService implements TestService {
     
     // Test 2: Get client IOLTA ledger
     try {
-      if (!this.testClientData.ioltaAccountId) {
+      if (!this.testClientData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       const clientLedger = await ioltaService.getClientLedger(
-        this.testClientId,
-        this.testClientData.ioltaAccountId,
-        this.testMerchantId
+        this.testClientId
       );
       
       tests.push({
@@ -346,16 +341,16 @@ export class IoltaTestService implements TestService {
         description: 'Should retrieve a client\'s IOLTA ledger',
         passed: !!clientLedger && 
                 clientLedger.clientId === this.testClientId &&
-                clientLedger.ioltaAccountId === this.testClientData.ioltaAccountId,
+                clientLedger.trustAccountId === this.testClientData.trustAccountId,
         error: null,
         expected: {
           clientId: this.testClientId,
-          ioltaAccountId: this.testClientData.ioltaAccountId,
+          trustAccountId: this.testClientData.trustAccountId,
           merchantId: this.testMerchantId
         },
         actual: clientLedger ? {
           clientId: clientLedger.clientId,
-          ioltaAccountId: clientLedger.ioltaAccountId,
+          trustAccountId: clientLedger.trustAccountId,
           merchantId: clientLedger.merchantId,
           balance: clientLedger.balance
         } : null
@@ -363,7 +358,7 @@ export class IoltaTestService implements TestService {
       
       if (!clientLedger || 
           clientLedger.clientId !== this.testClientId || 
-          clientLedger.ioltaAccountId !== this.testClientData.ioltaAccountId) {
+          clientLedger.trustAccountId !== this.testClientData.trustAccountId) {
         groupPassed = false;
       }
     } catch (e) {
@@ -378,13 +373,12 @@ export class IoltaTestService implements TestService {
     
     // Test 3: Get all client ledgers for an account
     try {
-      if (!this.testClientData.ioltaAccountId) {
+      if (!this.testClientData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       const clientLedgers = await ioltaService.getClientLedgersByTrustAccount(
-        this.testClientData.ioltaAccountId,
-        this.testMerchantId
+        this.testClientData.trustAccountId
       );
       
       tests.push({
@@ -439,7 +433,7 @@ export class IoltaTestService implements TestService {
     
     // Test 1: Create transaction
     try {
-      if (!this.testTransactionData.ioltaAccountId) {
+      if (!this.testTransactionData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
@@ -450,18 +444,14 @@ export class IoltaTestService implements TestService {
         name: 'Create transaction',
         description: 'Should create a new IOLTA transaction',
         passed: !!transaction && 
-                transaction.merchantId === this.testMerchantId &&
-                transaction.ioltaAccountId === this.testTransactionData.ioltaAccountId &&
-                transaction.clientId === this.testClientId,
+                transaction.trustAccountId === this.testTransactionData.trustAccountId,
         error: null,
         expected: this.testTransactionData,
         actual: transaction
       });
       
       if (!transaction || 
-          transaction.merchantId !== this.testMerchantId || 
-          transaction.ioltaAccountId !== this.testTransactionData.ioltaAccountId || 
-          transaction.clientId !== this.testClientId) {
+          transaction.trustAccountId !== this.testTransactionData.trustAccountId) {
         groupPassed = false;
       }
     } catch (e) {
@@ -481,32 +471,27 @@ export class IoltaTestService implements TestService {
       }
       
       const transaction = await ioltaService.getTransaction(
-        transactionId,
-        this.testMerchantId
+        transactionId
       );
       
       tests.push({
         name: 'Get transaction',
         description: 'Should retrieve an IOLTA transaction by ID',
         passed: !!transaction && 
-                transaction.id === transactionId &&
-                transaction.merchantId === this.testMerchantId,
+                transaction.id === transactionId,
         error: null,
         expected: {
-          id: transactionId,
-          merchantId: this.testMerchantId
+          id: transactionId
         },
         actual: transaction ? {
           id: transaction.id,
-          merchantId: transaction.merchantId,
           amount: transaction.amount,
           transactionType: transaction.transactionType
         } : null
       });
       
       if (!transaction || 
-          transaction.id !== transactionId || 
-          transaction.merchantId !== this.testMerchantId) {
+          transaction.id !== transactionId) {
         groupPassed = false;
       }
     } catch (e) {
@@ -521,15 +506,13 @@ export class IoltaTestService implements TestService {
     
     // Test 3: Get client transactions
     try {
-      if (!this.testTransactionData.ioltaAccountId) {
+      if (!this.testTransactionData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       // First get the client ledger 
       const clientLedger = await ioltaService.getClientLedger(
-        this.testClientId,
-        this.testTransactionData.ioltaAccountId,
-        this.testMerchantId
+        this.testClientId
       );
       
       const transactions = await ioltaService.getTransactionsByClientLedger(
@@ -572,12 +555,12 @@ export class IoltaTestService implements TestService {
     
     // Test 4: Get account transactions
     try {
-      if (!this.testTransactionData.ioltaAccountId) {
+      if (!this.testTransactionData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       const transactions = await ioltaService.getTransactionsByTrustAccount(
-        this.testTransactionData.ioltaAccountId
+        this.testTransactionData.trustAccountId
       );
       
       tests.push({
@@ -631,12 +614,12 @@ export class IoltaTestService implements TestService {
     
     // Test 1: Calculate client balances
     try {
-      if (!this.testTransactionData.ioltaAccountId) {
+      if (!this.testTransactionData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       const reconciliation = await ioltaService.getTrustAccountReconciliation(
-        this.testTransactionData.ioltaAccountId
+        this.testTransactionData.trustAccountId
       );
       const balances = reconciliation.clientLedgers;
       
@@ -678,12 +661,12 @@ export class IoltaTestService implements TestService {
     
     // Test 2: Calculate account balance
     try {
-      if (!this.testTransactionData.ioltaAccountId) {
+      if (!this.testTransactionData.trustAccountId) {
         throw new Error('Test account ID not set');
       }
       
       const reconciliation = await ioltaService.getTrustAccountReconciliation(
-        this.testTransactionData.ioltaAccountId
+        this.testTransactionData.trustAccountId
       );
       const balance = reconciliation.trustAccountBalance;
       
@@ -759,28 +742,25 @@ export class IoltaTestService implements TestService {
    * This is called after tests to remove test data
    */
   private async cleanup(): Promise<void> {
-    if (this.testTransactionData.ioltaAccountId) {
+    if (this.testTransactionData.trustAccountId) {
       // Delete transactions
       await db.delete(ioltaTransactions)
-        .where(and(
-          eq(ioltaTransactions.merchantId, this.testMerchantId),
-          eq(ioltaTransactions.ioltaAccountId, this.testTransactionData.ioltaAccountId)
-        ));
+        .where(
+          eq(ioltaTransactions.trustAccountId, this.testTransactionData.trustAccountId)
+        );
       
       // Delete client ledger
       await db.delete(ioltaClientLedgers)
         .where(and(
-          eq(ioltaClientLedgers.merchantId, this.testMerchantId),
-          eq(ioltaClientLedgers.ioltaAccountId, this.testTransactionData.ioltaAccountId),
+          eq(ioltaClientLedgers.trustAccountId, this.testTransactionData.trustAccountId),
           eq(ioltaClientLedgers.clientId, this.testClientId)
         ));
       
       // Delete account
       await db.delete(ioltaTrustAccounts)
-        .where(and(
-          eq(ioltaTrustAccounts.merchantId, this.testMerchantId),
-          eq(ioltaTrustAccounts.id, this.testTransactionData.ioltaAccountId)
-        ));
+        .where(
+          eq(ioltaTrustAccounts.id, this.testTransactionData.trustAccountId)
+        );
     }
   }
 }
