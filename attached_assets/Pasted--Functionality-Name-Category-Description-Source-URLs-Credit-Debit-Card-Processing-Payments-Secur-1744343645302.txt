@@ -1,0 +1,34 @@
+
+Functionality Name	Category	Description	Source URLs
+Credit & Debit Card Processing	Payments	Securely accept card payments via computer, tablet, or mobile. PCI-compliant with no card data storage required. Includes virtual terminal and mobile swiper support.	1, 2
+eCheck/ACH Processing	Payments	Proprietary electronic check processing with $2 flat fee per transaction. Directly integrated into payment flows with same security as card payments.	1, 6
+Legal Fee Financing (Pay Later)	Payments	Clients pay via installment plans through Affirm partnership. Firms receive full payment upfront. Automated repayment system with compliance safeguards.	1, 2
+QR Code Payments	Payments	Generate unique QR codes for mobile payments. Redirects to secure payment page with auto-populated invoice details.	1, 2
+Scheduled/Recurring Payments	Payments	Automate payment collection with configurable schedules. Includes Account Updater to maintain valid card details.	1, 6
+Card Vault	Payments	Secure PCI-compliant storage of client payment methods with tokenization. Enables rebilling without re-entering details.	2, 6
+Legal Payments Network	Payments	Integrated network connecting 1,000+ banks and AP vendors for faster reconciliation. Supports virtual card payments from corporate clients.	1, 2
+Next Day Payments	Payments	Funds available one business day after transaction (vs standard 2-3 days). Requires enrollment in accelerated payout program.	2, 6
+Enhanced Quick Bill	Billing & Invoicing	Itemized invoicing with line-item tracking. Integrated payment links. Real-time status tracking (paid/opened/unpaid). Mobile-friendly templates.	5, 6
+Time & Expense Tracking	Billing & Invoicing	Built-in tracker with calendar integration. Auto-converts entries to invoice line items. Matter-based categorization.	1
+Smart Spend Management	Financial Management	Visa-powered corporate cards with spend controls. Virtual/physical card issuance. Auto-categorization of legal expenses. Direct invoice reconciliation.	1, 7
+QuickBooks Integration	Integrations	Automated transaction syncing. Reconciliation tools for trust accounting. Two-way sync for payment status updates.	1, 6
+Legal Software Integrations	Integrations	Pre-built connectors for 65+ practice management systems (Clio, MyCase, etc). API access for custom integrations.	1, 7
+IOLTA Compliance Engine	Compliance	Automatic separation of earned/unearned funds. Prevents commingling. Fee deduction from operating account only. Audit trails for trust accounting.	1, 3
+PCI DSS Level 1 Compliance	Security	End-to-end encryption (256-bit AES). Regular third-party audits. Tokenization for stored data. SOC 2 Type II certified infrastructure.	3, 8
+Custom Payment Pages	Client Experience	White-label payment portals with firm branding. Customizable fields and payment flow. Mobile-optimized checkout.	1, 2
+Mobile App (iOS/Android)	Accessibility	Full payment processing capabilities. Bluetooth card reader support. Offline mode for limited connectivity. Biometric login.	1, 2
+Automated Reconciliation	Financial Reporting	Real-time transaction reporting. Customizable export formats (CSV/PDF). Trust account balancing tools. Matter-level financial analytics.	1, 6
+Refund Management	Payment Operations	One-click refunds with audit trail. Partial refund capability. Automated client notifications. Dispute resolution tools.	1, 2
+Key Technical Notes for Developers:
+
+All payment flows include automatic IOLTA compliance checks 17
+
+API supports webhooks for real-time payment notifications 67
+
+Mobile SDKs available for custom app integration 27
+
+Granular user permissions with RBAC (Role-Based Access Control) 38
+
+Supports multi-account structures for firms with multiple practice areas 17
+
+This table represents ~80% of core functionalities. Full technical specifications available through LawPay's developer portal (requires partner account).
