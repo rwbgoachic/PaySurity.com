@@ -17,6 +17,8 @@ import { taxCalculationService } from "./services/payroll/tax-calculation-servic
 import { taxDataService } from "./services/payroll/tax-data-service";
 import { payrollProcessorService } from "./services/payroll/payroll-processor-service";
 import { registerLegalRoutes } from "./services/legal/legal-routes";
+import { registerPayrollRoutes } from "./services/payroll/payroll-routes";
+import { registerPayrollPricingRoutes } from "./services/payroll/pricing-routes";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -6582,6 +6584,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register all legal payment features routes
   registerLegalRoutes(app);
+  
+  // Register all payroll system routes
+  registerPayrollRoutes(app);
+  
+  // Register all payroll pricing routes
+  registerPayrollPricingRoutes(app);
 
   return httpServer;
 }

@@ -168,6 +168,14 @@ function Router() {
       <Route path="/admin/analytics" component={AnalyticsDashboard} />
       <Route path="/admin/test-recommendation" component={TestRecommendationEngine} />
       <Route path="/admin/project-documentation" component={ProjectDocumentation} />
+      <Route path="/admin/payroll-pricing" component={() => {
+        const AdminPayrollPricing = React.lazy(() => import("./pages/admin-payroll-pricing"));
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <AdminPayrollPricing />
+          </React.Suspense>
+        );
+      }} />
       <Route path="/admin/test-management" component={() => {
         const TestManagement = React.lazy(() => import("./pages/admin/test-management"));
         return (
