@@ -50,7 +50,7 @@ async function runPricingTierTests() {
         features: {}
       };
 
-      const [result] = await db.insert(payrollPricingTiers).values(testTier).returning();
+      const [result] = await db.insert(payrollPricing).values(testTier).returning();
       
       if (result && result.id && result.name === testTier.name) {
         console.log('✅ Successfully created pricing tier');
@@ -60,7 +60,7 @@ async function runPricingTierTests() {
         // Test 2: Retrieve pricing tier
         try {
           console.log('Test: Retrieve pricing tier');
-          const [retrievedTier] = await db.select().from(payrollPricingTiers).where(eq(payrollPricingTiers.id, result.id));
+          const [retrievedTier] = await db.select().from(payrollPricing).where(eq(payrollPricing.id, result.id));
           
           if (retrievedTier && retrievedTier.name === testTier.name) {
             console.log('✅ Successfully retrieved pricing tier');
@@ -79,11 +79,11 @@ async function runPricingTierTests() {
               basePrice: '30.00'
             };
             
-            await db.update(payrollPricingTiers)
+            await db.update(payrollPricing)
               .set(updatedDetails)
-              .where(eq(payrollPricingTiers.id, result.id));
+              .where(eq(payrollPricing.id, result.id));
             
-            const [updated] = await db.select().from(payrollPricingTiers).where(eq(payrollPricingTiers.id, result.id));
+            const [updated] = await db.select().from(payrollPricing).where(eq(payrollPricing.id, result.id));
             
             if (updated && updated.name === updatedDetails.name && updated.basePrice === updatedDetails.basePrice) {
               console.log('✅ Successfully updated pricing tier');
@@ -97,9 +97,9 @@ async function runPricingTierTests() {
             // Test 4: Delete pricing tier
             try {
               console.log('Test: Delete pricing tier');
-              await db.delete(payrollPricingTiers).where(eq(payrollPricingTiers.id, result.id));
+              await db.delete(payrollPricing).where(eq(payrollPricing.id, result.id));
               
-              const [deleted] = await db.select().from(payrollPricingTiers).where(eq(payrollPricingTiers.id, result.id));
+              const [deleted] = await db.select().from(payrollPricing).where(eq(payrollPricing.id, result.id));
               
               if (!deleted) {
                 console.log('✅ Successfully deleted pricing tier');
@@ -201,13 +201,13 @@ async function runFeatureTests() {
               features: {}
             };
 
-            const [tierResult] = await db.insert(payrollPricingTiers).values(testTier).returning();
+            const [tierResult] = await db.insert(payrollPricing).values(testTier).returning();
 
             if (tierResult && tierResult.id) {
               // Test 3: Create feature availability
               try {
                 console.log('Test: Create feature availability');
-                const featureAvailability = {
+                const availabilityData = {
                   pricingId: tierResult.id,
                   featureId: result.id,
                   isIncluded: true,
@@ -216,46 +216,44 @@ async function runFeatureTests() {
                   additionalCost: null
                 };
 
-                const [availabilityResult] = await db.insert(payrollFeatureAvailability)
-                  .values(featureAvailability)
-                  .returning();
+                // Insert feature availability
+                try {
+                  const [availabilityResult] = await db.insert(payrollPricingFeatureAvailability)
+                    .values(availabilityData)
+                    .returning();
                 
-                if (availabilityResult && availabilityResult.id) {
-                  console.log('✅ Successfully created feature availability');
-                  tests.push({ name: 'Create feature availability', passed: true });
-                  passedCount++;
+                  if (availabilityResult && availabilityResult.id) {
+                    console.log('✅ Successfully created feature availability');
+                    tests.push({ name: 'Create feature availability', passed: true });
+                    passedCount++;
 
-                  // Test 4: Retrieve feature availability
-                  try {
-                    console.log('Test: Retrieve feature availability');
-                    const [retrievedAvailability] = await db.select().from(payrollFeatureAvailability)
-                      .where(
-                        and(
-                          eq(payrollFeatureAvailability.pricingId, tierResult.id),
-                          eq(payrollFeatureAvailability.featureId, result.id)
-                        )
-                      );
-                    
-                    if (retrievedAvailability && retrievedAvailability.isIncluded === true) {
-                      console.log('✅ Successfully retrieved feature availability');
-                      tests.push({ name: 'Retrieve feature availability', passed: true });
-                      passedCount++;
-                    } else {
-                      console.log('❌ Failed to retrieve feature availability');
-                      tests.push({ 
-                        name: 'Retrieve feature availability', 
-                        passed: false, 
-                        error: 'Could not retrieve feature availability with matching details' 
-                      });
+                    // Test 4: Retrieve feature availability
+                    try {
+                      console.log('Test: Retrieve feature availability');
+                      const [retrievedAvailability] = await db.select()
+                        .from(payrollPricingFeatureAvailability)
+                        .where(eq(payrollPricingFeatureAvailability.id, availabilityResult.id));
+                      
+                      if (retrievedAvailability && retrievedAvailability.isIncluded === true) {
+                        console.log('✅ Successfully retrieved feature availability');
+                        tests.push({ name: 'Retrieve feature availability', passed: true });
+                        passedCount++;
+                      } else {
+                        console.log('❌ Failed to retrieve feature availability');
+                        tests.push({ 
+                          name: 'Retrieve feature availability', 
+                          passed: false, 
+                          error: 'Could not retrieve feature availability with matching details' 
+                        });
+                      }
+                    } catch (error) {
+                      console.log('❌ Error in retrieve feature availability test:', error);
+                      tests.push({ name: 'Retrieve feature availability', passed: false, error: error.message });
                     }
-                  } catch (error) {
-                    console.log('❌ Error in retrieve feature availability test:', error);
-                    tests.push({ name: 'Retrieve feature availability', passed: false, error: error.message });
-                  }
 
-                  // Clean up feature availability
-                  await db.delete(payrollFeatureAvailability)
-                    .where(eq(payrollFeatureAvailability.id, availabilityResult.id));
+                    // Clean up feature availability
+                    await db.delete(payrollPricingFeatureAvailability)
+                      .where(eq(payrollPricingFeatureAvailability.id, availabilityResult.id));
                 } else {
                   console.log('❌ Failed to create feature availability');
                   tests.push({ 
@@ -270,7 +268,7 @@ async function runFeatureTests() {
               }
 
               // Clean up the temporary tier
-              await db.delete(payrollPricingTiers).where(eq(payrollPricingTiers.id, tierResult.id));
+              await db.delete(payrollPricing).where(eq(payrollPricing.id, tierResult.id));
             }
           } catch (error) {
             console.log('❌ Error creating temporary tier for feature tests:', error);
