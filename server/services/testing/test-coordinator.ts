@@ -1,169 +1,150 @@
 /**
- * PaySurity.com Test Coordinator Service
+ * Test Coordinator Service
  * 
- * This service coordinates the execution of all test suites across the platform.
- * It aggregates results and provides a comprehensive test report.
+ * This service coordinates the execution of multiple test services
+ * and generates comprehensive reports.
  */
 
-import { TestReport } from './test-interfaces';
-import { legalReportingSystemTestService } from './test-legal-reporting';
-import { testLegalIoltaSystem } from './test-legal-iolta';
+import fs from 'fs';
+import path from 'path';
+import { 
+  TestService, 
+  TestCoordinator, 
+  TestReport,
+  TestGroup,
+  TestResult,
+  createEmptyTestReport
+} from './test-interfaces';
 
-class TestCoordinatorService {
+export class TestCoordinatorService implements TestCoordinator {
+  private testServices: TestService[] = [];
+  private reportSavePath: string;
+
   /**
-   * Run all test suites across the platform
+   * Initialize the test coordinator
+   * @param reportSavePath Optional path to save test reports
    */
-  async runAllTests(): Promise<TestReport> {
-    console.log("Starting comprehensive test suite...");
-    const startTime = Date.now();
+  constructor(reportSavePath?: string) {
+    this.reportSavePath = reportSavePath || path.join(process.cwd(), 'test-reports');
     
-    // Master test report
-    const report: TestReport = {
-      testGroup: "PaySurity.com Master Test Suite",
-      startTime: new Date(),
-      endTime: new Date(),
-      duration: 0,
-      tests: [],
-      testsPassed: 0,
-      testsFailed: 0,
-      passRate: 0,
-      testGroups: []
-    };
-    
-    try {
-      // Run Legal Reporting System Tests
-      console.log("Running Legal Reporting System Tests...");
-      const legalReportingReport = await legalReportingSystemTestService.runComprehensiveTests();
-      report.testGroups.push({
-        name: "Legal Reporting System",
-        description: "Tests for legal practice management reporting features",
-        tests: legalReportingReport.tests,
-        passRate: legalReportingReport.passRate,
-        startTime: legalReportingReport.startTime,
-        endTime: legalReportingReport.endTime,
-        duration: legalReportingReport.duration
-      });
-      
-      // Run Legal IOLTA System Tests
-      console.log("Running Legal IOLTA System Tests...");
-      const legalIoltaReport = await testLegalIoltaSystem();
-      report.testGroups.push({
-        name: "Legal IOLTA Trust Accounting System",
-        description: "Tests for IOLTA trust accounting features",
-        tests: legalIoltaReport.tests,
-        passRate: legalIoltaReport.passRate,
-        startTime: legalIoltaReport.startTime,
-        endTime: legalIoltaReport.endTime,
-        duration: legalIoltaReport.duration
-      });
-      
-      // Add more test suites here as they are developed
-      // e.g. Wallet System, Affiliate System, POS Systems, etc.
-      
-      // Calculate overall statistics
-      let totalTests = 0;
-      let totalPassedTests = 0;
-      
-      report.testGroups.forEach(group => {
-        totalTests += group.tests.length;
-        totalPassedTests += group.tests.filter(t => t.passed).length;
-      });
-      
-      report.testsPassed = totalPassedTests;
-      report.testsFailed = totalTests - totalPassedTests;
-      report.passRate = totalTests > 0 ? totalPassedTests / totalTests : 0;
-      
-      // Add a summary test at the master level
-      report.tests.push({
-        name: "Master Test Suite Summary",
-        description: `Overall system health check with ${totalTests} tests across ${report.testGroups.length} test groups`,
-        passed: report.passRate >= 0.95, // Consider passing if 95% or more tests pass
-        duration: Date.now() - startTime
-      });
-      
-      // Update the overall test counts
-      report.testsPassed = report.tests.filter(t => t.passed).length;
-      report.testsFailed = report.tests.filter(t => !t.passed).length;
-      
-      // Set end time and duration
-      report.endTime = new Date();
-      report.duration = Date.now() - startTime;
-      
-      console.log(`Comprehensive test suite complete in ${report.duration}ms`);
-      console.log(`Overall pass rate: ${(report.passRate * 100).toFixed(2)}%`);
-      
-      return report;
-    } catch (error) {
-      console.error("Error running comprehensive test suite:", error);
-      
-      // Add error to master report
-      report.tests.push({
-        name: "Master Test Suite Execution",
-        description: "Error executing test coordinator",
-        passed: false,
-        error: error.message,
-        duration: Date.now() - startTime
-      });
-      
-      // Update stats
-      report.testsPassed = report.tests.filter(t => t.passed).length;
-      report.testsFailed = report.tests.filter(t => !t.passed).length;
-      report.passRate = report.testsPassed / report.tests.length;
-      
-      // Set end time and duration
-      report.endTime = new Date();
-      report.duration = Date.now() - startTime;
-      
-      return report;
+    // Ensure the reports directory exists
+    if (!fs.existsSync(this.reportSavePath)) {
+      fs.mkdirSync(this.reportSavePath, { recursive: true });
     }
   }
-  
+
   /**
-   * Run a specific test suite by name
+   * Add a test service to the coordinator
    */
-  async runTestSuite(suiteName: string): Promise<TestReport> {
-    console.log(`Starting ${suiteName} test suite...`);
-    const startTime = Date.now();
+  addTestService(service: TestService): void {
+    this.testServices.push(service);
+  }
+
+  /**
+   * Run all test services and generate a comprehensive report
+   */
+  async runAllTests(): Promise<TestReport> {
+    console.log('Running all test services...');
+    
+    const startTime = new Date();
+    const combinedReport: TestReport = createEmptyTestReport('Combined Test Report');
+    combinedReport.startTime = startTime;
+    
+    const serviceReports: TestReport[] = [];
+    
+    // Run each test service
+    for (const service of this.testServices) {
+      try {
+        console.log(`Running tests for ${service.constructor.name}...`);
+        const report = await service.runTests();
+        serviceReports.push(report);
+        
+        // Add test groups from this service to the combined report
+        combinedReport.testGroups.push(...report.testGroups);
+        
+        // Add all tests to the combined list of tests
+        combinedReport.tests.push(...report.tests);
+        
+        // Save the individual service report
+        this.saveReport(report);
+      } catch (error) {
+        console.error(`Error running tests for ${service.constructor.name}:`, error);
+      }
+    }
+    
+    // Update combined report statistics
+    const endTime = new Date();
+    combinedReport.endTime = endTime;
+    combinedReport.duration = (endTime.getTime() - startTime.getTime()) / 1000;
+    
+    // Calculate pass rates
+    const totalTests = combinedReport.tests.length;
+    const passedTests = combinedReport.tests.filter(test => test.passed).length;
+    
+    combinedReport.testsPassed = passedTests;
+    combinedReport.testsFailed = totalTests - passedTests;
+    combinedReport.passRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
+    
+    // Save the combined report
+    this.saveReport(combinedReport, 'combined-test-report.json');
+    
+    // Print a summary of the test results
+    this.printSummary(combinedReport);
+    
+    return combinedReport;
+  }
+
+  /**
+   * Save a test report to a file
+   */
+  private saveReport(report: TestReport, customFilename?: string): void {
+    const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+    const filename = customFilename || `${report.serviceName.replace(/\s+/g, '-').toLowerCase()}-${timestamp}.json`;
+    const reportPath = path.join(this.reportSavePath, filename);
     
     try {
-      switch (suiteName.toLowerCase()) {
-        case 'legal-reporting':
-          return await legalReportingSystemTestService.runComprehensiveTests();
-        
-        case 'legal-iolta':
-        case 'iolta':
-        case 'trust-accounting':
-          return await testLegalIoltaSystem();
-          
-        // Add more test suites here as they are developed
-        
-        default:
-          throw new Error(`Unknown test suite: ${suiteName}`);
-      }
+      fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+      console.log(`Report saved to ${reportPath}`);
     } catch (error) {
-      console.error(`Error running ${suiteName} test suite:`, error);
-      
-      // Create an error report
-      const errorReport: TestReport = {
-        testGroup: suiteName,
-        startTime: new Date(startTime),
-        endTime: new Date(),
-        duration: Date.now() - startTime,
-        tests: [{
-          name: `${suiteName} Test Suite Execution`,
-          description: `Error executing ${suiteName} test suite`,
-          passed: false,
-          error: error.message,
-          duration: Date.now() - startTime
-        }],
-        testsPassed: 0,
-        testsFailed: 1,
-        passRate: 0
-      };
-      
-      return errorReport;
+      console.error('Error saving report:', error);
     }
+  }
+
+  /**
+   * Print a summary of the test results to the console
+   */
+  private printSummary(report: TestReport): void {
+    console.log('\n===============================================');
+    console.log(`TEST SUMMARY: ${report.serviceName}`);
+    console.log('===============================================');
+    console.log(`Duration: ${report.duration.toFixed(2)} seconds`);
+    console.log(`Total Tests: ${report.testsPassed + report.testsFailed}`);
+    console.log(`Passed: ${report.testsPassed} (${report.passRate.toFixed(2)}%)`);
+    console.log(`Failed: ${report.testsFailed}`);
+    console.log('===============================================');
+    
+    // Print a summary for each test group
+    for (const group of report.testGroups) {
+      const groupTests = group.tests;
+      const groupPassed = groupTests.filter(test => test.passed).length;
+      const groupPassRate = groupTests.length > 0 ? (groupPassed / groupTests.length) * 100 : 0;
+      
+      console.log(`\nGroup: ${group.name}`);
+      console.log(`Pass Rate: ${groupPassRate.toFixed(2)}% (${groupPassed}/${groupTests.length})`);
+      
+      // Print failed tests for this group
+      const failedTests = groupTests.filter(test => !test.passed);
+      if (failedTests.length > 0) {
+        console.log('Failed Tests:');
+        for (const test of failedTests) {
+          console.log(`  - ${test.name}: ${test.error}`);
+        }
+      }
+    }
+    
+    console.log('\n===============================================');
   }
 }
 
+// Export a singleton instance of the test coordinator
 export const testCoordinator = new TestCoordinatorService();
