@@ -8,10 +8,22 @@
 import { db } from '../../db';
 import { eq, and, lte, gte, desc, isNull, asc, or } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
-import * as schema from '@shared/schema';
 
-// Import types from specific schema files for strong typing
+// Import tables from schema files
 import {
+  employees,
+  payrollRuns
+} from '@shared/schema-employees';
+
+import {
+  taxJurisdictions,
+  taxTables,
+  taxBrackets,
+  employeeTaxElections,
+  payrollTaxCalculations,
+  payrollTaxSettings,
+  specialTaxSituations,
+  taxUpdateLogs,
   TaxJurisdiction,
   TaxTable,
   TaxBracket,
@@ -40,9 +52,7 @@ export class TaxCalculationService {
   ): Promise<PayrollTaxCalculation[]> {
     try {
       // Get employee data
-      const employee = await db.query.employees.findFirst({
-        where: eq(employees.id, employeeId)
-      });
+      const [employee] = await db.select().from(employees).where(eq(employees.id, employeeId));
 
       if (!employee) {
         throw new Error(`Employee with ID ${employeeId} not found`);
@@ -50,7 +60,7 @@ export class TaxCalculationService {
 
       // Get payroll run data
       const payrollRun = await db.query.payrollRuns.findFirst({
-        where: eq(payrollRuns.id, payrollRunId)
+        where: eq(schema.payrollRuns.id, payrollRunId)
       });
 
       if (!payrollRun) {
