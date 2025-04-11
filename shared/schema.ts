@@ -142,6 +142,28 @@ export const transactionTypeEnum = pgEnum("transaction_type", ["incoming", "outg
 // Transaction methods
 export const transactionMethodEnum = pgEnum("transaction_method", ["wallet", "credit_card", "ach", "wire", "other"]);
 
+// Payment method types
+export const paymentMethodTypeEnum = pgEnum("payment_method_type", [
+  "credit_card", 
+  "debit_card", 
+  "ach", 
+  "wire", 
+  "wallet",
+  "apple_pay", 
+  "google_pay", 
+  "paypal", 
+  "venmo",
+  "cash"
+]);
+
+// Payment method status
+export const paymentMethodStatusEnum = pgEnum("payment_method_status", [
+  "active", 
+  "inactive", 
+  "expired", 
+  "suspended"
+]);
+
 // Expense types
 export const expenseTypeEnum = pgEnum("expense_type", [
   "meals",
@@ -229,6 +251,62 @@ export const insertBankAccountSchema = createInsertSchema(bankAccounts).pick({
   routingNumber: true,
   isActive: true,
 });
+
+// Payment method schema
+export const paymentMethods = pgTable("payment_methods", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  walletId: integer("wallet_id"), // Optional - linked to a specific wallet
+  type: text("type", { enum: ["credit_card", "debit_card", "ach", "wire", "wallet", "apple_pay", "google_pay", "paypal", "venmo", "cash"] }).notNull(),
+  status: text("status", { enum: ["active", "inactive", "expired", "suspended"] }).notNull().default("active"),
+  nickname: text("nickname").notNull(), // User-friendly name (e.g., "Work Visa")
+  cardholderName: text("cardholder_name"), // For card methods
+  last4: text("last4"), // Last 4 digits of card or account number 
+  expiryMonth: text("expiry_month"), // For card methods
+  expiryYear: text("expiry_year"), // For card methods
+  brand: text("brand"), // Visa, Mastercard, etc.
+  billingAddress: text("billing_address"),
+  billingCity: text("billing_city"),
+  billingState: text("billing_state"),
+  billingZip: text("billing_zip"),
+  billingCountry: text("billing_country"),
+  isDefault: boolean("is_default").notNull().default(false),
+  stripePaymentMethodId: text("stripe_payment_method_id"), // For Stripe integration
+  plaidAccountId: text("plaid_account_id"), // For Plaid integration
+  bankAccountId: integer("bank_account_id"), // References bank_accounts table for ACH methods
+  isVerified: boolean("is_verified").notNull().default(false),
+  verificationMethod: text("verification_method"), // micro-deposits, instant, etc.
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
+  userId: true,
+  walletId: true,
+  type: true,
+  status: true,
+  nickname: true,
+  cardholderName: true,
+  last4: true,
+  expiryMonth: true,
+  expiryYear: true,
+  brand: true,
+  billingAddress: true,
+  billingCity: true,
+  billingState: true,
+  billingZip: true,
+  billingCountry: true,
+  isDefault: true,
+  stripePaymentMethodId: true,
+  plaidAccountId: true,
+  bankAccountId: true,
+  isVerified: true,
+  verificationMethod: true,
+});
+
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
 
 // Fund request schema
 export const fundRequests = pgTable("fund_requests", {
@@ -514,6 +592,209 @@ export const insertMerchantSchema = createInsertSchema(merchants).pick({
 
 export type Merchant = typeof merchants.$inferSelect;
 export type InsertMerchant = typeof merchants.$inferInsert;
+
+// Merchant verification documents
+export const merchantVerificationDocumentTypeEnum = pgEnum("merchant_verification_document_type", [
+  "business_license", 
+  "tax_id", 
+  "incorporation_document", 
+  "bank_statement", 
+  "utility_bill", 
+  "owner_id",
+  "processing_statement",
+  "other"
+]);
+
+export const merchantVerificationStatusEnum = pgEnum("merchant_verification_status", [
+  "pending", 
+  "submitted", 
+  "verified", 
+  "rejected", 
+  "requires_additional_info"
+]);
+
+export const merchantVerifications = pgTable("merchant_verifications", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  status: text("status", { 
+    enum: ["pending", "submitted", "verified", "rejected", "requires_additional_info"] 
+  }).notNull().default("pending"),
+  verificationNotes: text("verification_notes"),
+  submittedAt: timestamp("submitted_at"),
+  verifiedAt: timestamp("verified_at"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  reviewerId: integer("reviewer_id"), // User ID who reviewed
+  kycStatus: text("kyc_status").notNull().default("pending"), // Know Your Customer
+  amlStatus: text("aml_status").notNull().default("pending"), // Anti-Money Laundering
+  termsAccepted: boolean("terms_accepted").notNull().default(false),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantVerificationSchema = createInsertSchema(merchantVerifications).pick({
+  merchantId: true,
+  status: true,
+  verificationNotes: true,
+  rejectionReason: true,
+  reviewerId: true,
+  kycStatus: true,
+  amlStatus: true,
+  termsAccepted: true,
+});
+
+export type MerchantVerification = typeof merchantVerifications.$inferSelect;
+export type InsertMerchantVerification = typeof merchantVerifications.$inferInsert;
+
+// Merchant verification documents
+export const merchantVerificationDocuments = pgTable("merchant_verification_documents", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  verificationId: integer("verification_id").notNull(),
+  documentType: text("document_type", { 
+    enum: ["business_license", "tax_id", "incorporation_document", "bank_statement", "utility_bill", "owner_id", "processing_statement", "other"] 
+  }).notNull(),
+  documentUrl: text("document_url").notNull(), // URL to the uploaded document
+  documentName: text("document_name").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  verifiedAt: timestamp("verified_at"),
+  rejectedAt: timestamp("rejected_at"),
+  status: text("status").notNull().default("pending"), // pending, verified, rejected
+  rejectionReason: text("rejection_reason"),
+  verifiedBy: integer("verified_by"), // User ID who verified
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMerchantVerificationDocumentSchema = createInsertSchema(merchantVerificationDocuments).pick({
+  merchantId: true,
+  verificationId: true,
+  documentType: true,
+  documentUrl: true,
+  documentName: true,
+  status: true,
+  rejectionReason: true,
+  verifiedBy: true,
+  notes: true,
+});
+
+export type MerchantVerificationDocument = typeof merchantVerificationDocuments.$inferSelect;
+export type InsertMerchantVerificationDocument = typeof merchantVerificationDocuments.$inferInsert;
+
+// Merchant payment gateway integration
+export const paymentGatewayTypeEnum = pgEnum("payment_gateway_type", [
+  "helcim", 
+  "stripe", 
+  "paypal", 
+  "authorize_net", 
+  "square",
+  "braintree",
+  "other"
+]);
+
+export const merchantPaymentGateways = pgTable("merchant_payment_gateways", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  gatewayType: text("gateway_type", { 
+    enum: ["helcim", "stripe", "paypal", "authorize_net", "square", "braintree", "other"] 
+  }).notNull(),
+  gatewayMerchantId: text("gateway_merchant_id").notNull(), // Gateway-specific merchant ID
+  apiKey: text("api_key"), // Encrypted API key
+  apiSecret: text("api_secret"), // Encrypted API secret
+  publicKey: text("public_key"), // Public key if applicable
+  environment: text("environment").notNull().default("sandbox"), // sandbox or production
+  isActive: boolean("is_active").notNull().default(true),
+  processingEnabled: boolean("processing_enabled").notNull().default(false),
+  processingRate: decimal("processing_rate"), // Base processing rate
+  transactionFee: decimal("transaction_fee"), // Per-transaction fee
+  monthlyFee: decimal("monthly_fee"), // Monthly gateway fee
+  integrationDate: timestamp("integration_date").defaultNow(),
+  lastVerifiedAt: timestamp("last_verified_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantPaymentGatewaySchema = createInsertSchema(merchantPaymentGateways).pick({
+  merchantId: true,
+  gatewayType: true,
+  gatewayMerchantId: true,
+  apiKey: true,
+  apiSecret: true,
+  publicKey: true,
+  environment: true,
+  isActive: true,
+  processingEnabled: true,
+  processingRate: true,
+  transactionFee: true,
+  monthlyFee: true,
+  notes: true,
+});
+
+export type MerchantPaymentGateway = typeof merchantPaymentGateways.$inferSelect;
+export type InsertMerchantPaymentGateway = typeof merchantPaymentGateways.$inferInsert;
+
+// Merchant microsite settings
+export const merchantMicrositeSettings = pgTable("merchant_microsite_settings", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull().unique(),
+  subdomain: text("subdomain").notNull().unique(),
+  useMicrosite: boolean("use_microsite").notNull().default(true),
+  customDomain: text("custom_domain"),
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color").default("#0066cc"),
+  secondaryColor: text("secondary_color").default("#f8f9fa"),
+  accentColor: text("accent_color").default("#ff9900"),
+  fontFamily: text("font_family").default("Arial, sans-serif"),
+  heroImage: text("hero_image"),
+  heroTitle: text("hero_title"),
+  heroSubtitle: text("hero_subtitle"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  googleAnalyticsId: text("google_analytics_id"),
+  facebookPixelId: text("facebook_pixel_id"),
+  customCss: text("custom_css"),
+  customJs: text("custom_js"),
+  featuredProducts: jsonb("featured_products"), // Array of product IDs
+  showTestimonials: boolean("show_testimonials").notNull().default(true),
+  showFaq: boolean("show_faq").notNull().default(true),
+  enableChat: boolean("enable_chat").notNull().default(false),
+  enableOnlinePayments: boolean("enable_online_payments").notNull().default(true),
+  enableBooking: boolean("enable_booking").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMerchantMicrositeSettingsSchema = createInsertSchema(merchantMicrositeSettings).pick({
+  merchantId: true,
+  subdomain: true,
+  useMicrosite: true,
+  customDomain: true,
+  logoUrl: true,
+  primaryColor: true,
+  secondaryColor: true,
+  accentColor: true,
+  fontFamily: true,
+  heroImage: true,
+  heroTitle: true,
+  heroSubtitle: true,
+  metaTitle: true,
+  metaDescription: true,
+  googleAnalyticsId: true,
+  facebookPixelId: true,
+  customCss: true,
+  customJs: true,
+  featuredProducts: true,
+  showTestimonials: true,
+  showFaq: true,
+  enableChat: true,
+  enableOnlinePayments: true,
+  enableBooking: true,
+});
+
+export type MerchantMicrositeSettings = typeof merchantMicrositeSettings.$inferSelect;
+export type InsertMerchantMicrositeSettings = typeof merchantMicrositeSettings.$inferInsert;
 
 // Commissions earned by ISO partners
 export const commissions = pgTable("commissions", {
@@ -893,12 +1174,12 @@ export const insertMerchantProfileSchema = createInsertSchema(merchantProfiles).
 });
 
 // Payment Gateway Schema
-export const paymentGatewayTypeEnum = pgEnum("payment_gateway_type", ["stripe", "paypal", "square", "adyen", "helcim", "custom"]);
+// This enum is already defined above - using that one instead
 
 export const paymentGateways = pgTable("payment_gateways", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(), // Link to the merchant profile
-  gatewayType: text("gateway_type", { enum: ["stripe", "paypal", "square", "adyen", "helcim", "custom"] }).notNull(),
+  gatewayType: text("gateway_type", { enum: ["helcim", "stripe", "paypal", "authorize_net", "square", "braintree", "other"] }).notNull(),
   accountId: text("account_id"), // External account/merchant ID in the payment system
   apiKey: text("api_key"), // Encrypted API key
   publicKey: text("public_key"), // Public API key
