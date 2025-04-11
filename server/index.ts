@@ -211,28 +211,6 @@ app.use((req, res, next) => {
     }
   });
   
-  // Add a special route for API testing authentication bypass
-  app.get('/api/user', (req, res) => {
-    // Debug the headers to see what's being received
-    console.log('Headers received:', req.headers);
-    
-    // For testing purposes - normally would check req.isAuthenticated()
-    if (req.headers['x-test-mode'] === 'true') {
-      console.log('Test mode detected, returning test user');
-      return res.json({ id: 1, username: 'test_user', role: 'user' });
-    }
-    
-    // Regular authentication check
-    if (!req.isAuthenticated()) {
-      console.log('User not authenticated');
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    // Return the authenticated user
-    console.log('User authenticated, returning user data');
-    return res.json(req.user);
-  });
-  
   // Add a 404 handler for API routes - must be before the UI routes
   app.use('/api/*', (req, res, next) => {
     // Check if the route is already registered
