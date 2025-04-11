@@ -160,7 +160,7 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const account = await ioltaService.getIoltaAccount(
+      const account = await ioltaService.getTrustAccount(
         this.testClientData.ioltaAccountId,
         this.testMerchantId
       );
@@ -200,7 +200,7 @@ export class IoltaTestService implements TestService {
     
     // Test 3: List IOLTA accounts
     try {
-      const accounts = await ioltaService.getIoltaAccounts(this.testMerchantId);
+      const accounts = await ioltaService.getTrustAccountsByMerchant(this.testMerchantId);
       
       tests.push({
         name: 'List IOLTA accounts',
@@ -295,7 +295,7 @@ export class IoltaTestService implements TestService {
         });
       }
       
-      const clientLedger = await ioltaService.addClientToIoltaAccount(this.testClientData);
+      const clientLedger = await ioltaService.createClientLedger(this.testClientData);
       
       tests.push({
         name: 'Add client to IOLTA account',
@@ -331,7 +331,7 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const clientLedger = await ioltaService.getClientIoltaLedger(
+      const clientLedger = await ioltaService.getClientLedger(
         this.testClientId,
         this.testClientData.ioltaAccountId,
         this.testMerchantId
@@ -378,7 +378,7 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const clientLedgers = await ioltaService.getIoltaAccountClients(
+      const clientLedgers = await ioltaService.getClientLedgersByTrustAccount(
         this.testClientData.ioltaAccountId,
         this.testMerchantId
       );
@@ -439,7 +439,7 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const transaction = await ioltaService.createTransaction(this.testTransactionData);
+      const transaction = await ioltaService.recordTransaction(this.testTransactionData);
       transactionId = transaction.id;
       
       tests.push({
@@ -521,10 +521,15 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const transactions = await ioltaService.getClientTransactions(
+      // First get the client ledger 
+      const clientLedger = await ioltaService.getClientLedger(
         this.testClientId,
         this.testTransactionData.ioltaAccountId,
         this.testMerchantId
+      );
+      
+      const transactions = await ioltaService.getTransactionsByClientLedger(
+        clientLedger.id
       );
       
       tests.push({
@@ -567,9 +572,8 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const transactions = await ioltaService.getAccountTransactions(
-        this.testTransactionData.ioltaAccountId,
-        this.testMerchantId
+      const transactions = await ioltaService.getTransactionsByTrustAccount(
+        this.testTransactionData.ioltaAccountId
       );
       
       tests.push({
@@ -627,10 +631,10 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const balances = await ioltaService.calculateClientBalances(
-        this.testTransactionData.ioltaAccountId,
-        this.testMerchantId
+      const reconciliation = await ioltaService.getTrustAccountReconciliation(
+        this.testTransactionData.ioltaAccountId
       );
+      const balances = reconciliation.clientLedgers;
       
       tests.push({
         name: 'Calculate client balances',
@@ -674,10 +678,10 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
-      const balance = await ioltaService.calculateAccountBalance(
-        this.testTransactionData.ioltaAccountId,
-        this.testMerchantId
+      const reconciliation = await ioltaService.getTrustAccountReconciliation(
+        this.testTransactionData.ioltaAccountId
       );
+      const balance = reconciliation.trustAccountBalance;
       
       tests.push({
         name: 'Calculate account balance',
