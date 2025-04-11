@@ -737,7 +737,6 @@ export class ClientPortalService {
     const buf = await scryptAsync(password, salt, 64) as Buffer;
     return buf.toString('hex') === hash;
   }
-}
 
   /**
    * Send a message in the client portal
