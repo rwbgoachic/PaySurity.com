@@ -672,18 +672,20 @@ async function runComprehensiveTests() {
   }
 }
 
-// Run if called directly
-if (require.main === module) {
-  runComprehensiveTests()
-    .then(() => {
-      console.log('\n✅ Comprehensive tests complete.');
-      process.exit(0);
-    })
-    .catch(error => {
-      console.error('❌ Comprehensive tests failed:', error);
-      process.exit(1);
-    });
-} else {
-  // Export for programmatic use
-  module.exports = { runComprehensiveTests, runAllTests, fixIssues };
-}
+// Run tests
+const runTests = async () => {
+  try {
+    await runComprehensiveTests();
+    console.log('\n✅ Comprehensive tests complete.');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Comprehensive tests failed:', error);
+    process.exit(1);
+  }
+};
+
+// Run if this is the main module
+runTests();
+
+// Export functions
+export { runComprehensiveTests, runAllTests, fixIssues };

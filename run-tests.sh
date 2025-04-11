@@ -1,91 +1,115 @@
 #!/bin/bash
-# PaySurity.com Test Runner Script
-# This script provides a simple interface to run various test suites
 
-# Set colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# PaySurity.com Comprehensive Test Runner
+# This script runs all test scripts across the platform
 
-# Print banner
-echo -e "${BLUE}"
-echo "  ____              _____             _ _          "
-echo " |  _ \ __ _ _   _/ / __|  _ _ _  _  | | |_ _  _   "
-echo " | |_) / _\` | | | | \__ \ | '_| || | |_   _| || |  "
-echo " |  __/ (_| | |_| | |__) || |  \_, |   |_|  \_, |  "
-echo " |_|   \__,_|\__, |_|____/ |_|  |__/        |__/   "
-echo "             |___/                                  "
-echo -e "       ${YELLOW}Comprehensive Test Runner${NC}"
-echo ""
+echo "🚀 PaySurity.com Test Suite Runner"
+echo "================================="
 
-# Function to run tests
+# Create test-reports directory if it doesn't exist
+mkdir -p test-reports
+
+# Set execution permission
+chmod +x scripts/*.ts
+
+echo "⚙️ Running Environment Setup..."
+export NODE_ENV=test
+export TEST_MODE=true
+
+# Function to run a test and track status
 run_test() {
-  echo -e "${YELLOW}Running $1 tests...${NC}"
-  npx tsx $2
+  test_name=$1
+  test_script=$2
+  
+  echo ""
+  echo "🧪 Running $test_name..."
+  echo "-------------------------------"
+  
+  # Execute the test script with tsx
+  npx tsx $test_script
+  
+  # Check exit status
+  if [ $? -eq 0 ]; then
+    echo "✅ $test_name completed successfully"
+    return 0
+  else
+    echo "❌ $test_name failed"
+    return 1
+  fi
+}
+
+# Initialize counters
+TOTAL_TESTS=0
+PASSED_TESTS=0
+
+# Individual Test Runners
+test_scripts=(
+  "API Tests:scripts/test-api-endpoints.ts"
+  "Wallet System Tests:scripts/test-wallet-system.ts"
+  "POS System Tests:scripts/test-pos-systems.ts"
+  "Merchant Onboarding Tests:scripts/test-merchant-onboarding.ts"
+  "Affiliate Program Tests:scripts/test-affiliate-marketing.ts"
+)
+
+# Run each test script
+for test_pair in "${test_scripts[@]}"; do
+  IFS=":" read -r test_name test_script <<< "$test_pair"
+  TOTAL_TESTS=$((TOTAL_TESTS + 1))
+  
+  run_test "$test_name" "$test_script"
   
   if [ $? -eq 0 ]; then
-    echo -e "${GREEN}$1 tests completed successfully!${NC}"
-  else
-    echo -e "${RED}$1 tests failed!${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
   fi
-  
-  echo ""
-}
-
-# Display menu
-show_menu() {
-  echo -e "${BLUE}Available Test Suites:${NC}"
-  echo "1. Run all tests (master test suite)"
-  echo "2. Run wallet system tests"
-  echo "3. Run POS system tests"
-  echo "4. Run API tests"
-  echo "5. Run merchant onboarding tests"
-  echo "6. Run affiliate marketing tests"
-  echo "7. Run comprehensive tests with auto-fix"
-  echo "q. Quit"
-  echo ""
-  echo -n "Enter your choice: "
-}
-
-# Main loop
-while true; do
-  show_menu
-  read choice
-  
-  case $choice in
-    1)
-      run_test "Master Test Suite" "scripts/run-master-test-suite.ts"
-      ;;
-    2)
-      run_test "Wallet System" "scripts/test-wallet-system.ts"
-      ;;
-    3)
-      run_test "POS Systems" "scripts/test-pos-systems.ts"
-      ;;
-    4)
-      run_test "API Endpoints" "scripts/test-api-endpoints.ts"
-      ;;
-    5)
-      run_test "Merchant Onboarding" "scripts/test-merchant-onboarding.ts"
-      ;;
-    6)
-      run_test "Affiliate Marketing" "scripts/test-affiliate-marketing.ts"
-      ;;
-    7)
-      run_test "Comprehensive Tests" "scripts/run-comprehensive-tests.ts"
-      ;;
-    q|Q)
-      echo -e "${GREEN}Exiting test runner. Goodbye!${NC}"
-      exit 0
-      ;;
-    *)
-      echo -e "${RED}Invalid choice. Please try again.${NC}"
-      ;;
-  esac
-  
-  echo -e "${BLUE}Press Enter to continue...${NC}"
-  read
-  clear
 done
+
+# Run comprehensive test suite
+echo ""
+echo "🔍 Running Comprehensive Test Suite..."
+echo "-------------------------------"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+npx tsx scripts/run-comprehensive-tests.ts
+
+if [ $? -eq 0 ]; then
+  echo "✅ Comprehensive Test Suite completed successfully"
+  PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+  echo "❌ Comprehensive Test Suite failed"
+fi
+
+# Run master test suite
+echo ""
+echo "🏆 Running Master Test Suite..."
+echo "-------------------------------"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+npx tsx scripts/run-master-test-suite.ts
+
+if [ $? -eq 0 ]; then
+  echo "✅ Master Test Suite completed successfully"
+  PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+  echo "❌ Master Test Suite failed"
+fi
+
+# Print summary
+echo ""
+echo "📊 Test Summary"
+echo "================="
+echo "Total Tests: $TOTAL_TESTS"
+echo "Passed: $PASSED_TESTS"
+echo "Failed: $((TOTAL_TESTS - PASSED_TESTS))"
+
+# Calculate pass percentage
+PASS_PERCENTAGE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+echo "Pass Rate: $PASS_PERCENTAGE%"
+
+# Exit with appropriate code
+if [ $PASSED_TESTS -eq $TOTAL_TESTS ]; then
+  echo "✅ All tests passed!"
+  exit 0
+else
+  echo "❌ Some tests failed."
+  exit 1
+fi

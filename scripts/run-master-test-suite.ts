@@ -13,12 +13,12 @@ import * as fs from 'fs';
 import { execSync } from 'child_process';
 
 // Import individual test runners
-const { runWalletSystemTests, prepareWalletTestData } = require('./test-wallet-system');
-const { runPOSSystemsTests, preparePOSTestData } = require('./test-pos-systems');
-const { runAPITests, runAPIStressTests } = require('./test-api-endpoints');
-const { runMerchantOnboardingTests } = require('./test-merchant-onboarding');
-const { runAffiliateProgramTests } = require('./test-affiliate-marketing');
-const { runComprehensiveTests } = require('./run-comprehensive-tests');
+import { runWalletSystemTests, prepareWalletTestData } from './test-wallet-system.js';
+import { runPOSSystemsTests, preparePOSTestData } from './test-pos-systems.js';
+import { runAPITests, runAPIStressTests } from './test-api-endpoints.js';
+import { runMerchantOnboardingTests } from './test-merchant-onboarding.js';
+import { runAffiliateProgramTests } from './test-affiliate-marketing.js';
+import { runComprehensiveTests } from './run-comprehensive-tests.js';
 
 interface TestResult {
   name: string;
@@ -439,26 +439,28 @@ function displayMasterReport(report: MasterTestReport): void {
   }
 }
 
-// Run if called directly
-if (require.main === module) {
-  console.log('⏳ Starting master test suite. This may take several minutes...');
-  runAllTestSuites()
-    .then(report => {
-      displayMasterReport(report);
-      console.log('\n✅ Master test suite complete.');
-      
-      // Exit with appropriate code
-      if (report.overallPassRate >= 75) {
-        process.exit(0); // Success
-      } else {
-        process.exit(1); // Failure
-      }
-    })
-    .catch(error => {
-      console.error('❌ Master test suite failed with error:', error);
-      process.exit(1);
-    });
-} else {
-  // Export for programmatic use
-  module.exports = { runAllTestSuites, displayMasterReport };
-}
+// Run tests
+const runTests = async () => {
+  try {
+    console.log('⏳ Starting master test suite. This may take several minutes...');
+    const report = await runAllTestSuites();
+    displayMasterReport(report);
+    console.log('\n✅ Master test suite complete.');
+    
+    // Exit with appropriate code
+    if (report.overallPassRate >= 75) {
+      process.exit(0); // Success
+    } else {
+      process.exit(1); // Failure
+    }
+  } catch (error) {
+    console.error('❌ Master test suite failed with error:', error);
+    process.exit(1);
+  }
+};
+
+// Run if this is the main module
+runTests();
+
+// Export functions
+export { runAllTestSuites, displayMasterReport };
