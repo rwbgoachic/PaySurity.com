@@ -8,6 +8,7 @@ import { z } from "zod";
 import { insertLegalTimeEntrySchema, insertLegalExpenseEntrySchema, insertLegalInvoiceSchema } from "@shared/schema";
 import { documentRouter } from "./document-routes";
 import { clientPortalRouter } from "./client-portal-routes";
+import calendarRouter from "./calendar-routes";
 
 /**
  * Helper to ensure user is authenticated

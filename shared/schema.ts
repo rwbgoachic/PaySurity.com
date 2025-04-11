@@ -4500,47 +4500,8 @@ export const calendarEventStatusEnum = pgEnum("calendar_event_status", [
 ]);
 
 // Calendar events
-export const legalCalendarEvents = pgTable("legal_calendar_events", {
-  id: serial("id").primaryKey(),
-  merchantId: integer("merchant_id").notNull(), // Law firm
-  title: text("title").notNull(),
-  description: text("description"),
-  eventType: calendarEventTypeEnum("event_type").notNull(),
-  status: calendarEventStatusEnum("status").notNull().default("pending"),
-  startDate: date("start_date").notNull(),
-  startTime: text("start_time"), // Time in HH:MM:SS format
-  endDate: date("end_date"),
-  endTime: text("end_time"), // Time in HH:MM:SS format
-  allDay: boolean("all_day").default(false),
-  location: text("location"),
-  isDeadline: boolean("is_deadline").default(false),
-  matterId: integer("matter_id"), // Associated legal matter
-  clientId: integer("client_id"), // Associated client
-  assignedToId: integer("assigned_to_id"), // Assigned attorney or staff
-  reminderMinutes: integer("reminder_minutes"), // Minutes before event for reminder
-  reminderSent: boolean("reminder_sent").default(false),
-  priority: text("priority").default("medium"), // low, medium, high, urgent
-  recurrenceRule: text("recurrence_rule"), // iCalendar RFC-5545 format
-  parentEventId: integer("parent_event_id"), // For recurring events
-  externalCalendarId: text("external_calendar_id"), // For sync with external calendars
-  externalCalendarType: text("external_calendar_type"), // google, outlook, etc.
-  notes: text("notes"),
-  createdById: integer("created_by_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
-  completedAt: timestamp("completed_at"),
-  completedById: integer("completed_by_id")
-});
-
-export const insertLegalCalendarEventSchema = createInsertSchema(legalCalendarEvents).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  completedAt: true
-});
-
-export type LegalCalendarEvent = typeof legalCalendarEvents.$inferSelect;
-export type InsertLegalCalendarEvent = z.infer<typeof insertLegalCalendarEventSchema>;
+// Note: These calendar events are defined below in the Calendar & Deadlines system section
+// This is a placeholder comment to maintain the structure of the file
 
 // Court rules (for automatic deadline calculations)
 export const courtRules = pgTable("court_rules", {
@@ -5053,6 +5014,138 @@ export const insertLegalPortalMessageSchema = createInsertSchema(legalPortalMess
 
 export type LegalPortalMessage = typeof legalPortalMessages.$inferSelect;
 export type InsertLegalPortalMessage = z.infer<typeof insertLegalPortalMessageSchema>;
+
+// Calendar & Deadlines system enums
+export const legalEventTypeEnum = pgEnum("legal_event_type", [
+  "court_date", 
+  "filing_deadline", 
+  "client_meeting", 
+  "internal_deadline", 
+  "statute_of_limitations",
+  "deposition",
+  "mediation",
+  "reminder",
+  "other"
+]);
+
+export const legalPriorityEnum = pgEnum("legal_priority", ["low", "medium", "high", "urgent"]);
+
+export const legalEventStatusEnum = pgEnum("legal_event_status", ["pending", "completed", "cancelled", "rescheduled"]);
+
+export const legalDeadlineStatusEnum = pgEnum("legal_deadline_status", ["pending", "completed", "cancelled", "extended"]);
+
+// Calendar & Deadlines system
+export const legalCalendarEvents = pgTable("legal_calendar_events", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull().references(() => merchants.id),
+  createdById: integer("created_by_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  eventType: legalEventTypeEnum("event_type").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  isAllDay: boolean("is_all_day").default(false),
+  location: text("location"),
+  matterId: integer("matter_id").references(() => legalMatters.id),
+  clientId: integer("client_id").references(() => legalClients.id),
+  assignedToIds: integer("assigned_to_ids").array(),
+  priority: legalPriorityEnum("priority").default("medium"),
+  status: legalEventStatusEnum("status").default("pending"),
+  reminderEnabled: boolean("reminder_enabled").default(true),
+  reminderTimes: integer("reminder_times").array(),
+  reminderId: integer("reminder_id"),
+  recurringPattern: text("recurring_pattern"),
+  recurringEndDate: timestamp("recurring_end_date"),
+  parentEventId: integer("parent_event_id").references(() => legalCalendarEvents.id),
+  showInClientPortal: boolean("show_in_client_portal").default(false),
+  externalCalendarId: text("external_calendar_id"),
+  externalCalendarSource: text("external_calendar_source"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalCalendarEventSchema = createInsertSchema(legalCalendarEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalCalendarEvent = typeof legalCalendarEvents.$inferSelect;
+export type InsertLegalCalendarEvent = z.infer<typeof insertLegalCalendarEventSchema>;
+
+// Calendar reminder notifications
+// Define enum types separately
+export const legalReminderTypeEnum = pgEnum("legal_reminder_type", ["email", "sms", "in_app", "all"]);
+export const legalReminderStatusEnum = pgEnum("legal_reminder_status", ["pending", "sent", "failed"]);
+
+export const legalCalendarReminders = pgTable("legal_calendar_reminders", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull().references(() => merchants.id),
+  eventId: integer("event_id").notNull().references(() => legalCalendarEvents.id, { onDelete: "cascade" }),
+  reminderType: legalReminderTypeEnum("reminder_type").notNull().default("email"),
+  minutesBefore: integer("minutes_before").notNull(),
+  sentAt: timestamp("sent_at"),
+  status: legalReminderStatusEnum("status").notNull().default("pending"),
+  recipientIds: integer("recipient_ids").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalCalendarReminderSchema = createInsertSchema(legalCalendarReminders).omit({
+  id: true,
+  sentAt: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalCalendarReminder = typeof legalCalendarReminders.$inferSelect;
+export type InsertLegalCalendarReminder = z.infer<typeof insertLegalCalendarReminderSchema>;
+
+// Additional deadline tracking for statute of limitations, etc.
+export const legalDeadlines = pgTable("legal_deadlines", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull().references(() => merchants.id),
+  matterId: integer("matter_id").notNull().references(() => legalMatters.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  // Define deadline type enum separately
+  deadlineType: pgEnum("legal_deadline_type", [
+    "statute_of_limitations", 
+    "filing_deadline", 
+    "response_deadline", 
+    "discovery_deadline",
+    "expert_disclosure",
+    "motion_deadline",
+    "other"
+  ])("deadline_type").notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  calculatedFromDate: timestamp("calculated_from_date"),
+  calculationMethod: text("calculation_method"),
+  jurisdiction: text("jurisdiction"),
+  priority: legalPriorityEnum("priority").default("high"),
+  status: legalDeadlineStatusEnum("status").default("pending"),
+  assignedToIds: integer("assigned_to_ids").array(),
+  completedAt: timestamp("completed_at"),
+  completedById: integer("completed_by_id").references(() => users.id),
+  reminderEnabled: boolean("reminder_enabled").default(true),
+  relatedEventId: integer("related_event_id").references(() => legalCalendarEvents.id),
+  notes: text("notes"),
+  showInClientPortal: boolean("show_in_client_portal").default(false),
+  createdById: integer("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+});
+
+export const insertLegalDeadlineSchema = createInsertSchema(legalDeadlines).omit({
+  id: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type LegalDeadline = typeof legalDeadlines.$inferSelect;
+export type InsertLegalDeadline = z.infer<typeof insertLegalDeadlineSchema>;
 
 // Type declarations for Express request interface
 declare global {
