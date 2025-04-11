@@ -310,16 +310,16 @@ export class ClientPortalTestService implements TestService {
     
     // Test 2: Authenticate portal user
     try {
-      const authResult = await clientPortalService.authenticatePortalUser(
-        this.testPortalUserEmail,
-        this.testPortalUserPassword
-      );
+      const authResult = await clientPortalService.authenticatePortalUser({
+        email: this.testPortalUserEmail,
+        password: this.testPortalUserPassword,
+        merchantId: this.testMerchantId
+      });
       
       tests.push({
         name: 'Authenticate portal user',
         description: 'Should authenticate portal user with correct credentials',
         passed: !!authResult && 
-                authResult.authenticated &&
                 !!authResult.user &&
                 authResult.user.email === this.testPortalUserEmail,
         error: null,
@@ -328,13 +328,14 @@ export class ClientPortalTestService implements TestService {
           userEmail: this.testPortalUserEmail
         },
         actual: authResult ? {
-          authenticated: authResult.authenticated,
-          userEmail: authResult.user?.email
+          user: authResult.user ? {
+            email: authResult.user.email,
+            id: authResult.user.id
+          } : null
         } : null
       });
       
       if (!authResult || 
-          !authResult.authenticated || 
           !authResult.user ||
           authResult.user.email !== this.testPortalUserEmail) {
         groupPassed = false;
@@ -351,16 +352,16 @@ export class ClientPortalTestService implements TestService {
     
     // Test 3: Reject incorrect authentication
     try {
-      const authResult = await clientPortalService.authenticatePortalUser(
-        this.testPortalUserEmail,
-        'WrongPassword123!'
-      );
+      const authResult = await clientPortalService.authenticatePortalUser({
+        email: this.testPortalUserEmail,
+        password: 'WrongPassword123!',
+        merchantId: this.testMerchantId
+      });
       
       tests.push({
         name: 'Reject incorrect authentication',
         description: 'Should reject authentication with incorrect credentials',
         passed: !!authResult && 
-                !authResult.authenticated &&
                 !authResult.user,
         error: null,
         expected: {
@@ -368,14 +369,11 @@ export class ClientPortalTestService implements TestService {
           user: null
         },
         actual: authResult ? {
-          authenticated: authResult.authenticated,
           user: authResult.user
         } : null
       });
       
-      if (!authResult || 
-          authResult.authenticated || 
-          authResult.user) {
+      if (!authResult || authResult.user) {
         groupPassed = false;
       }
     } catch (e) {
