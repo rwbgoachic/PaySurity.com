@@ -150,7 +150,7 @@ export class IoltaReconciliationTestService implements TestService {
    */
   private async setupTestData(): Promise<void> {
     // Create test account
-    const account = await ioltaService.createIoltaAccount({
+    const account = await ioltaService.createTrustAccount({
       merchantId: this.testMerchantId,
       accountNumber: 'RECTEST12345',
       accountName: 'Test Reconciliation IOLTA Account',
@@ -203,7 +203,7 @@ export class IoltaReconciliationTestService implements TestService {
     }
     
     // Add client to IOLTA account
-    await ioltaService.addClientToIoltaAccount({
+    await ioltaService.createClientLedger({
       merchantId: this.testMerchantId,
       clientId: this.testClientId,
       ioltaAccountId: account.id,
@@ -264,7 +264,7 @@ export class IoltaReconciliationTestService implements TestService {
     ];
     
     for (const transaction of transactions) {
-      const result = await ioltaService.createTransaction(transaction);
+      const result = await ioltaService.recordTransaction(transaction);
       this.testTransactionIds.push(result.id);
     }
   }
