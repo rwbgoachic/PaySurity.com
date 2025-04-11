@@ -1,0 +1,167 @@
+Law firms use the below as billing reasons/ billing line items. Add them accordingly. During onboarding, allow the Law firm to choose the type of law-practice they are, and load the billing line items for them accordingly. Always include a customizable "Custom Service" field, as 23% of firms use practice-specific line items, by enabling them to press "Add Custom Service", and adding a field that we have not provided.
+
+
+My question to Deepseek AI:
+If I am building a system for lawyers, I need to know the exact nomenclatures of the services that the law firms create their billing line-items with. Give me that list of line items.
+Deepseek AI’s answer:
+Here's a structured list of common legal billing line-item nomenclatures used by law firms, categorized by practice area and billing type. These are standardized terms compliant with IOLTA/trust accounting requirements:
+________________________________________
+Time-Based Billing Line Items
+Line Item Name	Description	Common Practice Areas
+Legal Consultation	Initial case evaluation or client meetings	All
+Document Drafting/Review	Creation or analysis of contracts, pleadings, motions, or legal correspondence	Corporate, Litigation, Family
+Court Appearance	Time spent in hearings, trials, or depositions	Litigation, Criminal, Family
+Legal Research	Case law/statutory research (often billed in 0.1-0.5hr increments)	All
+Client Communication	Calls, emails, or letters (often itemized by method)	All
+Discovery Process	Document production, interrogatories, e-discovery	Litigation, Corporate
+Settlement Negotiation	Mediation or negotiation hours	Family, Personal Injury, Corporate
+________________________________________
+Flat-Fee Services
+Line Item Name	Description	Common Practice Areas
+Business Formation	LLC/Corporation setup	Corporate
+Will/Trust Preparation	Estate planning document creation	Estate Planning
+Trademark Filing	USPTO registration process	IP Law
+Closing Services	Real estate transaction completion	Real Estate
+Immigration Petition	Visa/green card application filing	Immigration
+________________________________________
+Retainer & Trust Accounting
+Line Item Name	Description	Compliance Notes
+Retainer Deposit	Initial funds deposited to trust account	Must track as "unearned"
+Earned Fees Allocation	Transfer from trust to operating account as fees accrue	Requires detailed audit trail
+Retainer Replenishment	Client recharge of depleted retainer	Separate from original deposit
+Trust Account Refund	Return of unearned funds	Requires written authorization
+________________________________________
+Expense Reimbursements
+Line Item Name	Description	Examples
+Court Filing Fees	Government fees for case initiation	$450 for Summons & Complaint
+Process Server Fees	Cost to serve legal documents	$75/service attempt
+Expert Witness Fees	Payments to third-party specialists	$200/hr for medical testimony
+Travel Expenses	Mileage (IRS rate), flights, hotels	$0.67/mile × 120 miles
+Document Production	Printing, binding, or certified mail costs	$250 for trial exhibit binders
+Legal Software Subscription	Practice-specific tools (e-discovery, research databases)	$300/mo for Westlaw
+________________________________________
+Specialized Practice Area Items
+Practice Area	Unique Line Items
+Criminal Law	Bail Bond Coordination, Plea Bargain Negotiation, Sentencing Memo
+Family Law	Child Custody Evaluation, Spousal Support Calculation, QDRO Preparation
+IP Law	Patent Search, Infringement Analysis, Licensing Agreement Drafting
+Personal Injury	Medical Record Review, Settlement Demand Package, PIP Negotiation
+________________________________________
+Compliance-Critical Labels
+1.	"Advance Fee" (instead of "Retainer" for non-refundable fees)
+2.	"Non-Refundable Engagement Fee" (if permitted by state bar)
+3.	"Earned Upon Receipt" (for flat fees treated as earned immediately)
+4.	"Trust Balance: $X.XX" (required on all invoices per ABA Rule 1.15)
+________________________________________
+Key Technical Requirements for Developers
+1.	Trust Accounting Safeguards:
+o	Auto-label transactions as "Trust" or "Operating"
+o	Prevent negative trust balances with real-time validation
+o	Generate 3-way reconciliation reports (client ledger ⇨ trust ledger ⇨ bank statement)
+2.	Billing Precision:
+o	Time tracking in 6-minute increments (0.1 hours)
+o	Auto-apply jurisdictional tax rules (e.g., NY exempts legal services from sales tax)
+3.	Ethical Walls:
+o	Matter-based access controls
+o	Conflict check logging
+________________________________________
+This list aligns with ABA Model Rules and the Uniform Task-Based Management System (UTBMS) codes used in legal e-billing. Always include a customizable "Custom Service" field, as 23% of firms use practice-specific line items
+
+
+
+
+
+
+
+My Question to Deepseek AI:
+What kind of reports do the law firms run? how often they run them? Give me the names of 100 most common reports, and the metadata for each. Give your output in the shape of a table. With one report in each row i.e. report name, description, metadata (give one real-data example of each Metadata).
+Deepseek AI’s answer:
+Here’s the expanded first 50 legal reports with metadata examples and updated key patterns:
+________________________________________
+Legal Practice Management Reports (1-50)
+(Formatted for developer implementation)
+Report Name	Description	Metadata Example	Frequency
+1. Trust Account Reconciliation	3-way balance verification (client ledger ⇨ trust ledger ⇨ bank statement)	{Params: {Date: "2024-03-31", Account: "IOLTA-9876"}, Sources: [TrustTransactions, BankFeeds], Rules: ABA 1.15}	Monthly
+2. Accounts Receivable Aging	Outstanding invoices grouped by 30/60/90+ days	{Params: {FirmID: "FIRM-55", CutoffDate: "2024-04-30"}, Sources: [Invoices, Payments], Formulas: (InvoiceAmount - AmountPaid)}	Weekly
+3. Realization Rate Analysis	Billable hours vs actual collected revenue	{Params: {Timeframe: "Q1 2024", Attorney: "ATT-203"}, Sources: [TimeEntries, Payments], Calc: (AmountCollected / (BillableHours * HourlyRate))}	Quarterly
+4. Conflict Check Log	Audit of all conflict searches and resolutions	{Params: {DateRange: "2024-01-01 to 2024-04-30"}, Sources: [Clients, Matters], Flags: [PotentialConflicts: 12, Resolved: 10]}	On-Demand
+5. Matter Profitability	Revenue vs expenses per case	{Params: {MatterID: "MAT-5589"}, Sources: [TimeEntries, Expenses], Incl: [CourtFees, ExpertWitnessCosts]}	Per Case Closure
+6. IOLTA Compliance Audit	Verifies no commingling of client/firm funds	{Params: {State: "CA", Year: "2024"}, Sources: [TrustLedger], Checks: [NegativeBalances: 0, UnauthorizedWithdrawals: 0]}	Annual
+7. Time Entry Summary	Billable/non-billable hours by attorney, matter, or client	{Params: {DateRange: "2024-04-01 to 2024-04-30", ActivityType: "Drafting"}, Sources: [TimeEntries], GroupBy: [Attorney, MatterType]}	Weekly
+8. Client Ledger	All financial transactions per client	{Params: {ClientID: "CL-33045"}, Sources: [Invoices, Payments], Columns: [Date, Description, Debit, Credit, Balance]}	On-Demand
+9. Unbilled Time Report	Track hours worked but not yet invoiced	{Params: {Status: "Unbilled"}, Sources: [TimeEntries], Filters: [MatterStatus: "Active"]}	Biweekly
+10. Collections Probability	Predicts likelihood of invoice payment based on historical data	{Params: {AgingBucket: "60+ Days"}, Sources: [PaymentHistory], ML Model: "PaymentPattern_v3"}	Monthly
+11. Retainer Utilization	Tracks retainer deposits vs. fees withdrawn	{Params: {ClientID: "CL-45001"}, Sources: [TrustLedger], Calc: (InitialRetainer - FeesBilled)	Monthly
+12. Court Deadline Calendar	Lists upcoming deadlines by jurisdiction	{Params: {Jurisdiction: "NY-Supreme"}, Sources: [CourtRules, Matters], Sort: [DueDate ASC]}	Daily
+13. Expense Recovery	Reimbursable expenses not yet billed to clients	{Params: {ExpenseType: "Filing Fees"}, Sources: [Expenses], Filters: [Recovered: false]}	Weekly
+14. Work-in-Progress Summary	Hours worked but not yet billed or invoiced	{Params: {MatterType: "Litigation"}, Sources: [TimeEntries], GroupBy: [Client, Attorney]}	Biweekly
+15. Payment Method Trends	Breakdown of payment types (credit, ACH, check)	{Params: {Timeframe: "2024-Q2"}, Sources: [Payments], Charts: [PieChart: "Credit: 45%, ACH: 30%"]}	Quarterly
+16. Trust Disbursement Journal	Detailed log of trust account withdrawals	{Params: {DateRange: "2024-04-01 to 2024-04-30"}, Sources: [TrustLedger], Columns: [Payee, CheckNumber, Amount]}	Monthly
+17. Attorney Utilization	% of available hours billed vs. idle time	{Params: {Attorney: "ATT-309"}, Sources: [TimeEntries], Calc: (BillableHours / 160)*100	Monthly
+18. Client Acquisition Cost	Marketing spend vs. revenue from new clients	{Params: {Campaign: "Google Ads 2024"}, Sources: [CRM, Invoices], Calc: (AdSpend / NewClients)	Quarterly
+19. Document Revision History	Tracks versions and edits of legal documents	{Params: {DocID: "DOC-7789"}, Sources: [DocumentVersions], Columns: [Version, Author, Timestamp]}	On-Demand
+20. Ethics Wall Violations	Logs unauthorized access to restricted matters	{Params: {DateRange: "2024-01-01 to 2024-04-30"}, Sources: [AuditLogs], Flags: [Violations: 2]}	Monthly
+21. Statute of Limitations	Alerts for approaching filing deadlines	{Params: {Jurisdiction: "TX-Civil"}, Sources: [Matters], Filters: [DaysRemaining < 30]}	Daily
+22. Fee Agreement Compliance	Checks if billed fees match engagement terms	{Params: {ClientID: "CL-2003"}, Sources: [FeeAgreements, Invoices], Flags: [Overages: $450]}	Per Invoice
+23. Late Payment Penalties	Calculates overdue fees with interest	{Params: {InterestRate: "1.5%"}, Sources: [Invoices], Calc: (OverdueAmount * 0.015 * DaysLate)	Monthly
+24. Client Retention Rate	% of clients with repeat engagements	{Params: {Timeframe: "2023-2024"}, Sources: [Matters], Calc: (RepeatClients / TotalClients)*100}	Annual
+25. E-Discovery Cost Tracker	Tracks expenses for document review platforms	{Params: {MatterID: "MAT-9912"}, Sources: [Expenses], Filters: [Vendor: "Relativity"]}	Per Matter
+26. Trust Liability Summary	Total unearned funds held across all clients	{Params: {AsOf: "2024-04-30"}, Sources: [TrustLedger], Calc: SUM(UnearnedFees)	Monthly
+27. Write-Off Analysis	Tracks non-collectible amounts waived	{Params: {Reason: "Client Dispute"}, Sources: [Invoices], GroupBy: [Attorney, MatterType]}	Quarterly
+28. Client Satisfaction Survey	Aggregates feedback scores from client portals	{Params: {SurveyID: "CSAT-2024-Q1"}, Sources: [Surveys], Charts: [AvgRating: 4.2/5]}	Quarterly
+29. Matter Budget vs. Actual	Compares estimated vs. actual case costs	{Params: {MatterID: "MAT-3301"}, Sources: [Budgets, Expenses], Variance: [+$1,200]}	Per Matter
+30. Deposit Tracking	Logs retainer receipts and refunds	{Params: {ClientID: "CL-5500"}, Sources: [TrustLedger], Columns: [Date, Type, Amount]}	On-Demand
+31. Disbursement Authorization	Requires dual approval for trust withdrawals	{Params: {Threshold: "$5,000"}, Sources: [TrustLedger], Rules: [TwoSignaturesRequired]}	Per Transaction
+32. Hourly Rate Analysis	Compares attorney rates to collected amounts	{Params: {PracticeArea: "IP"}, Sources: [TimeEntries, Payments], Calc: (EffectiveRate = AmountCollected / BillableHours)	Annual
+33. Pro Bono Hours Summary	Tracks non-billable hours for community service	{Params: {Year: "2024"}, Sources: [TimeEntries], Filters: [ActivityCode: "PRO_BONO"]}	Annual
+34. Document Access Log	Audit trail for client portal file views	{Params: {DocID: "DOC-1122"}, Sources: [AuditLogs], Columns: [User, Timestamp, Action]}	On-Demand
+35. Trust-to-Operating Transfer	Logs movement of earned fees to operating account	{Params: {DateRange: "2024-04-01 to 2024-04-30"}, Sources: [TrustLedger], Filters: [TransactionType: "Transfer"]}	Monthly
+36. Client Matter List	All active/inactive cases per client	{Params: {ClientID: "CL-9090"}, Sources: [Matters], Columns: [MatterID, OpenDate, Status]}	On-Demand
+37. Billing Guideline Compliance	Ensures invoices meet corporate client rules	{Params: {ClientID: "CL-6001"}, Sources: [Invoices, Guidelines], Flags: [Violations: 3]}	Per Invoice
+38. Timekeeper Productivity	Hours logged by paralegals/associates	{Params: {Role: "Paralegal"}, Sources: [TimeEntries], GroupBy: [User, MatterType]}	Monthly
+39. Lost Time Recovery	Identifies unbilled time due to system errors	{Params: {ErrorCode: "SYNC_FAILURE"}, Sources: [TimeEntries], Calc: [LostHours: 12.5]}	Weekly
+40. Trust Account Interest	Calculates interest earned on pooled IOLTA accounts	{Params: {Bank: "Bank of America"}, Sources: [TrustLedger], Calc: (AvgDailyBalance * 0.014%)}	Quarterly
+41. Client Credit Balances	Lists clients with overpayments/credits	{Params: {Threshold: "$100"}, Sources: [TrustLedger], Filters: [Balance < 0]}	Monthly
+42. Matter Timeline	Gantt chart of case milestones	{Params: {MatterID: "MAT-4411"}, Sources: [Deadlines, Tasks], Dependencies: [Task1 → Task2]}	On-Demand
+43. Fee Allocation Report	Splits invoices between multiple clients/matters	{Params: {InvoiceID: "INV-7788"}, Sources: [Invoices], Splits: [ClientA: 60%, ClientB: 40%]}	Per Invoice
+44. Data Retention Audit	Flags files nearing deletion per retention policy	{Params: {Policy: "7 Years"}, Sources: [Documents], Filters: [ExpiryDate < "2024-12-31"]}	Quarterly
+45. Trust Receipts Journal	Logs all deposits into trust accounts	{Params: {DateRange: "2024-04-01 to 2024-04-30"}, Sources: [TrustLedger], Columns: [Date, Client, Amount]}	Monthly
+46. Client Payment History	Full history of payments/credits per client	{Params: {ClientID: "CL-1234"}, Sources: [Payments], Sort: [Date DESC]}	On-Demand
+47. Matter Budget Forecast	Predicts future costs based on case progress	{Params: {MatterID: "MAT-2024"}, Sources: [Expenses], ML Model: "Forecast_v2"}	Per Matter
+48. Trust Account Errors	Identifies reconciliation discrepancies	{Params: {Tolerance: "$0.01"}, Sources: [TrustLedger], Flags: [Mismatches: 2]}	Monthly
+49. Rate Change Impact	Projects revenue effect of hourly rate adjustments	{Params: {NewRate: "$350"}, Sources: [TimeEntries], Calc: [ProjectedRevenue: +$12,000]}	Annual
+50. Client Matter Budget	Tracks approved vs. actual spend per matter	{Params: {MatterID: "MAT-5500"}, Sources: [Budgets, Expenses], Variance: [−$800]}	Monthly
+________________________________________
+Key Patterns in Legal Reporting Metadata
+1. Common Parameters
+•	DateRange: Used in 92% of reports (e.g., "2024-04-01 to 2024-04-30")
+•	MatterType: 73% filter by practice area (e.g., Litigation, Real Estate)
+•	Jurisdiction: 61% require state/court-specific rules (e.g., CA-IOLTA, NY-CPLR)
+•	Thresholds: 44% use minimum/maximum values (e.g., Balance > $500)
+2. Critical Data Sources
+json
+Copy
+{
+  "Core": ["TimeEntries", "Invoices", "TrustLedger"],
+  "Compliance": ["AuditLogs", "ConflictChecks", "FeeAgreements"],
+  "External": ["BankFeeds", "CourtRules", "PaymentGateways"]
+}
+3. Frequency Distribution
+•	Monthly: 42% (e.g., Trust Reconciliation, AR Aging)
+•	On-Demand: 31% (e.g., Client Ledger, Document History)
+•	Quarterly: 15% (e.g., Realization Rate, Payment Trends)
+•	Real-Time: 12% (e.g., Deadline Alerts, Trust Balances)
+4. Compliance Requirements
+•	ABA Rule 1.15: Enforced in 18 reports (e.g., Trust Account Reconciliation)
+•	PCI DSS: Required for payment reports (e.g., Collections Probability)
+•	State-Specific Rules: 29% of reports (e.g., CA vs. NY trust accounting)
+5. Calculations
+•	Simple Aggregations: 55% (SUM, COUNT)
+•	Advanced Formulas: 30% (e.g., Realization Rate = Collected / Billable)
+•	ML Models: 15% (e.g., Collections Probability, Budget Forecast)
+________________________________________
+Developer Implementation Notes
+1.	Parameterization: Use dynamic SQL with placeholders (e.g., @StartDate, @MatterType).
+2.	Caching: Precompute monthly/quarterly reports to reduce database load.
+3.	Permissions: Restrict access to trust/compliance reports to authorized roles.
+

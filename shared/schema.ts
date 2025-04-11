@@ -3863,10 +3863,7 @@ export const legalExpenseEntries = pgTable("legal_expense_entries", {
   clientId: integer("client_id").notNull(),
   matterNumber: text("matter_number").notNull(),
   expenseDate: date("expense_date").notNull(),
-  expenseType: text("expense_type", { enum: [
-    "court_fees", "filing_fees", "expert_witness", "deposition", "transcript", 
-    "service_of_process", "travel", "copying", "postage", "research", "other"
-  ] }).notNull(),
+  expenseType: legalExpenseTypeEnum("expense_type").notNull(),
   description: text("description").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   billable: boolean("billable").notNull().default(true),
@@ -3915,9 +3912,7 @@ export const legalInvoices = pgTable("legal_invoices", {
   balanceDue: decimal("balance_due", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
   termsAndConditions: text("terms_and_conditions"),
-  status: text("status", { enum: [
-    "draft", "sent", "viewed", "partial_payment", "paid", "overdue", "void"
-  ] }).notNull().default("draft"),
+  status: legalInvoiceStatusEnum("status").notNull().default("draft"),
   lastSentDate: timestamp("last_sent_date"),
   paymentLink: text("payment_link"),
   paymentQrCode: text("payment_qr_code"),
@@ -3976,6 +3971,7 @@ export const paymentPlanStatusEnum = pgEnum("payment_plan_status", [
 ]);
 
 // Payment Plans Table - For scheduled/recurring payments
+
 export const paymentPlans = pgTable("payment_plans", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(),
@@ -3987,17 +3983,13 @@ export const paymentPlans = pgTable("payment_plans", {
   installmentAmount: decimal("installment_amount", { precision: 10, scale: 2 }).notNull(),
   numberOfInstallments: integer("number_of_installments").notNull(),
   installmentsPaid: integer("installments_paid").default(0),
-  frequency: text("frequency", { enum: [
-    "weekly", "biweekly", "monthly", "quarterly", "semiannual", "annual"
-  ] }).notNull(),
+  frequency: recurringFrequencyEnum("frequency").notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   nextPaymentDate: date("next_payment_date").notNull(),
   lastPaymentDate: date("last_payment_date"),
   paymentMethodId: integer("payment_method_id").notNull(), // Stored payment method
-  status: text("status", { enum: [
-    "active", "on_hold", "completed", "cancelled", "defaulted"
-  ] }).notNull().default("active"),
+  status: paymentPlanStatusEnum("status").notNull().default("active"),
   autoProcess: boolean("auto_process").default(true),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -4062,6 +4054,28 @@ export const legalPracticeAreaEnum = pgEnum("legal_practice_area", [
   "corporate", "litigation", "real_estate", "intellectual_property", "family", "estate_planning", 
   "tax", "bankruptcy", "immigration", "employment", "criminal", "personal_injury", 
   "environmental", "other"
+]);
+
+// Billing line item type enum
+export const legalBillingItemTypeEnum = pgEnum("legal_billing_item_type", [
+  "time_based", "flat_fee", "retainer", "expense", "custom"
+]);
+
+// We already have a legalExpenseTypeEnum defined elsewhere in the file
+// This updated version consolidates all expense types into a single enum
+
+// Time-based billing activity type enum
+export const legalTimeActivityTypeEnum = pgEnum("legal_time_activity_type", [
+  "legal_consultation", "document_drafting", "document_review", "court_appearance", 
+  "legal_research", "client_communication", "discovery_process", "settlement_negotiation", 
+  "deposition", "trial_preparation", "mediation", "phone_call", "email", "meeting", "other"
+]);
+
+// Flat-fee service type enum
+export const legalFlatFeeServiceTypeEnum = pgEnum("legal_flat_fee_service_type", [
+  "business_formation", "will_preparation", "trust_preparation", "trademark_filing", 
+  "closing_services", "immigration_petition", "incorporation", "contract_review", 
+  "simple_will", "power_of_attorney", "trademark_search", "uncontested_divorce", "other"
 ]);
 
 // Legal clients
@@ -4779,7 +4793,11 @@ export type InsertClientPortalLog = z.infer<typeof insertClientPortalLogSchema>;
 // Report type enum
 export const legalReportTypeEnum = pgEnum("legal_report_type", [
   "financial", "time_tracking", "activity", "productivity", "client", 
-  "case_status", "billing", "trust_accounting", "custom"
+  "case_status", "billing", "trust_accounting", "custom",
+  "trust_account_reconciliation", "accounts_receivable_aging", "realization_rate",
+  "conflict_check_log", "matter_profitability", "iolta_compliance", "time_entry_summary",
+  "client_ledger", "unbilled_time", "collections_probability", "retainer_utilization",
+  "court_deadline_calendar", "expense_recovery", "work_in_progress", "payment_method_trends"
 ]);
 
 // Report frequency enum
