@@ -110,7 +110,8 @@ export class ClientPortalTestService implements TestService {
         firstName: 'Test',
         lastName: 'PortalUser',
         email: 'test.portal@example.com',
-        phone: '555-123-4567'
+        phone: '555-123-4567',
+        taxId: '98-7654321' // Add taxId to fix missing column error
       });
     }
     
@@ -134,14 +135,17 @@ export class ClientPortalTestService implements TestService {
     }
     
     // Create IOLTA account
-    const account = await ioltaService.createIoltaAccount({
+    const account = await ioltaService.createTrustAccount({
       merchantId: this.testMerchantId,
+      clientId: this.testClientId.toString(), // Add clientId to fix null constraint
       accountNumber: 'PORTAL12345',
       accountName: 'Test Portal IOLTA Account',
       bankName: 'First National Test Bank',
       routingNumber: '123456789',
+      accountType: 'iolta' as const, // Add required accountType
+      accountStatus: 'active' as const, // Replace status with accountStatus
       balance: '10000.00',
-      status: 'active'
+      taxId: '98-7654321' // Add taxId to fix missing column error
     });
     
     this.testAccountId = account.id;

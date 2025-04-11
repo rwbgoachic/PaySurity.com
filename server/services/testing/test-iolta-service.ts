@@ -29,13 +29,15 @@ export class IoltaTestService implements TestService {
   // Test data for account creation
   private testAccountData = {
     merchantId: this.testMerchantId,
+    clientId: this.testClientId.toString(), // Add clientId to fix null constraint
     accountNumber: 'TEST12345',
     accountName: 'Test IOLTA Account',
     bankName: 'First National Test Bank',
     routingNumber: '123456789',
     accountType: 'iolta' as const,
     accountStatus: 'active' as const,
-    balance: '10000.00'
+    balance: '10000.00',
+    taxId: '12-3456789' // Add taxId to fix missing column error
   };
   
   // Test data for client ledger
