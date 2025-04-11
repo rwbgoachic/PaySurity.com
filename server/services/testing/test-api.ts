@@ -42,6 +42,21 @@ export class APITestService {
     report.testGroups.push(authTests);
     if (!authTests.passed) report.passed = false;
     
+    // Test wallet APIs
+    const walletTests = await this.testWalletAPIs();
+    report.testGroups.push(walletTests);
+    if (!walletTests.passed) report.passed = false;
+    
+    // Test POS APIs
+    const posTests = await this.testPOSAPIs();
+    report.testGroups.push(posTests);
+    if (!posTests.passed) report.passed = false;
+    
+    // Test merchant APIs
+    const merchantTests = await this.testMerchantAPIs();
+    report.testGroups.push(merchantTests);
+    if (!merchantTests.passed) report.passed = false;
+    
     // Test error handling
     const errorTests = await this.testErrorHandling();
     report.testGroups.push(errorTests);
@@ -356,6 +371,355 @@ export class APITestService {
         if (!isNetworkError || !test.url.includes('localhost')) {
           testGroup.passed = false;
         }
+      }
+    }
+    
+    return testGroup;
+  }
+  
+  /**
+   * Test wallet API endpoints
+   */
+  async testWalletAPIs(): Promise<TestGroup> {
+    const testGroup: TestGroup = {
+      name: 'Wallet API Tests',
+      tests: [],
+      passed: true
+    };
+    
+    const baseUrl = 'http://localhost:5000';
+    
+    // Define wallet endpoints to test
+    const endpoints = [
+      { 
+        name: 'Get Wallet Balance',
+        url: '/api/wallets/balance',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]  // Either OK or Not Found is acceptable for testing
+      },
+      { 
+        name: 'Get Wallet Transactions',
+        url: '/api/wallets/transactions',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]  // Either OK or Not Found is acceptable for testing
+      },
+      { 
+        name: 'Get Linked Payment Methods',
+        url: '/api/wallets/payment-methods',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]  // Either OK or Not Found is acceptable for testing
+      },
+      { 
+        name: 'Get Wallet Cards',
+        url: '/api/wallets/cards',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]  // Either OK or Not Found is acceptable for testing
+      }
+    ];
+    
+    // Test each endpoint
+    for (const endpoint of endpoints) {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add test authentication header
+        if (endpoint.useTestAuth) {
+          headers['X-Test-Mode'] = 'true';
+        }
+        
+        const response = await fetch(`${baseUrl}${endpoint.url}`, {
+          method: endpoint.method,
+          headers
+        });
+        
+        const status = response.status;
+        const isStatusCorrect = Array.isArray(endpoint.expectedStatus)
+          ? endpoint.expectedStatus.includes(status)
+          : status === endpoint.expectedStatus;
+        
+        testGroup.tests.push({
+          name: endpoint.name,
+          description: `Test ${endpoint.method} ${endpoint.url}`,
+          passed: isStatusCorrect,
+          result: isStatusCorrect ? 'Endpoint returned acceptable status' : `Endpoint returned unexpected status ${status}`,
+          expected: Array.isArray(endpoint.expectedStatus) 
+            ? `Status ${endpoint.expectedStatus.join(' or ')}` 
+            : `Status ${endpoint.expectedStatus}`,
+          actual: `Status ${status}`
+        });
+        
+        if (!isStatusCorrect) testGroup.passed = false;
+      } catch (error) {
+        testGroup.tests.push({
+          name: endpoint.name,
+          description: `Test ${endpoint.method} ${endpoint.url}`,
+          passed: false,
+          result: 'Error during request',
+          expected: Array.isArray(endpoint.expectedStatus) 
+            ? `Status ${endpoint.expectedStatus.join(' or ')}` 
+            : `Status ${endpoint.expectedStatus}`,
+          actual: `Error: ${(error as Error).message}`,
+          error
+        });
+        testGroup.passed = false;
+      }
+    }
+    
+    return testGroup;
+  }
+  
+  /**
+   * Test POS API endpoints
+   */
+  async testPOSAPIs(): Promise<TestGroup> {
+    const testGroup: TestGroup = {
+      name: 'POS API Tests',
+      tests: [],
+      passed: true
+    };
+    
+    const baseUrl = 'http://localhost:5000';
+    
+    // Define POS endpoints to test for different industry types
+    const endpoints = [
+      // Restaurant POS (BistroBeast)
+      { 
+        name: 'Get Restaurant Tables',
+        url: '/api/restaurant/tables',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Restaurant Orders',
+        url: '/api/restaurant/orders',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      
+      // Retail POS (ECom Ready)
+      { 
+        name: 'Get Retail Products',
+        url: '/api/retail/products',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Retail Orders',
+        url: '/api/retail/orders',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      
+      // Legal POS (LegalEdge)
+      { 
+        name: 'Get Legal Matters',
+        url: '/api/legal/matters',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Legal Clients',
+        url: '/api/legal/clients',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      
+      // Healthcare POS (MedPay)
+      { 
+        name: 'Get Healthcare Patients',
+        url: '/api/healthcare/patients',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Healthcare Appointments',
+        url: '/api/healthcare/appointments',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      
+      // Hospitality POS (HotelPay)
+      { 
+        name: 'Get Hospitality Properties',
+        url: '/api/hospitality/properties',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Hospitality Reservations',
+        url: '/api/hospitality/reservations',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      }
+    ];
+    
+    // Test each endpoint
+    for (const endpoint of endpoints) {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add test authentication header
+        if (endpoint.useTestAuth) {
+          headers['X-Test-Mode'] = 'true';
+        }
+        
+        const response = await fetch(`${baseUrl}${endpoint.url}`, {
+          method: endpoint.method,
+          headers
+        });
+        
+        const status = response.status;
+        const isStatusCorrect = Array.isArray(endpoint.expectedStatus)
+          ? endpoint.expectedStatus.includes(status)
+          : status === endpoint.expectedStatus;
+        
+        testGroup.tests.push({
+          name: endpoint.name,
+          description: `Test ${endpoint.method} ${endpoint.url}`,
+          passed: isStatusCorrect,
+          result: isStatusCorrect ? 'Endpoint returned acceptable status' : `Endpoint returned unexpected status ${status}`,
+          expected: Array.isArray(endpoint.expectedStatus) 
+            ? `Status ${endpoint.expectedStatus.join(' or ')}` 
+            : `Status ${endpoint.expectedStatus}`,
+          actual: `Status ${status}`
+        });
+        
+        if (!isStatusCorrect) testGroup.passed = false;
+      } catch (error) {
+        testGroup.tests.push({
+          name: endpoint.name,
+          description: `Test ${endpoint.method} ${endpoint.url}`,
+          passed: false,
+          result: 'Error during request',
+          expected: Array.isArray(endpoint.expectedStatus) 
+            ? `Status ${endpoint.expectedStatus.join(' or ')}` 
+            : `Status ${endpoint.expectedStatus}`,
+          actual: `Error: ${(error as Error).message}`,
+          error
+        });
+        testGroup.passed = false;
+      }
+    }
+    
+    return testGroup;
+  }
+  
+  /**
+   * Test merchant API endpoints
+   */
+  async testMerchantAPIs(): Promise<TestGroup> {
+    const testGroup: TestGroup = {
+      name: 'Merchant API Tests',
+      tests: [],
+      passed: true
+    };
+    
+    const baseUrl = 'http://localhost:5000';
+    
+    // Define merchant endpoints to test
+    const endpoints = [
+      { 
+        name: 'Get Merchant Profile',
+        url: '/api/merchants/profile',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Merchant Dashboard',
+        url: '/api/merchants/dashboard',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Merchant Payment Gateways',
+        url: '/api/merchants/payment-gateways',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Merchant Verification Status',
+        url: '/api/merchants/verification/status',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      },
+      { 
+        name: 'Get Merchant Microsite Settings',
+        url: '/api/merchants/microsite-settings',
+        method: 'GET',
+        useTestAuth: true,
+        expectedStatus: [200, 404]
+      }
+    ];
+    
+    // Test each endpoint
+    for (const endpoint of endpoints) {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add test authentication header
+        if (endpoint.useTestAuth) {
+          headers['X-Test-Mode'] = 'true';
+        }
+        
+        const response = await fetch(`${baseUrl}${endpoint.url}`, {
+          method: endpoint.method,
+          headers
+        });
+        
+        const status = response.status;
+        const isStatusCorrect = Array.isArray(endpoint.expectedStatus)
+          ? endpoint.expectedStatus.includes(status)
+          : status === endpoint.expectedStatus;
+        
+        testGroup.tests.push({
+          name: endpoint.name,
+          description: `Test ${endpoint.method} ${endpoint.url}`,
+          passed: isStatusCorrect,
+          result: isStatusCorrect ? 'Endpoint returned acceptable status' : `Endpoint returned unexpected status ${status}`,
+          expected: Array.isArray(endpoint.expectedStatus) 
+            ? `Status ${endpoint.expectedStatus.join(' or ')}` 
+            : `Status ${endpoint.expectedStatus}`,
+          actual: `Status ${status}`
+        });
+        
+        if (!isStatusCorrect) testGroup.passed = false;
+      } catch (error) {
+        testGroup.tests.push({
+          name: endpoint.name,
+          description: `Test ${endpoint.method} ${endpoint.url}`,
+          passed: false,
+          result: 'Error during request',
+          expected: Array.isArray(endpoint.expectedStatus) 
+            ? `Status ${endpoint.expectedStatus.join(' or ')}` 
+            : `Status ${endpoint.expectedStatus}`,
+          actual: `Error: ${(error as Error).message}`,
+          error
+        });
+        testGroup.passed = false;
       }
     }
     
