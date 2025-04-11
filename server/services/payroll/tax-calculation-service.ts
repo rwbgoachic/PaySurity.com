@@ -8,15 +8,10 @@
 import { db } from '../../db';
 import { eq, and, lte, gte, desc, isNull, asc, or } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
+import * as schema from '@shared/schema';
+
+// Import types from specific schema files for strong typing
 import {
-  taxJurisdictions,
-  taxTables,
-  taxBrackets,
-  employeeTaxElections,
-  payrollTaxCalculations,
-  payrollTaxSettings,
-  specialTaxSituations,
-  taxUpdateLogs,
   TaxJurisdiction,
   TaxTable,
   TaxBracket,
@@ -25,10 +20,6 @@ import {
   PayrollTaxSetting,
   SpecialTaxSituation
 } from '@shared/schema-payroll';
-import { 
-  employees, 
-  payrollRuns 
-} from '@shared/schema-employees';
 
 // Decimal precision settings
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
