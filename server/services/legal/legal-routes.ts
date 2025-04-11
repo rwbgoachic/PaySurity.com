@@ -9,30 +9,9 @@ import { insertLegalTimeEntrySchema, insertLegalExpenseEntrySchema, insertLegalI
 import { documentRouter } from "./document-routes";
 import { clientPortalRouter } from "./client-portal-routes";
 import calendarRouter from "./calendar-routes";
+import { ioltaRouter } from "./iolta-routes";
 
-/**
- * Helper to ensure user is authenticated
- */
-const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-  next();
-};
-
-/**
- * Helper to ensure user belongs to the merchant
- */
-const ensureLegalMerchant = (req: Request, res: Response, next: Function) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-  
-  // This would typically check if the user belongs to the merchant
-  // For testing purposes, we'll just pass it through
-  // In a real implementation, you would verify the merchant ID is valid for this user
-  next();
-};
+import { ensureAuthenticated, ensureLegalMerchant } from "./auth-middleware";
 
 export function registerLegalRoutes(app: Express) {
   // Document Management Routes
@@ -40,6 +19,12 @@ export function registerLegalRoutes(app: Express) {
   
   // Client Portal Routes
   app.use('/api/legal/client-portal', clientPortalRouter);
+  
+  // Calendar and Deadlines Routes
+  app.use('/api/legal/calendar', calendarRouter);
+  
+  // IOLTA Trust Accounting Routes
+  app.use('/api/legal/iolta', ioltaRouter);
   // Time Entries APIs
   
   // Create time entry
