@@ -151,26 +151,33 @@ export class ClientPortalTestService implements TestService {
     this.testAccountId = account.id;
     
     // Add client to IOLTA account
-    await ioltaService.addClientToIoltaAccount({
+    await ioltaService.createClientLedger({
       merchantId: this.testMerchantId,
-      clientId: this.testClientId,
-      ioltaAccountId: account.id,
+      clientId: this.testClientId.toString(), // Ensure clientId is a string to match schema
+      trustAccountId: account.id, // Use trustAccountId instead of ioltaAccountId
+      clientName: 'Test PortalUser', // Add required clientName
+      matterName: 'Test Portal Matter', // Add required matterName
+      matterNumber: 'TPM-001', // Add required matterNumber
       balance: '5000.00',
       status: 'active'
     });
     
-    // Create some sample transactions
-    await ioltaService.createTransaction({
-      merchantId: this.testMerchantId,
-      ioltaAccountId: account.id,
-      clientId: this.testClientId,
-      matterId: this.testMatterId,
+    // Create some sample transactions using the correct property names
+    await ioltaService.recordTransaction({
+      // Only include properties from the expected schema
       amount: '5000.00',
-      transactionType: 'deposit',
       description: 'Initial client retainer',
+      transactionType: 'deposit',
+      createdBy: 1, 
+      trustAccountId: account.id,
+      clientLedgerId: 1,
+      fundType: 'retainer',
       status: 'completed',
       referenceNumber: 'TPORTAL-1001',
-      createdAt: new Date(new Date().setDate(new Date().getDate() - 15))
+      // Additional required properties
+      checkNumber: 'N/A',
+      payee: 'N/A',
+      paymentMethod: 'electronic'
     });
     
     // Create test document
@@ -234,8 +241,8 @@ export class ClientPortalTestService implements TestService {
       await db.delete(ioltaClientLedgers)
         .where(and(
           eq(ioltaClientLedgers.merchantId, this.testMerchantId),
-          eq(ioltaClientLedgers.ioltaAccountId, this.testAccountId),
-          eq(ioltaClientLedgers.clientId, this.testClientId)
+          eq(ioltaClientLedgers.trustAccountId, this.testAccountId),
+          eq(ioltaClientLedgers.clientId, this.testClientId.toString()) // Convert clientId to string to match schema
         ));
       
       // Delete account
@@ -263,7 +270,7 @@ export class ClientPortalTestService implements TestService {
         merchantId: this.testMerchantId,
         firstName: 'Test',
         lastName: 'Portal',
-        status: 'active'
+        isActive: true // Use isActive instead of status
       });
       
       this.testPortalUserId = portalUser.id;
@@ -520,7 +527,7 @@ export class ClientPortalTestService implements TestService {
         throw new Error('Test portal user ID or account ID not set');
       }
       
-      const trustInfo = await clientPortalService.getClientTrustAccountInfo(
+      const trustInfo = await clientPortalService.getClientTrustAccounts(
         this.testClientId,
         this.testMerchantId
       );
@@ -529,27 +536,27 @@ export class ClientPortalTestService implements TestService {
         name: 'Access trust account information',
         description: 'Should retrieve trust account information for the client',
         passed: !!trustInfo && 
-                Array.isArray(trustInfo.accounts) &&
-                trustInfo.accounts.length > 0 &&
-                trustInfo.accounts.some(acc => acc.ioltaAccountId === this.testAccountId),
+                Array.isArray(trustInfo) &&
+                trustInfo.length > 0 &&
+                trustInfo.some(acc => acc.id === this.testAccountId),
         error: null,
         expected: {
           hasAccounts: true,
           hasTestAccount: true
         },
         actual: trustInfo ? {
-          hasAccounts: Array.isArray(trustInfo.accounts) && trustInfo.accounts.length > 0,
+          hasAccounts: Array.isArray(trustInfo) && trustInfo.length > 0,
           hasTestAccount: this.testAccountId !== null && 
-                          Array.isArray(trustInfo.accounts) && 
-                          trustInfo.accounts.some(acc => acc.ioltaAccountId === this.testAccountId),
-          accountCount: Array.isArray(trustInfo.accounts) ? trustInfo.accounts.length : 0
+                          Array.isArray(trustInfo) && 
+                          trustInfo.some(acc => acc.id === this.testAccountId),
+          accountCount: Array.isArray(trustInfo) ? trustInfo.length : 0
         } : null
       });
       
       if (!trustInfo || 
-          !Array.isArray(trustInfo.accounts) ||
-          trustInfo.accounts.length === 0 ||
-          !trustInfo.accounts.some(acc => acc.ioltaAccountId === this.testAccountId)) {
+          !Array.isArray(trustInfo) ||
+          trustInfo.length === 0 ||
+          !trustInfo.some(acc => acc.id === this.testAccountId)) {
         groupPassed = false;
       }
     } catch (e) {
@@ -568,11 +575,12 @@ export class ClientPortalTestService implements TestService {
         throw new Error('Test portal user ID or account ID not set');
       }
       
-      const transactions = await clientPortalService.getClientTrustAccountTransactions(
-        this.testClientId,
-        this.testAccountId,
-        this.testMerchantId
-      );
+      // Use the correct method name for trust account transactions
+      const transactions = await clientPortalService.getLedgerTransactions({
+        clientId: this.testClientId.toString(),
+        merchantId: this.testMerchantId,
+        trustAccountId: this.testAccountId
+      });
       
       tests.push({
         name: 'Access trust account transactions',
