@@ -1,58 +1,126 @@
 #!/bin/bash
 
-# Script to run all legal system tests
-# Usage: ./run-legal-tests.sh [test_suite]
-# If no test_suite is specified, it will run all legal system tests
+# Legal Practice Management System Test Runner
+# This script runs tests for the Legal Practice Management System
 
-# Ensure the script is executable
-# chmod +x run-legal-tests.sh
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
 
-# Set up environment
-echo "======================================="
-echo "Legal Practice Management System Tests"
-echo "======================================="
-echo ""
+# Function to print a header
+function print_header() {
+  echo -e "\n${MAGENTA}==============================================${NC}"
+  echo -e "${MAGENTA}$1${NC}"
+  echo -e "${MAGENTA}==============================================${NC}\n"
+}
 
-# Create test reports directory if it doesn't exist
-mkdir -p test-reports
+# Function to print a section
+function print_section() {
+  echo -e "\n${BLUE}----------------------------------------------${NC}"
+  echo -e "${BLUE}$1${NC}"
+  echo -e "${BLUE}----------------------------------------------${NC}\n"
+}
 
-# Determine which test to run
-TEST_SUITE=$1
+# Function to print success message
+function print_success() {
+  echo -e "${GREEN}✓ $1${NC}"
+}
 
-if [ -z "$TEST_SUITE" ]; then
-  echo "Running all legal system tests..."
+# Function to print error message
+function print_error() {
+  echo -e "${RED}✗ $1${NC}"
+}
+
+# Function to print info message
+function print_info() {
+  echo -e "${CYAN}$1${NC}"
+}
+
+# Function to print warning message
+function print_warning() {
+  echo -e "${YELLOW}$1${NC}"
+}
+
+# Display help message
+function show_help() {
+  print_header "Legal Practice Management System Test Runner"
+  echo "Usage: $0 [options]"
+  echo ""
+  echo "Options:"
+  echo "  -h, --help            Show this help message"
+  echo "  -s, --service SERVICE Run a specific test service"
+  echo "  -l, --list            List available test services"
+  echo ""
+  echo "Available services: Users, Clients, Matters, Documents, TimeTracking,"
+  echo "                   ExpenseTracking, IOLTA, Reconciliation, Billing,"
+  echo "                   PaymentPlans, ClientPortal, Reporting"
+  exit 0
+}
+
+# List available test services
+function list_services() {
+  print_header "Available Test Services"
+  echo "Users - User management and authentication tests"
+  echo "Clients - Client management tests"
+  echo "Matters - Legal matter management tests"
+  echo "Documents - Document management tests"
+  echo "TimeTracking - Time entry and tracking tests"
+  echo "ExpenseTracking - Expense tracking tests"
+  echo "IOLTA - Trust accounting tests"
+  echo "Reconciliation - Account reconciliation tests"
+  echo "Billing - Billing and invoicing tests"
+  echo "PaymentPlans - Payment plan tests"
+  echo "ClientPortal - Client portal tests"
+  echo "Reporting - Reporting system tests"
+  exit 0
+}
+
+# Parse command line arguments
+SERVICE=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      show_help
+      ;;
+    -l|--list)
+      list_services
+      ;;
+    -s|--service)
+      SERVICE="$2"
+      shift
+      shift
+      ;;
+    *)
+      print_error "Unknown option: $1"
+      echo "Use -h or --help to see available options"
+      exit 1
+      ;;
+  esac
+done
+
+# Run the tests
+print_header "Running Legal Practice Management System Tests"
+
+if [ -n "$SERVICE" ]; then
+  print_info "Running specific test service: $SERVICE"
+  npx tsx scripts/test-legal-system.ts --service=$SERVICE
+else
+  print_info "Running all test services"
   npx tsx scripts/test-legal-system.ts
-  exit $?
 fi
 
-# Run specific test suite
-case $TEST_SUITE in
-  "iolta")
-    echo "Running IOLTA trust accounting tests..."
-    npx tsx scripts/test-legal-iolta.ts
-    ;;
-  "reconciliation")
-    echo "Running IOLTA reconciliation tests..."
-    npx tsx scripts/test-iolta-reconciliation.ts
-    ;;
-  "portal")
-    echo "Running client portal tests..."
-    npx tsx scripts/test-client-portal.ts
-    ;;
-  "time-expense")
-    echo "Running time & expense tracking tests..."
-    npx tsx scripts/test-legal-time-expense.ts
-    ;;
-  "reporting")
-    echo "Running legal reporting tests..."
-    npx tsx scripts/test-legal-reporting.ts
-    ;;
-  *)
-    echo "Unknown test suite: $TEST_SUITE"
-    echo "Available test suites: iolta, reconciliation, portal, time-expense, reporting"
-    exit 1
-    ;;
-esac
-
-# Return exit code from the test
-exit $?
+# Check the exit code
+EXIT_CODE=$?
+if [ $EXIT_CODE -eq 0 ]; then
+  print_header "All Tests Passed Successfully"
+  exit 0
+else
+  print_header "Tests Failed"
+  exit 1
+fi
