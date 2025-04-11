@@ -15,13 +15,21 @@ import * as fs from 'fs';
 import { SystemTestService, systemTestService } from './test-system';
 import { apiTestService } from './test-api';
 import { performanceTestService } from './test-performance';
+import { walletTestService } from './test-wallet-system';
+import { merchantOnboardingTestService } from './test-merchant-onboarding';
+import { posSystemsTestService } from './test-pos-systems';
+import { affiliateSystemTestService } from './test-affiliate-system';
 
 export class TestCoordinator {
   private testSuites: { [key: string]: any } = {
     delivery: deliveryTestService,
     system: systemTestService,
     api: apiTestService,
-    performance: performanceTestService
+    performance: performanceTestService,
+    wallet: walletTestService,
+    merchant: merchantOnboardingTestService,
+    pos: posSystemsTestService,
+    affiliate: affiliateSystemTestService
   };
   
   /**
