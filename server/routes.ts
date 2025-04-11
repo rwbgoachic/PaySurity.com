@@ -16,6 +16,7 @@ import { generateOrderModificationUrl } from "./services/qrcode";
 import { taxCalculationService } from "./services/payroll/tax-calculation-service";
 import { taxDataService } from "./services/payroll/tax-data-service";
 import { payrollProcessorService } from "./services/payroll/payroll-processor-service";
+import { registerLegalRoutes } from "./services/legal/legal-routes";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -6578,6 +6579,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Server error" });
     }
   });
+
+  // Register all legal payment features routes
+  registerLegalRoutes(app);
 
   return httpServer;
 }

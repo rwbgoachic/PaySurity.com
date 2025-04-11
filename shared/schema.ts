@@ -3717,6 +3717,334 @@ export const insertRestaurantInventoryTransactionSchema = createInsertSchema(res
 export type RestaurantInventoryTransaction = typeof restaurantInventoryTransactions.$inferSelect;
 export type InsertRestaurantInventoryTransaction = z.infer<typeof insertRestaurantInventoryTransactionSchema>;
 
+// Legal Industry Schema - IOLTA Compliance
+
+// IOLTA Account Status
+export const ioltaAccountStatusEnum = pgEnum("iolta_account_status", ["active", "inactive", "pending_verification", "suspended"]);
+
+// IOLTA Account Type 
+export const ioltaAccountTypeEnum = pgEnum("iolta_account_type", ["attorney_trust", "escrow", "iolta", "iola", "general_client_trust"]);
+
+// Transaction Fund Type
+export const transactionFundTypeEnum = pgEnum("transaction_fund_type", ["earned", "unearned", "expense", "expense_advance", "filing_fee", "retainer", "trust", "operating"]);
+
+// IOLTA Trust Accounts
+export const ioltaTrustAccounts = pgTable("iolta_trust_accounts", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Law firm/attorney profile
+  accountName: text("account_name").notNull(),
+  accountType: text("account_type", { enum: ["attorney_trust", "escrow", "iolta", "iola", "general_client_trust"] }).notNull(),
+  bankName: text("bank_name").notNull(),
+  accountNumber: text("account_number").notNull(),
+  routingNumber: text("routing_number").notNull(),
+  accountStatus: text("account_status", { enum: ["active", "inactive", "pending_verification", "suspended"] }).notNull().default("pending_verification"),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  lastReconcileDate: timestamp("last_reconcile_date"),
+  interestBeneficiary: text("interest_beneficiary").default("state_bar_foundation"),
+  barAssociationId: text("bar_association_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIoltaTrustAccountSchema = createInsertSchema(ioltaTrustAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type IoltaTrustAccount = typeof ioltaTrustAccounts.$inferSelect;
+export type InsertIoltaTrustAccount = z.infer<typeof insertIoltaTrustAccountSchema>;
+
+// IOLTA Client Trust Ledgers
+export const ioltaClientLedgers = pgTable("iolta_client_ledgers", {
+  id: serial("id").primaryKey(),
+  trustAccountId: integer("trust_account_id").notNull(),
+  merchantId: integer("merchant_id").notNull(),
+  clientName: text("client_name").notNull(),
+  clientId: text("client_id").notNull(), // Custom client ID or reference number
+  matterName: text("matter_name").notNull(),
+  matterNumber: text("matter_number").notNull(),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  notes: text("notes"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIoltaClientLedgerSchema = createInsertSchema(ioltaClientLedgers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type IoltaClientLedger = typeof ioltaClientLedgers.$inferSelect;
+export type InsertIoltaClientLedger = z.infer<typeof insertIoltaClientLedgerSchema>;
+
+// IOLTA Transactions
+export const ioltaTransactions = pgTable("iolta_transactions", {
+  id: serial("id").primaryKey(),
+  trustAccountId: integer("trust_account_id").notNull(),
+  clientLedgerId: integer("client_ledger_id").notNull(),
+  transactionType: text("transaction_type").notNull(), // deposit, withdrawal, transfer, payment
+  fundType: text("fund_type", { enum: ["earned", "unearned", "expense", "expense_advance", "filing_fee", "retainer", "trust", "operating"] }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentMethodId: integer("payment_method_id"),
+  checkNumber: text("check_number"),
+  description: text("description").notNull(),
+  reference: text("reference"), // External reference number
+  relatedInvoiceId: integer("related_invoice_id"),
+  createdBy: integer("created_by").notNull(), // User ID who created the transaction
+  approvedBy: integer("approved_by"), // User ID who approved the transaction
+  status: text("status").notNull().default("pending"), // pending, completed, rejected, voided
+  earningDate: timestamp("earning_date"), // When funds are considered earned (for transfers from trust to operating)
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+export const insertIoltaTransactionSchema = createInsertSchema(ioltaTransactions).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
+export type IoltaTransaction = typeof ioltaTransactions.$inferSelect;
+export type InsertIoltaTransaction = z.infer<typeof insertIoltaTransactionSchema>;
+
+// Legal Time and Expense Tracking
+
+// Time Entry Type Enum
+export const timeEntryTypeEnum = pgEnum("time_entry_type", ["billable", "non_billable", "no_charge"]);
+
+// Legal Time Entries
+export const legalTimeEntries = pgTable("legal_time_entries", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  userId: integer("user_id").notNull(), // The timekeeper (attorney, paralegal)
+  clientId: integer("client_id").notNull(),
+  matterNumber: text("matter_number").notNull(),
+  dateOfWork: date("date_of_work").notNull(),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  duration: decimal("duration", { precision: 6, scale: 2 }).notNull(), // Hours in decimal form
+  description: text("description").notNull(),
+  entryType: text("entry_type", { enum: ["billable", "non_billable", "no_charge"] }).notNull().default("billable"),
+  billingRate: decimal("billing_rate", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
+  taskCode: text("task_code"), // For standardized legal billing codes (UTBMS, ABA, etc.)
+  activityCode: text("activity_code"),
+  invoiceId: integer("invoice_id"),
+  invoiced: boolean("invoiced").default(false),
+  status: text("status").notNull().default("active"), // active, billed, deleted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLegalTimeEntrySchema = createInsertSchema(legalTimeEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LegalTimeEntry = typeof legalTimeEntries.$inferSelect;
+export type InsertLegalTimeEntry = z.infer<typeof insertLegalTimeEntrySchema>;
+
+// Legal Expense Type Enum
+export const legalExpenseTypeEnum = pgEnum("legal_expense_type", [
+  "court_fees", "filing_fees", "expert_witness", "deposition", "transcript", 
+  "service_of_process", "travel", "copying", "postage", "research", "other"
+]);
+
+// Legal Expense Entries
+export const legalExpenseEntries = pgTable("legal_expense_entries", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  userId: integer("user_id").notNull(), // The person recording the expense
+  clientId: integer("client_id").notNull(),
+  matterNumber: text("matter_number").notNull(),
+  expenseDate: date("expense_date").notNull(),
+  expenseType: text("expense_type", { enum: [
+    "court_fees", "filing_fees", "expert_witness", "deposition", "transcript", 
+    "service_of_process", "travel", "copying", "postage", "research", "other"
+  ] }).notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  billable: boolean("billable").notNull().default(true),
+  markupPercentage: decimal("markup_percentage", { precision: 5, scale: 2 }).default("0.00"),
+  totalBillableAmount: decimal("total_billable_amount", { precision: 10, scale: 2 }),
+  receiptImageUrl: text("receipt_image_url"),
+  invoiceId: integer("invoice_id"),
+  invoiced: boolean("invoiced").default(false),
+  status: text("status").notNull().default("active"), // active, billed, deleted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLegalExpenseEntrySchema = createInsertSchema(legalExpenseEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LegalExpenseEntry = typeof legalExpenseEntries.$inferSelect;
+export type InsertLegalExpenseEntry = z.infer<typeof insertLegalExpenseEntrySchema>;
+
+// Legal Invoicing System
+
+// Invoice Status Enum
+export const legalInvoiceStatusEnum = pgEnum("legal_invoice_status", [
+  "draft", "sent", "viewed", "partial_payment", "paid", "overdue", "void"
+]);
+
+// Legal Invoices Table
+export const legalInvoices = pgTable("legal_invoices", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  clientId: integer("client_id").notNull(),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  matterNumber: text("matter_number").notNull(),
+  issueDate: date("issue_date").notNull(),
+  dueDate: date("due_date").notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("0.00"),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0.00"),
+  discountRate: decimal("discount_rate", { precision: 5, scale: 2 }).default("0.00"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0.00"),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0.00"),
+  balanceDue: decimal("balance_due", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  termsAndConditions: text("terms_and_conditions"),
+  status: text("status", { enum: [
+    "draft", "sent", "viewed", "partial_payment", "paid", "overdue", "void"
+  ] }).notNull().default("draft"),
+  lastSentDate: timestamp("last_sent_date"),
+  paymentLink: text("payment_link"),
+  paymentQrCode: text("payment_qr_code"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLegalInvoiceSchema = createInsertSchema(legalInvoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LegalInvoice = typeof legalInvoices.$inferSelect;
+export type InsertLegalInvoice = z.infer<typeof insertLegalInvoiceSchema>;
+
+// Payment Plans
+export const recurringFrequencyEnum = pgEnum("recurring_frequency", [
+  "weekly", "biweekly", "monthly", "quarterly", "semiannual", "annual"
+]);
+
+export const paymentPlanStatusEnum = pgEnum("payment_plan_status", [
+  "active", "on_hold", "completed", "cancelled", "defaulted"
+]);
+
+// Payment Plans Table - For scheduled/recurring payments
+export const paymentPlans = pgTable("payment_plans", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  clientId: integer("client_id").notNull(),
+  invoiceId: integer("invoice_id"), // Optional - can be for standalone payment plans
+  planName: text("plan_name").notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  remainingBalance: decimal("remaining_balance", { precision: 10, scale: 2 }).notNull(),
+  installmentAmount: decimal("installment_amount", { precision: 10, scale: 2 }).notNull(),
+  numberOfInstallments: integer("number_of_installments").notNull(),
+  installmentsPaid: integer("installments_paid").default(0),
+  frequency: text("frequency", { enum: [
+    "weekly", "biweekly", "monthly", "quarterly", "semiannual", "annual"
+  ] }).notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  nextPaymentDate: date("next_payment_date").notNull(),
+  lastPaymentDate: date("last_payment_date"),
+  paymentMethodId: integer("payment_method_id").notNull(), // Stored payment method
+  status: text("status", { enum: [
+    "active", "on_hold", "completed", "cancelled", "defaulted"
+  ] }).notNull().default("active"),
+  autoProcess: boolean("auto_process").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPaymentPlanSchema = createInsertSchema(paymentPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PaymentPlan = typeof paymentPlans.$inferSelect;
+export type InsertPaymentPlan = z.infer<typeof insertPaymentPlanSchema>;
+
+// Payment Plan Transactions
+export const paymentPlanTransactions = pgTable("payment_plan_transactions", {
+  id: serial("id").primaryKey(),
+  paymentPlanId: integer("payment_plan_id").notNull(),
+  plannedDate: date("planned_date").notNull(),
+  actualDate: date("actual_date"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("scheduled"), // scheduled, processing, completed, failed
+  transactionId: integer("transaction_id"), // Reference to the actual payment transaction
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").default(0),
+  nextRetryDate: timestamp("next_retry_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPaymentPlanTransactionSchema = createInsertSchema(paymentPlanTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PaymentPlanTransaction = typeof paymentPlanTransactions.$inferSelect;
+export type InsertPaymentPlanTransaction = z.infer<typeof insertPaymentPlanTransactionSchema>;
+
+// Legal Client Financing (Pay Later)
+export const legalFinancingStatusEnum = pgEnum("legal_financing_status", [
+  "pending_application", "approved", "active", "rejected", "completed", "defaulted", "cancelled"
+]);
+
+// Client Financing Applications
+export const clientFinancingApplications = pgTable("client_financing_applications", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(),
+  clientId: integer("client_id").notNull(),
+  invoiceId: integer("invoice_id"), // Optional - can be for retainer or future services
+  financingAmount: decimal("financing_amount", { precision: 10, scale: 2 }).notNull(),
+  termMonths: integer("term_months").notNull(), // Financing term in months
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).notNull(),
+  monthlyPayment: decimal("monthly_payment", { precision: 10, scale: 2 }).notNull(),
+  totalPaybackAmount: decimal("total_payback_amount", { precision: 10, scale: 2 }).notNull(),
+  applicationDate: timestamp("application_date").defaultNow(),
+  creditScore: integer("credit_score"),
+  status: text("status", { enum: ["pending_application", "approved", "active", "rejected", "completed", "defaulted", "cancelled"] }).notNull().default("pending_application"),
+  approvalDate: timestamp("approval_date"),
+  approvedBy: text("approved_by"),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  agreementDocUrl: text("agreement_doc_url"),
+  paymentPlanId: integer("payment_plan_id"), // Reference to payment plan created after approval
+  affirmApplicationId: text("affirm_application_id"), // For Affirm integration
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientFinancingApplicationSchema = createInsertSchema(clientFinancingApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ClientFinancingApplication = typeof clientFinancingApplications.$inferSelect;
+export type InsertClientFinancingApplication = z.infer<typeof insertClientFinancingApplicationSchema>;
+
 // Documentation System Schema
 export const documentVersions = pgTable("document_versions", {
   id: serial("id").primaryKey(),
