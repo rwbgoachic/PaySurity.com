@@ -9,7 +9,8 @@ import { db } from "../../db";
 import { 
   legalReportDefinitions, 
   legalScheduledReports, 
-  legalGeneratedReports 
+  legalGeneratedReports,
+  InsertLegalReportDefinition 
 } from "../../../shared/schema";
 import { 
   eq, 
@@ -44,6 +45,8 @@ export interface ReportParameters {
   fields?: string[];
   filters?: Record<string, any>;
   templateId?: number;
+  scheduledReportId?: number;
+  parameters?: Record<string, any>;
   [key: string]: any;
 }
 
@@ -60,21 +63,21 @@ class LegalReportingService {
   /**
    * Create a new report definition
    */
-  async createReportDefinition(data: any) {
+  async createReportDefinition(data: InsertLegalReportDefinition & { format?: string, frequency?: string }) {
     try {
+      const values = {
+        merchantId: data.merchantId,
+        createdById: data.createdById,
+        name: data.name,
+        description: data.description || null,
+        reportType: data.reportType,
+        isPublic: data.isPublic || false,
+        parameters: data.parameters || {},
+        // Frequency and format are handled elsewhere, not in schema
+      };
+      
       const [reportDefinition] = await db.insert(legalReportDefinitions)
-        .values({
-          merchantId: data.merchantId,
-          createdById: data.createdById,
-          name: data.name,
-          description: data.description || null,
-          reportType: data.reportType,
-          frequency: data.frequency,
-          isPublic: data.isPublic || false,
-          parameters: data.parameters || {},
-          format: data.format || "pdf",
-          createdAt: new Date()
-        })
+        .values(values)
         .returning();
 
       return reportDefinition;
@@ -127,10 +130,8 @@ class LegalReportingService {
           name: data.name,
           description: data.description,
           reportType: data.reportType,
-          frequency: data.frequency,
           isPublic: data.isPublic,
           parameters: data.parameters,
-          format: data.format,
           updatedAt: new Date()
         })
         .where(eq(legalReportDefinitions.id, id))
@@ -384,13 +385,13 @@ class LegalReportingService {
       }
       
       // Merge parameters with defaults
-      const mergedParams = {
-        ...reportDefinition.parameters,
+      const mergedParams: ReportParameters = {
+        ...(reportDefinition.parameters || {}),
         ...parameters
       };
       
-      // Set the format from parameters or use default
-      const format = parameters.format || reportDefinition.format;
+      // Set the format from parameters or use default (pdf as fallback)
+      const format = (parameters.format || "pdf") as "pdf" | "excel" | "csv" | "json" | "html";
       
       // Get report data
       const reportData = await this.getReportData(reportDefinition.reportType, mergedParams);
@@ -416,7 +417,7 @@ class LegalReportingService {
           reportType: reportDefinition.reportType,
           format: format,
           filePath: fileName,
-          parameters: mergedParams,
+          parameters: mergedParams as any, // Using type assertion to work around the spread type issue
           fileSize: fs.statSync(filePath).size,
           isPublic: reportDefinition.isPublic,
           generationTime,
@@ -425,9 +426,10 @@ class LegalReportingService {
         .returning();
       
       return generatedReport;
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error generating report:", error);
-      throw new Error(`Failed to generate report: ${error.message}`);
+      throw new Error(`Failed to generate report: ${errorMessage}`);
     }
   }
 
@@ -584,7 +586,7 @@ class LegalReportingService {
   private async generateFile(
     data: any,
     filePath: string,
-    format: string,
+    format: "pdf" | "excel" | "csv" | "json" | "html",
     reportDefinition: any,
     parameters: ReportParameters
   ): Promise<string> {
