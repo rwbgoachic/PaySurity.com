@@ -1,0 +1,841 @@
+{
+  "name": "Comprehensive System Test",
+  "timestamp": "2025-04-11T01:01:10.744Z",
+  "passed": false,
+  "testGroups": [
+    {
+      "name": "Provider Registration Tests",
+      "tests": [
+        {
+          "name": "List Delivery Providers",
+          "description": "Should return a list of available delivery providers",
+          "passed": true,
+          "result": "Found 1 providers",
+          "expected": "At least one provider",
+          "actual": "1 providers"
+        },
+        {
+          "name": "Check Internal Provider Availability",
+          "description": "Should find the internal delivery provider",
+          "passed": true,
+          "result": "Internal provider found",
+          "expected": "Internal provider available",
+          "actual": "Found: Restaurant Delivery"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Quote Generation Tests",
+      "tests": [
+        {
+          "name": "Get Delivery Quotes",
+          "description": "Should return quotes from available delivery providers",
+          "passed": true,
+          "result": "Retrieved 1 quotes",
+          "expected": "At least one quote",
+          "actual": "1 quotes returned"
+        },
+        {
+          "name": "Verify Quote Structure",
+          "description": "Quote should have all required fields",
+          "passed": true,
+          "result": "Quote has all required fields",
+          "expected": "All required fields present",
+          "actual": "{\n  \"providerId\": 1,\n  \"providerName\": \"Restaurant Delivery\",\n  \"fee\": 2.57,\n  \"customerFee\": 3.0839999999999996,\n  \"platformFee\": 0.514,\n  \"currency\": \"USD\",\n  \"estimatedPickupTime\": \"2025-04-11T01:11:10.745Z\",\n  \"estimatedDeliveryTime\": \"2025-04-11T01:11:26.945Z\",\n  \"distance\": 0.09,\n  \"distanceUnit\": \"miles\",\n  \"valid\": true,\n  \"validUntil\": \"2025-04-11T01:31:10.745Z\",\n  \"errors\": [],\n  \"providerData\": {\n    \"quoteId\": \"internal-1744333270745\"\n  }\n}"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Order Creation Tests",
+      "tests": [
+        {
+          "name": "Create Delivery Order",
+          "description": "Should successfully create a delivery order",
+          "passed": true,
+          "result": "Order created successfully",
+          "expected": "Order with external ID",
+          "actual": "External Order ID: internal-1-TEST-ORD-1744333270745-1744333270745"
+        },
+        {
+          "name": "Verify Order Structure",
+          "description": "Order should have all required fields",
+          "passed": true,
+          "result": "Order has all required fields",
+          "expected": "All required fields present",
+          "actual": "{\n  \"externalOrderId\": \"internal-1-TEST-ORD-1744333270745-1744333270745\",\n  \"status\": \"pending\",\n  \"estimatedPickupTime\": \"2025-04-11T01:11:10.745Z\",\n  \"estimatedDeliveryTime\": \"2025-04-11T01:11:26.945Z\",\n  \"providerData\": {\n    \"deliveryId\": \"internal-1-TEST-ORD-1744333270745-1744333270745\",\n    \"distance\": 0.09\n  }\n}"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Order Cancellation Tests",
+      "tests": [
+        {
+          "name": "Cancel Delivery Order",
+          "description": "Should successfully cancel a delivery order",
+          "passed": true,
+          "result": "Order cancelled successfully",
+          "expected": "true",
+          "actual": "true"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Status Update Tests",
+      "tests": [
+        {
+          "name": "Verify Internal Provider Order",
+          "description": "Should successfully create order with internal provider",
+          "passed": true,
+          "result": "Order created successfully with internal provider",
+          "expected": "Order with valid external ID",
+          "actual": "External Order ID: internal-1-TEST-STATUS-1744333270746-1744333270746"
+        },
+        {
+          "name": "Initial Order Status",
+          "description": "The order should have correct initial status",
+          "passed": true,
+          "result": "Initial status is pending",
+          "expected": "pending",
+          "actual": "pending"
+        },
+        {
+          "name": "Status Update API",
+          "description": "API should provide methods to update delivery status",
+          "passed": true,
+          "result": "Status update functionality exists",
+          "expected": "Status update API available",
+          "actual": "Test needs implementation with direct DB access"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Database Connectivity Tests",
+      "tests": [
+        {
+          "name": "Database Connection",
+          "description": "Should connect to the database and execute a simple query",
+          "passed": true,
+          "result": "Successfully connected to database",
+          "expected": "Row with test = 1",
+          "actual": "Row with test = 1"
+        },
+        {
+          "name": "Complex Query Execution",
+          "description": "Should execute a more complex query against the database",
+          "passed": true,
+          "result": "Successfully executed complex query",
+          "expected": "Query execution without errors",
+          "actual": "Retrieved information about 241 tables"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "File System Access Tests",
+      "tests": [
+        {
+          "name": "Directory Creation",
+          "description": "Should create a test directory",
+          "passed": true,
+          "result": "Successfully created directory",
+          "expected": "Directory exists",
+          "actual": "Directory exists"
+        },
+        {
+          "name": "File Writing",
+          "description": "Should write content to a test file",
+          "passed": true,
+          "result": "Successfully wrote to file",
+          "expected": "File exists with content",
+          "actual": "File exists"
+        },
+        {
+          "name": "File Reading",
+          "description": "Should read content from a test file",
+          "passed": true,
+          "result": "Successfully read file",
+          "expected": "Test content: 2025-04-11T01:01:11.134Z",
+          "actual": "Test content: 2025-04-11T01:01:11.134Z"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Environment Variables Tests",
+      "tests": [
+        {
+          "name": "Environment Variable: DATABASE_URL",
+          "description": "Should have DATABASE_URL environment variable set",
+          "passed": true,
+          "result": "DATABASE_URL is set",
+          "expected": "Variable is set",
+          "actual": "Variable is set"
+        },
+        {
+          "name": "Environment Variable: NODE_ENV",
+          "description": "Should have NODE_ENV environment variable set",
+          "passed": true,
+          "result": "NODE_ENV is set",
+          "expected": "Variable is set",
+          "actual": "Variable is set"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "System Resources Tests",
+      "tests": [
+        {
+          "name": "CPU Information",
+          "description": "Should get CPU information",
+          "passed": true,
+          "result": "Found 8 CPUs",
+          "expected": "At least 1 CPU",
+          "actual": "8 CPUs"
+        },
+        {
+          "name": "Memory Information",
+          "description": "Should get memory information",
+          "passed": true,
+          "result": "Memory usage: 46%",
+          "expected": "Memory information",
+          "actual": "Total: 64313MB, Free: 34852MB"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Internal API Tests",
+      "tests": [
+        {
+          "name": "GET /api/health",
+          "description": "Should receive a valid response from /api/health",
+          "passed": true,
+          "result": "Received valid response",
+          "expected": "Status 200 with valid body",
+          "actual": "Status 200, body is valid"
+        },
+        {
+          "name": "GET /api/user",
+          "description": "Should receive a valid response from /api/user",
+          "passed": true,
+          "result": "Received valid response",
+          "expected": "Status 200 with valid body",
+          "actual": "Status 200, body is valid"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "External API Tests",
+      "tests": [
+        {
+          "name": "News API Connectivity",
+          "description": "Test connection to News API",
+          "passed": true,
+          "result": "Successfully connected",
+          "expected": "Status 2xx with valid response body",
+          "actual": "Status 200, body validation: passed"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Authentication API Tests",
+      "tests": [
+        {
+          "name": "Access Protected Route Without Auth",
+          "description": "Test authentication behavior for http://localhost:5000/api/protected",
+          "passed": true,
+          "result": "Authentication behaved as expected",
+          "expected": "Status 401",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Auth Status Check",
+          "description": "Test authentication behavior for http://localhost:5000/api/user",
+          "passed": true,
+          "result": "Authentication behaved as expected",
+          "expected": "Status 200",
+          "actual": "Status 200"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "API Error Handling Tests",
+      "tests": [
+        {
+          "name": "Not Found Error",
+          "description": "Test error handling for GET http://localhost:5000/api/non-existent-endpoint",
+          "passed": true,
+          "result": "Error handled correctly",
+          "expected": "Status 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Method Not Allowed",
+          "description": "Test error handling for PUT http://localhost:5000/api/health",
+          "passed": true,
+          "result": "Error handled correctly",
+          "expected": "Status 405",
+          "actual": "Status 405"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "API Response Time Tests",
+      "tests": [
+        {
+          "name": "GET /api/health Response Time",
+          "description": "Should respond within 200ms",
+          "passed": true,
+          "result": "Response time is acceptable (2ms)",
+          "expected": "<= 200ms",
+          "actual": "2ms"
+        },
+        {
+          "name": "GET /api/user Response Time",
+          "description": "Should respond within 200ms",
+          "passed": true,
+          "result": "Response time is acceptable (2ms)",
+          "expected": "<= 200ms",
+          "actual": "2ms"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Database Performance Tests",
+      "tests": [
+        {
+          "name": "Simple SELECT Query Performance",
+          "description": "Should execute within 700ms",
+          "passed": true,
+          "result": "Execution time is acceptable (77ms)",
+          "expected": "<= 700ms",
+          "actual": "77ms"
+        },
+        {
+          "name": "Schema Information Query Performance",
+          "description": "Should execute within 200ms",
+          "passed": true,
+          "result": "Execution time is acceptable (76ms)",
+          "expected": "<= 200ms",
+          "actual": "76ms"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Memory Usage Tests",
+      "tests": [
+        {
+          "name": "Large Array Creation Memory Usage",
+          "description": "Should not increase heap usage by more than 50MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (28.84MB)",
+          "expected": "<= 50.00MB",
+          "actual": "28.84MB"
+        },
+        {
+          "name": "JSON Stringify/Parse Memory Usage",
+          "description": "Should not increase heap usage by more than 30MB",
+          "passed": true,
+          "result": "Memory increase is acceptable (-32.72MB)",
+          "expected": "<= 30.00MB",
+          "actual": "-32.72MB"
+        },
+        {
+          "name": "Overall Memory Usage",
+          "description": "Total process memory usage should be reasonable",
+          "passed": true,
+          "result": "Memory usage is acceptable (419.74MB RSS)",
+          "expected": "<= 700MB RSS",
+          "actual": "RSS: 419.74MB, Heap Total: 252.21MB, Heap Used: 199.45MB"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "Wallet Initialization Tests",
+      "tests": [
+        {
+          "name": "Wallet Table Existence",
+          "description": "The wallets table should exist in the database",
+          "passed": false,
+          "result": "Wallets table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Wallet Operations Tests",
+      "tests": [
+        {
+          "name": "Transactions Table Existence",
+          "description": "The wallet_transactions table should exist in the database",
+          "passed": false,
+          "result": "Transactions table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Get Wallet Balance",
+          "description": "Test the /api/wallets/balance endpoint",
+          "passed": true,
+          "result": "Endpoint returned expected status 401",
+          "expected": "Status 401",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Wallet Transaction History",
+          "description": "Test the /api/wallets/transactions endpoint",
+          "passed": true,
+          "result": "Endpoint returned expected status 401",
+          "expected": "Status 401",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Wallet Security Tests",
+      "tests": [
+        {
+          "name": "Create Wallet Transaction",
+          "description": "Test security of the /api/wallets/transactions endpoint",
+          "passed": false,
+          "result": "Endpoint security issue: returned status 403",
+          "expected": "Status 401 (Unauthorized)",
+          "actual": "Status 403"
+        },
+        {
+          "name": "Add Payment Method",
+          "description": "Test security of the /api/wallets/payment-methods endpoint",
+          "passed": false,
+          "result": "Endpoint security issue: returned status 403",
+          "expected": "Status 401 (Unauthorized)",
+          "actual": "Status 403"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Wallet API Tests",
+      "tests": [
+        {
+          "name": "Get Wallet Balance with Auth",
+          "description": "Test the /api/wallets/balance endpoint with test authentication",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Get Transaction History with Auth",
+          "description": "Test the /api/wallets/transactions endpoint with test authentication",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Merchant Application Tests",
+      "tests": [
+        {
+          "name": "Merchant Applications Table Existence",
+          "description": "The merchant_applications table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Merchant Application Submission",
+          "description": "Test the merchant application submission endpoint",
+          "passed": false,
+          "result": "Endpoint security issue: returned status 403",
+          "expected": "Status 401 (Unauthorized)",
+          "actual": "Status 403"
+        },
+        {
+          "name": "Merchant Applications Retrieval with Test Auth",
+          "description": "Test the merchant applications retrieval endpoint with test authentication",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Merchant Verification Tests",
+      "tests": [
+        {
+          "name": "Get Verification Status",
+          "description": "Test the /api/merchants/verification/status endpoint",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Submit Verification Documents",
+          "description": "Test the /api/merchants/verification/documents endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 403",
+          "expected": "Status 401",
+          "actual": "Status 403"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Payment Integration Tests",
+      "tests": [
+        {
+          "name": "Get Payment Gateways",
+          "description": "Test the /api/payment-gateways endpoint",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 401",
+          "expected": "Status 401",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Get Payment Gateways with Auth",
+          "description": "Test the /api/payment-gateways endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 403 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Create Payment Gateway",
+          "description": "Test the /api/payment-gateways endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 201 or 400 or 403 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Helcim Integration Test",
+          "description": "Test the Helcim payment integration",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200, 400, or 404",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Merchant Microsite Tests",
+      "tests": [
+        {
+          "name": "Get Public Merchant Microsite",
+          "description": "Test the /api/microsites/merchant/test-merchant endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 500",
+          "expected": "Status 200 or 404",
+          "actual": "Status 500"
+        },
+        {
+          "name": "Update Merchant Microsite Settings",
+          "description": "Test the /api/merchants/microsite-settings endpoint",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 400 or 403 or 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Microsite Settings Table Existence",
+          "description": "The merchant_microsite_settings table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Restaurant POS (BistroBeast) Tests",
+      "tests": [
+        {
+          "name": "Restaurant Tables Table Existence",
+          "description": "The restaurant tables table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Restaurant Orders Table Existence",
+          "description": "The restaurant orders table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Restaurant Menu Items Table Existence",
+          "description": "The restaurant menu items table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Restaurant Order Items Table Existence",
+          "description": "The restaurant order items table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Get Restaurant Tables",
+          "description": "Test the /api/restaurant/tables endpoint",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Get Restaurant Orders",
+          "description": "Test the /api/restaurant/orders endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Create Restaurant Order",
+          "description": "Test the /api/restaurant/orders endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 201 or 400 or 404",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Retail POS (ECom Ready) Tests",
+      "tests": [
+        {
+          "name": "Retail Products Table Existence",
+          "description": "The retail products table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Retail Inventory Table Existence",
+          "description": "The retail inventory table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Retail Sales Table Existence",
+          "description": "The retail sales table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Get Retail Inventory",
+          "description": "Test the /api/pos/inventory endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Create Retail Product",
+          "description": "Test the /api/pos/inventory endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 201 or 400 or 404",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Common POS Infrastructure Tests",
+      "tests": [
+        {
+          "name": "Get POS Locations",
+          "description": "Test the /api/pos/locations endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Get POS Staff",
+          "description": "Test the /api/pos/staff endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Get POS Payments",
+          "description": "Test the /api/pos/payments endpoint",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 200 or 404",
+          "actual": "Status 401"
+        },
+        {
+          "name": "Process POS Payment",
+          "description": "Test the POS payment processing",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 401",
+          "expected": "Status 201, 400, or 404",
+          "actual": "Status 401"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Affiliate Registration Tests",
+      "tests": [
+        {
+          "name": "Affiliate Profiles Table Existence",
+          "description": "The affiliate_profiles table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Affiliate Registration Security",
+          "description": "Test that affiliate registration requires authentication",
+          "passed": true,
+          "result": "Endpoint properly secured",
+          "expected": "Status 401 (Unauthorized) or 403 (Forbidden)",
+          "actual": "Status 403"
+        },
+        {
+          "name": "Get Affiliate Profile with Test Auth",
+          "description": "Test retrieving affiliate profile with test authentication",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Referral Tracking Tests",
+      "tests": [
+        {
+          "name": "Merchant Referrals Table Existence",
+          "description": "The merchant_referrals table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Get Affiliate Referrals with Test Auth",
+          "description": "Test retrieving affiliate referrals with test authentication",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Track Affiliate Referral",
+          "description": "Test tracking affiliate referrals through URL parameters",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Commission System Tests",
+      "tests": [
+        {
+          "name": "Affiliate Commissions Table Existence",
+          "description": "The affiliate_commissions table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Commission Payouts Table Existence",
+          "description": "The commission_payouts table should exist in the database",
+          "passed": false,
+          "result": "Table does not exist",
+          "expected": "Table exists",
+          "actual": "Table does not exist"
+        },
+        {
+          "name": "Get Affiliate Commissions",
+          "description": "Test the /api/affiliates/commissions endpoint",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        },
+        {
+          "name": "Get Affiliate Payouts",
+          "description": "Test the /api/affiliates/payouts endpoint",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200 or 404",
+          "actual": "Status 404"
+        }
+      ],
+      "passed": false
+    },
+    {
+      "name": "Affiliate Microsite Tests",
+      "tests": [
+        {
+          "name": "Access Affiliate Microsite",
+          "description": "Test accessing a public affiliate microsite",
+          "passed": false,
+          "result": "Endpoint returned unexpected status 500",
+          "expected": "Status 200 or 404",
+          "actual": "Status 500"
+        },
+        {
+          "name": "Update Affiliate Microsite Settings",
+          "description": "Test updating affiliate microsite settings",
+          "passed": true,
+          "result": "Endpoint returned acceptable status 404",
+          "expected": "Status 200, 400, or 404",
+          "actual": "Status 404"
+        }
+      ],
+      "passed": false
+    }
+  ]
+}
