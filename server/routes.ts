@@ -1540,7 +1540,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const query = 'payment processing OR fintech OR "payment industry" OR "credit card processing" OR "payment gateway" OR "merchant services"';
       
       const newsData = await fetchNewsFromApi('', query);
-      res.json(newsData);
+      
+      // Transform data to match our client's expected format
+      const transformedArticles = newsData.articles.map((article: any) => {
+        return {
+          title: article.title,
+          source: article.source?.name || 'Unknown Source',
+          author: article.author || 'Unknown Author',
+          url: article.url,
+          urlToImage: article.urlToImage,
+          date: new Date(article.publishedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
+          summary: article.description || article.content || 'No summary available',
+          // Categorize articles based on keywords in title or description
+          category: 
+            article.title?.toLowerCase().includes('regulation') || 
+            article.description?.toLowerCase().includes('regulation') ? 'Regulation' :
+            article.title?.toLowerCase().includes('innovat') || 
+            article.description?.toLowerCase().includes('innovat') ? 'Innovation' :
+            article.title?.toLowerCase().includes('market') || 
+            article.description?.toLowerCase().includes('market') ? 'Market Trends' :
+            'Industry News'
+        };
+      });
+      
+      // Return the transformed data
+      res.json({ articles: transformedArticles });
     } catch (error) {
       console.error("Error fetching payment industry news:", error);
       res.status(500).json({ error: "Failed to fetch news" });

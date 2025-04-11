@@ -15,7 +15,7 @@ export interface NewsItem {
  */
 export async function fetchPaymentNews(): Promise<NewsItem[]> {
   try {
-    const response = await fetch('/api/news?category=payment');
+    const response = await fetch('/api/news/payment-industry');
     
     if (!response.ok) {
       throw new Error(`Failed to fetch news. Status: ${response.status}`);
