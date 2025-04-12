@@ -21,6 +21,36 @@ export class IoltaTestService implements TestService {
   private trustAccountId: number | null = null;
   private clientLedgerId: number | null = null;
   private transactionIds: number[] = [];
+  
+  /**
+   * Create a deliberate test failure (for testing the test framework)
+   * Required by TestService interface
+   */
+  async createDeliberateTestFailure(): Promise<TestReport> {
+    return {
+      serviceName: 'IOLTA Trust Accounting',
+      passed: false,
+      startTime: new Date(),
+      endTime: new Date(),
+      duration: 0,
+      testGroups: [
+        {
+          name: 'Deliberate Failure',
+          description: 'This test is designed to fail for testing purposes.',
+          tests: [
+            {
+              name: 'Deliberate failure test',
+              description: 'This test always fails by design',
+              passed: false,
+              error: 'This is a deliberate test failure'
+            }
+          ],
+          passed: false
+        }
+      ],
+      error: 'Deliberate test failure'
+    };
+  }
 
   /**
    * Run all tests for IOLTA trust accounting
@@ -29,11 +59,13 @@ export class IoltaTestService implements TestService {
     console.log('Starting IOLTA Trust Accounting Tests...');
     
     const report: TestReport = {
-      name: 'IOLTA Trust Accounting Tests',
+      serviceName: 'IOLTA Trust Accounting Tests',
       testGroups: [],
       startTime: new Date(),
       endTime: new Date(),
-      passed: true
+      passed: true,
+      duration: 0,
+      error: null
     };
 
     try {
@@ -395,10 +427,12 @@ export class IoltaTestService implements TestService {
         error: (!!deposit && deposit.transactionType === 'deposit' && deposit.amount === '1000.00') ? null : 'Failed to create deposit transaction'
       });
       
-      // Update client ledger balance
-      await db.update(ioltaClientLedgers)
-        .set({ currentBalance: '1000.00' })
-        .where(eq(ioltaClientLedgers.id, this.clientLedgerId!));
+      // Update client ledger balance using direct SQL
+      await db.execute(sql`
+        UPDATE iolta_client_ledgers
+        SET current_balance = '1000.00', balance = '1000.00'
+        WHERE id = ${this.clientLedgerId}
+      `);
     } catch (error) {
       testGroup.tests.push({
         name: 'Create Deposit Transaction',
@@ -437,10 +471,12 @@ export class IoltaTestService implements TestService {
         error: (!!withdrawal && withdrawal.transactionType === 'withdrawal' && withdrawal.amount === '300.00') ? null : 'Failed to create withdrawal transaction'
       });
       
-      // Update client ledger balance
-      await db.update(ioltaClientLedgers)
-        .set({ currentBalance: '700.00' })
-        .where(eq(ioltaClientLedgers.id, this.clientLedgerId!));
+      // Update client ledger balance using direct SQL
+      await db.execute(sql`
+        UPDATE iolta_client_ledgers
+        SET current_balance = '700.00', balance = '700.00'
+        WHERE id = ${this.clientLedgerId}
+      `);
     } catch (error) {
       testGroup.tests.push({
         name: 'Create Withdrawal Transaction',
@@ -489,10 +525,12 @@ export class IoltaTestService implements TestService {
     
     // Test ledger balance calculation
     try {
-      // Get current ledger
-      const clientLedger = await db.select().from(ioltaClientLedgers)
-        .where(eq(ioltaClientLedgers.id, this.clientLedgerId!))
-        .then(records => records[0]);
+      // Get current ledger using direct SQL to ensure we get the currentBalance field
+      const result = await db.execute(sql`
+        SELECT id, current_balance, balance FROM iolta_client_ledgers
+        WHERE id = ${this.clientLedgerId}
+      `);
+      const clientLedger = result.rows[0];
       
       // Get all transactions for this ledger
       const transactions = await db.select().from(ioltaTransactions)
@@ -509,7 +547,7 @@ export class IoltaTestService implements TestService {
       }
       
       // Compare with stored balance
-      const storedBalance = parseFloat(clientLedger.currentBalance);
+      const storedBalance = parseFloat(clientLedger.current_balance);
       
       testGroup.tests.push({
         name: 'Ledger Balance Calculation',

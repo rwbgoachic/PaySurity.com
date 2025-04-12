@@ -104,20 +104,18 @@ export class ClientPortalTestService implements TestService {
     // If client doesn't exist, create it
     if (!existingClient) {
       try {
-        console.log("Creating test client using Drizzle ORM...");
-        await db.insert(legalClients).values({
-          id: this.testClientId,
-          merchantId: this.testMerchantId,
-          status: 'active',
-          clientType: 'individual',
-          firstName: 'Test',
-          lastName: 'PortalUser',
-          email: 'test.portal@example.com',
-          phone: '555-123-4567',
-          clientNumber: 'PORTAL-001',
-          jurisdiction: 'CA',
-          taxId: '98-7654321'
-        }).execute();
+        console.log("Creating test client using direct SQL...");
+        const result = await db.execute(sql`
+          INSERT INTO legal_clients (
+            merchant_id, status, client_type, first_name, last_name, 
+            email, phone, client_number, jurisdiction, tax_id, is_active
+          ) VALUES (
+            ${this.testMerchantId}, 'active', 'individual', 'Test', 'PortalUser',
+            'test.portal@example.com', '555-123-4567', 'PORTAL-001', 'CA', '98-7654321', true
+          ) RETURNING id
+        `);
+        this.testClientId = Number(result.rows[0].id);
+        console.log(`Test client created successfully with ID: ${this.testClientId}`);
         console.log("Test client created successfully with Drizzle ORM");
       } catch (err) {
         console.error("Error creating test client with Drizzle:", err);
@@ -198,9 +196,9 @@ export class ClientPortalTestService implements TestService {
       status: 'active'
     });
     
-    // Create sample transaction with Drizzle ORM using the correct schemas
+    // Create sample transaction with direct SQL
     try {
-      console.log("Creating sample IOLTA transaction with Drizzle ORM...");
+      console.log("Creating sample IOLTA transaction with direct SQL...");
       // First get the client ledger ID
       const clientLedger = await db.query.ioltaClientLedgers.findFirst({
         where: and(
@@ -213,22 +211,18 @@ export class ClientPortalTestService implements TestService {
         throw new Error("Client ledger not found");
       }
       
-      // Create transaction using Drizzle ORM
-      await db.insert(ioltaTransactions).values({
-        amount: "5000.00",
-        balanceAfter: "5000.00", // Required field
-        description: "Initial client retainer",
-        transactionType: "deposit",
-        createdBy: 1,
-        trustAccountId: account.id,
-        clientLedgerId: clientLedger.id,
-        fundType: "retainer",
-        status: "completed",
-        bankReference: "TPORTAL-1001",
-        checkNumber: "N/A",
-        payee: "N/A",
-        reference: "Portal Test Transaction"
-      }).execute();
+      // Create transaction using direct SQL
+      await db.execute(sql`
+        INSERT INTO iolta_transactions (
+          amount, balance_after, description, transaction_type, created_by, merchant_id,
+          trust_account_id, client_ledger_id, fund_type, status, bank_reference, 
+          check_number, payee, reference, transaction_date
+        ) VALUES (
+          '5000.00', '5000.00', 'Initial client retainer', 'deposit', 1, ${this.testMerchantId},
+          ${account.id}, ${clientLedger.id}, 'retainer', 'completed', 'TPORTAL-1001',
+          'N/A', 'N/A', 'Portal Test Transaction', ${new Date().toISOString().split('T')[0]}
+        )
+      `);
       
       console.log("IOLTA transaction created successfully with Drizzle ORM");
     } catch (err) {
