@@ -80,7 +80,7 @@ export class ClientPortalService {
       const [portalUser] = await db.insert(legalPortalUsers)
         .values({
           ...userData,
-          password: `${hash}.${salt}`,
+          password_hash: `${hash}.${salt}`, // Using password_hash instead of password
           isActive: true,
           lastLogin: null,
           failedLoginAttempts: 0
@@ -130,7 +130,7 @@ export class ClientPortalService {
       }
       
       // Check password
-      const isValidPassword = await this.verifyPassword(password, portalUser.password);
+      const isValidPassword = await this.verifyPassword(password, portalUser.password_hash);
       
       if (!isValidPassword) {
         // Increment failed login attempts
@@ -346,7 +346,7 @@ export class ClientPortalService {
       // Update the password and clear reset token
       await db.update(legalPortalUsers)
         .set({
-          password: `${hash}.${salt}`,
+          password_hash: `${hash}.${salt}`,
           resetToken: null,
           resetTokenExpiry: null,
           failedLoginAttempts: 0
