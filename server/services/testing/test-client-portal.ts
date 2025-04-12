@@ -9,6 +9,7 @@ import { TestService, TestReport, TestGroup, TestResult } from './test-interface
 import { db } from '../../db';
 import { clientPortalService } from '../legal/client-portal-service';
 import { ioltaService } from '../legal/iolta-service';
+import { compareClientIds, parseClientId } from '../legal/client-id-helper';
 import {
   legalClients,
   legalMatters,
@@ -345,7 +346,7 @@ export class ClientPortalTestService implements TestService {
         description: 'Should create a new portal user account',
         passed: !!portalUser && 
                 portalUser.email === this.testPortalUserEmail &&
-                parseInt(portalUser.clientId) === this.testClientId,
+                compareClientIds(portalUser.clientId, this.testClientId),
         error: null,
         expected: {
           email: this.testPortalUserEmail,
@@ -355,13 +356,13 @@ export class ClientPortalTestService implements TestService {
           id: portalUser.id,
           email: portalUser.email,
           clientId: portalUser.clientId,
-          parsedClientId: parseInt(portalUser.clientId)
+          parsedClientId: parseClientId(portalUser.clientId)
         } : null
       });
       
       if (!portalUser || 
           portalUser.email !== this.testPortalUserEmail || 
-          parseInt(portalUser.clientId) !== this.testClientId) {
+          !compareClientIds(portalUser.clientId, this.testClientId)) {
         groupPassed = false;
       }
     } catch (e) {
@@ -376,11 +377,11 @@ export class ClientPortalTestService implements TestService {
     
     // Test 2: Authenticate portal user
     try {
-      const authResult = await clientPortalService.authenticatePortalUser({
-        email: this.testPortalUserEmail,
-        password: this.testPortalUserPassword,
-        merchantId: this.testMerchantId
-      });
+      const authResult = await clientPortalService.authenticatePortalUser(
+        this.testPortalUserEmail,
+        this.testPortalUserPassword,
+        this.testMerchantId
+      );
       
       tests.push({
         name: 'Authenticate portal user',
@@ -418,11 +419,11 @@ export class ClientPortalTestService implements TestService {
     
     // Test 3: Reject incorrect authentication
     try {
-      const authResult = await clientPortalService.authenticatePortalUser({
-        email: this.testPortalUserEmail,
-        password: 'WrongPassword123!',
-        merchantId: this.testMerchantId
-      });
+      const authResult = await clientPortalService.authenticatePortalUser(
+        this.testPortalUserEmail,
+        'WrongPassword123!',
+        this.testMerchantId
+      );
       
       tests.push({
         name: 'Reject incorrect authentication',
