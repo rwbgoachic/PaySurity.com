@@ -153,6 +153,7 @@ export const ioltaClientLedgers = pgTable("iolta_client_ledgers", {
   clientName: text("client_name").notNull(),
   matterName: text("matter_name"),
   matterNumber: text("matter_number"),
+  jurisdiction: text("jurisdiction"), // Added to match database schema
   balance: numeric("balance").notNull().default("0"),
   currentBalance: numeric("current_balance").notNull().default("0"), // Add currentBalance field
   status: text("status", { enum: ["active", "inactive", "closed"] }).notNull().default("active"),
