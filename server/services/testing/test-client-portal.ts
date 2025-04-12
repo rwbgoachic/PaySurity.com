@@ -535,12 +535,34 @@ export class ClientPortalTestService implements TestService {
       tests,
       passed: groupPassed
     };
-  });
+  }
+      
+  /**
+   * Test invoice access functionality
+   */
+  private async testInvoiceAccess(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
+    
+    try {
+      // Get invoices for the client
+      const invoices = await this.clientPortalService.getClientInvoices(
+        this.testClientId,
+        this.testMerchantId
+      );
+      
+      // Validate invoice data
+      const valid = Array.isArray(invoices) && invoices.length > 0;
+      tests.push({
+        name: 'Get client invoices',
+        passed: valid,
+        description: 'Should retrieve invoices for the client',
+        error: valid ? null : 'Failed to retrieve client invoices'
+      });
       
       if (!valid) {
         groupPassed = false;
       }
-      
     } catch (error) {
       console.error('Error getting client invoices:', error);
       tests.push({
