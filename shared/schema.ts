@@ -4481,7 +4481,7 @@ export const legalDocuments = pgTable("legal_documents", {
   clientId: integer("client_id"),  // Optional if document is not client-specific
   title: text("title").notNull(),
   documentType: legalDocumentTypeEnum("document_type").notNull(),
-  status: legalDocumentStatusEnum("document_status").notNull().default("draft"),
+  status: legalDocumentStatusEnum("status").notNull().default("draft"),
   confidentialityLevel: confidentialityLevelEnum("confidentiality_level").notNull().default("client_confidential"),
   description: text("description"),
   fileLocation: text("file_location").notNull(), // Path or URL to document
