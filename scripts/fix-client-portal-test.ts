@@ -35,10 +35,10 @@ class FixedClientPortalTestService extends ClientPortalTestService {
       await db.execute(sql`
         INSERT INTO legal_matters (
           id, merchant_id, client_id, matter_number, status, title, description, 
-          practice_area, open_date, billing_type
+          practice_area, open_date, billing_type, matter_type
         ) VALUES (
           1, 1, 1, 'PORTAL-FIXED-001', 'active', 'Test Portal Fixed Matter', 
-          'Test client portal fixed matter', 'other', CURRENT_DATE, 'hourly'
+          'Test client portal fixed matter', 'other', CURRENT_DATE, 'hourly', 'general'
         ) ON CONFLICT (id) DO NOTHING
       `);
       console.log('Test matter created or already exists');
@@ -59,16 +59,25 @@ class FixedClientPortalTestService extends ClientPortalTestService {
       
       // Add client ledger
       console.log('Creating client ledger...');
-      await db.execute(sql`
-        INSERT INTO iolta_client_ledgers (
-          merchant_id, client_id, trust_account_id, client_name, matter_name, matter_number,
-          balance, status
-        ) VALUES (
-          1, '1', 1, 'Test PortalFixed', 'Test Portal Fixed Matter', 'TPFM-001',
-          '5000.00', 'active'
-        ) ON CONFLICT (client_id, trust_account_id) DO NOTHING
-        RETURNING id
+      
+      // First check if client ledger already exists
+      const existingLedger = await db.execute(sql`
+        SELECT id FROM iolta_client_ledgers 
+        WHERE client_id = '1' AND trust_account_id = 1
       `);
+      
+      // Only insert if no record exists
+      if (!existingLedger.rows.length) {
+        await db.execute(sql`
+          INSERT INTO iolta_client_ledgers (
+            merchant_id, client_id, trust_account_id, client_name, matter_name, matter_number,
+            balance, status
+          ) VALUES (
+            1, '1', 1, 'Test PortalFixed', 'Test Portal Fixed Matter', 'TPFM-001',
+            '5000.00', 'active'
+          )
+        `);
+      }
       console.log('Client ledger created or already exists');
       
       // Create test transaction
@@ -90,12 +99,12 @@ class FixedClientPortalTestService extends ClientPortalTestService {
       console.log('Creating test document...');
       await db.execute(sql`
         INSERT INTO legal_documents (
-          merchant_id, title, document_type, document_status, client_id, 
-          matter_id, file_path, file_size, mime_type, show_in_client_portal, created_by_id
+          merchant_id, title, document_type, status, client_id, 
+          matter_id, file_url, file_size, is_private, uploaded_by
         ) VALUES (
           1, 'Test Portal Fixed Document', 'client_communication', 'final',
           1, 1, '/test/portal/fixed-document.pdf',
-          1024, 'application/pdf', true, 1
+          1024, false, 1
         ) ON CONFLICT DO NOTHING
       `);
       console.log('Test document created or already exists');
@@ -104,11 +113,11 @@ class FixedClientPortalTestService extends ClientPortalTestService {
       console.log('Creating test invoice...');
       await db.execute(sql`
         INSERT INTO legal_invoices (
-          merchant_id, client_id, matter_id, invoice_number, invoice_date, 
-          due_date, status, total_amount, notes, show_in_client_portal
+          merchant_id, client_id, matter_id, invoice_number, issue_date, 
+          due_date, status, total_amount, notes
         ) VALUES (
           1, 1, 1, 'TEST-PORTAL-FIXED-001', CURRENT_DATE, 
-          CURRENT_DATE + INTERVAL '30 days', 'sent', '500.00', 'Test portal fixed invoice', true
+          CURRENT_DATE + INTERVAL '30 days', 'sent', '500.00', 'Test portal fixed invoice'
         ) ON CONFLICT DO NOTHING
       `);
       console.log('Test invoice created or already exists');
