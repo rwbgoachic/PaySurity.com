@@ -85,6 +85,55 @@ async function runTests() {
       console.log(`  ${col.column_name}: ${col.data_type}`);
     });
     
+    // Try a direct test query that uses the jurisdiction column
+    console.log(chalk.blue('Trying direct query with jurisdiction column...'));
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO legal_clients (
+          id, merchant_id, client_number, email, first_name, last_name, jurisdiction
+        ) VALUES (
+          999999, 1, 'TEST-DIRECT', 'test.direct@example.com', 'Test', 'Direct', 'CA'
+        ) RETURNING id
+      `);
+      console.log('Direct query succeeded, jurisdiction column exists!');
+      
+      // Clean up the test entry
+      await db.execute(sql`DELETE FROM legal_clients WHERE id = 999999`);
+    } catch (err) {
+      console.error(chalk.red('Direct query failed:'), err);
+      console.log(chalk.yellow('Detailed error information:'), JSON.stringify(err, null, 2));
+      
+      // Try a more basic query without jurisdiction
+      try {
+        console.log(chalk.blue('Trying direct query WITHOUT jurisdiction column...'));
+        const result = await db.execute(sql`
+          INSERT INTO legal_clients (
+            id, merchant_id, client_number, email, first_name, last_name
+          ) VALUES (
+            999999, 1, 'TEST-DIRECT', 'test.direct@example.com', 'Test', 'Direct'
+          ) RETURNING id
+        `);
+        console.log('Basic query succeeded!');
+        
+        // Clean up the test entry
+        await db.execute(sql`DELETE FROM legal_clients WHERE id = 999999`);
+      } catch (basicErr) {
+        console.error(chalk.red('Even basic query failed:'), basicErr);
+      }
+    }
+    
+    // Check table schemas
+    console.log(chalk.blue('Checking schema information...'));
+    const schemaInfo = await db.execute(sql`
+      SELECT table_schema, table_name
+      FROM information_schema.tables
+      WHERE table_name = 'legal_clients'
+    `);
+    console.log('Schema information for legal_clients:');
+    schemaInfo.rows.forEach(info => {
+      console.log(`  Table: ${info.table_name}, Schema: ${info.table_schema}`);
+    });
+    
     // Run just the client portal tests
     const testReport = await runLegalSystemTest('client-portal');
     const summary = formatTestResults(testReport);
