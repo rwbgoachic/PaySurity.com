@@ -24,6 +24,7 @@ import {
   payrollTaxSettings,
   specialTaxSituations,
   taxUpdateLogs,
+  taxTypeEnum,
   TaxJurisdiction,
   TaxTable,
   TaxBracket,
@@ -347,7 +348,7 @@ export class TaxCalculationService {
   private async getYTDWithholding(
     employeeId: number,
     jurisdictionId: number,
-    taxType: string,
+    taxType: "income" | "social_security" | "medicare" | "sui" | "sdi" | "futa" | "suta" | "local_income" | "transit" | "occupational",
     asOfDate: Date
   ): Promise<string> {
     // Get all payroll calculations for this employee, jurisdiction, and tax type in the current year
@@ -358,7 +359,7 @@ export class TaxCalculationService {
       and(
         eq(payrollTaxCalculations.employeeId, employeeId),
         eq(payrollTaxCalculations.jurisdictionId, jurisdictionId),
-        eq(payrollTaxCalculations.taxType, taxType as "income" | "social_security" | "medicare" | "sui" | "sdi" | "futa" | "suta" | "local_income" | "transit" | "occupational"),
+        eq(payrollTaxCalculations.taxType, taxType),
         gte(payrollTaxCalculations.calculatedAt, startOfYear),
         lte(payrollTaxCalculations.calculatedAt, asOfDate)
       )
