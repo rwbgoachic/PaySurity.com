@@ -8,7 +8,7 @@
  * - Reconciliation reporting
  */
 
-import { testLegalIoltaSystem } from '../server/services/testing/test-legal-iolta';
+import { IoltaTestService } from '../server/services/testing/test-legal-iolta';
 import { TestReport } from '../server/services/testing/test-interfaces';
 
 /**
@@ -20,24 +20,47 @@ async function runLegalIoltaTests() {
   console.log("====================================");
   
   try {
+    // Create a new instance of the test service
+    const ioltaTestService = new IoltaTestService();
+    
     // Run the tests
-    const report: TestReport = await testLegalIoltaSystem();
+    const report: TestReport = await ioltaTestService.runTests();
+    
+    // Calculate test counts
+    let passedTests = 0;
+    let totalTests = 0;
+    
+    for (const group of report.testGroups) {
+      for (const test of group.tests) {
+        totalTests++;
+        if (test.passed) {
+          passedTests++;
+        }
+      }
+    }
+    
+    const passRate = totalTests > 0 ? passedTests / totalTests : 0;
     
     // Output results
-    console.log(`\nTest Results: ${report.testsPassed} passed, ${report.testsFailed} failed`);
-    console.log(`Pass Rate: ${(report.passRate * 100).toFixed(2)}%`);
+    console.log(`\nTest Results: ${passedTests} passed, ${totalTests - passedTests} failed`);
+    console.log(`Pass Rate: ${(passRate * 100).toFixed(2)}%`);
     
     // Log each test
     console.log("\nTest Details:");
-    report.tests.forEach((test, index) => {
-      console.log(`${index + 1}. ${test.name}: ${test.passed ? '✓ PASSED' : '✗ FAILED'}`);
-      if (!test.passed && test.error) {
-        console.log(`   Error: ${test.error}`);
+    let testIndex = 1;
+    for (const group of report.testGroups) {
+      console.log(`\nGroup: ${group.name}`);
+      for (const test of group.tests) {
+        console.log(`${testIndex}. ${test.name}: ${test.passed ? '✓ PASSED' : '✗ FAILED'}`);
+        if (!test.passed && test.error) {
+          console.log(`   Error: ${test.error}`);
+        }
+        testIndex++;
       }
-    });
+    }
     
     // Exit with appropriate code
-    if (report.passRate === 1.0) {
+    if (report.passed) {
       console.log("\nAll IOLTA trust accounting tests passed successfully!");
       process.exit(0);
     } else {
