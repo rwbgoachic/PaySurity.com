@@ -114,10 +114,12 @@ class FixedClientPortalTestService extends ClientPortalTestService {
       await db.execute(sql`
         INSERT INTO legal_invoices (
           merchant_id, client_id, matter_id, invoice_number, issue_date, 
-          due_date, status, total_amount, notes
+          due_date, status, total_amount, notes, subtotal, discount_amount,
+          tax_amount, amount_paid, balance_due, time_entries_total, expenses_total
         ) VALUES (
           1, 1, 1, 'TEST-PORTAL-FIXED-001', CURRENT_DATE, 
-          CURRENT_DATE + INTERVAL '30 days', 'sent', '500.00', 'Test portal fixed invoice'
+          CURRENT_DATE + INTERVAL '30 days', 'sent', '500.00', 'Test portal fixed invoice',
+          '500.00', '0.00', '0.00', '0.00', '500.00', '400.00', '100.00'
         ) ON CONFLICT DO NOTHING
       `);
       console.log('Test invoice created or already exists');
