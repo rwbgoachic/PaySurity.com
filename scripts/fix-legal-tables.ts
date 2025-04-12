@@ -281,7 +281,8 @@ async function fixLegalTables() {
       SELECT COUNT(*) FROM legal_clients WHERE id = 1;
     `);
     
-    const clientExists = parseInt(existingClientCheck.rows[0].count) > 0;
+    const countValue = existingClientCheck.rows[0].count;
+    const clientExists = parseInt(String(countValue)) > 0;
     
     if (!clientExists) {
       await db.execute(sql`

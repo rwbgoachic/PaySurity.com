@@ -41,7 +41,15 @@ async function validateSchemaConsistency() {
   // Get all tables defined in the schema
   const schemaTables = Object.entries(schema)
     .filter(([_, value]) => typeof value === 'object' && value !== null && 'name' in value)
-    .map(([_, value]) => (value as any).name as string);
+    .map(([_, value]) => {
+      // Make sure we extract the name properly
+      const tableName = (value as any).name;
+      if (typeof tableName !== 'string') {
+        console.warn(`Warning: Table with non-string name detected: ${tableName}`);
+        return String(tableName); // Convert to string anyway
+      }
+      return tableName;
+    });
   
   // Get all tables from the database
   const dbTablesResult = await db.execute(sql`
