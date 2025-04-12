@@ -182,11 +182,12 @@ async function testIoltaDocumentIntegration() {
     
     if (matterResult.length === 0) {
       console.log("Creating test matter...");
+      const matterNumber = `TM-${Date.now()}`;
       const matterInsertResult = await sqlService.rawSQL(`
         INSERT INTO legal_matters 
-          (merchant_id, client_id, title, description, practice_area, open_date, status, created_at, updated_at) 
+          (merchant_id, client_id, title, description, practice_area, open_date, status, matter_number, matter_type, billing_type, created_at, updated_at) 
         VALUES 
-          (${testMerchantId}, ${testClient.id}, 'Test Matter', 'Matter for IOLTA document testing', 'other', NOW(), 'active', NOW(), NOW())
+          (${testMerchantId}, ${testClient.id}, 'Test Matter', 'Matter for IOLTA document testing', 'other', NOW(), 'active', '${matterNumber}', 'general', 'hourly', NOW(), NOW())
         RETURNING id
       `);
       testMatterId = matterInsertResult[0].id;
@@ -195,6 +196,9 @@ async function testIoltaDocumentIntegration() {
       testMatterId = matterResult[0].id;
       console.log(`Using existing matter with ID: ${testMatterId}`);
     }
+    
+    // Generate a test PDF file buffer
+    const fileBuffer = generateTestPdfBuffer();
     
     const documentData: InsertLegalDocument = {
       merchantId: testMerchantId,
@@ -206,15 +210,14 @@ async function testIoltaDocumentIntegration() {
       authorId: testUserId, // Use numeric user ID
       lastModifiedById: testUserId, // Use numeric user ID
       clientId: testClient.id, // Use the test client's ID
+      fileLocation: "test-document.pdf", // Add required fileLocation field
+      fileSize: fileBuffer.length, // Add file size based on buffer length
       metaData: {
         transactionType: "deposit",
         amount: "1000.00",
         documentCategory: "iolta_transaction" // Store the IOLTA-specific type in metadata
       }
     };
-    
-    // Generate a test PDF file buffer
-    const fileBuffer = generateTestPdfBuffer();
     
     // Create the document
     const document = await documentService.createDocument(documentData, fileBuffer);
@@ -261,6 +264,8 @@ async function testIoltaDocumentIntegration() {
       authorId: testUserId, // Use numeric user ID 
       lastModifiedById: testUserId, // Use numeric user ID
       clientId: testClient.id, // Use the test client's ID
+      fileLocation: "combined-transaction-document.pdf", // Add required fileLocation field
+      fileSize: fileBuffer.length, // Add file size based on buffer length
       metaData: {
         documentCategory: "iolta_transaction"
       }
