@@ -9,6 +9,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '../server/db';
 import chalk from 'chalk';
 import { ClientPortalTestService } from '../server/services/testing/test-client-portal';
+import { ClientPortalService } from '../server/services/legal/client-portal-service';
 
 // Define a new class that extends the original test service and overrides setupTestData
 class FixedClientPortalTestService extends ClientPortalTestService {

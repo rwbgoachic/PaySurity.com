@@ -39,6 +39,19 @@ async function finalPortalFixes() {
       console.log('✓ e_filing_status column already exists');
     }
     
+    // 1.1 Add e_filing_id column to legal_documents table
+    const hasEFilingId = await checkColumnExists('legal_documents', 'e_filing_id');
+    if (!hasEFilingId) {
+      console.log('Adding e_filing_id column to legal_documents table...');
+      await pool.query(`
+        ALTER TABLE legal_documents
+        ADD COLUMN e_filing_id VARCHAR(100)
+      `);
+      console.log('✓ Added e_filing_id column');
+    } else {
+      console.log('✓ e_filing_id column already exists');
+    }
+    
     // 2. Fix ClientPortalService.getClientInvoices in test-client-portal-service.ts
     console.log('Fixing test-client-portal-test.ts file...');
     const testServicePath = path.join(process.cwd(), 'scripts', 'fix-client-portal-test.ts');
@@ -115,6 +128,66 @@ async function finalPortalFixes() {
         }
       } else {
         console.log('✓ Authentication method already updated');
+      }
+    }
+    
+    // 4. Fix matter_number reference in invoice queries
+    console.log('Fixing matter_number reference in invoice queries...');
+    
+    // Check if client-portal-service.ts exists
+    if (fs.existsSync(clientPortalServicePath)) {
+      let content = fs.readFileSync(clientPortalServicePath, 'utf8');
+      
+      // Find and fix the issue with getClientInvoices method
+      if (content.includes('matter_number')) {
+        const fixedInvoiceQuery = content.replace(
+          /legal_matters.*?matter_number/g,
+          'legal_matters.matter_number AS matter_number'
+        );
+        
+        fs.writeFileSync(clientPortalServicePath, fixedInvoiceQuery, 'utf8');
+        console.log('✓ Fixed matter_number reference in invoice queries');
+      } else {
+        console.log('✓ No matter_number reference issues found');
+      }
+    }
+    
+    // 5. Create test portal user in fix-client-portal-test.ts if not exists
+    console.log('Adding portal user creation to test script...');
+    
+    if (fs.existsSync(testServicePath)) {
+      let content = fs.readFileSync(testServicePath, 'utf8');
+      
+      if (!content.includes('Creating test portal user')) {
+        const setupDataMethodContent = content.match(/async setupTestData\(\)[\s\S]*?console\.log\('✓ Test data setup complete'\);/);
+        
+        if (setupDataMethodContent) {
+          const updatedSetupData = setupDataMethodContent[0].replace(
+            'console.log(\'✓ Test data setup complete\');',
+            `// Create test portal user
+      console.log('Creating test portal user...');
+      await db.execute(sql\`
+        INSERT INTO legal_portal_users (
+          email, client_id, password_hash, merchant_id, first_name, last_name,
+          is_active, phone_number
+        ) VALUES (
+          'test.portal.fixed@example.com', 1, 'P@ssw0rd123!', 1, 'Test', 'PortalUser',
+          true, '555-123-4567'
+        ) ON CONFLICT (email, merchant_id) DO NOTHING
+      \`);
+      console.log('Test portal user created or already exists');
+      
+      console.log('✓ Test data setup complete');`
+          );
+          
+          const updatedContent = content.replace(setupDataMethodContent[0], updatedSetupData);
+          fs.writeFileSync(testServicePath, updatedContent, 'utf8');
+          console.log('✓ Added portal user creation to test script');
+        } else {
+          console.log('Could not locate setupTestData method');
+        }
+      } else {
+        console.log('✓ Portal user creation already exists');
       }
     }
     
