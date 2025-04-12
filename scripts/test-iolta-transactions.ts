@@ -20,23 +20,50 @@ async function testIoltaTransactions() {
     // First create a test merchant
     console.log(chalk.blue('Creating test merchant...'));
     const merchantResult = await db.execute(sql`
-      INSERT INTO merchants (name, description, type, status, created_at, updated_at)
-      VALUES ('Test Merchant', 'Test merchant for IOLTA transactions', 'legal', 'active', NOW(), NOW())
+      INSERT INTO merchants (
+        name, business_name, business_type, status, 
+        contact_name, email, phone, address, city, state, 
+        zip, country, created_at, updated_at
+      )
+      VALUES (
+        'Test Merchant', 'Test Law Firm LLC', 'legal', 'active',
+        'John Doe', 'test@example.com', '555-123-4567', '123 Test St',
+        'Testville', 'TS', '12345', 'US', NOW(), NOW()
+      )
       RETURNING id
     `);
     
     const merchantId = merchantResult.rows[0].id;
     console.log(chalk.green(`Created test merchant with ID: ${merchantId}`));
     
+    // Create a test client first (needed for trust account)
+    console.log(chalk.blue('Creating test client...'));
+    const clientResult = await db.execute(sql`
+      INSERT INTO legal_clients (
+        merchant_id, first_name, last_name, email, phone, address, city, state, 
+        zip, client_number, client_type, status, jurisdiction, is_active, intake_date,
+        created_at, updated_at
+      )
+      VALUES (
+        ${merchantId}, 'Test', 'Client', 'test@example.com', '555-123-4567',
+        '123 Test St', 'Testville', 'TS', '12345', 'CLIENT-001',
+        'individual', 'active', 'CA', true, NOW(), NOW(), NOW()
+      )
+      RETURNING id
+    `);
+    
+    const clientId = clientResult.rows[0].id;
+    console.log(chalk.green(`Created test client with ID: ${clientId}`));
+    
     // Create a test trust account
     console.log(chalk.blue('Creating test trust account...'));
     const trustAccountResult = await db.execute(sql`
       INSERT INTO iolta_trust_accounts (
-        merchant_id, account_number, bank_name, description, 
+        merchant_id, client_id, account_number, bank_name, description, 
         account_type, balance, status, created_at, updated_at
       )
       VALUES (
-        ${merchantId}, 'TEST-ACCT-12345', 'Test Bank', 'Test Trust Account', 
+        ${merchantId}, ${clientId}, 'TEST-ACCT-12345', 'Test Bank', 'Test Trust Account', 
         'checking', '0.00', 'active', NOW(), NOW()
       )
       RETURNING id
@@ -44,25 +71,6 @@ async function testIoltaTransactions() {
     
     const trustAccountId = trustAccountResult.rows[0].id;
     console.log(chalk.green(`Created test trust account with ID: ${trustAccountId}`));
-    
-    // Create a test client
-    console.log(chalk.blue('Creating test client...'));
-    const clientResult = await db.execute(sql`
-      INSERT INTO legal_clients (
-        merchant_id, name, email, phone, address, city, state, 
-        zip, client_number, client_type, status, jurisdiction, 
-        created_at, updated_at
-      )
-      VALUES (
-        ${merchantId}, 'Test Client', 'test@example.com', '555-123-4567',
-        '123 Test St', 'Testville', 'TS', '12345', 'CLIENT-001',
-        'individual', 'active', 'CA', NOW(), NOW()
-      )
-      RETURNING id
-    `);
-    
-    const clientId = clientResult.rows[0].id;
-    console.log(chalk.green(`Created test client with ID: ${clientId}`));
     
     // Create a test client ledger
     console.log(chalk.blue('Creating test client ledger...'));
@@ -85,12 +93,12 @@ async function testIoltaTransactions() {
     console.log(chalk.blue('Creating test user...'));
     const userResult = await db.execute(sql`
       INSERT INTO users (
-        first_name, last_name, email, password, status, merchant_id,
-        created_at, updated_at
+        username, password, first_name, last_name, email, role, merchant_id,
+        created_at
       )
       VALUES (
-        'Test', 'User', 'testuser@example.com', 'password', 'active', ${merchantId},
-        NOW(), NOW()
+        'testuser', 'password', 'Test', 'User', 'testuser@example.com', 'admin', ${merchantId},
+        NOW()
       )
       RETURNING id
     `);
@@ -105,17 +113,17 @@ async function testIoltaTransactions() {
     
     try {
       const depositResult = await transactionService.createTransaction({
-        merchantId,
-        trustAccountId,
-        clientLedgerId: ledgerId,
+        merchantId: Number(merchantId),
+        trustAccountId: Number(trustAccountId),
+        clientLedgerId: Number(ledgerId),
         amount: '500.00',
         description: 'Test Deposit',
         transactionType: 'deposit',
         fundType: 'retainer',
-        createdBy: userId,
+        createdBy: Number(userId),
         status: 'completed',
         referenceNumber: 'REF-001',
-        payee: null,
+        payee: '',
         payor: 'Test Client',
         notes: 'Test deposit transaction'
       });
@@ -129,18 +137,18 @@ async function testIoltaTransactions() {
       console.log(chalk.blue('Creating withdrawal transaction...'));
       
       const withdrawalResult = await transactionService.createTransaction({
-        merchantId,
-        trustAccountId,
-        clientLedgerId: ledgerId,
+        merchantId: Number(merchantId),
+        trustAccountId: Number(trustAccountId),
+        clientLedgerId: Number(ledgerId),
         amount: '200.00',
         description: 'Test Withdrawal',
         transactionType: 'withdrawal',
-        fundType: 'earned',
-        createdBy: userId,
+        fundType: 'operating', // changed from 'earned' to match allowed values
+        createdBy: Number(userId),
         status: 'completed',
         referenceNumber: 'REF-002',
         payee: 'Law Firm',
-        payor: null,
+        payor: '',
         notes: 'Test withdrawal transaction'
       });
       
@@ -151,7 +159,7 @@ async function testIoltaTransactions() {
       
       // Test retrieving transactions
       console.log(chalk.blue('Retrieving transactions...'));
-      const transactions = await transactionService.getClientLedgerTransactions(ledgerId);
+      const transactions = await transactionService.getClientLedgerTransactions(Number(ledgerId));
       
       console.log(chalk.green(`Retrieved ${transactions.length} transactions`));
       transactions.forEach((tx, index) => {
