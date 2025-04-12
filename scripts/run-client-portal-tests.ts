@@ -288,7 +288,7 @@ class ClientPortalTester {
         firstName: 'Test',
         lastName: 'Portal',
         email: this.testPortalUserEmail,
-        password_hash: await this.getHashedPassword(this.testPortalUserPassword),
+        password: this.testPortalUserPassword,  // Changed from password_hash to password
         isActive: true
       });
       

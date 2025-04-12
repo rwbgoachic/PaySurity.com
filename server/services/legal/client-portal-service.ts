@@ -74,7 +74,9 @@ export class ClientPortalService {
       
       // Generate salt and hash password
       const salt = randomBytes(16).toString('hex');
-      const hash = await this.hashPassword(userData.password, salt);
+      // Use password field directly or fallback to password_hash if provided directly
+      const passwordToHash = userData.password || userData.password_hash;
+      const hash = await this.hashPassword(passwordToHash, salt);
       
       // Insert portal user
       const [portalUser] = await db.insert(legalPortalUsers)
@@ -981,6 +983,8 @@ export class ClientPortalService {
    */
   async getClientTrustAccounts(clientId: number, merchantId: number): Promise<IoltaTrustAccount[]> {
     try {
+      console.log(`Getting trust accounts for clientId: ${clientId}, merchantId: ${merchantId}`);
+      
       // Get all trust accounts for this merchant
       const trustAccounts = await db.select()
         .from(ioltaTrustAccounts)
@@ -988,16 +992,28 @@ export class ClientPortalService {
           eq(ioltaTrustAccounts.merchantId, merchantId)
         );
       
+      console.log(`Found ${trustAccounts.length} trust accounts for merchant`);
+      if (trustAccounts.length > 0) {
+        console.log('First trust account:', JSON.stringify(trustAccounts[0], null, 2));
+      }
+      
       // Get all client ledgers for this client
       const clientLedgers = await db.select()
         .from(ioltaClientLedgers)
         .where(and(
-          eq(ioltaClientLedgers.clientId, clientId),
+          eq(ioltaClientLedgers.clientId, clientId.toString()), // Convert to string since clientId might be stored as string
           eq(ioltaClientLedgers.merchantId, merchantId)
         ));
       
+      console.log(`Found ${clientLedgers.length} client ledgers for client`);
+      if (clientLedgers.length > 0) {
+        console.log('First client ledger:', JSON.stringify(clientLedgers[0], null, 2));
+      }
+      
       // Filter to only include trust accounts that have ledgers for this client
       const trustAccountIds = new Set(clientLedgers.map(ledger => ledger.trustAccountId));
+      console.log('Trust account IDs from client ledgers:', Array.from(trustAccountIds));
+      
       const filteredTrustAccounts = trustAccounts.filter(account => 
         trustAccountIds.has(account.id) && account.accountStatus === 'active'
       );
