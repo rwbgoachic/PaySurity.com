@@ -405,6 +405,226 @@ async function fixLegalTables() {
     } else {
       console.log('jurisdiction column already exists in legal_clients');
     }
+    
+    // Add approved_by column to iolta_transactions if missing
+    const checkApprovedBy = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'approved_by'
+      );
+    `);
+    
+    const approvedByExists = checkApprovedBy.rows[0].exists;
+    
+    if (!approvedByExists) {
+      console.log('Adding approved_by column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN approved_by INTEGER;
+      `);
+      console.log('Successfully added approved_by column to iolta_transactions');
+    } else {
+      console.log('approved_by column already exists in iolta_transactions');
+    }
+    
+    // Add approved_at column to iolta_transactions if missing
+    const checkApprovedAt = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'approved_at'
+      );
+    `);
+    
+    const approvedAtExists = checkApprovedAt.rows[0].exists;
+    
+    if (!approvedAtExists) {
+      console.log('Adding approved_at column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN approved_at TIMESTAMP;
+      `);
+      console.log('Successfully added approved_at column to iolta_transactions');
+    } else {
+      console.log('approved_at column already exists in iolta_transactions');
+    }
+    
+    // Add voided_by column to iolta_transactions if missing
+    const checkVoidedBy = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'voided_by'
+      );
+    `);
+    
+    const voidedByExists = checkVoidedBy.rows[0].exists;
+    
+    if (!voidedByExists) {
+      console.log('Adding voided_by column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN voided_by INTEGER;
+      `);
+      console.log('Successfully added voided_by column to iolta_transactions');
+    } else {
+      console.log('voided_by column already exists in iolta_transactions');
+    }
+    
+    // Add voided_at column to iolta_transactions if missing
+    const checkVoidedAt = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'voided_at'
+      );
+    `);
+    
+    const voidedAtExists = checkVoidedAt.rows[0].exists;
+    
+    if (!voidedAtExists) {
+      console.log('Adding voided_at column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN voided_at TIMESTAMP;
+      `);
+      console.log('Successfully added voided_at column to iolta_transactions');
+    } else {
+      console.log('voided_at column already exists in iolta_transactions');
+    }
+    
+    // Add void_reason column to iolta_transactions if missing
+    const checkVoidReason = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'void_reason'
+      );
+    `);
+    
+    const voidReasonExists = checkVoidReason.rows[0].exists;
+    
+    if (!voidReasonExists) {
+      console.log('Adding void_reason column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN void_reason TEXT;
+      `);
+      console.log('Successfully added void_reason column to iolta_transactions');
+    } else {
+      console.log('void_reason column already exists in iolta_transactions');
+    }
+    
+    // Add processed_at column to iolta_transactions if missing
+    const checkProcessedAt = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'processed_at'
+      );
+    `);
+    
+    const processedAtExists = checkProcessedAt.rows[0].exists;
+    
+    if (!processedAtExists) {
+      console.log('Adding processed_at column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN processed_at TIMESTAMP;
+      `);
+      console.log('Successfully added processed_at column to iolta_transactions');
+    } else {
+      console.log('processed_at column already exists in iolta_transactions');
+    }
+    
+    // Add document_url column to iolta_transactions if missing
+    const checkDocumentUrl = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'document_url'
+      );
+    `);
+    
+    const documentUrlExists = checkDocumentUrl.rows[0].exists;
+    
+    if (!documentUrlExists) {
+      console.log('Adding document_url column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN document_url TEXT;
+      `);
+      console.log('Successfully added document_url column to iolta_transactions');
+    } else {
+      console.log('document_url column already exists in iolta_transactions');
+    }
+    
+    // Add payee column to iolta_transactions if missing
+    const checkPayee = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'payee'
+      );
+    `);
+    
+    const payeeExists = checkPayee.rows[0].exists;
+    
+    if (!payeeExists) {
+      console.log('Adding payee column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN payee TEXT;
+      `);
+      console.log('Successfully added payee column to iolta_transactions');
+    } else {
+      console.log('payee column already exists in iolta_transactions');
+    }
+    
+    // Add payor column to iolta_transactions if missing
+    const checkPayor = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'payor'
+      );
+    `);
+    
+    const payorExists = checkPayor.rows[0].exists;
+    
+    if (!payorExists) {
+      console.log('Adding payor column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN payor TEXT;
+      `);
+      console.log('Successfully added payor column to iolta_transactions');
+    } else {
+      console.log('payor column already exists in iolta_transactions');
+    }
+    
+    // Add notes column to iolta_transactions if missing
+    const checkNotes = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'notes'
+      );
+    `);
+    
+    const notesExists = checkNotes.rows[0].exists;
+    
+    if (!notesExists) {
+      console.log('Adding notes column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN notes TEXT;
+      `);
+      console.log('Successfully added notes column to iolta_transactions');
+    } else {
+      console.log('notes column already exists in iolta_transactions');
+    }
 
     // Fix legal_clients by ensuring all required columns match our schema
     // Insert a test client for tests to use
