@@ -154,8 +154,10 @@ export const ioltaClientLedgers = pgTable("iolta_client_ledgers", {
   matterName: text("matter_name"),
   matterNumber: text("matter_number"),
   balance: numeric("balance").notNull().default("0"),
+  currentBalance: numeric("current_balance").notNull().default("0"), // Add currentBalance field
   status: text("status", { enum: ["active", "inactive", "closed"] }).notNull().default("active"),
   lastTransactionDate: timestamp("last_transaction_date"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

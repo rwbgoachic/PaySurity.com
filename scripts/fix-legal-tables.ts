@@ -142,6 +142,28 @@ async function fixLegalTables() {
     } else {
       console.log('client_ledger_id column already exists in iolta_transactions');
     }
+    
+    // Add status column to iolta_transactions if missing
+    const checkStatus = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'status'
+      );
+    `);
+    
+    const statusExists = checkStatus.rows[0].exists;
+    
+    if (!statusExists) {
+      console.log('Adding status column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN status TEXT NOT NULL DEFAULT 'completed';
+      `);
+      console.log('Successfully added status column to iolta_transactions');
+    } else {
+      console.log('status column already exists in iolta_transactions');
+    }
 
     // Add notes column to iolta_client_ledgers if missing
     const checkClientLedgerNotes = await db.execute(sql`
@@ -163,6 +185,28 @@ async function fixLegalTables() {
       console.log('Successfully added notes column to iolta_client_ledgers');
     } else {
       console.log('notes column already exists in iolta_client_ledgers');
+    }
+    
+    // Add current_balance column to iolta_client_ledgers if missing
+    const checkCurrentBalance = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_client_ledgers' 
+        AND column_name = 'current_balance'
+      );
+    `);
+    
+    const currentBalanceExists = checkCurrentBalance.rows[0].exists;
+    
+    if (!currentBalanceExists) {
+      console.log('Adding current_balance column to iolta_client_ledgers...');
+      await db.execute(sql`
+        ALTER TABLE iolta_client_ledgers
+        ADD COLUMN current_balance NUMERIC NOT NULL DEFAULT '0';
+      `);
+      console.log('Successfully added current_balance column to iolta_client_ledgers');
+    } else {
+      console.log('current_balance column already exists in iolta_client_ledgers');
     }
 
     // Add merchant_id column to iolta_reconciliations if missing

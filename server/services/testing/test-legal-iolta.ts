@@ -167,11 +167,14 @@ export class IoltaTestService implements TestService {
     try {
       const trustAccountData = insertIoltaTrustAccountSchema.parse({
         merchantId: this.merchantId,
+        clientId: this.clientId,  // Add client ID
         accountName: 'Test Trust Account',
         accountNumber: 'TRUST-1234',
         bankName: 'Test Bank',
         routingNumber: '123456789',
-        accountStatus: 'active',
+        status: 'active',  // Changed from accountStatus to status
+        accountType: 'iolta',
+        balance: '0',
         notes: 'Test trust account for automated testing'
       });
       
@@ -269,11 +272,13 @@ export class IoltaTestService implements TestService {
       const clientLedgerData = insertIoltaClientLedgerSchema.parse({
         trustAccountId: this.trustAccountId,
         merchantId: this.merchantId,
-        clientId: this.clientId,
+        clientId: String(this.clientId), // Convert to string since schema expects string
+        clientName: 'Test Client', // Add required clientName field
         matterName: 'Test Matter',
         matterNumber: 'M-12345',
         status: 'active',
         currentBalance: '0.00',
+        balance: '0.00', // Include balance field explicitly
         notes: 'Test client ledger for automated testing'
       });
       
@@ -377,7 +382,9 @@ export class IoltaTestService implements TestService {
         amount: '1000.00',
         description: 'Initial deposit',
         referenceNumber: 'DEP-12345',
-        cleared: false
+        fundType: 'trust', // Add required fundType field
+        createdBy: 1, // Add required createdBy field
+        status: 'completed'
       });
       
       const [deposit] = await db.insert(ioltaTransactions)
@@ -417,7 +424,9 @@ export class IoltaTestService implements TestService {
         amount: '300.00',
         description: 'Withdrawal for client expenses',
         referenceNumber: 'WIT-12345',
-        cleared: false
+        fundType: 'trust', // Add required fundType field
+        createdBy: 1, // Add required createdBy field
+        status: 'completed'
       });
       
       const [withdrawal] = await db.insert(ioltaTransactions)
