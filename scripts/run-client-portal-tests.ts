@@ -9,6 +9,8 @@
 
 import chalk from 'chalk';
 import { initializeLegalSystemTests, runLegalSystemTest } from '../server/services/testing/test-legal-system';
+import { db } from '../server/db';
+import { sql } from 'drizzle-orm';
 
 /**
  * Format test results for display
@@ -69,6 +71,19 @@ async function runTests() {
   try {
     // Fix IOLTA tables first for proper functioning
     console.log(chalk.blue('Ensuring database schema is correct...'));
+    
+    // Check if jurisdiction column exists and has proper casing
+    console.log(chalk.blue('Checking legal_clients table columns...'));
+    const columnInfo = await db.execute(sql`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'legal_clients'
+    `);
+    
+    console.log('Available columns in legal_clients table:');
+    columnInfo.rows.forEach(col => {
+      console.log(`  ${col.column_name}: ${col.data_type}`);
+    });
     
     // Run just the client portal tests
     const testReport = await runLegalSystemTest('client-portal');

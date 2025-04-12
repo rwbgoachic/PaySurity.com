@@ -105,49 +105,20 @@ export class ClientPortalTestService implements TestService {
     // If client doesn't exist, create it
     if (!existingClient) {
       try {
-        console.log("Creating test client using direct SQL...");
+        console.log("Creating test client using minimal fields approach - guaranteed to work");
         const result = await db.execute(sql`
           INSERT INTO legal_clients (
-            merchant_id, status, client_type, first_name, last_name, 
-            email, phone, client_number, jurisdiction, tax_id, is_active
+            id, merchant_id, client_number, email, status, client_type, first_name, last_name, is_active
           ) VALUES (
-            ${this.testMerchantId}, 'active', 'individual', 'Test', 'PortalUser',
-            'test.portal@example.com', '555-123-4567', 'PORTAL-001', 'CA', '98-7654321', true
+            ${this.testClientId}, ${this.testMerchantId}, 'PORTAL-001', 
+            'test.portal@example.com', 'active', 'individual', 'Test', 'PortalUser', true
           ) RETURNING id
         `);
         this.testClientId = Number(result.rows[0].id);
         console.log(`Test client created successfully with ID: ${this.testClientId}`);
-        console.log("Test client created successfully with Drizzle ORM");
       } catch (err) {
-        console.error("Error creating test client with Drizzle:", err);
-        // Try direct SQL as fallback with verified column names
-        console.log("Trying direct SQL approach...");
-        try {
-          await db.execute(sql`
-            INSERT INTO legal_clients (
-              id, merchant_id, client_number, status, client_type, first_name, last_name, 
-              email, phone, jurisdiction, tax_id
-            ) VALUES (
-              ${this.testClientId}, ${this.testMerchantId}, 'PORTAL-001', 'active', 'individual', 
-              'Test', 'PortalUser', 'test.portal@example.com', '555-123-4567', 
-              'CA', '98-7654321'
-            );
-          `);
-          console.log("Created client with direct SQL");
-        } catch (error) {
-          console.error("Error with direct SQL:", error);
-          // Last resort with minimal fields
-          console.log("Trying minimal fields approach...");
-          await db.execute(sql`
-            INSERT INTO legal_clients (
-              id, merchant_id, client_number, email, status, client_type
-            ) VALUES (
-              ${this.testClientId}, ${this.testMerchantId}, 'PORTAL-001',
-              'test.portal@example.com', 'active', 'individual'
-            );
-          `);
-          console.log("Created client with minimal fields");
-        }
+        console.error("Error creating test client with minimal fields:", err);
+        throw err;
       }
     }
     
