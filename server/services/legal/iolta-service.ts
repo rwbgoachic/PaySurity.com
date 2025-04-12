@@ -7,9 +7,15 @@ import {
   InsertIoltaClientLedger,
   InsertIoltaTransaction
 } from "@shared/schema-legal";
+import {
+  legalDocuments,
+  type LegalDocument,
+  type InsertLegalDocument
+} from '@shared/schema';
 import { eq, and, desc, sql, lt, gte, lte } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import { ioltaTransactionSqlService } from "./iolta-transaction-sql-service";
+import { documentService } from './document-service';
 
 /**
  * IOLTA Service - Handles Interest on Lawyers Trust Accounts compliance
@@ -346,6 +352,164 @@ export class IoltaService {
       generatedAt: new Date(),
       isBalanced: new Decimal(account.balance).equals(totalClientBalances)
     };
+  }
+
+  /**
+   * Attaches a document to an IOLTA transaction
+   * 
+   * @param transactionId The ID of the transaction to attach the document to
+   * @param documentId The ID of the document to attach
+   * @returns The updated transaction
+   */
+  async attachDocumentToTransaction(transactionId: number, documentId: number) {
+    try {
+      // Verify the transaction exists
+      const transaction = await this.getTransaction(transactionId);
+      if (!transaction) {
+        throw new Error("Transaction not found");
+      }
+      
+      // Verify the document exists
+      const document = await documentService.getDocumentById(documentId);
+      if (!document) {
+        throw new Error("Document not found");
+      }
+      
+      // Update the transaction with the document URL
+      // In a real implementation, this might involve storing multiple documents
+      const [updatedTransaction] = await db.update(ioltaTransactions)
+        .set({
+          documentUrl: `/api/legal/documents/${documentId}`
+        })
+        .where(eq(ioltaTransactions.id, transactionId))
+        .returning();
+      
+      return updatedTransaction;
+    } catch (error) {
+      console.error('Error attaching document to transaction:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Gets the document attached to an IOLTA transaction
+   * 
+   * @param transactionId The ID of the transaction to get the document for
+   * @returns The document attached to the transaction, or null if none is attached
+   */
+  async getTransactionDocument(transactionId: number) {
+    try {
+      // Get the transaction
+      const transaction = await this.getTransaction(transactionId);
+      if (!transaction) {
+        throw new Error("Transaction not found");
+      }
+      
+      // If no document is attached, return null
+      if (!transaction.documentUrl) {
+        return null;
+      }
+      
+      // Extract document ID from the URL
+      const documentIdMatch = transaction.documentUrl.match(/\/(\d+)$/);
+      if (!documentIdMatch) {
+        return null;
+      }
+      
+      const documentId = parseInt(documentIdMatch[1]);
+      
+      // Get the document
+      return await documentService.getDocumentById(documentId);
+    } catch (error) {
+      console.error('Error getting transaction document:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Creates a new IOLTA transaction with an attached document
+   * 
+   * @param transactionData The transaction data
+   * @param documentData The document data
+   * @param fileBuffer The document file
+   * @returns The created transaction with document
+   */
+  async recordTransactionWithDocument(
+    transactionData: InsertIoltaTransaction, 
+    documentData: InsertLegalDocument, 
+    fileBuffer: Buffer
+  ) {
+    try {
+      // Record the transaction first
+      const transaction = await this.recordTransaction(transactionData);
+      
+      // Create the document
+      const document = await documentService.createDocument({
+        ...documentData,
+        // Associate the document with the transaction's merchant and matter
+        merchantId: transactionData.merchantId,
+        // Use clientId from the client ledger
+        clientId: (await this.getClientLedger(transactionData.clientLedgerId))?.clientId 
+          ? parseInt((await this.getClientLedger(transactionData.clientLedgerId))?.clientId || '0')
+          : undefined,
+        // Set reference information in metadata
+        metaData: {
+          ...documentData.metaData,
+          transactionId: transaction.id,
+          transactionType: transactionData.transactionType,
+          transactionDate: transaction.createdAt
+        }
+      }, fileBuffer);
+      
+      // Attach the document to the transaction
+      return await this.attachDocumentToTransaction(transaction.id, document.id);
+    } catch (error) {
+      console.error('Error recording transaction with document:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Gets all documents related to a client ledger based on the transactions
+   * 
+   * @param clientLedgerId The ID of the client ledger
+   * @returns An array of documents related to the client ledger
+   */
+  async getClientLedgerDocuments(clientLedgerId: number) {
+    try {
+      // Get all transactions for the client ledger
+      const transactions = await this.getTransactionsByClientLedger(clientLedgerId);
+      
+      // Collect document IDs from transaction.documentUrl values
+      const documentIds: number[] = [];
+      for (const transaction of transactions) {
+        if (transaction.documentUrl) {
+          const documentIdMatch = transaction.documentUrl.match(/\/(\d+)$/);
+          if (documentIdMatch) {
+            documentIds.push(parseInt(documentIdMatch[1]));
+          }
+        }
+      }
+      
+      // If no documents found, return empty array
+      if (documentIds.length === 0) {
+        return [];
+      }
+      
+      // Get the documents
+      const documents: LegalDocument[] = [];
+      for (const id of documentIds) {
+        const document = await documentService.getDocumentById(id);
+        if (document) {
+          documents.push(document);
+        }
+      }
+      
+      return documents;
+    } catch (error) {
+      console.error('Error getting client ledger documents:', error);
+      throw error;
+    }
   }
 }
 

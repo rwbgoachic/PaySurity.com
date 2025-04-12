@@ -10,6 +10,7 @@ import { documentRouter } from "./document-routes";
 import { clientPortalRouter } from "./client-portal-routes";
 import calendarRouter from "./calendar-routes";
 import { ioltaRouter } from "./iolta-routes";
+import { ioltaDocumentRouter } from "./iolta-document-routes";
 
 import { ensureAuthenticated, ensureLegalMerchant } from "./auth-middleware";
 
