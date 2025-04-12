@@ -62,9 +62,12 @@ class ClientPortalTester {
         
         const account = await this.ioltaService.createTrustAccount({
           merchantId: this.testMerchantId,
+          clientId: this.testClientId,
           accountName: 'Test IOLTA Account',
           accountNumber: `IOLTA-TEST-${Date.now()}`,
           bankName: 'Test Bank',
+          routingNumber: '123456789', // Adding this because it's required
+          accountType: 'iolta', // Adding this because it's required
           status: 'active',
           balance: '10000.00',
           notes: 'Test account for portal integration',
@@ -247,12 +250,12 @@ class ClientPortalTester {
       await db.execute(sql`
         INSERT INTO iolta_transactions (
           merchant_id, trust_account_id, client_ledger_id,
-          amount, transaction_type, description, check_number,
-          status, entered_by, reference
+          amount, balance_after, transaction_type, description, check_number,
+          status, created_by, reference, fund_type
         ) VALUES (
           ${this.testMerchantId}, ${this.testAccountId}, ${this.testLedgerId},
-          '1000.00', 'deposit', 'Initial client retainer', 'CHK12345',
-          'cleared', 'admin', 'REF12345'
+          '1000.00', '5000.00', 'deposit', 'Initial client retainer', 'CHK12345',
+          'completed', 1, 'REF12345', 'retainer'
         )
       `);
       
