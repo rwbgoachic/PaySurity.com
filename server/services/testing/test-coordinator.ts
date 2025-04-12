@@ -88,6 +88,13 @@ export class TestCoordinatorService {
   }
   
   /**
+   * Alias for runTests to maintain backwards compatibility
+   */
+  async runTestSuite(serviceName: string): Promise<TestReport> {
+    return this.runTests(serviceName);
+  }
+  
+  /**
    * Run all registered tests
    */
   async runAllTests(): Promise<TestReport> {

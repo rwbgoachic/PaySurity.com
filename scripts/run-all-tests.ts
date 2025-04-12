@@ -67,9 +67,9 @@ async function runAllTests() {
         if (groupFailedTests.length > 0) {
           console.log(`\n📝 ${group.name}:`);
           groupFailedTests.forEach(test => {
-            console.log(`  ❌ ${test.name}: ${test.result}`);
-            console.log(`     Expected: ${test.expected}`);
-            console.log(`     Actual: ${test.actual}`);
+            console.log(`  ❌ ${test.name}: ${test.error || 'Failed'}`);
+            if ('expected' in test) console.log(`     Expected: ${(test as any).expected}`);
+            if ('actual' in test) console.log(`     Actual: ${(test as any).actual}`);
           });
         }
       });
