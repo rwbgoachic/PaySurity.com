@@ -53,7 +53,27 @@ export class IoltaService {
   async createClientLedger(data: InsertIoltaClientLedger) {
     try {
       console.log("Creating client ledger with data:", JSON.stringify(data, null, 2));
-      const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
+      
+      // Create client ledger using SQL to avoid Drizzle ORM schema validation issues
+      const result = await db.execute(sql`
+        INSERT INTO iolta_client_ledgers (
+          merchant_id, trust_account_id, client_id, client_name,
+          matter_name, matter_number, balance, current_balance,
+          status, notes, jurisdiction
+        ) VALUES (
+          ${data.merchantId}, ${data.trustAccountId}, ${data.clientId}, ${data.clientName},
+          ${data.matterName || null}, ${data.matterNumber || null}, ${data.balance || '0.00'}, 
+          ${data.currentBalance || '0.00'}, ${data.status || 'active'}, ${data.notes || null},
+          ${data.jurisdiction || 'Unknown'}
+        )
+        RETURNING *;
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error('Failed to create client ledger');
+      }
+      
+      const ledger = result.rows[0];
       console.log("Created client ledger:", JSON.stringify(ledger, null, 2));
       return ledger;
     } catch (error) {

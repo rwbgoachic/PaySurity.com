@@ -60,7 +60,7 @@ export class IoltaTestService implements TestService {
   private testClientData = {
     merchantId: this.testMerchantId,
     clientId: this.testClientId.toString(), // String format as defined in schema
-    trustAccountId: 75, // Using existing trust account ID from fix-transaction-test.ts
+    trustAccountId: 80, // Using trust account ID created by our fix script
     clientName: 'Test Client',
     matterName: 'Test Matter',
     matterNumber: 'MAT-001',
@@ -78,8 +78,8 @@ export class IoltaTestService implements TestService {
     description: 'Initial client retainer',
     transactionType: 'deposit' as const,
     createdBy: 1,
-    trustAccountId: 75, // Using existing trust account ID from the database
-    clientLedgerId: 12, // Using existing client ledger ID from the database
+    trustAccountId: 80, // Updated to match our fixed trust account ID
+    clientLedgerId: 16, // Updated to match our fixed client ledger ID
     fundType: 'retainer' as const,
     status: 'completed' as const,
     referenceNumber: 'TR-1001',
@@ -476,8 +476,8 @@ export class IoltaTestService implements TestService {
       // First, ensure we have a valid client ledger ID
       // We'll use the client ledger we know exists from our previous fix
       // This ensures the client ledger ID used in the test matches what's in the database
-      const fixedClientLedgerId = 12; // From the fix-transaction-test.ts script
-      const fixedTrustAccountId = 75; // From the fix-transaction-test.ts script
+      const fixedClientLedgerId = 16; // Client ledger created in fix-jurisdication-in-iolta-tests.ts
+      const fixedTrustAccountId = 80; // Trust account created in fix-jurisdication-in-iolta-tests.ts
       this.testTransactionData.clientLedgerId = fixedClientLedgerId;
       this.testTransactionData.trustAccountId = fixedTrustAccountId;
       
