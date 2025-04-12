@@ -29,7 +29,7 @@ export const legalPortalUsers = pgTable("legal_portal_users", {
   merchantId: integer("merchant_id").notNull(),
   clientId: integer("client_id").notNull(),
   email: varchar("email", { length: 255 }).notNull(),
-  password: varchar("password", { length: 255 }).notNull(),
+  password_hash: varchar("password_hash", { length: 255 }).notNull(),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   phoneNumber: varchar("phone_number", { length: 20 }),
