@@ -66,6 +66,8 @@ export const legalClients = pgTable("legal_clients", {
   portalAccess: boolean("portal_access").default(false),
   portalUserId: integer("portal_user_id"),
   retainer_agreement_signed: boolean("retainer_agreement_signed").default(false),
+  retainerAgreementDate: date("retainer_agreement_date"),
+  retainerAgreementDocumentId: integer("retainer_agreement_document_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -172,6 +174,7 @@ export const ioltaTransactions = pgTable("iolta_transactions", {
   transactionType: text("transaction_type", { enum: ["deposit", "withdrawal", "transfer", "interest", "fee"] }).notNull(),
   fundType: text("fund_type", { enum: ["retainer", "settlement", "trust", "operating", "other"] }).notNull(),
   checkNumber: text("check_number"),
+  reference: text("reference"),
   referenceNumber: text("reference_number"),
   payee: text("payee"),
   payor: text("payor"),

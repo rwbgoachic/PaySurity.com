@@ -252,6 +252,28 @@ async function fixLegalTables() {
       console.log('retainer_agreement_signed column already exists in legal_clients');
     }
     
+    // Add retainer_agreement_date column to legal_clients if missing
+    const checkRetainerAgreementDate = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'legal_clients' 
+        AND column_name = 'retainer_agreement_date'
+      );
+    `);
+    
+    const retainerAgreementDateExists = checkRetainerAgreementDate.rows[0].exists;
+    
+    if (!retainerAgreementDateExists) {
+      console.log('Adding retainer_agreement_date column to legal_clients...');
+      await db.execute(sql`
+        ALTER TABLE legal_clients
+        ADD COLUMN retainer_agreement_date DATE;
+      `);
+      console.log('Successfully added retainer_agreement_date column to legal_clients');
+    } else {
+      console.log('retainer_agreement_date column already exists in legal_clients');
+    }
+    
     // Add payment_method_id column to iolta_transactions if missing
     const checkPaymentMethodId = await db.execute(sql`
       SELECT EXISTS (
@@ -272,6 +294,28 @@ async function fixLegalTables() {
       console.log('Successfully added payment_method_id column to iolta_transactions');
     } else {
       console.log('payment_method_id column already exists in iolta_transactions');
+    }
+    
+    // Add check_number column to iolta_transactions if missing
+    const checkCheckNumber = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'check_number'
+      );
+    `);
+    
+    const checkNumberExists = checkCheckNumber.rows[0].exists;
+    
+    if (!checkNumberExists) {
+      console.log('Adding check_number column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN check_number TEXT;
+      `);
+      console.log('Successfully added check_number column to iolta_transactions');
+    } else {
+      console.log('check_number column already exists in iolta_transactions');
     }
 
     // Fix legal_clients by ensuring all required columns match our schema
