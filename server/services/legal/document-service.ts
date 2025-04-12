@@ -60,7 +60,11 @@ export class DocumentService {
       const documentToInsert = {
         ...document,
         fileLocation: fileName,
-        lastModifiedAt: new Date()
+        lastModifiedAt: new Date(),
+        // Set file_url to the same as fileLocation for backward compatibility
+        file_url: fileName,
+        // Add required uploaded_by field using authorId if not explicitly set
+        uploaded_by: document.authorId
       };
       
       // Insert document record
