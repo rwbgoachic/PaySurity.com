@@ -11,7 +11,13 @@ import { db } from '../server/db';
 import { eq } from 'drizzle-orm';
 import { ioltaService } from '../server/services/legal/iolta-service';
 import { documentService } from '../server/services/legal/document-service';
-import { ioltaTrustAccounts, ioltaClientLedgers, ioltaTransactions } from '../shared/schema';
+import { sqlService } from '../server/services/sql-service';
+import { 
+  ioltaTrustAccounts, 
+  ioltaClientLedgers, 
+  ioltaTransactions, 
+  legalClients 
+} from '../shared/schema';
 import { InsertIoltaTransaction, InsertLegalDocument } from '../shared/schema';
 
 // Helper function to generate a test file buffer
@@ -59,6 +65,37 @@ async function testIoltaDocumentIntegration() {
     // Check for existing test data
     const testMerchantId = 12345; // Use a known test merchant ID
     
+    // First, make sure we have a test legal client
+    console.log("Checking for existing test client...");
+    let testClient = await db.query.legalClients.findFirst({
+      where: eq(legalClients.merchantId, testMerchantId)
+    });
+    
+    // If no test client exists, create one using direct SQL
+    if (!testClient) {
+      console.log("Creating test legal client...");
+      
+      // Use direct SQL to create a client record
+      const clientInsertResult = await sqlService.rawSQL(`
+        INSERT INTO legal_clients 
+          (merchant_id, client_type, first_name, last_name, email, phone, client_number, jurisdiction, is_active, created_at, updated_at) 
+        VALUES 
+          (${testMerchantId}, 'individual', 'Test', 'Client', 'test@example.com', '555-123-4567', 'TC-${Date.now()}', 'CA', true, NOW(), NOW())
+        RETURNING id
+      `);
+      
+      // Get the ID of the newly created client
+      const clientId = clientInsertResult[0].id;
+      console.log(`Created test client with ID: ${clientId}`);
+      
+      // Fetch the new client record
+      testClient = await db.query.legalClients.findFirst({
+        where: eq(legalClients.id, clientId)
+      });
+    } else {
+      console.log(`Using existing test client with ID: ${testClient.id}`);
+    }
+    
     // Check if we have an IOLTA trust account for our test
     let account = await db.query.ioltaTrustAccounts.findFirst({
       where: eq(ioltaTrustAccounts.merchantId, testMerchantId)
@@ -76,8 +113,8 @@ async function testIoltaDocumentIntegration() {
         balance: "0.00",
         status: "active",
         notes: "Test account for document integration testing",
-        clientId: 12345,
-        firmId: 12345
+        clientId: testClient.id, // Use the ID of our test client
+        firmId: testMerchantId
       });
       console.log(`Created trust account with ID: ${account.id}`);
     } else {
@@ -95,8 +132,8 @@ async function testIoltaDocumentIntegration() {
       clientLedger = await ioltaService.createClientLedger({
         merchantId: testMerchantId,
         trustAccountId: account.id,
-        clientId: "TEST-CLIENT-" + Date.now(),
-        clientName: "Test Client",
+        clientId: testClient.id.toString(), // Use the client ID from our test client
+        clientName: testClient.firstName + " " + testClient.lastName,
         matterName: "Test Matter",
         matterNumber: "TM-" + Date.now(),
         balance: "0.00",
@@ -112,6 +149,10 @@ async function testIoltaDocumentIntegration() {
     
     // Create a test transaction
     console.log("Creating test transaction...");
+    
+    // Get or create a test user ID for the createdBy field
+    let testUserId = 1; // Default test user ID
+    
     const transactionData: InsertIoltaTransaction = {
       merchantId: testMerchantId,
       trustAccountId: account.id,
@@ -120,7 +161,7 @@ async function testIoltaDocumentIntegration() {
       amount: "1000.00",
       description: "Test deposit with document",
       reference: "REF-DOC-" + Date.now(),
-      createdBy: "test-user",
+      createdBy: testUserId,
       cleared: false
     };
     
@@ -133,14 +174,15 @@ async function testIoltaDocumentIntegration() {
       merchantId: testMerchantId,
       title: "Test IOLTA Transaction Document",
       description: "This is a test document for IOLTA transaction",
-      documentType: "iolta_transaction",
+      documentType: "other", // Using one of the allowed document types
       status: "final",
       authorId: "test-user",
       lastModifiedById: "test-user",
-      clientId: parseInt(clientLedger.clientId),
+      clientId: testClient.id, // Use the test client's ID
       metaData: {
         transactionType: "deposit",
-        amount: "1000.00"
+        amount: "1000.00",
+        documentCategory: "iolta_transaction" // Store the IOLTA-specific type in metadata
       }
     };
     
@@ -186,11 +228,14 @@ async function testIoltaDocumentIntegration() {
       merchantId: testMerchantId,
       title: "Combined Transaction Document",
       description: "Document created with transaction in a single call",
-      documentType: "iolta_transaction",
+      documentType: "other", // Using one of the allowed document types
       status: "final",
       authorId: "test-user",
       lastModifiedById: "test-user",
-      metaData: {}
+      clientId: testClient.id, // Use the test client's ID
+      metaData: {
+        documentCategory: "iolta_transaction"
+      }
     };
     
     const combinedResult = await ioltaService.recordTransactionWithDocument(
