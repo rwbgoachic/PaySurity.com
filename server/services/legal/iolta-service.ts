@@ -51,8 +51,15 @@ export class IoltaService {
    * Creates a new client ledger within a trust account
    */
   async createClientLedger(data: InsertIoltaClientLedger) {
-    const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
-    return ledger;
+    try {
+      console.log("Creating client ledger with data:", JSON.stringify(data, null, 2));
+      const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
+      console.log("Created client ledger:", JSON.stringify(ledger, null, 2));
+      return ledger;
+    } catch (error) {
+      console.error("Error creating client ledger:", error);
+      throw error;
+    }
   }
   
   /**
