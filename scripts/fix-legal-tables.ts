@@ -707,6 +707,138 @@ async function fixLegalTables() {
     } else {
       console.log('notes column already exists in iolta_transactions');
     }
+    
+    // Add earning_date column to iolta_transactions if missing
+    const checkEarningDate = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'earning_date'
+      );
+    `);
+    
+    const earningDateExists = checkEarningDate.rows[0].exists;
+    
+    if (!earningDateExists) {
+      console.log('Adding earning_date column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN earning_date TIMESTAMP;
+      `);
+      console.log('Successfully added earning_date column to iolta_transactions');
+    } else {
+      console.log('earning_date column already exists in iolta_transactions');
+    }
+    
+    // Add cleared_date column to iolta_transactions if missing
+    const checkClearedDate = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'cleared_date'
+      );
+    `);
+    
+    const clearedDateExists = checkClearedDate.rows[0].exists;
+    
+    if (!clearedDateExists) {
+      console.log('Adding cleared_date column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN cleared_date TIMESTAMP;
+      `);
+      console.log('Successfully added cleared_date column to iolta_transactions');
+    } else {
+      console.log('cleared_date column already exists in iolta_transactions');
+    }
+    
+    // Add bank_reference column to iolta_transactions if missing
+    const checkBankReference = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'bank_reference'
+      );
+    `);
+    
+    const bankReferenceExists = checkBankReference.rows[0].exists;
+    
+    if (!bankReferenceExists) {
+      console.log('Adding bank_reference column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN bank_reference TEXT;
+      `);
+      console.log('Successfully added bank_reference column to iolta_transactions');
+    } else {
+      console.log('bank_reference column already exists in iolta_transactions');
+    }
+    
+    // Add reconciliation_id column to iolta_transactions if missing
+    const checkReconciliationId = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'reconciliation_id'
+      );
+    `);
+    
+    const reconciliationIdExists = checkReconciliationId.rows[0].exists;
+    
+    if (!reconciliationIdExists) {
+      console.log('Adding reconciliation_id column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN reconciliation_id INTEGER;
+      `);
+      console.log('Successfully added reconciliation_id column to iolta_transactions');
+    } else {
+      console.log('reconciliation_id column already exists in iolta_transactions');
+    }
+    
+    // Add balance_after column to iolta_transactions if missing
+    const checkBalanceAfter = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'balance_after'
+      );
+    `);
+    
+    const balanceAfterExists = checkBalanceAfter.rows[0].exists;
+    
+    if (!balanceAfterExists) {
+      console.log('Adding balance_after column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN balance_after TEXT DEFAULT '0.00' NOT NULL;
+      `);
+      console.log('Successfully added balance_after column to iolta_transactions');
+    } else {
+      // Check if it's nullable and make it non-nullable with a default
+      const checkBalanceAfterNullable = await db.execute(sql`
+        SELECT is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'balance_after';
+      `);
+      
+      if (checkBalanceAfterNullable.rows.length > 0 && checkBalanceAfterNullable.rows[0].is_nullable === 'YES') {
+        console.log('Updating balance_after column to be NOT NULL with default...');
+        await db.execute(sql`
+          ALTER TABLE iolta_transactions
+          ALTER COLUMN balance_after SET DEFAULT '0.00',
+          ALTER COLUMN balance_after SET NOT NULL;
+          
+          UPDATE iolta_transactions
+          SET balance_after = '0.00'
+          WHERE balance_after IS NULL;
+        `);
+        console.log('Successfully updated balance_after column');
+      } else {
+        console.log('balance_after column already exists with correct constraints');
+      }
+    }
 
     // Check if merchants table exists and create it if it doesn't
     const checkMerchantsTable = await db.execute(sql`

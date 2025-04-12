@@ -276,15 +276,15 @@ export class IoltaTestService implements TestService {
       
       // If client doesn't exist, create it
       if (!existingClient) {
-        await db.insert(legalClients).values({
-          merchantId: this.testMerchantId,
-          status: 'active',
-          clientType: 'individual',
-          firstName: 'Test',
-          lastName: 'Client',
-          email: 'test.client@example.com',
-          phone: '555-123-4567'
-        });
+        await db.execute(sql`
+          INSERT INTO legal_clients (
+            merchant_id, status, client_type, first_name, last_name, 
+            email, phone, client_number, jurisdiction, is_active
+          ) VALUES (
+            ${this.testMerchantId}, 'active', 'individual', 'Test', 'Client', 
+            'test.client@example.com', '555-123-4567', 'CLIENT-001', 'CA', true
+          );
+        `);
       }
       
       // Ensure the matter exists
