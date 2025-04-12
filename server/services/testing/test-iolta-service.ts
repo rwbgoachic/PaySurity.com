@@ -286,6 +286,20 @@ export class IoltaTestService implements TestService {
             'test.client@example.com', '555-123-4567', 'CLIENT-001', 'CA', true
           );
         `);
+        
+        // Get the client ID
+        const client = await db.query.legalClients.findFirst({
+          where: and(
+            eq(legalClients.merchantId, this.testMerchantId),
+            eq(legalClients.email, 'test.client@example.com')
+          )
+        });
+        
+        if (client) {
+          this.testClientId = client.id;
+        } else {
+          throw new Error('Failed to create test client');
+        }
       }
       
       // Ensure the matter exists
