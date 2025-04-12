@@ -638,14 +638,28 @@ export class ClientPortalService {
    */
   async getClientInvoices(clientId: number, merchantId: number): Promise<LegalInvoice[]> {
     try {
-      const invoices = await db.select()
-        .from(legalInvoices)
-        .where(and(
-          eq(legalInvoices.clientId, clientId),
-          eq(legalInvoices.merchantId, merchantId),
-          eq(legalInvoices.status, 'sent')
-        ))
-        .orderBy(desc(legalInvoices.createdAt));
+      // Use raw SQL to avoid matter_number column reference issues
+      const result = await db.execute(sql`
+        SELECT * FROM legal_invoices
+        WHERE client_id = ${clientId}
+        AND merchant_id = ${merchantId}
+        AND status = 'sent'
+        ORDER BY created_at DESC
+      `);
+      
+      // Transform the raw results to match the expected type
+      const invoices = result.rows.map(row => ({
+        id: row.id,
+        merchantId: row.merchant_id,
+        clientId: row.client_id,
+        matterId: row.matter_id,
+        invoiceNumber: row.invoice_number,
+        amount: row.amount,
+        status: row.status,
+        dueDate: row.due_date ? new Date(row.due_date) : null,
+        createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+        updatedAt: row.updated_at ? new Date(row.updated_at) : new Date()
+      }));
       
       return invoices;
     } catch (error) {
@@ -675,15 +689,23 @@ export class ClientPortalService {
       
       const invoice = invoiceResult.rows[0];
       
-      // Import the time-expense service to get invoice entries
-      const { legalTimeExpenseService } = require('./time-expense-service');
+      // Get time entries directly with SQL
+      const timeEntriesResult = await db.execute(sql`
+        SELECT * FROM legal_time_entries
+        WHERE invoice_id = ${invoiceId}
+      `);
       
-      // Get invoice entries from the time & expense service
-      const invoiceWithEntries = await legalTimeExpenseService.getInvoiceEntries(invoiceId);
+      // Get expense entries directly with SQL
+      const expenseEntriesResult = await db.execute(sql`
+        SELECT * FROM legal_expense_entries
+        WHERE invoice_id = ${invoiceId}
+      `);
       
-      if (!invoiceWithEntries) {
-        throw new Error('Failed to retrieve invoice entries');
-      }
+      // Prepare the invoice entries data structure
+      const invoiceWithEntries = {
+        timeEntries: timeEntriesResult.rows || [],
+        expenseEntries: expenseEntriesResult.rows || []
+      };
       
       // Log invoice view activity
       await this.logPortalActivity({

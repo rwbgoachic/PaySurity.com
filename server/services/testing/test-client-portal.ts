@@ -535,6 +535,29 @@ export class ClientPortalTestService implements TestService {
       tests,
       passed: groupPassed
     };
+  });
+      
+      if (!valid) {
+        groupPassed = false;
+      }
+      
+    } catch (error) {
+      console.error('Error getting client invoices:', error);
+      tests.push({
+        name: 'Get client invoices',
+        passed: false,
+        description: 'Should retrieve invoices for the client',
+        error: error instanceof Error ? error.message : String(error)
+      });
+      groupPassed = false;
+    }
+    
+    return {
+      name: 'Invoice Access',
+      description: 'Tests for accessing client invoices via the portal',
+      tests,
+      passed: groupPassed
+    };
   }
   
   /**
