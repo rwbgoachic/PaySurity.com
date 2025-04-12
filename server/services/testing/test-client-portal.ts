@@ -494,7 +494,10 @@ export class ClientPortalTestService implements TestService {
   /**
    * Test invoice access functionality
    */
-  private async testInvoiceAccess() {
+  private async testInvoiceAccess(): Promise<TestGroup> {
+    const tests: TestResult[] = [];
+    let groupPassed = true;
+    
     try {
       // Get invoices for the client
       const invoices = await this.clientPortalService.getClientInvoices(
@@ -504,37 +507,24 @@ export class ClientPortalTestService implements TestService {
       
       // Validate invoice data
       const valid = Array.isArray(invoices) && invoices.length > 0;
-      this.testResults.push({
+      tests.push({
         name: 'Get client invoices',
         passed: valid,
         description: 'Should retrieve invoices for the client',
         error: valid ? null : 'Failed to retrieve client invoices'
       });
       
-      return true;
+      if (!valid) {
+        groupPassed = false;
+      }
+      
     } catch (error) {
       console.error('Error getting client invoices:', error);
-      this.testResults.push({
+      tests.push({
         name: 'Get client invoices',
         passed: false,
         description: 'Should retrieve invoices for the client',
-        error: error.message
-      });
-      return false;
-    }
-  }
-      
-      if (!Array.isArray(invoices) || 
-          invoices.length === 0 ||
-          !invoices.some(inv => inv.notes === 'Test portal invoice')) {
-        groupPassed = false;
-      }
-    } catch (e) {
-      tests.push({
-        name: 'Access client invoices',
-        description: 'Should retrieve invoices accessible to the client',
-        passed: false,
-        error: e instanceof Error ? e.message : String(e)
+        error: error instanceof Error ? error.message : String(error)
       });
       groupPassed = false;
     }

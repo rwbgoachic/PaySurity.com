@@ -12,6 +12,7 @@ import { ClientPortalTestService } from '../server/services/testing/test-client-
 
 // Define a new class that extends the original test service and overrides setupTestData
 class FixedClientPortalTestService extends ClientPortalTestService {
+  clientPortalService = new ClientPortalService();
   // Override the setupTestData method
   async setupTestData(): Promise<void> {
     console.log(chalk.blue('Setting up test data with modified approach...'));
