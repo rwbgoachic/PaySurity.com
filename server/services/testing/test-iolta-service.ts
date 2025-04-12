@@ -25,6 +25,7 @@ import {
   legalMatters,
   eq
 } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 
 /**
  * IoltaTestService implements tests for the IOLTA service
@@ -294,15 +295,15 @@ export class IoltaTestService implements TestService {
       
       // If matter doesn't exist, create it
       if (!existingMatter) {
-        await db.insert(legalMatters).values({
-          merchantId: this.testMerchantId,
-          clientId: this.testClientId,
-          status: 'active',
-          title: 'Test Matter',
-          description: 'Test IOLTA matter',
-          practiceArea: 'other',
-          openDate: new Date()
-        });
+        await db.execute(sql`
+          INSERT INTO legal_matters (
+            merchant_id, client_id, status, title, description, 
+            practice_area, open_date
+          ) VALUES (
+            ${this.testMerchantId}, ${this.testClientId}, 'active', 'Test Matter', 
+            'Test IOLTA matter', 'other', ${new Date()}
+          );
+        `);
       }
       
       const clientLedger = await ioltaService.createClientLedger(this.testClientData);
