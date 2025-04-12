@@ -1,106 +1,135 @@
 /**
  * Fix Portal Users Table Schema
  * 
- * This script adds the missing merchant_id column to the legal_portal_users table
- * and other related portal tables if needed.
+ * This script adds the missing columns to the legal_portal_users table
+ * to match the schema definition in schema-portal.ts
+ * 
+ * Run with: npx tsx scripts/fix-portal-users-table.ts
  */
 
-import { db } from '../server/db';
-import { sql } from 'drizzle-orm';
-import { Pool } from '@neondatabase/serverless';
-import chalk from 'chalk';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
+
+neonConfig.webSocketConstructor = ws;
 
 async function fixPortalUsersTables() {
-  console.log(chalk.blue.bold('Fixing Portal User Tables Schema...'));
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   
   try {
-    // Check if merchant_id column exists in legal_portal_users
-    const columnExists = await checkColumnExists('legal_portal_users', 'merchant_id');
-    
-    if (!columnExists) {
-      console.log(chalk.yellow('Adding missing merchant_id column to legal_portal_users table...'));
-      
-      // Add the merchant_id column to legal_portal_users
-      await db.execute(sql`
-        ALTER TABLE legal_portal_users 
-        ADD COLUMN merchant_id INTEGER NOT NULL DEFAULT 1
-      `);
-      
-      console.log(chalk.green('✓ Added merchant_id column to legal_portal_users table'));
-    } else {
-      console.log(chalk.green('✓ merchant_id column already exists in legal_portal_users table'));
-    }
-    
-    // Update legal_portal_users schema to match actual database structure
-    const portalUserColumns = await getTableColumns('legal_portal_users');
-    console.log('Portal user table columns:', portalUserColumns);
-    
-    // Check for other portal tables that might need merchant_id column
-    await checkAndFixTable('legal_portal_sessions', 'merchant_id');
-    await checkAndFixTable('legal_portal_activities', 'merchant_id');
-    await checkAndFixTable('legal_portal_shared_documents', 'merchant_id');
-    await checkAndFixTable('legal_portal_messages', 'merchant_id');
-    
-    console.log(chalk.green.bold('✅ Portal users table schema fixes completed'));
-  } catch (error) {
-    console.error(chalk.red('Error fixing portal users tables:'), error);
-    throw error;
-  }
-}
+    console.log("Fixing portal users and sessions tables...");
 
-async function checkColumnExists(tableName: string, columnName: string): Promise<boolean> {
-  try {
-    const result = await db.execute(sql`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = ${tableName}
-      AND column_name = ${columnName}
+    // Check portal_user_id in sessions table
+    console.log("Checking legal_portal_sessions table for column naming issues...");
+    
+    const checkPortalUserIdResult = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'legal_portal_sessions' AND column_name = 'portal_user_id'
     `);
     
-    return result.rows.length > 0;
-  } catch (error) {
-    console.error(`Error checking if column ${columnName} exists in ${tableName}:`, error);
-    throw error;
-  }
-}
-
-async function getTableColumns(tableName: string): Promise<string[]> {
-  try {
-    const result = await db.execute(sql`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = ${tableName}
-      ORDER BY ordinal_position
-    `);
-    
-    return result.rows.map(row => row.column_name);
-  } catch (error) {
-    console.error(`Error getting columns for table ${tableName}:`, error);
-    throw error;
-  }
-}
-
-async function checkAndFixTable(tableName: string, columnName: string): Promise<void> {
-  try {
-    const columnExists = await checkColumnExists(tableName, columnName);
-    
-    if (!columnExists) {
-      console.log(chalk.yellow(`Adding missing ${columnName} column to ${tableName} table...`));
-      
-      await db.execute(sql`
-        ALTER TABLE ${sql.identifier(tableName)}
-        ADD COLUMN ${sql.identifier(columnName)} INTEGER NOT NULL DEFAULT 1
+    if (checkPortalUserIdResult.rows.length === 0) {
+      // Check if portalUserId exists instead
+      const checkPortalUserIdCamelResult = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'legal_portal_sessions' AND column_name = 'portalUserId'
       `);
       
-      console.log(chalk.green(`✓ Added ${columnName} column to ${tableName} table`));
+      if (checkPortalUserIdCamelResult.rows.length === 1) {
+        console.log("Need to rename portalUserId column to portal_user_id");
+        
+        await pool.query(`
+          ALTER TABLE legal_portal_sessions
+          RENAME COLUMN "portalUserId" TO portal_user_id
+        `);
+        
+        console.log("Renamed portalUserId to portal_user_id in legal_portal_sessions table");
+      } else {
+        // Column doesn't exist at all, add it
+        await pool.query(`
+          ALTER TABLE legal_portal_sessions
+          ADD COLUMN portal_user_id INTEGER NOT NULL
+        `);
+        console.log("Added portal_user_id column to legal_portal_sessions table");
+      }
     } else {
-      console.log(chalk.green(`✓ ${columnName} column already exists in ${tableName} table`));
+      console.log("portal_user_id column already exists in legal_portal_sessions table");
     }
+    
+    // Fix document_status in legal_documents table
+    console.log("Checking legal_documents table for document_status column...");
+    
+    const checkDocStatusResult = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'legal_documents' AND column_name = 'document_status'
+    `);
+    
+    if (checkDocStatusResult.rows.length === 0) {
+      // Check if status exists instead
+      const checkStatusResult = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'legal_documents' AND column_name = 'status'
+      `);
+      
+      if (checkStatusResult.rows.length === 0) {
+        // Neither column exists, add status
+        await pool.query(`
+          ALTER TABLE legal_documents
+          ADD COLUMN status VARCHAR(50) DEFAULT 'draft' NOT NULL
+        `);
+        console.log("Added status column to legal_documents table");
+      } else {
+        console.log("status column already exists in legal_documents table");
+      }
+    } else {
+      // Need to rename document_status to status
+      await pool.query(`
+        ALTER TABLE legal_documents
+        RENAME COLUMN document_status TO status
+      `);
+      console.log("Renamed document_status to status in legal_documents table");
+    }
+    
+    // Fix matter_number in legal_matters table
+    console.log("Checking legal_matters table for matter_number column...");
+    
+    const checkMatterNumberResult = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'legal_matters' AND column_name = 'matter_number'
+    `);
+    
+    if (checkMatterNumberResult.rows.length === 0) {
+      // Add matter_number column
+      await pool.query(`
+        ALTER TABLE legal_matters
+        ADD COLUMN matter_number VARCHAR(50)
+      `);
+      console.log("Added matter_number column to legal_matters table");
+      
+      // Update existing records with a default matter number
+      await pool.query(`
+        UPDATE legal_matters
+        SET matter_number = CONCAT('M-', id) 
+        WHERE matter_number IS NULL
+      `);
+      console.log("Updated existing matters with default matter numbers");
+    } else {
+      console.log("matter_number column already exists in legal_matters table");
+    }
+    
+    console.log("Done fixing portal tables!");
   } catch (error) {
-    console.error(`Error checking/fixing ${columnName} in ${tableName}:`, error);
-    throw error;
+    console.error("Error fixing portal tables:", error);
+  } finally {
+    await pool.end();
   }
 }
 
-// Run the function
 fixPortalUsersTables().catch(console.error);
