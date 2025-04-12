@@ -65,6 +65,7 @@ export const legalClients = pgTable("legal_clients", {
   notes: text("notes"),
   portalAccess: boolean("portal_access").default(false),
   portalUserId: integer("portal_user_id"),
+  retainer_agreement_signed: boolean("retainer_agreement_signed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -182,6 +183,7 @@ export const ioltaTransactions = pgTable("iolta_transactions", {
   voidedAt: timestamp("voided_at"),
   voidReason: text("void_reason"),
   documentUrl: text("document_url"), // URL to related document (receipt, etc.)
+  payment_method_id: integer("payment_method_id"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
