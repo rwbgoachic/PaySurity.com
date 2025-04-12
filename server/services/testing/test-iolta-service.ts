@@ -79,11 +79,12 @@ export class IoltaTestService implements TestService {
     transactionType: 'deposit' as const,
     createdBy: 1,
     trustAccountId: 0, // Will be set during test
-    clientLedgerId: 0, // Will be set during client ledger test
+    clientLedgerId: 8, // Using existing client ledger ID from the database
     fundType: 'retainer' as const,
     status: 'completed' as const,
     referenceNumber: 'TR-1001',
-    balanceAfter: '5000.00' // Required field
+    balanceAfter: '5000.00', // Required field
+    transactionDate: new Date() // Add transaction date
   };
   
   /**

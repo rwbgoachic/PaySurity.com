@@ -56,10 +56,22 @@ export class IoltaService {
   }
   
   /**
-   * Gets a client ledger by ID
+   * Gets a client ledger by ID or client ID
+   * 
+   * @param id The ID of the ledger or client to retrieve
+   * @param isClientId If true, retrieve by client ID instead of ledger ID
    */
-  async getClientLedger(id: number) {
-    const [ledger] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.id, id));
+  async getClientLedger(id: number, isClientId: boolean = false) {
+    let ledger;
+    if (isClientId) {
+      // Find by client ID (converted to string to match schema type)
+      const [result] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.clientId, id.toString()));
+      ledger = result;
+    } else {
+      // Find by ledger ID
+      const [result] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.id, id));
+      ledger = result;
+    }
     return ledger;
   }
   
