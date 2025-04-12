@@ -176,8 +176,8 @@ async function testIoltaDocumentIntegration() {
       description: "This is a test document for IOLTA transaction",
       documentType: "other", // Using one of the allowed document types
       status: "final",
-      authorId: "test-user",
-      lastModifiedById: "test-user",
+      authorId: testUserId, // Use numeric user ID
+      lastModifiedById: testUserId, // Use numeric user ID
       clientId: testClient.id, // Use the test client's ID
       metaData: {
         transactionType: "deposit",
@@ -220,7 +220,7 @@ async function testIoltaDocumentIntegration() {
       amount: "500.00",
       description: "Second test deposit with document",
       reference: "REF-DOC-COMBINED-" + Date.now(),
-      createdBy: "test-user",
+      createdBy: testUserId, // Use numeric ID instead of string
       cleared: false
     };
     
@@ -230,8 +230,8 @@ async function testIoltaDocumentIntegration() {
       description: "Document created with transaction in a single call",
       documentType: "other", // Using one of the allowed document types
       status: "final",
-      authorId: "test-user",
-      lastModifiedById: "test-user",
+      authorId: testUserId, // Use numeric user ID 
+      lastModifiedById: testUserId, // Use numeric user ID
       clientId: testClient.id, // Use the test client's ID
       metaData: {
         documentCategory: "iolta_transaction"
