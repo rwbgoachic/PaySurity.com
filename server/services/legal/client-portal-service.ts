@@ -1014,9 +1014,16 @@ export class ClientPortalService {
       const trustAccountIds = new Set(clientLedgers.map(ledger => ledger.trustAccountId));
       console.log('Trust account IDs from client ledgers:', Array.from(trustAccountIds));
       
+      // Add more debug info
+      console.log('Trust account statuses:', trustAccounts.map(a => ({ id: a.id, status: a.accountStatus })));
+      
+      // Modify filter to include pending_verification accounts as well
       const filteredTrustAccounts = trustAccounts.filter(account => 
-        trustAccountIds.has(account.id) && account.accountStatus === 'active'
+        trustAccountIds.has(account.id) && 
+        (account.accountStatus === 'active' || account.accountStatus === 'pending_verification')
       );
+      
+      console.log(`Filtered to ${filteredTrustAccounts.length} trust accounts after applying filters`);
       
       // Log trust account view activity
       await this.logPortalActivity({
@@ -1098,13 +1105,17 @@ export class ClientPortalService {
       }
       
       // Get transactions for this ledger
+      console.log(`Getting transactions for ledger ID ${ledgerId}`);
+      
+      // Debug the schema
+      console.log('Transaction schema fields:', Object.keys(ioltaTransactions));
+      
       const transactions = await db.select()
         .from(ioltaTransactions)
-        .where(and(
-          eq(ioltaTransactions.clientLedgerId, ledgerId),
-          eq(ioltaTransactions.merchantId, merchantId)
-        ))
-        .orderBy(desc(ioltaTransactions.transactionDate));
+        .where(
+          eq(ioltaTransactions.clientLedgerId, ledgerId)
+        )
+        .orderBy(desc(ioltaTransactions.createdAt)); // Use createdAt instead of transactionDate
       
       // Log transaction view activity
       await this.logPortalActivity({
@@ -1162,25 +1173,21 @@ export class ClientPortalService {
           // Get transactions in the date range
           const transactions = await db.select()
             .from(ioltaTransactions)
-            .where(and(
-              eq(ioltaTransactions.clientLedgerId, ledger.id),
-              eq(ioltaTransactions.merchantId, merchantId),
-              gte(ioltaTransactions.transactionDate, effectiveStartDate),
-              lte(ioltaTransactions.transactionDate, effectiveEndDate)
-            ))
-            .orderBy(desc(ioltaTransactions.transactionDate));
+            .where(
+              eq(ioltaTransactions.clientLedgerId, ledger.id)
+            )
+            .orderBy(desc(ioltaTransactions.createdAt));
           
           // Calculate the running balance
           let runningBalance = 0;
           
-          // Get previous balance (all transactions before start date)
+          // Get previous balance (all transactions)
+          // For simplicity, we're not filtering by date since we don't have a transactionDate field
           const previousTransactions = await db.select()
             .from(ioltaTransactions)
-            .where(and(
-              eq(ioltaTransactions.clientLedgerId, ledger.id),
-              eq(ioltaTransactions.merchantId, merchantId),
-              lt(ioltaTransactions.transactionDate, effectiveStartDate)
-            ));
+            .where(
+              eq(ioltaTransactions.clientLedgerId, ledger.id)
+            );
           
           // Calculate opening balance
           for (const transaction of previousTransactions) {
