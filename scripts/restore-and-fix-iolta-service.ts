@@ -1,17 +1,138 @@
-import { db } from "../../db";
-import { 
-  ioltaTrustAccounts, 
-  ioltaClientLedgers, 
-  ioltaTransactions,
-  InsertIoltaTrustAccount,
-  InsertIoltaClientLedger,
-  InsertIoltaTransaction
-} from "@shared/schema-legal";
-import { eq, and, desc, sql, lt, gte, lte } from "drizzle-orm";
-import { Decimal } from "decimal.js";
-import { ioltaTransactionSqlService } from "./iolta-transaction-sql-service";
-
 /**
+ * Restore and Fix IOLTA Service
+ * 
+ * This script:
+ * 1. Creates a backup of the current iolta-service.ts file
+ * 2. Restores the file to its original state
+ * 3. Adds targeted fixes for the client ledger creation issue
+ * 
+ * Run with: npx tsx scripts/restore-and-fix-iolta-service.ts
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+
+async function restoreAndFixIoltaService() {
+  console.log("Starting restore and fix for IOLTA service...");
+  
+  try {
+    const servicePath = path.join(process.cwd(), 'server/services/legal/iolta-service.ts');
+    
+    // 1. Create a backup of the current file
+    if (fs.existsSync(servicePath)) {
+      const backupPath = `${servicePath}.bak`;
+      fs.copyFileSync(servicePath, backupPath);
+      console.log(`Created backup at ${backupPath}`);
+    }
+    
+    // 2. Get the original version from Git history
+    // This approach assumes the original file is in the Git history
+    try {
+      const originalContent = execSync('git show HEAD~5:server/services/legal/iolta-service.ts', { 
+        stdio: ['pipe', 'pipe', 'ignore'] 
+      }).toString();
+      
+      fs.writeFileSync(servicePath, originalContent);
+      console.log("Restored original iolta-service.ts file from Git history");
+    } catch (gitError) {
+      console.log("Could not restore from Git, using a clean template");
+      
+      // If we can't get from Git, we'll create a clean implementation
+      const cleanTemplate = createCleanTemplate();
+      fs.writeFileSync(servicePath, cleanTemplate);
+      console.log("Created clean implementation of iolta-service.ts");
+    }
+    
+    // 3. Now apply our targeted fix for client ledger creation
+    let content = fs.readFileSync(servicePath, 'utf8');
+    
+    // Find the createClientLedger method
+    const methodStart = content.indexOf('async createClientLedger(data: InsertIoltaClientLedger)');
+    if (methodStart === -1) {
+      throw new Error('Could not find createClientLedger method');
+    }
+    
+    // Find method body start and end
+    const bodyStart = content.indexOf('{', methodStart) + 1;
+    let bodyEnd = bodyStart;
+    let braceCount = 1;
+    
+    while (braceCount > 0 && bodyEnd < content.length) {
+      bodyEnd++;
+      if (content[bodyEnd] === '{') braceCount++;
+      if (content[bodyEnd] === '}') braceCount--;
+    }
+    
+    // Extract the original method body
+    const originalBody = content.substring(bodyStart, bodyEnd);
+    
+    // Replace with our fixed version that handles the jurisdiction field properly
+    const newBody = `
+    try {
+      console.log("Creating client ledger with data:", JSON.stringify(data, null, 2));
+      
+      // Make sure we include the jurisdiction field
+      if (!data.jurisdiction) {
+        data.jurisdiction = "Unknown";
+      }
+      
+      // Use the normal Drizzle ORM insert, but with more explicit error handling
+      const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
+      console.log("Created client ledger:", JSON.stringify(ledger, null, 2));
+      return ledger;
+    } catch (error) {
+      console.error("Error creating client ledger:", error);
+      
+      // If there's a column not found error, try direct SQL as a fallback
+      if (error.message && (
+          error.message.includes("column") || 
+          error.message.includes("does not exist")
+      )) {
+        console.log("Attempting direct SQL insert as fallback");
+        
+        // Fall back to direct SQL insert to bypass schema validation
+        const result = await db.execute(sql\`
+          INSERT INTO iolta_client_ledgers (
+            merchant_id, trust_account_id, client_id, client_name,
+            matter_name, matter_number, balance, current_balance,
+            status, notes, jurisdiction
+          ) VALUES (
+            \${data.merchantId}, \${data.trustAccountId}, \${data.clientId}, \${data.clientName},
+            \${data.matterName || null}, \${data.matterNumber || null}, \${data.balance || '0.00'}, 
+            \${data.currentBalance || '0.00'}, \${data.status || 'active'}, \${data.notes || null},
+            \${data.jurisdiction || 'Unknown'}
+          )
+          RETURNING *;
+        \`);
+        
+        if (!result.rows || result.rows.length === 0) {
+          throw new Error('Failed to create client ledger with direct SQL');
+        }
+        
+        return result.rows[0];
+      }
+      
+      // Re-throw the original error
+      throw error;
+    }`;
+    
+    // Replace the method body
+    content = content.substring(0, bodyStart) + newBody + content.substring(bodyEnd);
+    
+    // Write the updated file
+    fs.writeFileSync(servicePath, content);
+    
+    console.log("✅ Successfully fixed createClientLedger method in iolta-service.ts");
+    
+  } catch (error) {
+    console.error("Error during restore and fix:", error);
+    process.exit(1);
+  }
+}
+
+function createCleanTemplate() {
+  return `/**
  * IOLTA Service - Handles Interest on Lawyers Trust Accounts compliance
  * 
  * This service provides functionality for managing trust accounts, client ledgers,
@@ -22,8 +143,23 @@ import { ioltaTransactionSqlService } from "./iolta-transaction-sql-service";
  * 3. Fee deduction from operating account only
  * 4. Audit trails for all trust accounting
  */
+
+import { db } from '../../db';
+import { sql, eq, and, desc } from 'drizzle-orm';
+import { Decimal } from 'decimal.js';
+
+import {
+  ioltaTrustAccounts,
+  ioltaClientLedgers,
+  ioltaTransactions,
+  InsertIoltaTrustAccount,
+  InsertIoltaClientLedger,
+  InsertIoltaTransaction
+} from '@shared/schema-legal';
+
+import { ioltaTransactionSqlService } from './iolta-transaction-sql-service';
+
 export class IoltaService {
-  
   /**
    * Creates a new trust account
    */
@@ -51,53 +187,9 @@ export class IoltaService {
    * Creates a new client ledger within a trust account
    */
   async createClientLedger(data: InsertIoltaClientLedger) {
-    try {
-      console.log("Creating client ledger with data:", JSON.stringify(data, null, 2));
-      
-      // Make sure we include the jurisdiction field
-      if (!data.jurisdiction) {
-        data.jurisdiction = "Unknown";
-      }
-      
-      // Use the normal Drizzle ORM insert, but with more explicit error handling
-      const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
-      console.log("Created client ledger:", JSON.stringify(ledger, null, 2));
-      return ledger;
-    } catch (error) {
-      console.error("Error creating client ledger:", error);
-      
-      // If there's a column not found error, try direct SQL as a fallback
-      if (error.message && (
-          error.message.includes("column") || 
-          error.message.includes("does not exist")
-      )) {
-        console.log("Attempting direct SQL insert as fallback");
-        
-        // Fall back to direct SQL insert to bypass schema validation
-        const result = await db.execute(sql`
-          INSERT INTO iolta_client_ledgers (
-            merchant_id, trust_account_id, client_id, client_name,
-            matter_name, matter_number, balance, current_balance,
-            status, notes, jurisdiction
-          ) VALUES (
-            ${data.merchantId}, ${data.trustAccountId}, ${data.clientId}, ${data.clientName},
-            ${data.matterName || null}, ${data.matterNumber || null}, ${data.balance || '0.00'}, 
-            ${data.currentBalance || '0.00'}, ${data.status || 'active'}, ${data.notes || null},
-            ${data.jurisdiction || 'Unknown'}
-          )
-          RETURNING *;
-        `);
-        
-        if (!result.rows || result.rows.length === 0) {
-          throw new Error('Failed to create client ledger with direct SQL');
-        }
-        
-        return result.rows[0];
-      }
-      
-      // Re-throw the original error
-      throw error;
-    }}
+    const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
+    return ledger;
+  }
   
   /**
    * Gets a client ledger by ID or client ID
@@ -161,10 +253,10 @@ export class IoltaService {
         clientLedgerId: data.clientLedgerId,
         amount: data.amount,
         description: data.description,
-        transactionType: data.transactionType as any, // type conversion
-        fundType: data.fundType as any, // type conversion
+        transactionType: data.transactionType,
+        fundType: data.fundType,
         createdBy: data.createdBy,
-        status: data.status as any, // type conversion
+        status: data.status,
         checkNumber: data.checkNumber,
         referenceNumber: data.referenceNumber,
         payee: data.payee,
@@ -227,61 +319,51 @@ export class IoltaService {
       throw new Error("Client ledger not found");
     }
     
-    // Build query for transactions
-    let query = db.select().from(ioltaTransactions)
-      .where(eq(ioltaTransactions.clientLedgerId, clientLedgerId));
+    // Get transactions for this client ledger
+    const transactions = await this.getTransactionsByClientLedger(clientLedgerId);
     
-    // Add date filters if provided
-    if (startDate && endDate) {
-      query = query.where(
-        and(
-          ioltaTransactions.createdAt >= startDate,
-          ioltaTransactions.createdAt <= endDate
-        )
-      );
-    } else if (startDate) {
-      query = query.where(ioltaTransactions.createdAt >= startDate);
-    } else if (endDate) {
-      query = query.where(ioltaTransactions.createdAt <= endDate);
+    // Filter by date if provided
+    let filteredTransactions = transactions;
+    if (startDate || endDate) {
+      filteredTransactions = transactions.filter(tx => {
+        const txDate = new Date(tx.createdAt);
+        if (startDate && endDate) {
+          return txDate >= startDate && txDate <= endDate;
+        } else if (startDate) {
+          return txDate >= startDate;
+        } else if (endDate) {
+          return txDate <= endDate;
+        }
+        return true;
+      });
     }
     
-    // Order by date
-    const transactions = await query.orderBy(ioltaTransactions.createdAt);
-    
-    // Calculate opening and closing balances
+    // Calculate opening balance
     let openingBalance = "0.00";
     if (startDate && transactions.length > 0) {
-      // Find the sum of all transactions before the start date
-      const priorTransactions = await db.select().from(ioltaTransactions)
-        .where(
-          and(
-            eq(ioltaTransactions.clientLedgerId, clientLedgerId),
-            ioltaTransactions.createdAt < startDate
-          )
-        );
-        
+      // Calculate balance from transactions before start date
+      const priorTransactions = transactions.filter(tx => 
+        new Date(tx.createdAt) < startDate
+      );
+      
       let balance = new Decimal(0);
       for (const tx of priorTransactions) {
         if (tx.transactionType === "deposit") {
           balance = balance.plus(tx.amount);
-        } else if (tx.transactionType === "withdrawal" || tx.transactionType === "payment") {
+        } else if (tx.transactionType === "withdrawal") {
           balance = balance.minus(tx.amount);
         }
-        // For transfers, need to check if it's incoming or outgoing
-        // This is simplified and might need more complex logic depending on how transfers are recorded
       }
       
       openingBalance = balance.toString();
     }
     
-    const closingBalance = ledger.balance;
-    
     // Return the statement
     return {
       ledger,
-      transactions,
+      transactions: filteredTransactions,
       openingBalance,
-      closingBalance,
+      closingBalance: ledger.balance,
       startDate,
       endDate,
       generatedAt: new Date()
@@ -293,8 +375,7 @@ export class IoltaService {
    */
   async getClientLedgerBalances(trustAccountId: number) {
     // Get all client ledgers for this trust account
-    const clientLedgers = await db.select().from(ioltaClientLedgers)
-      .where(eq(ioltaClientLedgers.trustAccountId, trustAccountId));
+    const clientLedgers = await this.getClientLedgersByTrustAccount(trustAccountId);
     
     // Calculate total balance
     let totalBalance = new Decimal(0);
@@ -313,14 +394,13 @@ export class IoltaService {
    */
   async getTrustAccountReconciliation(trustAccountId: number, reconciliationDate: Date = new Date()) {
     // Get the trust account
-    const [account] = await db.select().from(ioltaTrustAccounts).where(eq(ioltaTrustAccounts.id, trustAccountId));
+    const account = await this.getTrustAccount(trustAccountId);
     if (!account) {
       throw new Error("Trust account not found");
     }
     
     // Get all client ledgers for this trust account
-    const clientLedgers = await db.select().from(ioltaClientLedgers)
-      .where(eq(ioltaClientLedgers.trustAccountId, trustAccountId));
+    const clientLedgers = await this.getClientLedgersByTrustAccount(trustAccountId);
     
     // Sum up all client ledger balances
     let totalClientBalances = new Decimal(0);
@@ -328,11 +408,8 @@ export class IoltaService {
       totalClientBalances = totalClientBalances.plus(ledger.balance);
     }
     
-    // Get recent transactions for the reconciliation
-    const recentTransactions = await db.select().from(ioltaTransactions)
-      .where(eq(ioltaTransactions.trustAccountId, trustAccountId))
-      .orderBy(desc(ioltaTransactions.createdAt))
-      .limit(50);  // Limit to recent transactions
+    // Get recent transactions
+    const recentTransactions = await this.getTransactionsByTrustAccount(trustAccountId);
     
     // Return the reconciliation report
     return {
@@ -342,7 +419,7 @@ export class IoltaService {
       totalClientLedgerBalances: totalClientBalances.toString(),
       difference: new Decimal(account.balance).minus(totalClientBalances).toString(),
       clientLedgers,
-      recentTransactions,
+      recentTransactions: recentTransactions.slice(0, 50), // Limit to 50 most recent
       generatedAt: new Date(),
       isBalanced: new Decimal(account.balance).equals(totalClientBalances)
     };
@@ -350,3 +427,13 @@ export class IoltaService {
 }
 
 export const ioltaService = new IoltaService();
+`;
+}
+
+// Run the fix
+restoreAndFixIoltaService()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Unhandled error:", err);
+    process.exit(1);
+  });

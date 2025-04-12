@@ -54,50 +54,33 @@ export class IoltaService {
     try {
       console.log("Creating client ledger with data:", JSON.stringify(data, null, 2));
       
-      // Make sure we include the jurisdiction field
-      if (!data.jurisdiction) {
-        data.jurisdiction = "Unknown";
+      // Create client ledger using SQL to avoid Drizzle ORM schema validation issues
+      const result = await db.execute(sql`
+        INSERT INTO iolta_client_ledgers (
+          merchant_id, trust_account_id, client_id, client_name,
+          matter_name, matter_number, balance, current_balance,
+          status, notes, jurisdiction
+        ) VALUES (
+          ${data.merchantId}, ${data.trustAccountId}, ${data.clientId}, ${data.clientName},
+          ${data.matterName || null}, ${data.matterNumber || null}, ${data.balance || '0.00'}, 
+          ${data.currentBalance || '0.00'}, ${data.status || 'active'}, ${data.notes || null},
+          ${data.jurisdiction || 'Unknown'}
+        )
+        RETURNING *;
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error('Failed to create client ledger');
       }
       
-      // Use the normal Drizzle ORM insert, but with more explicit error handling
-      const [ledger] = await db.insert(ioltaClientLedgers).values(data).returning();
+      const ledger = result.rows[0];
       console.log("Created client ledger:", JSON.stringify(ledger, null, 2));
       return ledger;
     } catch (error) {
       console.error("Error creating client ledger:", error);
-      
-      // If there's a column not found error, try direct SQL as a fallback
-      if (error.message && (
-          error.message.includes("column") || 
-          error.message.includes("does not exist")
-      )) {
-        console.log("Attempting direct SQL insert as fallback");
-        
-        // Fall back to direct SQL insert to bypass schema validation
-        const result = await db.execute(sql`
-          INSERT INTO iolta_client_ledgers (
-            merchant_id, trust_account_id, client_id, client_name,
-            matter_name, matter_number, balance, current_balance,
-            status, notes, jurisdiction
-          ) VALUES (
-            ${data.merchantId}, ${data.trustAccountId}, ${data.clientId}, ${data.clientName},
-            ${data.matterName || null}, ${data.matterNumber || null}, ${data.balance || '0.00'}, 
-            ${data.currentBalance || '0.00'}, ${data.status || 'active'}, ${data.notes || null},
-            ${data.jurisdiction || 'Unknown'}
-          )
-          RETURNING *;
-        `);
-        
-        if (!result.rows || result.rows.length === 0) {
-          throw new Error('Failed to create client ledger with direct SQL');
-        }
-        
-        return result.rows[0];
-      }
-      
-      // Re-throw the original error
       throw error;
-    }}
+    }
+  }
   
   /**
    * Gets a client ledger by ID or client ID
