@@ -247,6 +247,26 @@ export class IoltaService {
   }
   
   /**
+   * Gets client ledger balances for a trust account
+   */
+  async getClientLedgerBalances(trustAccountId: number) {
+    // Get all client ledgers for this trust account
+    const clientLedgers = await db.select().from(ioltaClientLedgers)
+      .where(eq(ioltaClientLedgers.trustAccountId, trustAccountId));
+    
+    // Calculate total balance
+    let totalBalance = new Decimal(0);
+    for (const ledger of clientLedgers) {
+      totalBalance = totalBalance.plus(ledger.balance || '0.00');
+    }
+    
+    return {
+      clientLedgers,
+      totalBalance: totalBalance.toString()
+    };
+  }
+
+  /**
    * Gets trust account reconciliation report
    */
   async getTrustAccountReconciliation(trustAccountId: number, reconciliationDate: Date = new Date()) {

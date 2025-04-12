@@ -466,11 +466,26 @@ async function fixLegalTables() {
       console.log('Adding jurisdiction column to legal_clients...');
       await db.execute(sql`
         ALTER TABLE legal_clients
-        ADD COLUMN jurisdiction TEXT;
+        ADD COLUMN jurisdiction TEXT DEFAULT 'Unknown';
       `);
       console.log('Successfully added jurisdiction column to legal_clients');
+      
+      // Update test client to have a jurisdiction
+      await db.execute(sql`
+        UPDATE legal_clients 
+        SET jurisdiction = 'Test Jurisdiction'
+        WHERE id = 1;
+      `);
+      console.log('Updated test client with jurisdiction data');
     } else {
       console.log('jurisdiction column already exists in legal_clients');
+      
+      // Make sure test client has a jurisdiction
+      await db.execute(sql`
+        UPDATE legal_clients 
+        SET jurisdiction = 'Test Jurisdiction'
+        WHERE id = 1 AND (jurisdiction IS NULL OR jurisdiction = '');
+      `);
     }
     
     // Add approved_by column to iolta_transactions if missing
