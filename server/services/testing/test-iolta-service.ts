@@ -78,8 +78,8 @@ export class IoltaTestService implements TestService {
     description: 'Initial client retainer',
     transactionType: 'deposit' as const,
     createdBy: 1,
-    trustAccountId: 0, // Will be set during test
-    clientLedgerId: 8, // Using existing client ledger ID from the database
+    trustAccountId: 71, // Using existing trust account ID from the database
+    clientLedgerId: 11, // Using existing client ledger ID from the database
     fundType: 'retainer' as const,
     status: 'completed' as const,
     referenceNumber: 'TR-1001',
