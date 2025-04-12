@@ -9,6 +9,10 @@ import { testCoordinator } from '../server/services/testing/test-coordinator';
 import { TestReport } from '../server/services/testing/test-delivery-service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function runAllTests() {
   console.log('📋 PaySurity.com Comprehensive Test Suite');
@@ -79,7 +83,7 @@ async function runAllTests() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === import.meta.resolve(process.argv[1])) {
   runAllTests()
     .then(() => {
       console.log('\nTest run complete.');
@@ -88,7 +92,7 @@ if (require.main === module) {
       console.error('Test run failed:', error);
       process.exit(1);
     });
-} else {
-  // Export for programmatic use
-  module.exports = { runAllTests };
 }
+
+// Export for programmatic use
+export { runAllTests };
