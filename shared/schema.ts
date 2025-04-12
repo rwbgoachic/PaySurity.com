@@ -1,7 +1,13 @@
 import { pgTable, text, serial, integer, boolean, numeric, timestamp, pgEnum, date, jsonb, varchar, decimal, time } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Export eq operator for use in queries
+export { eq };
+
+// Import and re-export legal schema definitions
+export * from './schema-legal';
 
 // Type declarations for Express request interface
 declare global {
