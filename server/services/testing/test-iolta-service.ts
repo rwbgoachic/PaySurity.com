@@ -22,9 +22,9 @@ import {
   ioltaClientLedgers,
   ioltaTransactions,
   legalClients,
-  legalMatters,
-  eq
-} from '@shared/schema';
+  legalMatters
+} from '@shared/schema-legal';
+import { eq } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -44,8 +44,12 @@ export class IoltaTestService implements TestService {
     bankName: 'First National Test Bank',
     routingNumber: '123456789',
     accountType: 'iolta' as const,
-    status: 'active',
-    balance: '10000.00'
+    status: 'active' as const,
+    balance: '10000.00',
+    description: 'Test IOLTA account for automated testing',
+    matterId: this.testMatterId,
+    lastReconcileDate: new Date().toISOString().split('T')[0],
+    lastReconciledBalance: '10000.00'
   };
   
   // Test data for client ledger
@@ -62,6 +66,7 @@ export class IoltaTestService implements TestService {
   
   // Test data for transactions
   private testTransactionData = {
+    merchantId: this.testMerchantId,
     amount: '2500.00',
     description: 'Initial client retainer',
     transactionType: 'deposit' as const,
@@ -70,7 +75,8 @@ export class IoltaTestService implements TestService {
     clientLedgerId: 0, // Will be set during client ledger test
     fundType: 'retainer' as const,
     status: 'completed' as const,
-    referenceNumber: 'TR-1001'
+    referenceNumber: 'TR-1001',
+    balanceAfter: '5000.00' // Required field
   };
   
   /**
