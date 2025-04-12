@@ -8,7 +8,7 @@
 import { pgTable, serial, text, integer, decimal, timestamp, boolean, pgEnum, uniqueIndex, foreignKey, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { employees } from "./schema-employees";
+import { employees, payFrequencyEnum } from './schema-employees';
 
 // Tax Jurisdiction Types
 export const taxJurisdictionTypeEnum = pgEnum('tax_jurisdiction_type', ['federal', 'state', 'local', 'county', 'city']);
@@ -31,7 +31,6 @@ export const filingStatusEnum = pgEnum('filing_status', [
 ]);
 
 // Pay Frequency - imported from schema-employees.ts
-import { payFrequencyEnum } from './schema-employees';
 
 // Create tax jurisdiction table
 export const taxJurisdictions = pgTable('tax_jurisdictions', {
