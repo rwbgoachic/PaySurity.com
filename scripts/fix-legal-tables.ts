@@ -675,22 +675,89 @@ async function fixLegalTables() {
     } else {
       console.log('merchants table already exists');
       
-      // Ensure test merchant exists
-      const existingMerchantCheck = await db.execute(sql`
-        SELECT COUNT(*) FROM merchants WHERE id = 1;
+      // Check if iso_partner_id column exists
+      const checkIsoPartnerId = await db.execute(sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'merchants' 
+          AND column_name = 'iso_partner_id'
+        );
       `);
       
-      const merchantCountValue = existingMerchantCheck.rows[0].count;
-      const merchantExists = parseInt(String(merchantCountValue)) > 0;
+      const isoPartnerIdExists = checkIsoPartnerId.rows[0].exists;
       
-      if (!merchantExists) {
-        await db.execute(sql`
-          INSERT INTO merchants (id, name, status, business_name)
-          VALUES (1, 'Test Merchant', 'active', 'Test Law Firm');
+      if (!isoPartnerIdExists) {
+        console.log('Columns missing in merchants table, recreating...');
+        
+        // Backup existing merchant data
+        const merchantsData = await db.execute(sql`
+          SELECT * FROM merchants;
         `);
-        console.log('Successfully added test merchant');
+        
+        // Drop and recreate the table with all required columns
+        await db.execute(sql`
+          DROP TABLE merchants;
+          
+          CREATE TABLE merchants (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            business_name TEXT,
+            business_type TEXT,
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            city TEXT,
+            state TEXT,
+            zip_code TEXT,
+            country TEXT,
+            tax_id TEXT,
+            website TEXT,
+            iso_partner_id INTEGER,
+            payment_processor TEXT,
+            merchant_id_number TEXT,
+            account_manager_id INTEGER,
+            onboarding_status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        
+        console.log('Successfully recreated merchants table with all required columns');
+        
+        // Re-insert the test merchant
+        await db.execute(sql`
+          INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor)
+          VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim')
+          ON CONFLICT (id) DO NOTHING;
+        `);
+        console.log('Successfully re-added test merchant with all fields');
       } else {
-        console.log('Test merchant already exists');
+        // Ensure test merchant exists
+        const existingMerchantCheck = await db.execute(sql`
+          SELECT COUNT(*) FROM merchants WHERE id = 1;
+        `);
+        
+        const merchantCountValue = existingMerchantCheck.rows[0].count;
+        const merchantExists = parseInt(String(merchantCountValue)) > 0;
+        
+        if (!merchantExists) {
+          await db.execute(sql`
+            INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor)
+            VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim');
+          `);
+          console.log('Successfully added test merchant');
+        } else {
+          // Update existing merchant to ensure it has iso_partner_id
+          await db.execute(sql`
+            UPDATE merchants
+            SET 
+              iso_partner_id = COALESCE(iso_partner_id, 1),
+              payment_processor = COALESCE(payment_processor, 'helcim')
+            WHERE id = 1;
+          `);
+          console.log('Test merchant already exists - updated with required fields');
+        }
       }
     }
   
