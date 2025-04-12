@@ -26,6 +26,9 @@ export function registerLegalRoutes(app: Express) {
   
   // IOLTA Trust Accounting Routes
   app.use('/api/legal/iolta', ioltaRouter);
+  
+  // IOLTA Document Management Routes
+  app.use('/api/legal/iolta-documents', ioltaDocumentRouter);
   // Time Entries APIs
   
   // Create time entry

@@ -5,6 +5,23 @@ import { z } from 'zod';
 import { ioltaService } from './iolta-service';
 import { documentService } from './document-service';
 import { insertLegalDocumentSchema } from '@shared/schema';
+import { IoltaTransaction } from '@shared/schema';
+
+// Extend Request to include transaction and user properties
+declare global {
+  namespace Express {
+    interface Request {
+      transaction?: IoltaTransaction;
+      user: {
+        id: string | number;
+        merchantId: number;
+        [key: string]: any;
+      };
+      file?: Express.Multer.File;
+      isAuthenticated(): boolean;
+    }
+  }
+}
 
 const ioltaDocumentRouter = Router();
 
