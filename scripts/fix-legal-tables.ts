@@ -274,6 +274,28 @@ async function fixLegalTables() {
       console.log('retainer_agreement_date column already exists in legal_clients');
     }
     
+    // Add retainer_agreement_document_id column to legal_clients if missing
+    const checkRetainerAgreementDocId = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'legal_clients' 
+        AND column_name = 'retainer_agreement_document_id'
+      );
+    `);
+    
+    const retainerAgreementDocIdExists = checkRetainerAgreementDocId.rows[0].exists;
+    
+    if (!retainerAgreementDocIdExists) {
+      console.log('Adding retainer_agreement_document_id column to legal_clients...');
+      await db.execute(sql`
+        ALTER TABLE legal_clients
+        ADD COLUMN retainer_agreement_document_id INTEGER;
+      `);
+      console.log('Successfully added retainer_agreement_document_id column to legal_clients');
+    } else {
+      console.log('retainer_agreement_document_id column already exists in legal_clients');
+    }
+    
     // Add payment_method_id column to iolta_transactions if missing
     const checkPaymentMethodId = await db.execute(sql`
       SELECT EXISTS (
@@ -316,6 +338,72 @@ async function fixLegalTables() {
       console.log('Successfully added check_number column to iolta_transactions');
     } else {
       console.log('check_number column already exists in iolta_transactions');
+    }
+    
+    // Add reference column to iolta_transactions if missing
+    const checkReference = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'reference'
+      );
+    `);
+    
+    const referenceExists = checkReference.rows[0].exists;
+    
+    if (!referenceExists) {
+      console.log('Adding reference column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN reference TEXT;
+      `);
+      console.log('Successfully added reference column to iolta_transactions');
+    } else {
+      console.log('reference column already exists in iolta_transactions');
+    }
+    
+    // Add related_invoice_id column to iolta_transactions if missing
+    const checkRelatedInvoiceId = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'iolta_transactions' 
+        AND column_name = 'related_invoice_id'
+      );
+    `);
+    
+    const relatedInvoiceIdExists = checkRelatedInvoiceId.rows[0].exists;
+    
+    if (!relatedInvoiceIdExists) {
+      console.log('Adding related_invoice_id column to iolta_transactions...');
+      await db.execute(sql`
+        ALTER TABLE iolta_transactions
+        ADD COLUMN related_invoice_id INTEGER;
+      `);
+      console.log('Successfully added related_invoice_id column to iolta_transactions');
+    } else {
+      console.log('related_invoice_id column already exists in iolta_transactions');
+    }
+    
+    // Add jurisdiction column to legal_clients if missing
+    const checkJurisdiction = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'legal_clients' 
+        AND column_name = 'jurisdiction'
+      );
+    `);
+    
+    const jurisdictionExists = checkJurisdiction.rows[0].exists;
+    
+    if (!jurisdictionExists) {
+      console.log('Adding jurisdiction column to legal_clients...');
+      await db.execute(sql`
+        ALTER TABLE legal_clients
+        ADD COLUMN jurisdiction TEXT;
+      `);
+      console.log('Successfully added jurisdiction column to legal_clients');
+    } else {
+      console.log('jurisdiction column already exists in legal_clients');
     }
 
     // Fix legal_clients by ensuring all required columns match our schema

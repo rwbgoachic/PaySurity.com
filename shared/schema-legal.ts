@@ -61,6 +61,7 @@ export const legalClients = pgTable("legal_clients", {
   state: text("state"),
   zipCode: text("zip_code"),
   country: text("country").default("USA"),
+  jurisdiction: text("jurisdiction"),
   taxId: text("tax_id"),
   notes: text("notes"),
   portalAccess: boolean("portal_access").default(false),
@@ -187,6 +188,7 @@ export const ioltaTransactions = pgTable("iolta_transactions", {
   voidReason: text("void_reason"),
   documentUrl: text("document_url"), // URL to related document (receipt, etc.)
   payment_method_id: integer("payment_method_id"),
+  related_invoice_id: integer("related_invoice_id"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
