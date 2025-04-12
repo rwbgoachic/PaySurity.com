@@ -18,7 +18,7 @@ import {
   legalDocuments
 } from '@shared/schema';
 import { legalPortalUsers } from '@shared/schema-portal';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

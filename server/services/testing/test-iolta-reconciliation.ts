@@ -173,16 +173,16 @@ export class IoltaReconciliationTestService implements TestService {
     
     // If client doesn't exist, create it
     if (!existingClient) {
-      await db.insert(legalClients).values({
-        id: this.testClientId,
-        merchantId: this.testMerchantId,
-        status: 'active',
-        clientType: 'individual',
-        firstName: 'Test',
-        lastName: 'Reconciliation',
-        email: 'test.reconciliation@example.com',
-        phone: '555-123-4567'
-      });
+      await db.execute(sql`
+        INSERT INTO legal_clients (
+          id, merchant_id, status, client_type, first_name, last_name, 
+          email, phone, client_number, jurisdiction, is_active
+        ) VALUES (
+          ${this.testClientId}, ${this.testMerchantId}, 'active', 'individual', 'Test', 
+          'Reconciliation', 'test.reconciliation@example.com', '555-123-4567', 
+          'CLIENT-REC-001', 'CA', true
+        );
+      `);
     }
     
     // Ensure the matter exists
@@ -192,16 +192,16 @@ export class IoltaReconciliationTestService implements TestService {
     
     // If matter doesn't exist, create it
     if (!existingMatter) {
-      await db.insert(legalMatters).values({
-        id: this.testMatterId,
-        merchantId: this.testMerchantId,
-        clientId: this.testClientId,
-        status: 'active',
-        title: 'Test Reconciliation Matter',
-        description: 'Test IOLTA reconciliation matter',
-        practiceArea: 'other',
-        openDate: new Date()
-      });
+      await db.execute(sql`
+        INSERT INTO legal_matters (
+          id, merchant_id, client_id, status, title, description, 
+          practice_area, open_date
+        ) VALUES (
+          ${this.testMatterId}, ${this.testMerchantId}, ${this.testClientId}, 'active', 
+          'Test Reconciliation Matter', 'Test IOLTA reconciliation matter', 
+          'other', ${new Date()}
+        );
+      `);
     }
     
     // Add client to IOLTA account
