@@ -289,10 +289,7 @@ export class IoltaTestService implements TestService {
         
         // Get the client ID
         const client = await db.query.legalClients.findFirst({
-          where: and(
-            eq(legalClients.merchantId, this.testMerchantId),
-            eq(legalClients.email, 'test.client@example.com')
-          )
+          where: sql`merchant_id = ${this.testMerchantId} AND email = 'test.client@example.com'`
         });
         
         if (client) {

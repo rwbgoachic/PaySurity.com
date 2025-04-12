@@ -6,7 +6,7 @@ import {
   InsertIoltaTrustAccount,
   InsertIoltaClientLedger,
   InsertIoltaTransaction
-} from "@shared/schema";
+} from "@shared/schema-legal";
 import { eq, and, desc, sql, lt, gte, lte } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import { ioltaTransactionSqlService } from "./iolta-transaction-sql-service";
