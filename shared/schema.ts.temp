@@ -6,21 +6,15 @@ import { z } from "zod";
 // Export eq operator for use in queries
 export { eq };
 
-// Import and re-export schema definitions from other files
+// Import and re-export legal schema definitions
 export * from './schema-legal';
-export * from './schema-payroll';
-export * from './schema-employees';
-export * from './schema-portal';
-export * from './schema-payroll-pricing';
-
-
 
 // Type declarations for Express request interface
 declare global {
   namespace Express {
     interface Request {
       portalUser?: any; // Will be LegalPortalUser
-      portalSession?: any; // Will be LegalPortalSession
+      portalSession?: LegalPortalSession;
     }
   }
 }
@@ -5235,7 +5229,7 @@ declare global {
   namespace Express {
     interface Request {
       portalUser?: any; // Will be LegalPortalUser
-      portalSession?: any; // Will be LegalPortalSession
+      portalSession?: LegalPortalSession;
     }
   }
 }
