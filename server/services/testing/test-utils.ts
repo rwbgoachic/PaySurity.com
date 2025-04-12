@@ -58,6 +58,7 @@ export async function createTestMerchant() {
   const merchantName = `Test Merchant ${generateRandomString(4)}`;
   
   const [merchant] = await db.insert(merchants).values({
+    name: merchantName,
     isoPartnerId: 1,
     businessName: merchantName,
     contactName: 'Test Contact',
@@ -69,7 +70,10 @@ export async function createTestMerchant() {
     zip: '12345',
     businessType: 'legal_services',
     taxId: generateRandomString(9),
-    status: 'active'
+    status: 'active',
+    processingVolume: 10000,
+    commissionRate: 0.25,
+    monthlyFee: 49.99
   }).returning();
   
   return merchant;
@@ -84,6 +88,7 @@ export async function createTestClient(merchantId: number) {
   
   const [client] = await db.insert(legalClients).values({
     merchantId,
+    clientNumber: `CL-${generateRandomString(6)}`,
     firstName,
     lastName,
     email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`,
@@ -91,7 +96,7 @@ export async function createTestClient(merchantId: number) {
     address: '456 Client Avenue',
     city: 'Client City',
     state: 'CC',
-    zip: '54321',
+    zipCode: '54321',
     clientType: 'individual',
     status: 'active',
     contactMethod: 'email'

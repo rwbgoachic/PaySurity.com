@@ -71,6 +71,7 @@ export class IoltaTestService implements TestService {
     // Create test merchant
     const [merchant] = await db.insert(merchants)
       .values({
+        name: 'Test Law Firm LLP',
         businessName: 'Test Law Firm LLP',
         contactName: 'Test Contact',
         email: 'test@example.com',
@@ -83,7 +84,10 @@ export class IoltaTestService implements TestService {
         taxId: '12-3456789',
         website: 'https://testlawfirm.example.com',
         isoPartnerId: 1,
-        status: 'active'
+        status: 'active',
+        processingVolume: 10000,
+        commissionRate: 0.25,
+        monthlyFee: 49.99
       })
       .returning();
     
@@ -93,6 +97,7 @@ export class IoltaTestService implements TestService {
     const [client] = await db.insert(legalClients)
       .values({
         merchantId: this.merchantId,
+        clientNumber: 'TC-' + Date.now().toString().slice(-6), // Generate unique client number
         clientType: 'individual',
         status: 'active',
         firstName: 'Test',
@@ -102,7 +107,7 @@ export class IoltaTestService implements TestService {
         address: '456 Client St',
         city: 'Client City',
         state: 'CS',
-        zip: '54321'
+        zipCode: '54321'
       })
       .returning();
     

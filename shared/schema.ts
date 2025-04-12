@@ -572,6 +572,7 @@ export type InsertIsoPartner = typeof isoPartners.$inferInsert;
 // Merchants (enrolled by ISO partners)
 export const merchants = pgTable("merchants", {
   id: serial("id").primaryKey(),
+  name: text("name").notNull(),
   isoPartnerId: integer("iso_partner_id").notNull(),
   businessName: text("business_name").notNull(),
   contactName: text("contact_name").notNull(),
@@ -595,6 +596,7 @@ export const merchants = pgTable("merchants", {
 });
 
 export const insertMerchantSchema = createInsertSchema(merchants).pick({
+  name: true,
   isoPartnerId: true,
   businessName: true,
   contactName: true,
@@ -4172,6 +4174,7 @@ export const legalFlatFeeServiceTypeEnum = pgEnum("legal_flat_fee_service_type",
 export const legalClients = pgTable("legal_clients", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(), // Law firm
+  clientNumber: text("client_number").notNull(), // Required client identifier
   clientType: legalClientTypeEnum("client_type").notNull(),
   status: legalClientStatusEnum("status").notNull().default("prospect"),
   firstName: text("first_name"),  // For individual clients

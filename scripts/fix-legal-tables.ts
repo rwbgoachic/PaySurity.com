@@ -10,6 +10,29 @@ async function fixLegalTables() {
   console.log('Fixing legal tables...');
 
   try {
+    // Check for client_number column in legal_clients
+    console.log('Checking for client_number column in legal_clients...');
+    const checkClientNumber = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'legal_clients' 
+        AND column_name = 'client_number'
+      );
+    `);
+    
+    const clientNumberExists = checkClientNumber.rows[0].exists;
+    
+    if (!clientNumberExists) {
+      console.log('Adding client_number column to legal_clients...');
+      await db.execute(sql`
+        ALTER TABLE legal_clients
+        ADD COLUMN client_number TEXT NOT NULL DEFAULT concat('CL-', floor(random() * 1000000)::text);
+      `);
+      console.log('Successfully added client_number column to legal_clients');
+    } else {
+      console.log('client_number column already exists in legal_clients');
+    }
+    
     // Add tax_id column to legal_clients if missing
     console.log('Checking legal_clients table...');
     const checkTaxId = await db.execute(sql`
@@ -720,6 +743,7 @@ async function fixLegalTables() {
             city TEXT,
             state TEXT,
             zip_code TEXT,
+            zip TEXT,  -- Adding both zip and zip_code to handle different code expectations
             country TEXT,
             tax_id TEXT,
             website TEXT,
@@ -737,8 +761,8 @@ async function fixLegalTables() {
         
         // Re-insert the test merchant
         await db.execute(sql`
-          INSERT INTO merchants (id, name, status, business_name, contact_name, iso_partner_id, payment_processor)
-          VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 'John Doe', 1, 'helcim')
+          INSERT INTO merchants (id, name, status, business_name, contact_name, iso_partner_id, payment_processor, zip, zip_code)
+          VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 'John Doe', 1, 'helcim', '12345', '12345')
           ON CONFLICT (id) DO NOTHING;
         `);
         console.log('Successfully re-added test merchant with all fields');
@@ -754,25 +778,57 @@ async function fixLegalTables() {
         if (!merchantExists) {
           if (contactNameExists) {
             await db.execute(sql`
-              INSERT INTO merchants (id, name, status, business_name, contact_name, iso_partner_id, payment_processor)
-              VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 'John Doe', 1, 'helcim');
+              INSERT INTO merchants (id, name, status, business_name, contact_name, iso_partner_id, payment_processor, zip, zip_code)
+              VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 'John Doe', 1, 'helcim', '12345', '12345');
             `);
           } else {
             await db.execute(sql`
-              INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor)
-              VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim');
+              INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor, zip, zip_code)
+              VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim', '12345', '12345');
             `);
           }
           console.log('Successfully added test merchant');
         } else {
           // Update existing merchant to ensure it has all required fields
-          if (contactNameExists) {
+          // Check if zip column exists before updating
+          const checkZip = await db.execute(sql`
+            SELECT EXISTS (
+              SELECT FROM information_schema.columns 
+              WHERE table_name = 'merchants' 
+              AND column_name = 'zip'
+            );
+          `);
+      
+          const zipExists = checkZip.rows[0].exists;
+          
+          if (contactNameExists && zipExists) {
+            await db.execute(sql`
+              UPDATE merchants
+              SET 
+                iso_partner_id = COALESCE(iso_partner_id, 1),
+                payment_processor = COALESCE(payment_processor, 'helcim'),
+                contact_name = COALESCE(contact_name, 'John Doe'),
+                zip = COALESCE(zip, '12345'),
+                zip_code = COALESCE(zip_code, '12345')
+              WHERE id = 1;
+            `);
+          } else if (contactNameExists) {
             await db.execute(sql`
               UPDATE merchants
               SET 
                 iso_partner_id = COALESCE(iso_partner_id, 1),
                 payment_processor = COALESCE(payment_processor, 'helcim'),
                 contact_name = COALESCE(contact_name, 'John Doe')
+              WHERE id = 1;
+            `);
+          } else if (zipExists) {
+            await db.execute(sql`
+              UPDATE merchants
+              SET 
+                iso_partner_id = COALESCE(iso_partner_id, 1),
+                payment_processor = COALESCE(payment_processor, 'helcim'),
+                zip = COALESCE(zip, '12345'),
+                zip_code = COALESCE(zip_code, '12345')
               WHERE id = 1;
             `);
           } else {

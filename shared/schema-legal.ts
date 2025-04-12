@@ -49,6 +49,7 @@ export const legalPracticeAreaEnum = pgEnum("legal_practice_area", [
 export const legalClients = pgTable("legal_clients", {
   id: serial("id").primaryKey(),
   merchantId: integer("merchant_id").notNull(),
+  clientNumber: text("client_number").notNull(),
   status: text("status", { enum: ["active", "inactive", "former"] }).notNull().default("active"),
   clientType: text("client_type", { enum: ["individual", "organization", "government"] }).notNull(),
   firstName: text("first_name"),
