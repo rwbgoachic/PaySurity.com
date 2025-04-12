@@ -170,11 +170,12 @@ export type InsertIoltaClientLedger = typeof ioltaClientLedgers.$inferInsert;
 // IOLTA transactions schema
 export const ioltaTransactions = pgTable("iolta_transactions", {
   id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id").notNull(), // Add merchant_id column
   trustAccountId: integer("trust_account_id").notNull().references(() => ioltaTrustAccounts.id),
   clientLedgerId: integer("client_ledger_id").references(() => ioltaClientLedgers.id),
   transactionDate: timestamp("transaction_date").defaultNow(),
   amount: numeric("amount").notNull(),
-  balanceAfter: numeric("balance_after").notNull(), // Required field missing from schema
+  balanceAfter: numeric("balance_after").notNull(), // Required field for balance tracking
   description: text("description").notNull(),
   transactionType: text("transaction_type", { enum: ["deposit", "withdrawal", "transfer", "interest", "fee"] }).notNull(),
   fundType: text("fund_type", { enum: ["retainer", "settlement", "trust", "operating", "other"] }).notNull(),
@@ -194,10 +195,11 @@ export const ioltaTransactions = pgTable("iolta_transactions", {
   payment_method_id: integer("payment_method_id"),
   related_invoice_id: integer("related_invoice_id"),
   notes: text("notes"),
-  earningDate: timestamp("earning_date"), // Missing field
-  clearedDate: timestamp("cleared_date"), // Missing field
-  bankReference: text("bank_reference"), // Missing field
-  reconciliationId: integer("reconciliation_id"), // Missing field
+  earningDate: timestamp("earning_date"),
+  clearedDate: timestamp("cleared_date"),
+  bankReference: text("bank_reference"),
+  reconciliationId: integer("reconciliation_id"),
+  processedAt: timestamp("processed_at"), // For batch processing tracking
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

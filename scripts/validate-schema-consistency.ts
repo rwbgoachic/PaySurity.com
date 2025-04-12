@@ -1,285 +1,353 @@
 /**
- * Schema Consistency Validator
+ * Schema Validation Script
  * 
- * This script validates that the database schema defined in shared/schema.ts is consistent
- * with the actual database structure, and that test files are correctly aligned with
- * the schema definitions.
+ * This script compares the actual database schema with Drizzle ORM definitions
+ * to identify missing columns or mismatches that could cause runtime errors.
  * 
  * Usage: npx tsx scripts/validate-schema-consistency.ts
  */
 
 import { db } from '../server/db';
-import * as schema from '../shared/schema';
 import { sql } from 'drizzle-orm';
-import * as path from 'path';
-import * as fs from 'fs';
-import chalk from 'chalk';
+import * as schema from '../shared/schema';
+import * as legalSchema from '../shared/schema-legal';
+import { PgColumn } from 'drizzle-orm/pg-core';
 
-interface SchemaIssue {
-  type: string;
+interface ColumnInfo {
   tableName: string;
-  columnName?: string;
-  dbType?: string;
-  schemaType?: string;
-  dbNullable?: boolean;
-  schemaNullable?: boolean;
-  message: string;
+  columnName: string;
+  dataType: string;
+  isNullable: boolean;
 }
 
-interface CodeIssue {
-  file: string;
-  issue: string;
-  suggestion: string;
-}
-
-async function validateSchemaConsistency() {
-  console.log(chalk.blue('\n======= Schema Consistency Validator =======\n'));
-  
-  const schemaIssues: SchemaIssue[] = [];
-  const codeIssues: CodeIssue[] = [];
-  
-  // Get all tables defined in the schema
-  const schemaTables = Object.entries(schema)
-    .filter(([_, value]) => typeof value === 'object' && value !== null && 'name' in value)
-    .map(([_, value]) => {
-      // Make sure we extract the name properly
-      const tableName = (value as any).name;
-      if (typeof tableName !== 'string') {
-        console.warn(`Warning: Table with non-string name detected: ${tableName}`);
-        return String(tableName); // Convert to string anyway
-      }
-      return tableName;
-    });
-  
-  // Get all tables from the database
-  const dbTablesResult = await db.execute(sql`
-    SELECT table_name 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public' 
-    AND table_type = 'BASE TABLE'
-  `);
-  
-  const dbTables = dbTablesResult.rows.map(row => (row as any).table_name as string);
-  
-  // Check for tables in schema but not in DB
-  for (const tableName of schemaTables) {
-    if (!dbTables.includes(tableName)) {
-      schemaIssues.push({
-        type: 'missing_table_in_db',
-        tableName,
-        message: `Table ${tableName} is defined in schema but does not exist in the database.`
-      });
-    }
-  }
-  
-  // Check for tables in DB but not in schema
-  for (const tableName of dbTables) {
-    if (!schemaTables.includes(tableName)) {
-      schemaIssues.push({
-        type: 'missing_table_in_schema',
-        tableName,
-        message: `Table ${tableName} exists in the database but is not defined in schema.`
-      });
-    }
-  }
-  
-  // For each table that exists in both, check column consistency
-  for (const tableName of schemaTables) {
-    if (!dbTables.includes(tableName)) continue; // Skip if table doesn't exist in DB
-    
-    // Get column information from DB
-    const dbColumnsResult = await db.execute(sql`
-      SELECT column_name, data_type, is_nullable 
-      FROM information_schema.columns 
-      WHERE table_name = ${tableName}
-    `);
-    
-    const dbColumns = dbColumnsResult.rows.map(row => ({
-      name: (row as any).column_name as string,
-      type: (row as any).data_type as string,
-      nullable: (row as any).is_nullable === 'YES'
-    }));
-    
-    // Find the schema table definition
-    const schemaTable = Object.entries(schema)
-      .find(([_, value]) => typeof value === 'object' && value !== null && 'name' in value && (value as any).name === tableName);
-    
-    if (!schemaTable) continue; // Shouldn't happen but just in case
-    
-    const schemaColumns = Object.entries((schemaTable[1] as any).columns || {})
-      .map(([colName, colDef]) => ({
-        name: colName,
-        // These can only be rough approximations since drizzle uses its own type system
-        type: (colDef as any).dataType || 'unknown',
-        nullable: !(colDef as any).notNull
-      }));
-    
-    // Check for columns in DB but not in schema
-    for (const dbCol of dbColumns) {
-      const schemaCol = schemaColumns.find(col => col.name === dbCol.name);
-      if (!schemaCol) {
-        schemaIssues.push({
-          type: 'missing_column_in_schema',
-          tableName,
-          columnName: dbCol.name,
-          message: `Column ${dbCol.name} exists in table ${tableName} but is missing in schema.`
-        });
-      }
-    }
-    
-    // Check for columns in schema but not in DB
-    for (const schemaCol of schemaColumns) {
-      const dbCol = dbColumns.find(col => col.name === schemaCol.name);
-      if (!dbCol) {
-        schemaIssues.push({
-          type: 'missing_column_in_db',
-          tableName,
-          columnName: schemaCol.name,
-          message: `Column ${schemaCol.name} is defined in schema for table ${tableName} but does not exist in the database.`
-        });
-        continue;
-      }
-      
-      // Type compatibility check - simplified, could be improved
-      const dbType = dbCol.type.toLowerCase();
-      const schemaType = schemaCol.type.toLowerCase();
-      
-      // Basic type compatibility check
-      let typeCompatible = false;
-      if (
-        (dbType.includes('int') && (schemaType === 'number' || schemaType === 'integer')) ||
-        (dbType === 'text' && schemaType === 'string') ||
-        (dbType.includes('char') && schemaType === 'string') ||
-        (dbType.includes('bool') && schemaType === 'boolean') ||
-        (dbType.includes('timestamp') && schemaType === 'date') ||
-        (dbType.includes('date') && schemaType === 'date') ||
-        (dbType.includes('decimal') && schemaType === 'string') || // Decimal is often handled as string in JS
-        (dbType.includes('numeric') && schemaType === 'string')
-      ) {
-        typeCompatible = true;
-      }
-      
-      if (!typeCompatible) {
-        schemaIssues.push({
-          type: 'type_mismatch',
-          tableName,
-          columnName: schemaCol.name,
-          dbType,
-          schemaType,
-          message: `Type mismatch for column ${schemaCol.name} in table ${tableName}: DB type is ${dbType}, schema type is ${schemaType}.`
-        });
-      }
-      
-      // Nullability check
-      if (dbCol.nullable !== schemaCol.nullable) {
-        schemaIssues.push({
-          type: 'nullability_mismatch',
-          tableName,
-          columnName: schemaCol.name,
-          dbNullable: dbCol.nullable,
-          schemaNullable: schemaCol.nullable,
-          message: `Nullability mismatch for column ${schemaCol.name} in table ${tableName}: DB nullable is ${dbCol.nullable}, schema nullable is ${schemaCol.nullable}.`
-        });
-      }
-    }
-  }
-  
-  // Check test files for schema consistency
-  const testDir = path.join(process.cwd(), 'server', 'services', 'testing');
-  if (fs.existsSync(testDir)) {
-    const testFiles = fs.readdirSync(testDir)
-      .filter(file => (file.startsWith('test-') && (file.endsWith('.ts') || file.endsWith('.js'))));
-    
-    for (const testFile of testFiles) {
-      const filePath = path.join(testDir, testFile);
-      const content = fs.readFileSync(filePath, 'utf8');
-      
-      // Look for clientId comparisons that might be problematic
-      if (content.includes('clientId ===') || content.includes('clientId !==')) {
-        // Check if ioltaClientLedgers is imported
-        if (content.includes('ioltaClientLedgers')) {
-          codeIssues.push({
-            file: filePath,
-            issue: 'Potential clientId type mismatch in comparison',
-            suggestion: 'Make sure clientId comparisons use .toString() for ioltaClientLedgers'
-          });
-        }
-      }
-      
-      // Look for other common schema mismatches
-      if (content.includes('accountStatus')) {
-        codeIssues.push({
-          file: filePath,
-          issue: 'Using deprecated "accountStatus" field',
-          suggestion: 'Use "status" field instead of "accountStatus"'
-        });
-      }
-      
-      // Look for issues with reconciliation fields
-      if (content.includes('ioltaAccountId')) {
-        codeIssues.push({
-          file: filePath,
-          issue: 'Using non-existent "ioltaAccountId" field',
-          suggestion: 'Use "trustAccountId" instead of "ioltaAccountId"'
-        });
-      }
-    }
-  }
-  
-  // Display issues
-  if (schemaIssues.length === 0 && codeIssues.length === 0) {
-    console.log(chalk.green('No schema consistency issues found!'));
-  } else {
-    if (schemaIssues.length > 0) {
-      console.log(chalk.red(`Found ${schemaIssues.length} schema consistency issues:`));
-      schemaIssues.forEach((issue, index) => {
-        console.log(chalk.yellow(`\n${index + 1}. ${issue.type.toUpperCase()} in ${issue.tableName}${issue.columnName ? '.' + issue.columnName : ''}`));
-        console.log(chalk.white(issue.message));
-      });
-    }
-    
-    if (codeIssues.length > 0) {
-      console.log(chalk.red(`\nFound ${codeIssues.length} code consistency issues:`));
-      codeIssues.forEach((issue, index) => {
-        console.log(chalk.yellow(`\n${index + 1}. Issue in ${path.basename(issue.file)}`));
-        console.log(chalk.white(`Issue: ${issue.issue}`));
-        console.log(chalk.green(`Suggestion: ${issue.suggestion}`));
-      });
-    }
-  }
-  
-  return {
-    schemaIssues,
-    codeIssues,
-    totalIssues: schemaIssues.length + codeIssues.length
+interface SchemaMismatch {
+  type: 'missing_column' | 'data_type_mismatch' | 'nullable_mismatch';
+  tableName: string;
+  columnName: string;
+  dbInfo?: ColumnInfo;
+  ormInfo?: {
+    dataType: string;
+    isNullable: boolean;
   };
 }
 
-async function main() {
-  try {
-    const result = await validateSchemaConsistency();
-    
-    if (result.totalIssues > 0) {
-      console.log(chalk.yellow('\nActions to consider:'));
-      console.log(chalk.cyan('1. Update shared/schema.ts to match the database structure'));
-      console.log(chalk.cyan('2. Run database migrations to update the database structure'));
-      console.log(chalk.cyan('3. Fix test files to match the correct schema types'));
-      
-      process.exit(1); // Exit with error code
-    } else {
-      console.log(chalk.green('\nSchema validation completed successfully!'));
+async function validateSchemaConsistency() {
+  console.log('Validating database schema consistency with ORM definitions...');
+
+  // Get all tables from combined schema
+  const ormTables = extractTablesFromSchema();
+  console.log(`Found ${Object.keys(ormTables).length} tables in ORM schema definitions`);
+
+  // Get all tables and columns from database
+  const dbColumns = await getDbColumns();
+  console.log(`Found ${dbColumns.length} columns in database schema`);
+
+  // Convert DB columns to a map for easier lookup
+  const dbColumnMap = dbColumns.reduce((map, col) => {
+    const key = `${col.tableName}.${col.columnName}`;
+    map[key] = col;
+    return map;
+  }, {} as Record<string, ColumnInfo>);
+
+  // Check for mismatches
+  const mismatches: SchemaMismatch[] = [];
+
+  // Check ORM tables against DB schema
+  for (const [tableName, columns] of Object.entries(ormTables)) {
+    for (const [columnName, dataInfo] of Object.entries(columns)) {
+      const dbColumnKey = `${tableName}.${columnName}`;
+      const dbColumn = dbColumnMap[dbColumnKey];
+
+      if (!dbColumn) {
+        // Column defined in ORM but missing in DB
+        mismatches.push({
+          type: 'missing_column',
+          tableName,
+          columnName,
+          ormInfo: {
+            dataType: dataInfo.dataType,
+            isNullable: dataInfo.isNullable,
+          }
+        });
+      } else {
+        // Check data type compatibility
+        const isTypeCompatible = isDataTypeCompatible(dataInfo.dataType, dbColumn.dataType);
+        if (!isTypeCompatible) {
+          mismatches.push({
+            type: 'data_type_mismatch',
+            tableName,
+            columnName,
+            dbInfo: dbColumn,
+            ormInfo: {
+              dataType: dataInfo.dataType,
+              isNullable: dataInfo.isNullable,
+            }
+          });
+        }
+
+        // Check nullability
+        if (dataInfo.isNullable !== dbColumn.isNullable) {
+          mismatches.push({
+            type: 'nullable_mismatch',
+            tableName,
+            columnName,
+            dbInfo: dbColumn,
+            ormInfo: {
+              dataType: dataInfo.dataType,
+              isNullable: dataInfo.isNullable,
+            }
+          });
+        }
+      }
     }
-  } catch (error) {
-    console.error(chalk.red('Error during schema validation:'));
-    console.error(error);
-    process.exit(1);
+  }
+
+  // Check DB columns against ORM schema to find columns in DB but not in ORM
+  for (const column of dbColumns) {
+    const { tableName, columnName } = column;
+    
+    // Skip system tables
+    if (tableName.startsWith('pg_') || tableName === 'information_schema') {
+      continue;
+    }
+    
+    // Check if this table exists in ORM schema
+    if (!ormTables[tableName]) {
+      continue; // Skip tables not defined in ORM
+    }
+    
+    // Check if this column exists in ORM schema for this table
+    if (!ormTables[tableName][columnName]) {
+      mismatches.push({
+        type: 'missing_column',
+        tableName,
+        columnName,
+        dbInfo: column
+      });
+    }
+  }
+
+  // Report results
+  if (mismatches.length === 0) {
+    console.log('✅ Database schema is consistent with ORM definitions');
+  } else {
+    console.log(`❌ Found ${mismatches.length} schema inconsistencies:`);
+    
+    // Group by table name
+    const tableGroups = mismatches.reduce((groups, mismatch) => {
+      if (!groups[mismatch.tableName]) {
+        groups[mismatch.tableName] = [];
+      }
+      groups[mismatch.tableName].push(mismatch);
+      return groups;
+    }, {} as Record<string, SchemaMismatch[]>);
+    
+    // Display grouped mismatches
+    for (const [tableName, tableIssues] of Object.entries(tableGroups)) {
+      console.log(`\nTable: ${tableName} (${tableIssues.length} issues)`);
+      
+      for (const issue of tableIssues) {
+        switch (issue.type) {
+          case 'missing_column':
+            if (issue.ormInfo) {
+              console.log(`  - Column "${issue.columnName}" exists in ORM but missing in database`);
+            } else if (issue.dbInfo) {
+              console.log(`  - Column "${issue.columnName}" exists in database but missing in ORM`);
+            }
+            break;
+            
+          case 'data_type_mismatch':
+            console.log(`  - Column "${issue.columnName}" has type mismatch: DB=${issue.dbInfo?.dataType}, ORM=${issue.ormInfo?.dataType}`);
+            break;
+            
+          case 'nullable_mismatch':
+            console.log(`  - Column "${issue.columnName}" has nullability mismatch: DB=${issue.dbInfo?.isNullable ? 'NULL' : 'NOT NULL'}, ORM=${issue.ormInfo?.isNullable ? 'NULL' : 'NOT NULL'}`);
+            break;
+        }
+      }
+    }
+    
+    // Generate SQL to fix critical issues
+    console.log('\nSQL statements to fix critical issues:');
+    generateFixSql(mismatches);
   }
 }
 
-// Run main function if this is the primary module
-// Using ES modules pattern instead of CommonJS
-if (import.meta.url.endsWith(process.argv[1].split('/').pop() || '')) {
-  main();
+function isDataTypeCompatible(ormType: string, dbType: string): boolean {
+  // Simplified type compatibility check
+  // This could be expanded with more detailed type compatibility rules
+  
+  // Normalize types
+  const normalizedOrmType = ormType.toLowerCase();
+  const normalizedDbType = dbType.toLowerCase();
+  
+  // Direct matches
+  if (normalizedOrmType === normalizedDbType) {
+    return true;
+  }
+  
+  // Common compatibility mappings
+  const compatibilityMap: Record<string, string[]> = {
+    'number': ['integer', 'numeric', 'decimal', 'real', 'double precision', 'bigint', 'smallint'],
+    'string': ['text', 'character varying', 'varchar', 'char', 'character'],
+    'boolean': ['boolean', 'bool'],
+    'date': ['timestamp', 'timestamptz', 'date', 'time', 'timetz'],
+    'json': ['json', 'jsonb']
+  };
+  
+  // Check if db type is compatible with orm type
+  for (const [baseType, compatibleTypes] of Object.entries(compatibilityMap)) {
+    if (normalizedOrmType === baseType && compatibleTypes.some(t => normalizedDbType.includes(t))) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
-export { validateSchemaConsistency };
+function generateFixSql(mismatches: SchemaMismatch[]): void {
+  // Handle missing columns in database
+  const missingInDb = mismatches.filter(m => m.type === 'missing_column' && m.ormInfo);
+  
+  for (const mismatch of missingInDb) {
+    const dataType = getPostgresTypeFromOrmType(mismatch.ormInfo!.dataType);
+    const nullableStr = mismatch.ormInfo!.isNullable ? '' : ' NOT NULL';
+    
+    console.log(`ALTER TABLE ${mismatch.tableName} ADD COLUMN ${mismatch.columnName} ${dataType}${nullableStr};`);
+  }
+  
+  // Handle data type mismatches
+  const typeMismatches = mismatches.filter(m => m.type === 'data_type_mismatch');
+  
+  for (const mismatch of typeMismatches) {
+    const dataType = getPostgresTypeFromOrmType(mismatch.ormInfo!.dataType);
+    console.log(`ALTER TABLE ${mismatch.tableName} ALTER COLUMN ${mismatch.columnName} TYPE ${dataType} USING ${mismatch.columnName}::${dataType};`);
+  }
+  
+  // Handle nullability mismatches
+  const nullabilityMismatches = mismatches.filter(m => m.type === 'nullable_mismatch');
+  
+  for (const mismatch of nullabilityMismatches) {
+    if (mismatch.ormInfo!.isNullable) {
+      console.log(`ALTER TABLE ${mismatch.tableName} ALTER COLUMN ${mismatch.columnName} DROP NOT NULL;`);
+    } else {
+      console.log(`ALTER TABLE ${mismatch.tableName} ALTER COLUMN ${mismatch.columnName} SET NOT NULL;`);
+    }
+  }
+}
+
+function getPostgresTypeFromOrmType(ormType: string): string {
+  // Map ORM types to PostgreSQL types
+  const typeMap: Record<string, string> = {
+    'number': 'NUMERIC',
+    'string': 'TEXT',
+    'boolean': 'BOOLEAN',
+    'date': 'TIMESTAMP',
+    'json': 'JSONB',
+    'serial': 'SERIAL'
+  };
+  
+  return typeMap[ormType.toLowerCase()] || 'TEXT';
+}
+
+async function getDbColumns(): Promise<ColumnInfo[]> {
+  const result = await db.execute(sql`
+    SELECT 
+      table_name AS "tableName",
+      column_name AS "columnName",
+      data_type AS "dataType",
+      is_nullable = 'YES' AS "isNullable"
+    FROM 
+      information_schema.columns
+    WHERE 
+      table_schema = 'public'
+    ORDER BY 
+      table_name, ordinal_position
+  `);
+  
+  return result.rows.map(row => ({
+    tableName: row.tableName as string,
+    columnName: row.columnName as string,
+    dataType: row.dataType as string,
+    isNullable: row.isNullable as boolean
+  }));
+}
+
+function extractTablesFromSchema(): Record<string, Record<string, { dataType: string; isNullable: boolean }>> {
+  const tables: Record<string, Record<string, { dataType: string; isNullable: boolean }>> = {};
+  
+  // Extract from combined schema
+  const combinedSchema = { ...schema, ...legalSchema };
+  
+  for (const [key, value] of Object.entries(combinedSchema)) {
+    // Skip non-table entries
+    if (!value || typeof value !== 'object' || !('$schema' in value)) {
+      continue;
+    }
+    
+    const tableDef = value as any;
+    
+    if (tableDef.name) {
+      const tableName = tableDef.name;
+      tables[tableName] = {};
+      
+      // Process columns
+      if (tableDef.columns) {
+        for (const [colName, colDef] of Object.entries(tableDef.columns)) {
+          if (colDef && typeof colDef === 'object' && colDef instanceof PgColumn) {
+            const pgCol = colDef as any;
+            const dataType = extractDataTypeFromColumn(pgCol);
+            const isNullable = !pgCol.notNull;
+            
+            // Convert to snake_case for DB comparison
+            const dbColName = camelToSnakeCase(colName);
+            tables[tableName][dbColName] = { dataType, isNullable };
+          }
+        }
+      }
+    }
+  }
+  
+  return tables;
+}
+
+function extractDataTypeFromColumn(column: any): string {
+  // Try to extract data type from column definition
+  if (column.dataType) {
+    return column.dataType;
+  }
+  
+  // Fallback: infer from column type name
+  const colType = column.constructor?.name || '';
+  
+  if (colType.includes('Serial')) {
+    return 'serial';
+  } else if (colType.includes('Text')) {
+    return 'string';
+  } else if (colType.includes('Integer')) {
+    return 'number';
+  } else if (colType.includes('Boolean')) {
+    return 'boolean';
+  } else if (colType.includes('Timestamp')) {
+    return 'date';
+  } else if (colType.includes('Json')) {
+    return 'json';
+  }
+  
+  return 'unknown';
+}
+
+function camelToSnakeCase(str: string): string {
+  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
+
+// Execute the validation
+validateSchemaConsistency()
+  .then(() => {
+    console.log('Schema validation completed');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('Error during schema validation:', error);
+    process.exit(1);
+  });

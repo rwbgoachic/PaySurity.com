@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { eq, and, desc, sql, lt, gte, lte } from "drizzle-orm";
 import { Decimal } from "decimal.js";
+import { ioltaTransactionSqlService } from "./iolta-transaction-sql-service";
 
 /**
  * IOLTA Service - Handles Interest on Lawyers Trust Accounts compliance
@@ -79,91 +80,76 @@ export class IoltaService {
   /**
    * Records a transaction in the IOLTA system
    * This will update both the client ledger balance and the trust account balance
+   * 
+   * This implementation uses our direct SQL service to ensure proper handling of
+   * balance calculations and updates in the database
    */
   async recordTransaction(data: InsertIoltaTransaction) {
-    // Start a transaction
-    return await db.transaction(async (tx) => {
-      // Insert the transaction record
-      const [transaction] = await tx.insert(ioltaTransactions).values({
-        ...data,
-        processedAt: new Date()
-      }).returning();
-      
-      // Get the client ledger
-      const [ledger] = await tx.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.id, data.clientLedgerId));
+    try {
+      // Verify the client ledger exists
+      const ledger = await this.getClientLedger(data.clientLedgerId);
       if (!ledger) {
         throw new Error("Client ledger not found");
       }
       
-      // Get the trust account
-      const [account] = await tx.select().from(ioltaTrustAccounts).where(eq(ioltaTrustAccounts.id, data.trustAccountId));
+      // Verify the trust account exists
+      const account = await this.getTrustAccount(data.trustAccountId);
       if (!account) {
         throw new Error("Trust account not found");
       }
       
-      // Calculate new balances based on transaction type
-      let ledgerBalanceChange = new Decimal(0);
-      let accountBalanceChange = new Decimal(0);
+      // Use the SQL service to create the transaction with proper balance handling
+      const result = await ioltaTransactionSqlService.createTransaction({
+        merchantId: data.merchantId,
+        trustAccountId: data.trustAccountId,
+        clientLedgerId: data.clientLedgerId,
+        amount: data.amount,
+        description: data.description,
+        transactionType: data.transactionType as any, // type conversion
+        fundType: data.fundType as any, // type conversion
+        createdBy: data.createdBy,
+        status: data.status as any, // type conversion
+        checkNumber: data.checkNumber,
+        referenceNumber: data.referenceNumber,
+        payee: data.payee,
+        payor: data.payor,
+        notes: data.notes,
+        bankReference: data.bankReference
+      });
       
-      switch (data.transactionType) {
-        case "deposit":
-          ledgerBalanceChange = new Decimal(data.amount);
-          accountBalanceChange = new Decimal(data.amount);
-          break;
-        case "withdrawal":
-          ledgerBalanceChange = new Decimal(data.amount).negated();
-          accountBalanceChange = new Decimal(data.amount).negated();
-          break;
-        case "transfer":
-          // If transferring between clients in the same trust account, 
-          // account balance doesn't change, but client ledger does
-          ledgerBalanceChange = new Decimal(data.amount).negated();
-          // No change to the account balance for internal transfers
-          break;
-        case "payment":
-          // For payments, always reduce the client ledger
-          ledgerBalanceChange = new Decimal(data.amount).negated();
-          
-          // If the fund type is "earned", these funds are moved out of trust
-          if (data.fundType === "earned" || data.fundType === "operating") {
-            accountBalanceChange = new Decimal(data.amount).negated();
-          }
-          break;
-      }
-      
-      // Update the client ledger balance
-      const newLedgerBalance = new Decimal(ledger.balance).plus(ledgerBalanceChange).toString();
-      await tx.update(ioltaClientLedgers)
-        .set({ balance: newLedgerBalance, updatedAt: new Date() })
-        .where(eq(ioltaClientLedgers.id, data.clientLedgerId));
-      
-      // Update the trust account balance
-      if (!accountBalanceChange.isZero()) {
-        const newAccountBalance = new Decimal(account.balance).plus(accountBalanceChange).toString();
-        await tx.update(ioltaTrustAccounts)
-          .set({ balance: newAccountBalance, updatedAt: new Date() })
-          .where(eq(ioltaTrustAccounts.id, data.trustAccountId));
-      }
-      
-      return transaction;
-    });
+      // Return the created transaction
+      return result.transaction;
+    } catch (error) {
+      // Log the error and rethrow
+      console.error('Error recording IOLTA transaction:', error);
+      throw error;
+    }
   }
   
   /**
    * Gets a transaction by ID
    */
   async getTransaction(id: number) {
-    const [transaction] = await db.select().from(ioltaTransactions).where(eq(ioltaTransactions.id, id));
-    return transaction;
+    try {
+      // Use SQL service for consistent transaction handling
+      return await ioltaTransactionSqlService.getTransaction(id);
+    } catch (error) {
+      console.error('Error getting IOLTA transaction:', error);
+      throw error;
+    }
   }
   
   /**
    * Gets transactions for a client ledger
    */
   async getTransactionsByClientLedger(clientLedgerId: number) {
-    return await db.select().from(ioltaTransactions)
-      .where(eq(ioltaTransactions.clientLedgerId, clientLedgerId))
-      .orderBy(desc(ioltaTransactions.createdAt));
+    try {
+      // Use SQL service for consistent transaction handling
+      return await ioltaTransactionSqlService.getClientLedgerTransactions(clientLedgerId);
+    } catch (error) {
+      console.error('Error getting IOLTA client ledger transactions:', error);
+      throw error;
+    }
   }
   
   /**

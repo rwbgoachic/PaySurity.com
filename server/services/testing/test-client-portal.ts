@@ -345,7 +345,7 @@ export class ClientPortalTestService implements TestService {
         description: 'Should create a new portal user account',
         passed: !!portalUser && 
                 portalUser.email === this.testPortalUserEmail &&
-                portalUser.clientId === this.testClientId.toString(),
+                parseInt(portalUser.clientId) === this.testClientId,
         error: null,
         expected: {
           email: this.testPortalUserEmail,
@@ -354,13 +354,14 @@ export class ClientPortalTestService implements TestService {
         actual: portalUser ? {
           id: portalUser.id,
           email: portalUser.email,
-          clientId: portalUser.clientId
+          clientId: portalUser.clientId,
+          parsedClientId: parseInt(portalUser.clientId)
         } : null
       });
       
       if (!portalUser || 
           portalUser.email !== this.testPortalUserEmail || 
-          portalUser.clientId !== this.testClientId.toString()) {
+          parseInt(portalUser.clientId) !== this.testClientId) {
         groupPassed = false;
       }
     } catch (e) {
@@ -638,12 +639,12 @@ export class ClientPortalTestService implements TestService {
         throw new Error('Test portal user ID or account ID not set');
       }
       
-      // Use the correct method name for trust account transactions
-      const transactions = await clientPortalService.getLedgerTransactions({
-        clientId: this.testClientId.toString(),
-        merchantId: this.testMerchantId,
-        trustAccountId: this.testAccountId
-      });
+      // Use the correct method signature for trust account transactions
+      const transactions = await clientPortalService.getLedgerTransactions(
+        this.testClientId,
+        this.testMerchantId,
+        this.testAccountId
+      );
       
       tests.push({
         name: 'Access trust account transactions',
