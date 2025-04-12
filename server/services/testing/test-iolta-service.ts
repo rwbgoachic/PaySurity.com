@@ -39,6 +39,7 @@ export class IoltaTestService implements TestService {
   private testAccountData = {
     merchantId: this.testMerchantId,
     clientId: this.testClientId,
+    matterId: this.testMatterId,
     accountNumber: 'TEST12345',
     accountName: 'Test IOLTA Account',
     bankName: 'First National Test Bank',
@@ -47,9 +48,12 @@ export class IoltaTestService implements TestService {
     status: 'active' as const,
     balance: '10000.00',
     description: 'Test IOLTA account for automated testing',
-    matterId: this.testMatterId,
     lastReconcileDate: new Date().toISOString().split('T')[0],
-    lastReconciledBalance: '10000.00'
+    lastReconciledBalance: '10000.00',
+    lastReconciledDate: new Date().toISOString().split('T')[0],
+    interestBeneficiary: 'Legal Aid Society',
+    barAssociationId: 'BA12345',
+    notes: 'Test account for IOLTA compliance testing'
   };
   
   // Test data for client ledger
@@ -61,7 +65,10 @@ export class IoltaTestService implements TestService {
     matterName: 'Test Matter',
     matterNumber: 'MAT-001',
     balance: '5000.00',
-    status: 'active' as const
+    status: 'active' as const,
+    jurisdiction: 'CA',
+    currentBalance: '5000.00',
+    notes: 'Test client ledger'
   };
   
   // Test data for transactions
