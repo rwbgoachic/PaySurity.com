@@ -170,8 +170,35 @@ async function testIoltaDocumentIntegration() {
     
     // Create a test document
     console.log("Creating test document...");
+    
+    // Create a test matter if needed
+    console.log("Creating or finding test matter...");
+    let testMatterId;
+    const matterResult = await sqlService.rawSQL(`
+      SELECT id FROM legal_matters 
+      WHERE merchant_id = ${testMerchantId} AND client_id = ${testClient.id}
+      LIMIT 1
+    `);
+    
+    if (matterResult.length === 0) {
+      console.log("Creating test matter...");
+      const matterInsertResult = await sqlService.rawSQL(`
+        INSERT INTO legal_matters 
+          (merchant_id, client_id, title, description, practice_area, open_date, status, created_at, updated_at) 
+        VALUES 
+          (${testMerchantId}, ${testClient.id}, 'Test Matter', 'Matter for IOLTA document testing', 'other', NOW(), 'active', NOW(), NOW())
+        RETURNING id
+      `);
+      testMatterId = matterInsertResult[0].id;
+      console.log(`Created test matter with ID: ${testMatterId}`);
+    } else {
+      testMatterId = matterResult[0].id;
+      console.log(`Using existing matter with ID: ${testMatterId}`);
+    }
+    
     const documentData: InsertLegalDocument = {
       merchantId: testMerchantId,
+      matterId: testMatterId, // Add the required matterId field
       title: "Test IOLTA Transaction Document",
       description: "This is a test document for IOLTA transaction",
       documentType: "other", // Using one of the allowed document types
@@ -226,6 +253,7 @@ async function testIoltaDocumentIntegration() {
     
     const newDocumentData: InsertLegalDocument = {
       merchantId: testMerchantId,
+      matterId: testMatterId, // Include the required matterId field
       title: "Combined Transaction Document",
       description: "Document created with transaction in a single call",
       documentType: "other", // Using one of the allowed document types

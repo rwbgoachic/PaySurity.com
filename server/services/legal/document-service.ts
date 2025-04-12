@@ -48,8 +48,9 @@ export class DocumentService {
    */
   async createDocument(document: InsertLegalDocument, fileBuffer: Buffer): Promise<LegalDocument> {
     try {
-      // Generate a unique filename
-      const fileName = `${Date.now()}-${randomBytes(8).toString('hex')}${path.extname(document.fileLocation)}`;
+      // Generate a unique filename with .pdf extension if no fileLocation provided
+      const fileExt = document.fileLocation ? path.extname(document.fileLocation) : '.pdf';
+      const fileName = `${Date.now()}-${randomBytes(8).toString('hex')}${fileExt}`;
       const filePath = path.join(this.documentDir, fileName);
       
       // Save the file
@@ -164,8 +165,9 @@ export class DocumentService {
       
       // If a new file is provided, save it
       if (fileBuffer) {
-        // Generate a unique filename
-        const fileName = `${Date.now()}-${randomBytes(8).toString('hex')}${path.extname(updates.fileLocation || document.fileLocation)}`;
+        // Generate a unique filename with .pdf extension if no fileLocation provided
+        const fileExt = (updates.fileLocation || document.fileLocation) ? path.extname(updates.fileLocation || document.fileLocation) : '.pdf';
+        const fileName = `${Date.now()}-${randomBytes(8).toString('hex')}${fileExt}`;
         const filePath = path.join(this.documentDir, fileName);
         
         // Save the file
@@ -314,8 +316,9 @@ export class DocumentService {
     fileBuffer: Buffer
   ): Promise<LegalDocumentTemplate> {
     try {
-      // Generate a unique filename
-      const fileName = `template-${Date.now()}-${randomBytes(8).toString('hex')}${path.extname(template.fileLocation)}`;
+      // Generate a unique filename with .pdf extension if no fileLocation provided
+      const fileExt = template.fileLocation ? path.extname(template.fileLocation) : '.pdf';
+      const fileName = `template-${Date.now()}-${randomBytes(8).toString('hex')}${fileExt}`;
       const filePath = path.join(this.templateDir, fileName);
       
       // Save the file
@@ -413,8 +416,9 @@ export class DocumentService {
       
       // If a new file is provided, save it
       if (fileBuffer) {
-        // Generate a unique filename
-        const fileName = `template-${Date.now()}-${randomBytes(8).toString('hex')}${path.extname(updates.fileLocation || template.fileLocation)}`;
+        // Generate a unique filename with .pdf extension if no fileLocation provided
+        const fileExt = (updates.fileLocation || template.fileLocation) ? path.extname(updates.fileLocation || template.fileLocation) : '.pdf';
+        const fileName = `template-${Date.now()}-${randomBytes(8).toString('hex')}${fileExt}`;
         const filePath = path.join(this.templateDir, fileName);
         
         // Save the file
