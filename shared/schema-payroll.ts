@@ -30,10 +30,8 @@ export const filingStatusEnum = pgEnum('filing_status', [
   'head_of_household', 'qualifying_widow_widower'
 ]);
 
-// Pay Frequency
-export const payFrequencyEnum = pgEnum('pay_frequency', [
-  'weekly', 'biweekly', 'semimonthly', 'monthly', 'quarterly', 'annually'
-]);
+// Pay Frequency - imported from schema-employees.ts
+import { payFrequencyEnum } from './schema-employees';
 
 // Create tax jurisdiction table
 export const taxJurisdictions = pgTable('tax_jurisdictions', {
