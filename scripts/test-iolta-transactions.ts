@@ -76,12 +76,12 @@ async function testIoltaTransactions() {
     console.log(chalk.blue('Creating test client ledger...'));
     const ledgerResult = await db.execute(sql`
       INSERT INTO iolta_client_ledgers (
-        merchant_id, trust_account_id, client_id, matter_id,
-        description, balance, current_balance, status, created_at, updated_at
+        merchant_id, trust_account_id, client_id, client_name,
+        matter_name, matter_number, balance, current_balance, status, created_at, updated_at
       )
       VALUES (
-        ${merchantId}, ${trustAccountId}, ${clientId}, NULL,
-        'Test Client Ledger', '0.00', '0.00', 'active', NOW(), NOW()
+        ${merchantId}, ${trustAccountId}, ${clientId}, 'Test Client',
+        'Test Matter', 'MATTER-001', '0.00', '0.00', 'active', NOW(), NOW()
       )
       RETURNING id
     `);
@@ -89,15 +89,16 @@ async function testIoltaTransactions() {
     const ledgerId = ledgerResult.rows[0].id;
     console.log(chalk.green(`Created test client ledger with ID: ${ledgerId}`));
     
-    // Create a test user for the transactions
+    // Create a test user for the transactions - using timestamp to ensure unique username
     console.log(chalk.blue('Creating test user...'));
+    const timestamp = Date.now();
     const userResult = await db.execute(sql`
       INSERT INTO users (
         username, password, first_name, last_name, email, role, merchant_id,
         created_at
       )
       VALUES (
-        'testuser', 'password', 'Test', 'User', 'testuser@example.com', 'admin', ${merchantId},
+        ${'testuser_' + timestamp}, 'password', 'Test', 'User', ${'testuser' + timestamp + '@example.com'}, 'admin', ${merchantId},
         NOW()
       )
       RETURNING id
