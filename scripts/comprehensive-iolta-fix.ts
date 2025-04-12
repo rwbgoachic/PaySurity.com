@@ -155,10 +155,10 @@ async function createComprehensiveTestData() {
     await db.execute(sql`
       INSERT INTO legal_matters (
         id, merchant_id, client_id, title, description,
-        practice_area, open_date
+        practice_area, open_date, matter_number, status, matter_type, billing_type
       ) VALUES (
         2, 2, 2, 'Test Matter', 'Test matter description',
-        'Corporate', CURRENT_TIMESTAMP
+        'Corporate', CURRENT_TIMESTAMP, 'MATTER-002', 'active', 'litigation', 'hourly'
       )
       ON CONFLICT (id) DO NOTHING
     `);
@@ -273,20 +273,22 @@ async function checkColumnExists(tableName: string, columnName: string): Promise
 
 // Run the fix
 fixIoltaSystem()
-  .then(() => {
+  .then(async () => {
     console.log("\n🎉 All IOLTA system fixes completed successfully!");
     
-    // Run the tests
+    // Run the fixed IOLTA test directly
     console.log("\n🧪 Running IOLTA tests to verify fixes...");
-    const { spawn } = require('child_process');
-    const testProcess = spawn('npx', ['tsx', 'scripts/run-fixed-iolta-test.ts'], {
-      stdio: 'inherit'
-    });
     
-    testProcess.on('close', (code: number) => {
-      console.log(`\nTest process exited with code ${code}`);
-      process.exit(code);
-    });
+    // Run our test separately using bash
+    const { execSync } = await import('child_process');
+    try {
+      console.log(execSync('npx tsx scripts/run-fixed-iolta-test.ts').toString());
+      console.log("✅ All IOLTA tests passed!");
+      process.exit(0);
+    } catch (error) {
+      console.error("❌ IOLTA tests failed:", error);
+      process.exit(1);
+    }
   })
   .catch(err => {
     console.error("\n❌ Error in comprehensive IOLTA fix:", err);
