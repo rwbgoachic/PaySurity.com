@@ -134,12 +134,70 @@ async function runTests() {
       console.log(`  Table: ${info.table_name}, Schema: ${info.table_schema}`);
     });
     
-    // Run just the client portal tests
-    const testReport = await runLegalSystemTest('client-portal');
-    const summary = formatTestResults(testReport);
+    // Create a modified test client portal service without depending on jurisdiction
+    console.log(chalk.blue('Creating custom test client portal service...'));
     
-    // Return exit code based on test success
-    process.exit(summary.passRate === 100 ? 0 : 1);
+    // Specifically checking line 126 - this is where the error is occurring
+    try {
+      await db.execute(sql`
+        SELECT EXISTS(
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'legal_matters' 
+          AND column_name = 'jurisdiction'
+        )
+      `);
+      console.log('Legal matters successfully queried');
+    } catch (err) {
+      console.error('Error querying legal_matters:', err);
+    }
+    
+    // Instead of running the regular tests, let's try step by step
+    console.log(chalk.blue('Trying steps from the client portal test individually...'));
+    
+    // Create a test client directly 
+    try {
+      console.log('Creating test client...');
+      await db.execute(sql`
+        INSERT INTO legal_clients (
+          id, merchant_id, client_number, email, status, client_type, first_name, last_name, is_active
+        ) VALUES (
+          9999, 1, 'TEST-PORTAL-DIRECT', 'test.direct.portal@example.com', 'active', 'individual', 
+          'Test', 'DirectPortal', true
+        ) ON CONFLICT (id) DO NOTHING
+      `);
+      console.log('Test client created');
+      
+      // Create test matter
+      console.log('Creating test matter...');
+      await db.execute(sql`
+        INSERT INTO legal_matters (
+          id, merchant_id, client_id, status, title, description, practice_area, open_date
+        ) VALUES (
+          9999, 1, 9999, 'active', 'Test Direct Matter', 'Test direct portal matter', 
+          'other', ${new Date().toISOString().split('T')[0]}
+        ) ON CONFLICT (id) DO NOTHING
+      `);
+      console.log('Test matter created');
+      
+      // Clean up when done
+      console.log('Test setup completed successfully');
+    } catch (setupErr) {
+      console.error('Error in direct test setup:', setupErr);
+      console.log('Detailed error:', JSON.stringify(setupErr, null, 2));
+    }
+    
+    try {
+      // Run the client portal tests
+      console.log(chalk.blue('Running actual client portal tests...'));
+      const testReport = await runLegalSystemTest('client-portal');
+      const summary = formatTestResults(testReport);
+      
+      // Return exit code based on test success
+      process.exit(summary.passRate === 100 ? 0 : 1);
+    } catch (testErr) {
+      console.error('Error running tests:', testErr);
+      process.exit(1);
+    }
   } catch (error) {
     console.error(chalk.red('Error running tests:'), error);
     process.exit(1);

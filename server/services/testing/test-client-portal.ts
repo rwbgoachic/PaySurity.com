@@ -131,12 +131,12 @@ export class ClientPortalTestService implements TestService {
     if (!existingMatter) {
       await db.execute(sql`
         INSERT INTO legal_matters (
-          id, merchant_id, client_id, status, title, description, 
-          practice_area, open_date
+          id, merchant_id, client_id, matter_number, status, title, description, 
+          practice_area, open_date, billing_type
         ) VALUES (
-          ${this.testMatterId}, ${this.testMerchantId}, ${this.testClientId}, 'active', 
-          'Test Portal Matter', 'Test client portal matter', 
-          'other', ${new Date()}
+          ${this.testMatterId}, ${this.testMerchantId}, ${this.testClientId}, 'PORTAL-001', 
+          'active', 'Test Portal Matter', 'Test client portal matter', 
+          'other', ${new Date().toISOString().split('T')[0]}, 'hourly'
         );
       `);
     }
