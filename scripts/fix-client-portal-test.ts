@@ -126,6 +126,27 @@ class FixedClientPortalTestService extends ClientPortalTestService {
       `);
       console.log('Test invoice created or already exists');
       
+      // Create test portal user
+      console.log('Creating test portal user...');
+      // First check if user already exists
+      const existingUser = await db.execute(sql`
+        SELECT id FROM legal_portal_users 
+        WHERE email = 'test.portal.fixed@example.com' AND merchant_id = 1
+      `);
+      
+      if (existingUser.rows.length === 0) {
+        await db.execute(sql`
+          INSERT INTO legal_portal_users (
+            email, client_id, password_hash, merchant_id, first_name, last_name,
+            is_active, phone_number
+          ) VALUES (
+            'test.portal.fixed@example.com', 1, 'P@ssw0rd123!', 1, 'Test', 'PortalUser',
+            true, '555-123-4567'
+          )
+        `);
+      }
+      console.log('Test portal user created or already exists');
+      
       console.log(chalk.green('✓ Test data setup complete'));
     } catch (error) {
       console.error(chalk.red('Error setting up test data:'), error);

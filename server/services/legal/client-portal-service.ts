@@ -588,25 +588,44 @@ export class ClientPortalService {
    */
   async getClientDocuments(clientId: number, merchantId: number): Promise<any[]> {
     try {
-      const sharedDocuments = await db.select({
-        document: legalDocuments,
-        sharedInfo: legalPortalSharedDocuments
-      })
-        .from(legalPortalSharedDocuments)
-        .innerJoin(legalDocuments, eq(legalPortalSharedDocuments.documentId, legalDocuments.id))
-        .where(and(
-          eq(legalPortalSharedDocuments.clientId, clientId),
-          eq(legalPortalSharedDocuments.merchantId, merchantId),
-          eq(legalPortalSharedDocuments.isActive, true)
-        ))
-        .orderBy(desc(legalPortalSharedDocuments.sharedAt));
+      // Use raw SQL to avoid issues with schema not matching all table columns
+      const documentsResult = await db.execute(sql`
+        SELECT 
+          d.*,
+          s.shared_at as "sharedAt",
+          s.shared_by_id as "sharedBy",
+          s.note,
+          s.matter_id as "matterId"
+        FROM 
+          legal_portal_shared_documents s
+        INNER JOIN 
+          legal_documents d ON s.document_id = d.id
+        WHERE 
+          s.client_id = ${clientId}
+          AND s.merchant_id = ${merchantId}
+          AND s.is_active = true
+        ORDER BY 
+          s.shared_at DESC
+      `);
       
-      return sharedDocuments.map(item => ({
-        ...item.document,
-        sharedAt: item.sharedInfo.sharedAt,
-        sharedBy: item.sharedInfo.sharedById,
-        note: item.sharedInfo.note,
-        matterId: item.sharedInfo.matterId
+      // Parse the result
+      return documentsResult.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        documentType: row.document_type,
+        status: row.status,
+        clientId: row.client_id,
+        matterId: row.matter_id || row.matterId, // Use the joined matter_id if document's is null
+        fileUrl: row.file_url,
+        fileSize: row.file_size,
+        sharedAt: row.sharedAt,
+        sharedBy: row.sharedBy,
+        note: row.note,
+        isPrivate: row.is_private,
+        uploadedBy: row.uploaded_by,
+        createdAt: row.created_at,
+        merchant_id: row.merchant_id
+        // We don't need to include e_filing_id and e_filing_status here
       }));
     } catch (error) {
       console.error('Error getting client documents:', error);
@@ -640,18 +659,21 @@ export class ClientPortalService {
    */
   async getInvoiceDetails(invoiceId: number, clientId: number, merchantId: number): Promise<any> {
     try {
-      // Get the invoice
-      const [invoice] = await db.select()
-        .from(legalInvoices)
-        .where(and(
-          eq(legalInvoices.id, invoiceId),
-          eq(legalInvoices.clientId, clientId),
-          eq(legalInvoices.merchantId, merchantId)
-        ));
+      // Use raw SQL to get the invoice to avoid schema mismatches
+      const invoiceResult = await db.execute(sql`
+        SELECT *
+        FROM legal_invoices
+        WHERE 
+          id = ${invoiceId}
+          AND client_id = ${clientId}
+          AND merchant_id = ${merchantId}
+      `);
       
-      if (!invoice) {
+      if (!invoiceResult.rows || invoiceResult.rows.length === 0) {
         throw new Error('Invoice not found or not accessible');
       }
+      
+      const invoice = invoiceResult.rows[0];
       
       // Import the time-expense service to get invoice entries
       const { legalTimeExpenseService } = require('./time-expense-service');
@@ -669,12 +691,35 @@ export class ClientPortalService {
         clientId,
         merchantId,
         activityType: 'invoice_viewed',
-        description: `Viewed invoice #${invoice.invoiceNumber}`,
+        description: `Viewed invoice #${invoice.invoice_number}`,
         details: { invoiceId: invoice.id }
       });
       
+      // Format invoice data to match expected structure
+      const formattedInvoice = {
+        id: invoice.id,
+        merchantId: invoice.merchant_id,
+        clientId: invoice.client_id,
+        matterId: invoice.matter_id,
+        invoiceNumber: invoice.invoice_number,
+        issueDate: invoice.issue_date,
+        dueDate: invoice.due_date,
+        status: invoice.status,
+        totalAmount: invoice.total_amount,
+        notes: invoice.notes,
+        subtotal: invoice.subtotal,
+        discountAmount: invoice.discount_amount,
+        taxAmount: invoice.tax_amount,
+        amountPaid: invoice.amount_paid,
+        balanceDue: invoice.balance_due,
+        timeEntriesTotal: invoice.time_entries_total,
+        expensesTotal: invoice.expenses_total,
+        createdAt: invoice.created_at,
+        updatedAt: invoice.updated_at
+      };
+      
       return {
-        invoice,
+        invoice: formattedInvoice,
         timeEntries: invoiceWithEntries.timeEntries || [],
         expenseEntries: invoiceWithEntries.expenseEntries || []
       };
