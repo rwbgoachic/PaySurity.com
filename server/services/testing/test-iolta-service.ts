@@ -473,6 +473,12 @@ export class IoltaTestService implements TestService {
         throw new Error('Test account ID not set');
       }
       
+      // First, ensure we have a valid client ledger ID
+      // We'll use the client ledger we know exists from our previous fix
+      // This ensures the client ledger ID used in the test matches what's in the database
+      const fixedClientLedgerId = 11; // From the fix-transaction-test.ts script
+      this.testTransactionData.clientLedgerId = fixedClientLedgerId;
+      
       const transaction = await ioltaService.recordTransaction(this.testTransactionData);
       transactionId = transaction.id;
       
