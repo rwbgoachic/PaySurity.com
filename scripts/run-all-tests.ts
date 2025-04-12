@@ -6,7 +6,7 @@
  */
 
 import { testCoordinator } from '../server/services/testing/test-coordinator';
-import { TestReport } from '../server/services/testing/test-delivery-service';
+import { TestReport } from '../server/services/testing/test-interfaces';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
