@@ -102,17 +102,16 @@ export class ClientPortalTestService implements TestService {
     
     // If client doesn't exist, create it
     if (!existingClient) {
-      await db.insert(legalClients).values({
-        id: this.testClientId,
-        merchantId: this.testMerchantId,
-        status: 'active',
-        clientType: 'individual',
-        firstName: 'Test',
-        lastName: 'PortalUser',
-        email: 'test.portal@example.com',
-        phone: '555-123-4567',
-        taxId: '98-7654321' // Add taxId to fix missing column error
-      });
+      await db.execute(sql`
+        INSERT INTO legal_clients (
+          id, merchant_id, status, client_type, first_name, last_name, 
+          email, phone, tax_id, jurisdiction, client_number
+        ) VALUES (
+          ${this.testClientId}, ${this.testMerchantId}, 'active', 'individual', 
+          'Test', 'PortalUser', 'test.portal@example.com', '555-123-4567',
+          '98-7654321', 'CA', 'PORTAL-${Date.now().toString().slice(-6)}'
+        );
+      `);
     }
     
     // Ensure the matter exists
@@ -122,16 +121,16 @@ export class ClientPortalTestService implements TestService {
     
     // If matter doesn't exist, create it
     if (!existingMatter) {
-      await db.insert(legalMatters).values({
-        id: this.testMatterId,
-        merchantId: this.testMerchantId,
-        clientId: this.testClientId,
-        status: 'active',
-        title: 'Test Portal Matter',
-        description: 'Test client portal matter',
-        practiceArea: 'other',
-        openDate: new Date()
-      });
+      await db.execute(sql`
+        INSERT INTO legal_matters (
+          id, merchant_id, client_id, status, title, description, 
+          practice_area, open_date
+        ) VALUES (
+          ${this.testMatterId}, ${this.testMerchantId}, ${this.testClientId}, 'active', 
+          'Test Portal Matter', 'Test client portal matter', 
+          'other', ${new Date()}
+        );
+      `);
     }
     
     // Create IOLTA account
@@ -161,52 +160,44 @@ export class ClientPortalTestService implements TestService {
       status: 'active'
     });
     
-    // Create some sample transactions using the correct property names
-    await ioltaService.recordTransaction({
-      // Only include properties from the expected schema
-      amount: '5000.00',
-      description: 'Initial client retainer',
-      transactionType: 'deposit',
-      createdBy: 1, 
-      trustAccountId: account.id,
-      clientLedgerId: 1,
-      fundType: 'retainer',
-      status: 'completed',
-      referenceNumber: 'TPORTAL-1001',
-      // Additional required properties
-      checkNumber: 'N/A',
-      payee: 'N/A',
-      paymentMethod: 'electronic'
-    });
+    // Create some sample transactions using the correct property names and direct SQL
+    await db.execute(sql`
+      INSERT INTO iolta_transactions (
+        amount, description, transaction_type, created_by, trust_account_id,
+        client_ledger_id, fund_type, status, bank_reference, check_number,
+        payee, payment_method
+      ) VALUES (
+        '5000.00', 'Initial client retainer', 'deposit', 1, ${account.id},
+        1, 'retainer', 'completed', 'TPORTAL-1001', 'N/A',
+        'N/A', 'electronic'
+      );
+    `);
     
     // Create test document
-    await db.insert(legalDocuments).values({
-      merchantId: this.testMerchantId,
-      title: 'Test Portal Document',
-      documentType: 'client_communication',
-      documentStatus: 'final',
-      clientId: this.testClientId,
-      matterId: this.testMatterId,
-      filePath: '/test/portal/document.pdf',
-      fileSize: 1024,
-      mimeType: 'application/pdf',
-      showInClientPortal: true,
-      createdById: 1
-    });
+    await db.execute(sql`
+      INSERT INTO legal_documents (
+        merchant_id, title, document_type, document_status, client_id, 
+        matter_id, file_path, file_size, mime_type, show_in_client_portal, created_by_id
+      ) VALUES (
+        ${this.testMerchantId}, 'Test Portal Document', 'client_communication', 'final',
+        ${this.testClientId}, ${this.testMatterId}, '/test/portal/document.pdf',
+        1024, 'application/pdf', true, 1
+      );
+    `);
     
     // Create test invoice
-    await db.insert(legalInvoices).values({
-      merchantId: this.testMerchantId,
-      clientId: this.testClientId,
-      matterId: this.testMatterId,
-      invoiceNumber: `TEST-PORTAL-${Date.now()}`,
-      invoiceDate: new Date(),
-      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
-      status: 'sent',
-      totalAmount: '500.00',
-      notes: 'Test portal invoice',
-      showInClientPortal: true
-    });
+    const invoiceDate = new Date();
+    const dueDate = new Date(new Date().setDate(new Date().getDate() + 30));
+    await db.execute(sql`
+      INSERT INTO legal_invoices (
+        merchant_id, client_id, matter_id, invoice_number, invoice_date, 
+        due_date, status, total_amount, notes, show_in_client_portal
+      ) VALUES (
+        ${this.testMerchantId}, ${this.testClientId}, ${this.testMatterId}, 
+        ${'TEST-PORTAL-' + Date.now()}, ${invoiceDate}, ${dueDate}, 
+        'sent', '500.00', 'Test portal invoice', true
+      );
+    `);
   }
   
   /**
