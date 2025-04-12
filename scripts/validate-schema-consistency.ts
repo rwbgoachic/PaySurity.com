@@ -268,7 +268,9 @@ async function main() {
   }
 }
 
-if (require.main === module) {
+// Run main function if this is the primary module
+// Using ES modules pattern instead of CommonJS
+if (import.meta.url.endsWith(process.argv[1].split('/').pop() || '')) {
   main();
 }
 
