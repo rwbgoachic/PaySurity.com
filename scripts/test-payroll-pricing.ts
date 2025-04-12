@@ -272,28 +272,27 @@ async function runFeatureTests() {
             }
           } catch (error) {
             console.log('❌ Error creating temporary tier for feature tests:', error);
-          }
-
-          // Test 5: Delete feature
-          try {
-            console.log('Test: Delete feature');
-            await db.delete(payrollPricingFeatures).where(eq(payrollPricingFeatures.id, result.id));
-            
-            const [deleted] = await db.select().from(payrollPricingFeatures)
-              .where(eq(payrollPricingFeatures.id, result.id));
-            
-            if (!deleted) {
-              console.log('✅ Successfully deleted feature');
-              tests.push({ name: 'Delete feature', passed: true });
-              passedCount++;
-            } else {
-              console.log('❌ Failed to delete feature');
-              tests.push({ name: 'Delete feature', passed: false, error: 'Feature still exists after deletion' });
+          } finally {
+            // Test 5: Delete feature
+            try {
+              console.log('Test: Delete feature');
+              await db.delete(payrollPricingFeatures).where(eq(payrollPricingFeatures.id, result.id));
+              
+              const [deleted] = await db.select().from(payrollPricingFeatures)
+                .where(eq(payrollPricingFeatures.id, result.id));
+              
+              if (!deleted) {
+                console.log('✅ Successfully deleted feature');
+                tests.push({ name: 'Delete feature', passed: true });
+                passedCount++;
+              } else {
+                console.log('❌ Failed to delete feature');
+                tests.push({ name: 'Delete feature', passed: false, error: 'Feature still exists after deletion' });
+              }
+            } catch (error) {
+              console.log('❌ Error in delete feature test:', error);
+              tests.push({ name: 'Delete feature', passed: false, error: error.message });
             }
-          } catch (error) {
-            console.log('❌ Error in delete feature test:', error);
-            tests.push({ name: 'Delete feature', passed: false, error: error.message });
-          }
         } catch (error) {
           console.log('❌ Error in retrieve feature test:', error);
           tests.push({ name: 'Retrieve feature', passed: false, error: error.message });
