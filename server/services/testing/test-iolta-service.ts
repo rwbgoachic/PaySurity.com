@@ -368,7 +368,8 @@ export class IoltaTestService implements TestService {
       }
       
       const clientLedger = await ioltaService.getClientLedger(
-        this.testClientId
+        this.testClientId,
+        true // Pass isClientId=true to search by client ID
       );
       
       tests.push({
@@ -547,7 +548,8 @@ export class IoltaTestService implements TestService {
       
       // First get the client ledger 
       const clientLedger = await ioltaService.getClientLedger(
-        this.testClientId
+        this.testClientId,
+        true // Pass isClientId=true to search by client ID
       );
       
       const transactions = await ioltaService.getTransactionsByClientLedger(
