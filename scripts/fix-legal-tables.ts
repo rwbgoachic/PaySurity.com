@@ -675,7 +675,7 @@ async function fixLegalTables() {
     } else {
       console.log('merchants table already exists');
       
-      // Check if iso_partner_id column exists
+      // Check if required columns exist
       const checkIsoPartnerId = await db.execute(sql`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
@@ -684,9 +684,18 @@ async function fixLegalTables() {
         );
       `);
       
-      const isoPartnerIdExists = checkIsoPartnerId.rows[0].exists;
+      const checkContactName = await db.execute(sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'merchants' 
+          AND column_name = 'contact_name'
+        );
+      `);
       
-      if (!isoPartnerIdExists) {
+      const isoPartnerIdExists = checkIsoPartnerId.rows[0].exists;
+      const contactNameExists = checkContactName.rows[0].exists;
+      
+      if (!isoPartnerIdExists || !contactNameExists) {
         console.log('Columns missing in merchants table, recreating...');
         
         // Backup existing merchant data
@@ -704,6 +713,7 @@ async function fixLegalTables() {
             status TEXT NOT NULL DEFAULT 'active',
             business_name TEXT,
             business_type TEXT,
+            contact_name TEXT,
             email TEXT,
             phone TEXT,
             address TEXT,
@@ -727,8 +737,8 @@ async function fixLegalTables() {
         
         // Re-insert the test merchant
         await db.execute(sql`
-          INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor)
-          VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim')
+          INSERT INTO merchants (id, name, status, business_name, contact_name, iso_partner_id, payment_processor)
+          VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 'John Doe', 1, 'helcim')
           ON CONFLICT (id) DO NOTHING;
         `);
         console.log('Successfully re-added test merchant with all fields');
@@ -742,20 +752,38 @@ async function fixLegalTables() {
         const merchantExists = parseInt(String(merchantCountValue)) > 0;
         
         if (!merchantExists) {
-          await db.execute(sql`
-            INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor)
-            VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim');
-          `);
+          if (contactNameExists) {
+            await db.execute(sql`
+              INSERT INTO merchants (id, name, status, business_name, contact_name, iso_partner_id, payment_processor)
+              VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 'John Doe', 1, 'helcim');
+            `);
+          } else {
+            await db.execute(sql`
+              INSERT INTO merchants (id, name, status, business_name, iso_partner_id, payment_processor)
+              VALUES (1, 'Test Merchant', 'active', 'Test Law Firm', 1, 'helcim');
+            `);
+          }
           console.log('Successfully added test merchant');
         } else {
-          // Update existing merchant to ensure it has iso_partner_id
-          await db.execute(sql`
-            UPDATE merchants
-            SET 
-              iso_partner_id = COALESCE(iso_partner_id, 1),
-              payment_processor = COALESCE(payment_processor, 'helcim')
-            WHERE id = 1;
-          `);
+          // Update existing merchant to ensure it has all required fields
+          if (contactNameExists) {
+            await db.execute(sql`
+              UPDATE merchants
+              SET 
+                iso_partner_id = COALESCE(iso_partner_id, 1),
+                payment_processor = COALESCE(payment_processor, 'helcim'),
+                contact_name = COALESCE(contact_name, 'John Doe')
+              WHERE id = 1;
+            `);
+          } else {
+            await db.execute(sql`
+              UPDATE merchants
+              SET 
+                iso_partner_id = COALESCE(iso_partner_id, 1),
+                payment_processor = COALESCE(payment_processor, 'helcim')
+              WHERE id = 1;
+            `);
+          }
           console.log('Test merchant already exists - updated with required fields');
         }
       }
