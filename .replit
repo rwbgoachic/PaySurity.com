@@ -19,7 +19,7 @@ localPort = 8080
 externalPort = 8080
 
 [workflows]
-runButton = "Project"
+runButton = "Start Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -44,3 +44,12 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start Server"
+author = 41093508
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
