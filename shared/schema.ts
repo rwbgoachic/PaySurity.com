@@ -5215,6 +5215,9 @@ export const insertLegalDeadlineSchema = createInsertSchema(legalDeadlines).omit
 export type LegalDeadline = typeof legalDeadlines.$inferSelect;
 export type InsertLegalDeadline = z.infer<typeof insertLegalDeadlineSchema>;
 
+// Import and re-export payroll pricing schema definitions
+export * from './schema-payroll-pricing';
+
 // Type declarations for Express request interface
 declare global {
   namespace Express {
