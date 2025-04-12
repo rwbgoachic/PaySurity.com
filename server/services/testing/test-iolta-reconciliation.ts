@@ -176,11 +176,11 @@ export class IoltaReconciliationTestService implements TestService {
       await db.execute(sql`
         INSERT INTO legal_clients (
           id, merchant_id, status, client_type, first_name, last_name, 
-          email, phone, client_number, jurisdiction, is_active
+          email, phone, client_number, jurisdiction, portal_access, tax_id
         ) VALUES (
           ${this.testClientId}, ${this.testMerchantId}, 'active', 'individual', 'Test', 
           'Reconciliation', 'test.reconciliation@example.com', '555-123-4567', 
-          'CLIENT-REC-001', 'CA', true
+          'CLIENT-REC-001', 'CA', true, '99-8765432'
         );
       `);
     }

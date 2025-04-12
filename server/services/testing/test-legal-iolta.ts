@@ -10,7 +10,7 @@ import {
   merchants,
   legalClients
 } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 /**
  * Test service for IOLTA trust accounting functionality
@@ -93,25 +93,20 @@ export class IoltaTestService implements TestService {
     
     this.merchantId = merchant.id;
     
-    // Create test client
-    const [client] = await db.insert(legalClients)
-      .values({
-        merchantId: this.merchantId,
-        clientNumber: 'TC-' + Date.now().toString().slice(-6), // Generate unique client number
-        clientType: 'individual',
-        status: 'active',
-        firstName: 'Test',
-        lastName: 'Client',
-        email: 'testclient@example.com',
-        phone: '555-987-6543',
-        address: '456 Client St',
-        city: 'Client City',
-        state: 'CS',
-        zipCode: '54321'
-      })
-      .returning();
-    
-    this.clientId = client.id;
+    // Create test client using SQL to ensure jurisdiction column is included
+    const clientNumber = 'TC-' + Date.now().toString().slice(-6); // Generate unique client number
+    await db.execute(sql`
+        INSERT INTO legal_clients (
+          merchant_id, client_number, client_type, status, first_name, last_name,
+          email, phone, address, city, state, zip_code, jurisdiction, tax_id, is_active
+        ) VALUES (
+          ${this.merchantId}, ${clientNumber}, 'individual', 'active', 'Test',
+          'Client', 'testclient@example.com', '555-987-6543', '456 Client St',
+          'Client City', 'CS', '54321', 'CA', '11-2233445', true
+        ) RETURNING id;
+      `).then(result => {
+        this.clientId = Number(result.rows[0].id);
+      });
     
     console.log('Test environment setup complete.');
   }

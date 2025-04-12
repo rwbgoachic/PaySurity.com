@@ -109,7 +109,7 @@ export class ClientPortalTestService implements TestService {
         ) VALUES (
           ${this.testClientId}, ${this.testMerchantId}, 'active', 'individual', 
           'Test', 'PortalUser', 'test.portal@example.com', '555-123-4567',
-          '98-7654321', 'CA', 'PORTAL-${Date.now().toString().slice(-6)}'
+          '98-7654321', 'CA', 'PORTAL-001'
         );
       `);
     }
