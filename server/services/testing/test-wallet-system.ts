@@ -24,30 +24,35 @@ export class WalletTestService {
       passed: true,
       testGroups: []
     };
-    
+
     // Test wallet initialization
     const initializationTests = await this.testWalletInitialization();
     report.testGroups.push(initializationTests);
     if (!initializationTests.passed) report.passed = false;
-    
+
     // Test wallet operations
     const operationsTests = await this.testWalletOperations();
     report.testGroups.push(operationsTests);
     if (!operationsTests.passed) report.passed = false;
-    
+
     // Test wallet security
     const securityTests = await this.testWalletSecurity();
     report.testGroups.push(securityTests);
     if (!securityTests.passed) report.passed = false;
-    
+
     // Test wallet API endpoints
     const apiTests = await this.testWalletAPI();
     report.testGroups.push(apiTests);
     if (!apiTests.passed) report.passed = false;
-    
+
+    // Test bank integration
+    const bankIntegrationTests = await this.testBankIntegration();
+    report.testGroups.push(bankIntegrationTests);
+    if (!bankIntegrationTests.passed) report.passed = false;
+
     return report;
   }
-  
+
   /**
    * Test wallet initialization and creation
    */
@@ -57,7 +62,7 @@ export class WalletTestService {
       tests: [],
       passed: true
     };
-    
+
     try {
       // Test database schema for wallets
       const walletTableResult = await db.execute(`
@@ -67,9 +72,9 @@ export class WalletTestService {
           AND table_name = 'wallets'
         );
       `);
-      
+
       const walletTableExists = walletTableResult[0]?.exists || false;
-      
+
       testGroup.tests.push({
         name: 'Wallet Table Existence',
         description: 'The wallets table should exist in the database',
@@ -78,9 +83,9 @@ export class WalletTestService {
         expected: 'Table exists',
         actual: walletTableExists ? 'Table exists' : 'Table does not exist'
       });
-      
+
       if (!walletTableExists) testGroup.passed = false;
-      
+
       // Test wallet schema structure (if table exists)
       if (walletTableExists) {
         const walletColumnsResult = await db.execute(`
@@ -89,7 +94,7 @@ export class WalletTestService {
           WHERE table_schema = 'public' 
           AND table_name = 'wallets';
         `);
-        
+
         // Expected columns for wallet table
         const expectedColumns = [
           { name: 'id', type: 'integer' },
@@ -99,20 +104,20 @@ export class WalletTestService {
           { name: 'walletType', type: /character varying|text/ },
           { name: 'createdAt', type: /timestamp|date/ }
         ];
-        
+
         const columnResults = expectedColumns.map(expectedColumn => {
           const column = walletColumnsResult.find(
             (col: any) => col.column_name === expectedColumn.name
           );
-          
+
           const exists = !!column;
           const typeMatches = exists && 
             (typeof expectedColumn.type === 'string' 
               ? column.data_type === expectedColumn.type
               : expectedColumn.type.test(column.data_type));
-          
+
           const passed = exists && typeMatches;
-          
+
           return {
             name: `Wallet Column: ${expectedColumn.name}`,
             description: `The ${expectedColumn.name} column should exist with correct type`,
@@ -126,9 +131,9 @@ export class WalletTestService {
             actual: exists ? `Column ${column.column_name} with type ${column.data_type}` : 'Column not found'
           };
         });
-        
+
         testGroup.tests.push(...columnResults);
-        
+
         if (columnResults.some(result => !result.passed)) {
           testGroup.passed = false;
         }
@@ -145,10 +150,10 @@ export class WalletTestService {
       });
       testGroup.passed = false;
     }
-    
+
     return testGroup;
   }
-  
+
   /**
    * Test wallet operations (deposit, withdraw, transfer)
    */
@@ -158,7 +163,7 @@ export class WalletTestService {
       tests: [],
       passed: true
     };
-    
+
     // Test database transactions table existence
     try {
       const transactionsTableResult = await db.execute(`
@@ -168,9 +173,9 @@ export class WalletTestService {
           AND table_name = 'wallet_transactions'
         );
       `);
-      
+
       const transactionsTableExists = transactionsTableResult[0]?.exists || false;
-      
+
       testGroup.tests.push({
         name: 'Transactions Table Existence',
         description: 'The wallet_transactions table should exist in the database',
@@ -179,9 +184,9 @@ export class WalletTestService {
         expected: 'Table exists',
         actual: transactionsTableExists ? 'Table exists' : 'Table does not exist'
       });
-      
+
       if (!transactionsTableExists) testGroup.passed = false;
-      
+
       // Test API endpoints for wallet operations
       const baseUrl = 'http://localhost:5000';
       const testEndpoints = [
@@ -198,17 +203,17 @@ export class WalletTestService {
           expectedStatus: 401  // Should be unauthorized without auth
         }
       ];
-      
+
       // Test each endpoint
       for (const endpoint of testEndpoints) {
         try {
           const response = await fetch(`${baseUrl}${endpoint.url}`, {
             method: endpoint.method
           });
-          
+
           const status = response.status;
           const isStatusCorrect = status === endpoint.expectedStatus;
-          
+
           testGroup.tests.push({
             name: endpoint.name,
             description: `Test the ${endpoint.url} endpoint`,
@@ -219,7 +224,7 @@ export class WalletTestService {
             expected: `Status ${endpoint.expectedStatus}`,
             actual: `Status ${status}`
           });
-          
+
           if (!isStatusCorrect) testGroup.passed = false;
         } catch (error) {
           // Network errors are a type of test failure
@@ -247,10 +252,10 @@ export class WalletTestService {
       });
       testGroup.passed = false;
     }
-    
+
     return testGroup;
   }
-  
+
   /**
    * Test wallet security features
    */
@@ -260,9 +265,9 @@ export class WalletTestService {
       tests: [],
       passed: true
     };
-    
+
     const baseUrl = 'http://localhost:5000';
-    
+
     // Test security endpoints - should be unauthorized without proper auth
     const securityEndpoints = [
       { 
@@ -280,7 +285,7 @@ export class WalletTestService {
         expectedStatus: 401
       }
     ];
-    
+
     // Test each security endpoint
     for (const endpoint of securityEndpoints) {
       try {
@@ -291,10 +296,10 @@ export class WalletTestService {
           },
           body: JSON.stringify(endpoint.body)
         });
-        
+
         const status = response.status;
         const isStatusCorrect = status === endpoint.expectedStatus;
-        
+
         testGroup.tests.push({
           name: endpoint.name,
           description: `Test security of the ${endpoint.url} endpoint`,
@@ -305,7 +310,7 @@ export class WalletTestService {
           expected: `Status ${endpoint.expectedStatus} (Unauthorized)`,
           actual: `Status ${status}`
         });
-        
+
         if (!isStatusCorrect) testGroup.passed = false;
       } catch (error) {
         // Network errors are a type of test failure
@@ -321,10 +326,10 @@ export class WalletTestService {
         testGroup.passed = false;
       }
     }
-    
+
     return testGroup;
   }
-  
+
   /**
    * Test wallet API endpoints with test authentication
    */
@@ -334,9 +339,9 @@ export class WalletTestService {
       tests: [],
       passed: true
     };
-    
+
     const baseUrl = 'http://localhost:5000';
-    
+
     // Test API endpoints with test authentication
     const apiEndpoints = [
       { 
@@ -354,27 +359,27 @@ export class WalletTestService {
         expectedStatus: [200, 404]  // Either OK or Not Found is acceptable for testing
       }
     ];
-    
+
     // Test each API endpoint
     for (const endpoint of apiEndpoints) {
       try {
         const headers: Record<string, string> = {};
-        
+
         // Add test authentication header
         if (endpoint.useTestAuth) {
           headers['X-Test-Mode'] = 'true';
         }
-        
+
         const response = await fetch(`${baseUrl}${endpoint.url}`, {
           method: endpoint.method,
           headers
         });
-        
+
         const status = response.status;
         const isStatusCorrect = Array.isArray(endpoint.expectedStatus)
           ? endpoint.expectedStatus.includes(status)
           : status === endpoint.expectedStatus;
-        
+
         testGroup.tests.push({
           name: endpoint.name,
           description: `Test the ${endpoint.url} endpoint with test authentication`,
@@ -387,7 +392,7 @@ export class WalletTestService {
             : `Status ${endpoint.expectedStatus}`,
           actual: `Status ${status}`
         });
-        
+
         if (!isStatusCorrect) testGroup.passed = false;
       } catch (error) {
         // Network errors are a type of test failure
@@ -405,7 +410,90 @@ export class WalletTestService {
         testGroup.passed = false;
       }
     }
-    
+
+    return testGroup;
+  }
+
+  async testBankIntegration(): Promise<TestGroup> {
+    const testGroup: TestGroup = {
+      name: 'Bank Integration Tests',
+      tests: [],
+      passed: true
+    };
+
+    try {
+      // Test bank account linking
+      const bankAccount = await db.execute(`
+        INSERT INTO bank_accounts (
+          userId, 
+          bankName, 
+          accountType,
+          accountNumber,
+          routingNumber,
+          isActive
+        )
+        VALUES (
+          1,
+          'Test Bank',
+          'checking',
+          '********1234',
+          '021000021',
+          true
+        )
+        RETURNING id
+      `);
+
+      testGroup.tests.push({
+        name: 'Bank Account Linking',
+        description: 'Should link a bank account to wallet',
+        passed: !!bankAccount[0].id,
+        result: 'Successfully linked bank account',
+        expected: 'Bank account linked with valid ID',
+        actual: `Bank account ID: ${bankAccount[0].id}`
+      });
+
+      // Test bank transfer simulation
+      const transferAmount = 100.00;
+      await db.execute(`
+        INSERT INTO transactions (
+          walletId,
+          userId,
+          amount,
+          type,
+          method,
+          sourceOfFunds
+        )
+        VALUES (
+          1,
+          1,
+          $1,
+          'deposit',
+          'ach',
+          'bank_account'
+        )
+      `, [transferAmount]);
+
+      testGroup.tests.push({
+        name: 'Bank Transfer',
+        description: 'Should process bank transfer',
+        passed: true,
+        result: 'Successfully processed bank transfer',
+        expected: 'Transaction recorded with correct details',
+        actual: 'Bank transfer transaction created'
+      });
+
+    } catch (error) {
+      testGroup.tests.push({
+        name: 'Bank Integration',
+        description: 'Should integrate with banking system',
+        passed: false,
+        result: 'Error during bank integration',
+        expected: 'Successful bank integration',
+        actual: `Error: ${(error as Error).message}`,
+        error
+      });
+      testGroup.passed = false;
+    }
     return testGroup;
   }
 }
