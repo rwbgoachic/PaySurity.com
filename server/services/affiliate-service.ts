@@ -155,7 +155,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_referral_tracking'
@@ -168,7 +168,7 @@ export class AffiliateService {
         return [];
       }
       
-      const result = await db.execute(
+      const result = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_referral_tracking WHERE affiliate_id = $1 ORDER BY created_at DESC',
         [affiliateId]
       );
@@ -205,7 +205,7 @@ export class AffiliateService {
       } = referralData;
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_referral_tracking'
@@ -217,7 +217,7 @@ export class AffiliateService {
         console.log('Table affiliate_referral_tracking does not exist, attempting to create it');
         try {
           // Create the table if it doesn't exist
-          await db.execute(`
+          await sqlService.query(`
             CREATE TABLE IF NOT EXISTS affiliate_referral_tracking (
               id SERIAL PRIMARY KEY,
               affiliate_id INTEGER NOT NULL,
@@ -243,7 +243,7 @@ export class AffiliateService {
         }
       }
       
-      const result = await db.execute(`
+      const result = await sqlService.parameterizedSQL(`
         INSERT INTO affiliate_referral_tracking (
           affiliate_id, referral_code, utm_source, utm_medium, utm_campaign,
           landing_page, referrer_url, ip_address, user_agent, device_type, 
@@ -282,7 +282,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_commissions'
@@ -295,7 +295,7 @@ export class AffiliateService {
         return [];
       }
       
-      const result = await db.execute(
+      const result = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_commissions WHERE affiliate_id = $1 ORDER BY created_at DESC',
         [affiliateId]
       );
@@ -318,7 +318,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_payouts'
@@ -331,7 +331,7 @@ export class AffiliateService {
         return [];
       }
       
-      const result = await db.execute(
+      const result = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_payouts WHERE affiliate_id = $1 ORDER BY created_at DESC',
         [affiliateId]
       );
@@ -354,7 +354,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_profiles'
@@ -368,7 +368,7 @@ export class AffiliateService {
       }
       
       // Check if affiliate_code column exists
-      const columnCheckResult = await db.execute(`
+      const columnCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
           WHERE table_name = 'affiliate_profiles' AND column_name = 'affiliate_code'
@@ -380,7 +380,7 @@ export class AffiliateService {
         console.log('Column affiliate_code does not exist in affiliate_profiles table');
         
         // Try using subdomain column instead as fallback
-        const subdomainColumnCheckResult = await db.execute(`
+        const subdomainColumnCheckResult = await sqlService.query(`
           SELECT EXISTS (
             SELECT FROM information_schema.columns 
             WHERE table_name = 'affiliate_profiles' AND column_name = 'subdomain'
@@ -389,24 +389,24 @@ export class AffiliateService {
         
         const subdomainColumnExists = subdomainColumnCheckResult.rows[0]?.exists;
         if (subdomainColumnExists) {
-          const result = await db.execute(
+          const result = await sqlService.parameterizedSQL(
             'SELECT * FROM affiliate_profiles WHERE subdomain = $1',
             [subdomain]
           );
           
-          return result.rows[0] || null;
+          return result[0] || null;
         }
         
         return null;
       }
       
       // Use affiliate_code column
-      const result = await db.execute(
+      const result = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_profiles WHERE affiliate_code = $1',
         [subdomain]
       );
       
-      return result.rows[0] || null;
+      return result[0] || null;
     } catch (error) {
       console.error('Error getting affiliate by subdomain:', error);
       // Return null instead of throwing error for more graceful handling
@@ -432,7 +432,7 @@ export class AffiliateService {
       } = settings;
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'merchant_microsite_settings'
@@ -444,7 +444,7 @@ export class AffiliateService {
         console.log('Table merchant_microsite_settings does not exist, attempting to create it');
         try {
           // Create the table if it doesn't exist
-          await db.execute(`
+          await sqlService.query(`
             CREATE TABLE IF NOT EXISTS merchant_microsite_settings (
               id SERIAL PRIMARY KEY,
               affiliate_id INTEGER NOT NULL,
@@ -464,24 +464,24 @@ export class AffiliateService {
       }
       
       // Check if we have a microsite settings record for this affiliate
-      const existingResult = await db.execute(
+      const existingResult = await sqlService.parameterizedSQL(
         'SELECT * FROM merchant_microsite_settings WHERE affiliate_id = $1',
         [affiliateId]
       );
       
-      if (existingResult.rows && existingResult.rows.length > 0) {
+      if (existingResult && existingResult.length > 0) {
         // Update existing record
-        const updateResult = await db.execute(`
+        const updateResult = await sqlService.parameterizedSQL(`
           UPDATE merchant_microsite_settings
           SET subdomain = $1, theme = $2, custom_logo = $3, custom_colors = $4, updated_at = NOW()
           WHERE affiliate_id = $5
           RETURNING *
         `, [subdomain, theme, customLogo, JSON.stringify(customColors || {}), affiliateId]);
         
-        return updateResult.rows[0] || null;
+        return updateResult[0] || null;
       } else {
         // Create new record
-        const insertResult = await db.execute(`
+        const insertResult = await sqlService.parameterizedSQL(`
           INSERT INTO merchant_microsite_settings (
             affiliate_id, subdomain, theme, custom_logo, custom_colors, created_at, updated_at
           )
@@ -489,7 +489,7 @@ export class AffiliateService {
           RETURNING *
         `, [affiliateId, subdomain, theme, customLogo, JSON.stringify(customColors || {})]);
         
-        return insertResult.rows[0] || null;
+        return insertResult[0] || null;
       }
     } catch (error) {
       console.error('Error updating microsite settings:', error);
