@@ -286,4 +286,33 @@ export function setupAuth(app: Express) {
     console.log('User authenticated, returning user data');
     res.json(req.user);
   });
+  
+  // Special direct admin access endpoint - ONLY FOR DEVELOPMENT
+  app.get("/api/admin-access", async (req, res) => {
+    try {
+      console.log("Admin direct access endpoint called");
+      // Get the super_admin user from the database
+      const adminUser = await storage.getUserByUsername('super_admin');
+      
+      if (!adminUser) {
+        console.error("No super_admin user found in database");
+        return res.status(500).send("Admin user not found");
+      }
+      
+      // Login as super_admin directly
+      req.login(adminUser, (err) => {
+        if (err) {
+          console.error("Admin login error:", err);
+          return res.status(500).send("Error during admin login");
+        }
+        
+        console.log("Admin login successful via direct access endpoint");
+        // Redirect to admin dashboard
+        res.redirect("/super-admin/dashboard");
+      });
+    } catch (error) {
+      console.error("Admin access error:", error);
+      res.status(500).send("Error accessing admin account");
+    }
+  });
 }
