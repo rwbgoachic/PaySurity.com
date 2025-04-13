@@ -200,6 +200,9 @@ async function testIoltaDocumentIntegration() {
     // Generate a test PDF file buffer
     const fileBuffer = generateTestPdfBuffer();
     
+    // Log the test user ID to verify it's a valid integer
+    console.log("Test user ID (should be numeric):", testUserId);
+    
     const documentData: InsertLegalDocument = {
       merchantId: testMerchantId,
       matterId: testMatterId, // Add the required matterId field
@@ -209,7 +212,7 @@ async function testIoltaDocumentIntegration() {
       status: "final",
       authorId: testUserId, // Use numeric user ID
       lastModifiedById: testUserId, // Use numeric user ID
-      uploaded_by: testUserId, // Explicitly set the uploaded_by field
+      uploaded_by: 1, // Explicitly set the uploaded_by field to a hardcoded integer value
       clientId: testClient.id, // Use the test client's ID
       fileLocation: "test-document.pdf", // Add required fileLocation field
       fileSize: fileBuffer.length, // Add file size based on buffer length
@@ -264,7 +267,7 @@ async function testIoltaDocumentIntegration() {
       status: "final",
       authorId: testUserId, // Use numeric user ID 
       lastModifiedById: testUserId, // Use numeric user ID
-      uploaded_by: testUserId, // Explicitly set the uploaded_by field
+      uploaded_by: 1, // Explicitly set the uploaded_by field to a hardcoded integer value
       clientId: testClient.id, // Use the test client's ID
       fileLocation: "combined-transaction-document.pdf", // Add required fileLocation field
       fileSize: fileBuffer.length, // Add file size based on buffer length
