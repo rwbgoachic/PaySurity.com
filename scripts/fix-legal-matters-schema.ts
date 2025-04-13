@@ -22,6 +22,9 @@ async function fixLegalMattersSchema() {
     await ensureColumnExists('legal_matters', 'show_in_client_portal', 'BOOLEAN', 'true');
     await ensureColumnExists('legal_matters', 'billing_type', 'TEXT');
     await ensureColumnExists('legal_matters', 'fixed_fee_amount', 'TEXT');
+    await ensureColumnExists('legal_matters', 'contingency_percentage', 'TEXT');
+    await ensureColumnExists('legal_matters', 'estimated_fees', 'TEXT');
+    await ensureColumnExists('legal_matters', 'conflict_check_complete', 'BOOLEAN', 'true');
     await ensureColumnExists('legal_matters', 'court_name', 'TEXT');
     await ensureColumnExists('legal_matters', 'judge_name', 'TEXT');
     await ensureColumnExists('legal_matters', 'opposing_counsel', 'TEXT');
