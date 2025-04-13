@@ -130,6 +130,14 @@ export default function AuthPage() {
                   >
                     {loginMutation.isPending ? "Signing in..." : "Sign In"}
                   </Button>
+                  
+                  {loginMutation.isError && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-800">
+                      <p className="font-medium">Login failed</p>
+                      <p className="mt-1">{(loginMutation.error as Error)?.message || "An unexpected error occurred"}</p>
+                      <p className="mt-2 text-xs text-red-600">If this problem persists, please contact support with error code: AUTH-503</p>
+                    </div>
+                  )}
                 </form>
               </Form>
             </TabsContent>

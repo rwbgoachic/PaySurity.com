@@ -29,10 +29,24 @@ async function hashPassword(password: string) {
 
 async function comparePasswords(supplied: string, stored: string) {
   try {
+    // Debug authentication process
+    console.log("Password comparison starting");
+    
     const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) {
+      console.error("Invalid stored password format - missing hash or salt");
+      return false;
+    }
+    
+    console.log("Password hash format valid, computing supplied password hash");
+    
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptAsync(supplied, salt, 128)) as Buffer;
-    return timingSafeEqual(hashedBuf, suppliedBuf);
+    
+    const result = timingSafeEqual(hashedBuf, suppliedBuf);
+    console.log("Password comparison result:", result ? "matched" : "not matched");
+    
+    return result;
   } catch (error) {
     // If anything goes wrong, fail securely
     console.error("Password comparison error:", error);
@@ -202,9 +216,11 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", loginBruteforce.prevent, async (req, res, next) => {
+    console.log("Login attempt received for:", req.body?.username);
     
     // Check if username and password are provided
     if (!req.body || !req.body.username || !req.body.password) {
+      console.error("Login failed: Missing username or password");
       return res.status(400).json({ error: "Username and password are required" });
     }
     
@@ -213,25 +229,42 @@ export function setupAuth(app: Express) {
       req.body.username = validator.escape(String(req.body.username));
       // Don't sanitize password as it might contain special characters
       
+      console.log("Attempting to authenticate user:", req.body.username);
+      
       passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Authentication error:", err);
+          return next(err);
+        }
         
         if (!user) {
+          console.error("Authentication failed for user:", req.body.username, "Info:", info);
           return res.status(401).json({ error: info?.message || "Invalid username or password" });
         }
         
+        console.log("User authenticated successfully:", user.username, "- establishing session");
+        
         req.login(user, (loginErr) => {
-          if (loginErr) return next(loginErr);
+          if (loginErr) {
+            console.error("Session creation error:", loginErr);
+            return next(loginErr);
+          }
+          
+          console.log("Login session created for user:", user.username);
           
           // Don't send back password hash or sensitive data in response
           const { password, ...userWithoutPassword } = user;
           
           // Set login timestamp
           storage.updateLastLogin(user.id)
+            .then(() => {
+              console.log("Last login timestamp updated for user:", user.username);
+            })
             .catch(error => {
               console.error("Failed to update last login timestamp:", error);
             });
           
+          console.log("Sending successful login response");
           res.status(200).json(userWithoutPassword);
         });
       })(req, res, next);
