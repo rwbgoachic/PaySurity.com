@@ -63,8 +63,13 @@ export class DocumentService {
         lastModifiedAt: new Date(),
         // Set file_url to the same as fileLocation for backward compatibility
         file_url: fileName,
-        // Add required uploaded_by field using authorId if not explicitly set
-        uploaded_by: document.authorId
+        // Explicitly set the uploaded_by field - this is required in the DB schema
+        uploaded_by: document.uploaded_by || document.authorId || 1, // Fallback to ensure it's never null
+        // Make sure we log the values for debugging
+        ...console.log("Document data for insert:", { 
+          authorId: document.authorId, 
+          uploaded_by: document.uploaded_by || document.authorId || 1 
+        }) && {}
       };
       
       // Insert document record
