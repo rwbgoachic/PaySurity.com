@@ -304,7 +304,7 @@ async function cleanupTestData() {
   await db.execute(`
     DELETE FROM iolta_client_ledgers 
     WHERE trust_account_id = ${testData.trustAccountId}
-    AND client_id = ${testData.clientId}
+    AND client_id = '${testData.clientId}'
   `);
   
   // Delete reconciliation records

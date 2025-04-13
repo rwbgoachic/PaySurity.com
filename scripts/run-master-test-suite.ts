@@ -62,11 +62,12 @@ async function runAllTestSuites(): Promise<MasterTestReport> {
     
     // Run database check to ensure connectivity
     try {
-      execSync('node -e "require(\'./server/db\').pool.query(\'SELECT NOW()\')"', { stdio: 'inherit' });
+      execSync('node -e "require(\'../../server/db\').pool.query(\'SELECT NOW()\')"', { stdio: 'inherit' });
       console.log('✅ Database connection successful');
     } catch (error) {
       console.error('❌ Database connection error:', error);
       console.log('⚠️ Some tests may fail due to database connectivity issues');
+      // Continuing despite connection error - many tests use their own DB connections
     }
     
     // Prepare test data

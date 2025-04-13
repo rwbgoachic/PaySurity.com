@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-04-13T01:15:04.633Z",
+  "duration": 67,
+  "totalTests": 0,
+  "passedTests": 0,
+  "failedTests": 0,
+  "overallResult": "passed",
+  "testGroups": [],
+  "issues": [],
+  "fixedIssues": [],
+  "unresolvedIssues": [],
+  "reportPath": "/home/runner/workspace/test-reports/system-report-2025-04-13T01-15-04.633Z.json"
+}
