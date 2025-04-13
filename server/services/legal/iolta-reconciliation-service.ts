@@ -3,6 +3,7 @@ import { eq, and, between, desc, sql, lt, gt, gte, lte, isNotNull } from "drizzl
 import { 
   ioltaTransactions, 
   ioltaClientLedgers,
+  ioltaTrustAccounts,
   IoltaTransaction
 } from "../../../shared/schema";
 import { 
@@ -124,17 +125,27 @@ export class IoltaReconciliationService {
   
   /**
    * Get all reconciliations for a trust account with merchant access control
+   * 
+   * First checks if the trust account belongs to the given merchant for security
    */
   async getReconciliations(trustAccountId: number, merchantId: number): Promise<IoltaReconciliation[]> {
+    // First verify the trust account belongs to the merchant
+    const trustAccount = await db.query.ioltaTrustAccounts.findFirst({
+      where: and(
+        eq(ioltaTrustAccounts.id, trustAccountId),
+        eq(ioltaTrustAccounts.merchantId, merchantId)
+      )
+    });
+    
+    if (!trustAccount) {
+      throw new Error('Trust account not found or unauthorized');
+    }
+    
+    // Now get the reconciliations for the validated trust account
     return await db
       .select()
       .from(ioltaReconciliations)
-      .where(
-        and(
-          eq(ioltaReconciliations.trustAccountId, trustAccountId),
-          eq(ioltaReconciliations.merchantId, merchantId)
-        )
-      )
+      .where(eq(ioltaReconciliations.trustAccountId, trustAccountId))
       .orderBy(desc(ioltaReconciliations.reconciliationDate));
   }
 
@@ -484,8 +495,8 @@ export class IoltaReconciliationService {
   async generateReconciliationReport(
     accountId: number,
     merchantId: number,
-    startDate: Date,
-    endDate: Date
+    startDate: Date | string,
+    endDate: Date | string
   ): Promise<{
     accountId: number;
     account: any;
@@ -499,6 +510,10 @@ export class IoltaReconciliationService {
     reconciliationDate: Date;
   }> {
     try {
+      // Convert string dates to Date objects if necessary
+      const startDateObj = typeof startDate === 'string' ? new Date(startDate) : startDate;
+      const endDateObj = typeof endDate === 'string' ? new Date(endDate) : endDate;
+      
       // Get the trust account details
       const account = await this.ioltaService.getTrustAccount(accountId);
       if (!account || account.merchantId !== merchantId) {
@@ -521,10 +536,9 @@ export class IoltaReconciliationService {
         .where(
           and(
             eq(ioltaTransactions.trustAccountId, accountId),
-            eq(ioltaTransactions.merchantId, merchantId),
             eq(ioltaTransactions.status, "completed"),
-            gte(ioltaTransactions.createdAt!, startDate),
-            lte(ioltaTransactions.createdAt!, endDate)
+            gte(ioltaTransactions.createdAt!, startDateObj),
+            lte(ioltaTransactions.createdAt!, endDateObj)
           )
         )
         .orderBy(ioltaTransactions.createdAt!);
@@ -540,9 +554,8 @@ export class IoltaReconciliationService {
         ), 0) as starting_balance
         FROM iolta_transactions
         WHERE trust_account_id = ${accountId}
-        AND merchant_id = ${merchantId}
         AND status = 'completed'
-        AND created_at < ${startDate.toISOString()}
+        AND created_at < ${startDateObj.toISOString()}
       `);
       
       let startingBalance = "0.00";
@@ -593,8 +606,8 @@ export class IoltaReconciliationService {
     clientId: number | string,
     accountId: number,
     merchantId: number,
-    startDate: Date,
-    endDate: Date
+    startDate: Date | string,
+    endDate: Date | string
   ): Promise<{
     clientId: string;
     accountId: number;
@@ -607,6 +620,10 @@ export class IoltaReconciliationService {
     reconciliationDate: Date;
   }> {
     try {
+      // Convert string dates to Date objects if necessary
+      const startDateObj = typeof startDate === 'string' ? new Date(startDate) : startDate;
+      const endDateObj = typeof endDate === 'string' ? new Date(endDate) : endDate;
+      
       // Get the client ledger
       const ledger = await this.ioltaService.getClientLedger(clientId.toString(), accountId, merchantId);
       if (!ledger) {
@@ -620,11 +637,10 @@ export class IoltaReconciliationService {
         .where(
           and(
             eq(ioltaTransactions.trustAccountId, accountId),
-            eq(ioltaTransactions.merchantId, merchantId),
-            eq(ioltaTransactions.clientId, clientId.toString()),
             eq(ioltaTransactions.status, "completed"),
-            gte(ioltaTransactions.createdAt!, startDate),
-            lte(ioltaTransactions.createdAt!, endDate)
+            eq(ioltaTransactions.clientId, clientId.toString()),
+            gte(ioltaTransactions.createdAt!, startDateObj),
+            lte(ioltaTransactions.createdAt!, endDateObj)
           )
         )
         .orderBy(ioltaTransactions.createdAt!);
@@ -640,10 +656,9 @@ export class IoltaReconciliationService {
         ), 0) as starting_balance
         FROM iolta_transactions
         WHERE trust_account_id = ${accountId}
-        AND merchant_id = ${merchantId}
         AND client_id = ${clientId.toString()}
         AND status = 'completed'
-        AND created_at < ${startDate.toISOString()}
+        AND created_at < ${startDateObj.toISOString()}
       `);
       
       let startingBalance = "0.00";
