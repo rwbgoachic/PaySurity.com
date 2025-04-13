@@ -10,6 +10,7 @@
 
 import express from 'express';
 import { affiliateService } from './affiliate-service';
+import { sqlService } from './sql-service';
 
 export function setupAffiliateRoutes(app: express.Express) {
   // Get affiliate profile

@@ -222,7 +222,7 @@ export class AffiliateService {
         console.log('Table affiliate_referral_tracking does not exist, attempting to create it');
         try {
           // Create the table if it doesn't exist
-          await sqlService.query(`
+          await sqlService.rawSQL(`
             CREATE TABLE IF NOT EXISTS affiliate_referral_tracking (
               id SERIAL PRIMARY KEY,
               affiliate_id INTEGER NOT NULL,
