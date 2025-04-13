@@ -361,7 +361,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await sqlService.query(`
+      const tableCheckResult = await sqlService.rawSQL(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_profiles'
@@ -369,14 +369,14 @@ export class AffiliateService {
       `);
       
       // Extract the exists property from the first row
-      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
+      const tableExists = tableCheckResult && tableCheckResult[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_profiles does not exist');
         return null;
       }
       
       // Check if affiliate_code column exists
-      const columnCheckResult = await sqlService.query(`
+      const columnCheckResult = await sqlService.rawSQL(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
           WHERE table_name = 'affiliate_profiles' AND column_name = 'affiliate_code'
@@ -384,12 +384,12 @@ export class AffiliateService {
       `);
       
       // Extract the exists property from the first row
-      const columnExists = columnCheckResult.rows && columnCheckResult.rows[0]?.exists;
+      const columnExists = columnCheckResult && columnCheckResult[0]?.exists;
       if (!columnExists) {
         console.log('Column affiliate_code does not exist in affiliate_profiles table');
         
         // Try using subdomain column instead as fallback
-        const subdomainColumnCheckResult = await sqlService.query(`
+        const subdomainColumnCheckResult = await sqlService.rawSQL(`
           SELECT EXISTS (
             SELECT FROM information_schema.columns 
             WHERE table_name = 'affiliate_profiles' AND column_name = 'subdomain'
@@ -397,7 +397,7 @@ export class AffiliateService {
         `);
         
         // Extract the exists property from the first row
-        const subdomainColumnExists = subdomainColumnCheckResult.rows && subdomainColumnCheckResult.rows[0]?.exists;
+        const subdomainColumnExists = subdomainColumnCheckResult && subdomainColumnCheckResult[0]?.exists;
         if (subdomainColumnExists) {
           const result = await sqlService.parameterizedSQL(
             'SELECT * FROM affiliate_profiles WHERE subdomain = $1',
@@ -442,7 +442,7 @@ export class AffiliateService {
       } = settings;
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await sqlService.query(`
+      const tableCheckResult = await sqlService.rawSQL(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'merchant_microsite_settings'
@@ -450,12 +450,12 @@ export class AffiliateService {
       `);
       
       // Extract the exists property from the first row
-      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
+      const tableExists = tableCheckResult && tableCheckResult[0]?.exists;
       if (!tableExists) {
         console.log('Table merchant_microsite_settings does not exist, attempting to create it');
         try {
           // Create the table if it doesn't exist
-          await sqlService.query(`
+          await sqlService.rawSQL(`
             CREATE TABLE IF NOT EXISTS merchant_microsite_settings (
               id SERIAL PRIMARY KEY,
               affiliate_id INTEGER NOT NULL,
