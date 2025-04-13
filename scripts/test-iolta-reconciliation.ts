@@ -17,14 +17,19 @@ const ioltaService = new IoltaService();
 const testData = {
   merchantId: 1,
   trustAccountId: 0, // Will be populated after trust account creation
-  clientId: 12345, // Using numeric ID as expected by the schema
+  clientId: 0, // Will be populated after client creation
   clientData: {
     merchantId: 1,
-    clientId: 12345,
-    clientName: "Test Client",
+    firstName: "Test",
+    lastName: "Client",
     email: "test@example.com",
     status: "active",
-    clientType: "business"
+    client_type: "business",
+    is_business: true,
+    // Derived properties
+    get clientName() {
+      return `${this.firstName} ${this.lastName}`;
+    }
   }
 };
 
@@ -66,11 +71,14 @@ async function setupTestData() {
   console.log("Setting up test data...");
   
   // First, create a test client
-  await db.execute(`
-    INSERT INTO legal_clients (merchant_id, client_id, client_type, first_name, last_name, email, phone_number, status, jurisdiction)
-    VALUES (${testData.merchantId}, ${testData.clientId}, 'business', 'Test', 'Client', 'test@example.com', '555-1234', 'active', 'CA')
+  const clientResult = await db.execute(`
+    INSERT INTO legal_clients (merchant_id, client_type, first_name, last_name, email, phone, status, jurisdiction, is_business, client_number)
+    VALUES (${testData.merchantId}, 'business', 'Test', 'Client', 'test@example.com', '555-1234', 'active', 'CA', true, 'CLIENT-${Date.now()}')
+    RETURNING id
   `);
   
+  // Set the clientId from the returned ID
+  testData.clientId = clientResult.rows[0].id;
   console.log("Created test client with ID:", testData.clientId);
   
   // Create a test trust account
@@ -157,15 +165,21 @@ async function setupTestData() {
   console.log(`Created ${transactions.length} test transactions`);
   
   // Create a test reconciliation record
+  const reconciliationDate = new Date();
+  // Convert to ISO string format "YYYY-MM-DD" for the database
+  const formattedDate = reconciliationDate.toISOString().split('T')[0];
+  
   await reconciliationService.createReconciliation({
     merchantId: testData.merchantId,
     trustAccountId: trustAccount.id,
-    reconciliationDate: new Date(),
+    reconciliationDate: formattedDate,
     bookBalance: "10000.00",
     bankBalance: "10000.00",
+    adjustedBookBalance: "10000.00",
+    adjustedBankBalance: "10000.00",
     isBalanced: true,
     status: "completed",
-    performedById: 1
+    createdById: 1
   });
   
   console.log("Created test reconciliation record");
@@ -196,14 +210,19 @@ async function testGetReconciliations() {
 async function testGenerateReconciliationReport() {
   console.log("\nTesting generateReconciliationReport...");
   
-  const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+  // 30 days ago
+  const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const endDate = new Date(); // Now
+  
+  // Format dates as ISO strings YYYY-MM-DD
+  const formattedStartDate = startDate.toISOString().split('T')[0];
+  const formattedEndDate = endDate.toISOString().split('T')[0];
   
   const report = await reconciliationService.generateReconciliationReport(
     testData.trustAccountId,
     testData.merchantId,
-    startDate,
-    endDate
+    formattedStartDate,
+    formattedEndDate
   );
   
   if (!report) {
@@ -230,12 +249,16 @@ async function testGenerateClientReconciliationReport() {
   const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
   const endDate = new Date(); // Now
   
+  // Format dates as ISO strings YYYY-MM-DD
+  const formattedStartDate = startDate.toISOString().split('T')[0];
+  const formattedEndDate = endDate.toISOString().split('T')[0];
+  
   const report = await reconciliationService.generateClientReconciliationReport(
     testData.clientId,
     testData.trustAccountId,
     testData.merchantId,
-    startDate,
-    endDate
+    formattedStartDate,
+    formattedEndDate
   );
   
   if (!report) {
@@ -288,7 +311,7 @@ async function cleanupTestData() {
   // Delete the test client
   await db.execute(`
     DELETE FROM legal_clients
-    WHERE client_id = ${testData.clientId}
+    WHERE id = ${testData.clientId}
     AND merchant_id = ${testData.merchantId}
   `);
   
