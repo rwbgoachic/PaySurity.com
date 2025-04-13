@@ -630,7 +630,25 @@ export class IoltaReconciliationService {
         throw new Error('Client ledger not found');
       }
       
-      // Get transactions for this client in the period
+      // First, get the client ledger ID(s) for this client and trust account
+      const clientLedgers = await db
+        .select()
+        .from(ioltaClientLedgers)
+        .where(
+          and(
+            eq(ioltaClientLedgers.trustAccountId, accountId),
+            eq(ioltaClientLedgers.clientId, clientId.toString())
+          )
+        );
+      
+      if (!clientLedgers || clientLedgers.length === 0) {
+        throw new Error(`No client ledger found for client ID ${clientId} in trust account ${accountId}`);
+      }
+      
+      // Get the client ledger IDs
+      const clientLedgerIds = clientLedgers.map(ledger => ledger.id);
+      
+      // Get transactions for these client ledgers in the period
       const transactions = await db
         .select()
         .from(ioltaTransactions)
@@ -638,7 +656,7 @@ export class IoltaReconciliationService {
           and(
             eq(ioltaTransactions.trustAccountId, accountId),
             eq(ioltaTransactions.status, "completed"),
-            eq(ioltaTransactions.clientId, clientId.toString()),
+            inArray(ioltaTransactions.clientLedgerId, clientLedgerIds),
             gte(ioltaTransactions.createdAt!, startDateObj),
             lte(ioltaTransactions.createdAt!, endDateObj)
           )
@@ -646,8 +664,10 @@ export class IoltaReconciliationService {
         .orderBy(ioltaTransactions.createdAt!);
       
       // Calculate starting balance by looking at transactions before the start date
-      const clientIdStr = clientId.toString();
-      console.log(`Client ID (string): ${clientIdStr}`);
+      const clientLedgerIdsArray = clientLedgerIds.map(id => id.toString());
+      const clientLedgerIdsString = clientLedgerIdsArray.join(',');
+      
+      console.log(`Client Ledger IDs: ${clientLedgerIdsString}`);
       
       // Debug the query
       const startBalanceQuery = sql`
@@ -660,13 +680,12 @@ export class IoltaReconciliationService {
         ), 0) as starting_balance
         FROM iolta_transactions
         WHERE trust_account_id = ${accountId}
-        AND client_id = ${clientIdStr}
+        AND client_ledger_id IN (${sql.raw(clientLedgerIdsString)})
         AND status = 'completed'
         AND created_at < ${startDateObj.toISOString()}
       `;
       
-      console.log("SQL Query for starting balance:", startBalanceQuery.sql);
-      console.log("SQL Params:", startBalanceQuery.params);
+      console.log("SQL Query for starting balance:", startBalanceQuery);
       
       const startingBalanceResult = await db.execute(startBalanceQuery);
       
