@@ -39,7 +39,7 @@ import { eq, and, or, like, desc, sql, gte, lte, isNull, not } from 'drizzle-orm
 import { randomBytes, createHash, scrypt } from 'crypto';
 import { promisify } from 'util';
 import { generateToken } from '../../utils/security';
-import { compareClientIds, parseClientId, ensureStringClientId } from './client-id-helper';
+// Import already at the top of the file
 import { sendEmail } from '../../utils/email';
 import { timingSafeEqual } from 'crypto';
 

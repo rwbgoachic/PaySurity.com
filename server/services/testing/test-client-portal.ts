@@ -9,7 +9,7 @@ import { TestService, TestReport, TestGroup, TestResult } from './test-interface
 import { db } from '../../db';
 import { ClientPortalService, clientPortalService } from '../legal/client-portal-service';
 import { ioltaService } from '../legal/iolta-service';
-import { compareClientIds, parseClientId } from '../legal/client-id-helper';
+import { toIoltaClientId, toPortalClientId, clientIdsMatch } from '../legal/client-id-helper';
 import {
   legalClients,
   legalMatters,
@@ -323,7 +323,7 @@ export class ClientPortalTestService implements TestService {
         description: 'Should create a new portal user account',
         passed: !!portalUser && 
                 portalUser.email === this.testPortalUserEmail &&
-                compareClientIds(portalUser.clientId, this.testClientId),
+                clientIdsMatch(portalUser.clientId, this.testClientId),
         error: null,
         expected: {
           email: this.testPortalUserEmail,
@@ -339,7 +339,7 @@ export class ClientPortalTestService implements TestService {
       
       if (!portalUser || 
           portalUser.email !== this.testPortalUserEmail || 
-          !compareClientIds(portalUser.clientId, this.testClientId)) {
+          !clientIdsMatch(portalUser.clientId, this.testClientId)) {
         groupPassed = false;
       }
     } catch (e) {

@@ -1,42 +1,37 @@
 /**
- * Client ID Helper
+ * Client ID Helper Functions
  * 
- * Utility functions to handle the conversion between string and numeric client IDs
- * across different parts of the legal practice management system.
- * 
- * This is needed because:
- * - IOLTA tables store clientId as string
- * - Portal tables store clientId as number
+ * Utility functions for handling client ID type inconsistencies between IOLTA tables
+ * (which use string clientIds) and client portal tables (which use number clientIds).
  */
 
 /**
- * Convert client ID to string format for IOLTA operations
+ * Convert a client ID to the format needed for IOLTA tables (string)
+ * 
+ * @param clientId Client ID as string or number
+ * @returns Client ID as string for IOLTA operations
  */
 export function toIoltaClientId(clientId: string | number): string {
   return String(clientId);
 }
 
 /**
- * Convert client ID to number format for portal operations
+ * Convert a client ID to the format needed for portal tables (number)
+ * 
+ * @param clientId Client ID as string or number
+ * @returns Client ID as number for portal operations
  */
 export function toPortalClientId(clientId: string | number): number {
-  // If it's already a number, return it
-  if (typeof clientId === 'number') return clientId;
-  
-  // Try to convert to number
-  const numericId = Number(clientId);
-  
-  // Check if conversion was successful and valid
-  if (isNaN(numericId)) {
-    throw new Error(`Invalid client ID: ${clientId}`);
-  }
-  
-  return numericId;
+  return typeof clientId === 'string' ? parseInt(clientId, 10) : clientId;
 }
 
 /**
- * Safely compare client IDs regardless of type
+ * Check if two client IDs match, regardless of their type (string or number)
+ * 
+ * @param clientId1 First client ID (string or number)
+ * @param clientId2 Second client ID (string or number) 
+ * @returns True if the client IDs represent the same client
  */
-export function clientIdsMatch(id1: string | number, id2: string | number): boolean {
-  return String(id1) === String(id2);
+export function clientIdsMatch(clientId1: string | number, clientId2: string | number): boolean {
+  return String(clientId1) === String(clientId2);
 }
