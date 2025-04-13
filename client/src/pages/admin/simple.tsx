@@ -1,21 +1,28 @@
-// Simple Test Page for Connectivity Debugging
+// Super simple test page with minimal JSX and no hooks
 
-export default function SimplePage() {
+const SimplePage = () => {
+  // Basic JavaScript without hooks or complex React features
+  const pageTitle = "Simple React Test";
+  const currentTime = new Date().toLocaleTimeString();
+  
+  // Simple function
+  const getBackgroundColor = () => '#f0f9ff';
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-        <h1 className="text-2xl font-bold text-center mb-6">Simple Test Page</h1>
-        
-        <div className="bg-green-100 p-4 rounded-md text-green-800 mb-4">
-          <p className="font-medium">Connection Test</p>
-          <p className="text-sm">If you can see this page, basic rendering is working.</p>
-        </div>
-        
-        <div className="bg-blue-100 p-4 rounded-md text-blue-800">
-          <p className="font-medium">CSS Test</p>
-          <p className="text-sm">If the colors and styling are visible, CSS is loading correctly.</p>
-        </div>
+    <div style={{ padding: '2rem' }}>
+      <h1>{pageTitle}</h1>
+      <div style={{ 
+        backgroundColor: getBackgroundColor(),
+        padding: '1rem', 
+        border: '1px solid #3b82f6',
+        borderRadius: '0.5rem',
+        marginTop: '1rem'
+      }}>
+        <p>Current time when page loaded: {currentTime}</p>
+        <p>This is a very simple React page with minimal features.</p>
       </div>
     </div>
   );
-}
+};
+
+export default SimplePage;

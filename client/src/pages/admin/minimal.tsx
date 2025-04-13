@@ -1,8 +1,22 @@
 // Minimal test page for React functionality without complex dependencies
 
-import React from 'react';
+import { useState, useEffect } from 'react';
 
 export default function MinimalReactPage() {
+  // Add some state and effects to ensure React is properly working
+  const [count, setCount] = useState(0);
+  const [time, setTime] = useState(new Date().toLocaleTimeString());
+  
+  // Simple effect to update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date().toLocaleTimeString());
+    }, 1000);
+    
+    // Clean up on unmount
+    return () => clearInterval(timer);
+  }, []);
+  
   return (
     <div style={{
       minHeight: '100vh',
@@ -41,6 +55,22 @@ export default function MinimalReactPage() {
           <p style={{ margin: 0, fontSize: '0.875rem' }}>
             If you can see this page with styling, React is rendering correctly.
           </p>
+          <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+            <p>Counter: {count}</p>
+            <button 
+              onClick={() => setCount(c => c + 1)}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.25rem',
+                cursor: 'pointer'
+              }}
+            >
+              Increment
+            </button>
+          </div>
         </div>
         
         <div style={{
@@ -50,9 +80,12 @@ export default function MinimalReactPage() {
           padding: '1rem',
           borderRadius: '6px'
         }}>
-          <p style={{ fontWeight: 'bold', margin: '0 0 0.5rem 0' }}>Inline Styles Test</p>
+          <p style={{ fontWeight: 'bold', margin: '0 0 0.5rem 0' }}>Current Time</p>
           <p style={{ margin: 0, fontSize: '0.875rem' }}>
-            This page uses inline styles instead of Tailwind CSS or external stylesheets.
+            {time}
+          </p>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.8 }}>
+            (This updates every second to verify React effects are working)
           </p>
         </div>
       </div>

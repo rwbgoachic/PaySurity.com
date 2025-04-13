@@ -9,7 +9,7 @@ try {
 dotenv.config(); // Regular .env file
 
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes-diagnostic";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import compression from "compression";
