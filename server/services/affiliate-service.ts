@@ -30,7 +30,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_profiles does not exist');
         return null;
@@ -67,7 +68,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_profiles does not exist');
         return null;
@@ -104,7 +106,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_profiles does not exist');
         return null;
@@ -365,7 +368,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_profiles does not exist');
         return null;
@@ -379,7 +383,8 @@ export class AffiliateService {
         );
       `);
       
-      const columnExists = columnCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const columnExists = columnCheckResult.rows && columnCheckResult.rows[0]?.exists;
       if (!columnExists) {
         console.log('Column affiliate_code does not exist in affiliate_profiles table');
         
@@ -391,7 +396,8 @@ export class AffiliateService {
           );
         `);
         
-        const subdomainColumnExists = subdomainColumnCheckResult.rows[0]?.exists;
+        // Extract the exists property from the first row
+        const subdomainColumnExists = subdomainColumnCheckResult.rows && subdomainColumnCheckResult.rows[0]?.exists;
         if (subdomainColumnExists) {
           const result = await sqlService.parameterizedSQL(
             'SELECT * FROM affiliate_profiles WHERE subdomain = $1',
@@ -443,7 +449,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table merchant_microsite_settings does not exist, attempting to create it');
         try {
