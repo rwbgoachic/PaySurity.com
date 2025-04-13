@@ -164,11 +164,11 @@ function Router() {
       <ProtectedRoute path="/parent/dashboard" component={ParentDashboard} />
       <ProtectedRoute path="/child/dashboard" component={ChildDashboard} />
       
-      {/* Admin Routes */}
-      <Route path="/admin/analytics" component={AnalyticsDashboard} />
-      <Route path="/admin/test-recommendation" component={TestRecommendationEngine} />
-      <Route path="/admin/project-documentation" component={ProjectDocumentation} />
-      <Route path="/admin/payroll-pricing" component={() => {
+      {/* Admin Routes - Protected */}
+      <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
+      <ProtectedRoute path="/admin/test-recommendation" component={TestRecommendationEngine} />
+      <ProtectedRoute path="/admin/project-documentation" component={ProjectDocumentation} />
+      <ProtectedRoute path="/admin/payroll-pricing" component={() => {
         const AdminPayrollPricing = React.lazy(() => import("./pages/admin-payroll-pricing"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -176,7 +176,7 @@ function Router() {
           </React.Suspense>
         );
       }} />
-      <Route path="/admin/test-management" component={() => {
+      <ProtectedRoute path="/admin/test-management" component={() => {
         const TestManagement = React.lazy(() => import("./pages/admin/test-management"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -184,7 +184,7 @@ function Router() {
           </React.Suspense>
         );
       }} />
-      <Route path="/admin/test-reporting" component={() => {
+      <ProtectedRoute path="/admin/test-reporting" component={() => {
         const TestReporting = React.lazy(() => import("./pages/admin/test-reporting"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -192,7 +192,7 @@ function Router() {
           </React.Suspense>
         );
       }} />
-      <Route path="/admin/test-root-cause" component={() => {
+      <ProtectedRoute path="/admin/test-root-cause" component={() => {
         const TestRootCause = React.lazy(() => import("./pages/admin/test-root-cause"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -200,7 +200,7 @@ function Router() {
           </React.Suspense>
         );
       }} />
-      <Route path="/admin/test-optimization" component={() => {
+      <ProtectedRoute path="/admin/test-optimization" component={() => {
         const TestOptimization = React.lazy(() => import("./pages/admin/test-optimization"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -236,7 +236,7 @@ function Router() {
       <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
       <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
       <ProtectedRoute path="/admin/project-dependencies" component={ProjectDependenciesPage} />
-      <Route path="/admin/test-suite" component={() => {
+      <ProtectedRoute path="/admin/test-suite" component={() => {
         const TestSuite = React.lazy(() => import("./pages/admin/test-suite"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -244,7 +244,7 @@ function Router() {
           </React.Suspense>
         );
       }} />
-      <Route path="/admin/test-dashboard" component={() => {
+      <ProtectedRoute path="/admin/test-dashboard" component={() => {
         const TestDashboard = React.lazy(() => import("./pages/admin/test-dashboard"));
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -268,7 +268,7 @@ function Router() {
       <Route path="/payment-success" component={PaymentSuccessPage} />
       
       {/* Admin routes */}
-      <Route path="/admin/sms-settings">
+      <ProtectedRoute path="/admin/sms-settings">
         {() => {
           const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
           return (
@@ -277,21 +277,19 @@ function Router() {
             </React.Suspense>
           );
         }}
-      </Route>
+      </ProtectedRoute>
       
-      {/* Super Admin routes */}
-      <Route path="/super-admin/dashboard" component={SuperAdminDashboard} />
-      <Route path="/super-admin/merchants" component={React.lazy(() => import("./pages/super-admin/merchants"))} />
-      <Route path="/super-admin/partners" component={React.lazy(() => import("./pages/super-admin/partners"))} />
-      <Route path="/super-admin/affiliates" component={React.lazy(() => import("./pages/super-admin/affiliates"))} />
-      <Route path="/super-admin/payments" component={React.lazy(() => import("./pages/super-admin/payments"))} />
-      <Route path="/super-admin/analytics" component={React.lazy(() => import("./pages/super-admin/analytics"))} />
+      {/* Super Admin routes - Protected */}
+      <ProtectedRoute path="/super-admin/dashboard" component={SuperAdminDashboard} />
+      <ProtectedRoute path="/super-admin/merchants" component={React.lazy(() => import("./pages/super-admin/merchants"))} />
+      <ProtectedRoute path="/super-admin/partners" component={React.lazy(() => import("./pages/super-admin/partners"))} />
+      <ProtectedRoute path="/super-admin/affiliates" component={React.lazy(() => import("./pages/super-admin/affiliates"))} />
+      <ProtectedRoute path="/super-admin/payments" component={React.lazy(() => import("./pages/super-admin/payments"))} />
+      <ProtectedRoute path="/super-admin/analytics" component={React.lazy(() => import("./pages/super-admin/analytics"))} />
       
-      {/* Admin routes should be protected */}
-      <ProtectedRoute path="/admin/analytics" component={AnalyticsDashboard} />
+      {/* Additional protected admin routes */}
       <ProtectedRoute path="/admin/test-recommendation" component={TestRecommendationEngine} />
       <ProtectedRoute path="/admin/project-documentation" component={ProjectDocumentation} />
-      <ProtectedRoute path="/admin/hubspot-settings" component={HubSpotSettings} />
       <ProtectedRoute path="/admin/payroll-pricing" component={() => {
         const AdminPayrollPricing = React.lazy(() => import("./pages/admin-payroll-pricing"));
         return (
