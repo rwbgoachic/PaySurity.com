@@ -265,11 +265,11 @@ async function testIoltaDocumentRoutes() {
     console.log("\nTest 4: Creating transaction with document in one call...");
     
     // Get test trust account
-    const { rows: trustAccountRows } = await db.query(`
+    const trustAccountResult = await sqlService.query(`
       SELECT * FROM iolta_trust_accounts 
       WHERE id = ${transaction.trust_account_id}
     `);
-    const trustAccount = trustAccountRows[0] || null;
+    const trustAccount = trustAccountResult.rows[0] || null;
     
     if (!trustAccount) {
       throw new Error("Trust account not found");

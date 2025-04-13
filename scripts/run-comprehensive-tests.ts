@@ -4,15 +4,22 @@
  * This script executes all test suites, identifies issues, attempts to fix them,
  * and generates detailed reports on the system health.
  * 
- * Usage: ts-node scripts/run-comprehensive-tests.ts
+ * Usage: npx tsx scripts/run-comprehensive-tests.ts
  */
 
 import { testCoordinator } from '../server/services/testing/test-coordinator';
 import { TestReport, TestGroup, Test } from '../server/services/testing/test-delivery-service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import { db } from '../server/db';
 import fetch from 'node-fetch';
+import { sqlService } from '../server/services/sql-service';
+
+// Get current file's path equivalent to __dirname in CommonJS
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Custom interface for issue tracking
 interface Issue {
@@ -234,7 +241,7 @@ async function fixDatabaseIssue(issue: Issue): Promise<void> {
         );
       `;
       
-      const tableExistsResult = await db.execute(tableExistsQuery);
+      const tableExistsResult = await sqlService.query(tableExistsQuery);
       const tableExists = tableExistsResult.rows[0]?.exists === true;
       
       if (!tableExists) {
