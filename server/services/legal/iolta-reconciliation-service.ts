@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { eq, and, between, desc, sql, lt, gt, gte, lte, isNotNull } from "drizzle-orm";
+import { eq, and, between, desc, sql, lt, gt, gte, lte, isNotNull, inArray } from "drizzle-orm";
 import { 
   ioltaTransactions, 
   ioltaClientLedgers,
