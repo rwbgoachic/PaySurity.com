@@ -270,6 +270,9 @@ function Router() {
       {/* Admin portal access route - this is the only path to access admin functionality */}
       <Route path="/admin" component={React.lazy(() => import("./pages/admin/login"))} />
       
+      {/* Simple test page for connectivity debugging */}
+      <Route path="/admin/simple" component={React.lazy(() => import("./pages/admin/simple"))} />
+      
       {/* Admin routes */}
       <ProtectedRoute path="/admin/dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="super_admin" />
       <ProtectedRoute path="/admin/dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="sub_super_admin" />

@@ -99,6 +99,12 @@ app.use('/api/register', authLimiter);
 // First set up the routes that need to be registered before authentication and CSRF
 app.get('/sitemap.xml', generateSitemap);
 
+// Static test page for debugging connectivity issues
+app.get('/static-test', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.sendFile(path.join(import.meta.dirname, '..', 'client', 'static-test.html'));
+});
+
 // Set up auth which will handle session creation
 setupAuth(app);
 
