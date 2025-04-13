@@ -10,6 +10,25 @@ import { sql } from 'drizzle-orm';
 
 class SQLService {
   /**
+   * Execute a raw SQL query and return the results in a format compatible with @neondatabase/serverless format
+   * 
+   * @param sqlQuery The SQL query to execute
+   * @returns The query results with rows property
+   */
+  async query(sqlQuery: string): Promise<{ rows: any[] }> {
+    try {
+      const result = await db.execute(sql.raw(sqlQuery));
+      // Return in a format compatible with client expectations
+      return { 
+        rows: Array.isArray(result) ? result : (result.rows || []) 
+      };
+    } catch (error) {
+      console.error('Error executing SQL query:', error);
+      throw error;
+    }
+  }
+  
+  /**
    * Execute a raw SQL query and return the results
    * 
    * @param sqlQuery The SQL query to execute
@@ -36,8 +55,10 @@ class SQLService {
    */
   async parameterizedSQL(sqlQuery: string, values: any[]): Promise<any[]> {
     try {
+      // Create a prepared statement using Drizzle's sql template literals
       const preparedQuery = sql.raw(sqlQuery);
-      const result = await db.execute(preparedQuery, values);
+      // Execute the query with the provided values
+      const result = await db.execute(preparedQuery, values || []);
       // Convert the result to an array if it's not already
       return Array.isArray(result) ? result : (result.rows || []);
     } catch (error) {

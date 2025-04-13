@@ -14,6 +14,7 @@ import FormData from 'form-data';
 import { db } from '../server/db';
 import { eq, desc } from 'drizzle-orm';
 import { ioltaTransactions, ioltaClientLedgers, ioltaTrustAccounts } from '../shared/schema';
+import { sqlService } from '../server/services/sql-service';
 
 // Configuration
 const BASE_URL = 'http://localhost:5000';
@@ -86,13 +87,13 @@ async function testIoltaDocumentRoutes() {
     
     // Get the most recent transaction for our test
     // Using raw SQL since there's a schema mismatch with merchantId
-    const { rows: transactionRows } = await db.query(`
+    const transactionResult = await sqlService.query(`
       SELECT * FROM iolta_transactions 
       WHERE merchant_id = ${testMerchantId}
       ORDER BY created_at DESC 
       LIMIT 1
     `);
-    const transaction = transactionRows[0] || null;
+    const transaction = transactionResult.rows[0] || null;
     
     if (!transaction) {
       throw new Error("No test transaction found. Run test-iolta-document-integration.ts first.");
@@ -101,11 +102,11 @@ async function testIoltaDocumentRoutes() {
     console.log(`Using transaction with ID: ${transaction.id}`);
     
     // Get the client ledger for our test (using raw SQL)
-    const { rows: clientLedgerRows } = await db.query(`
+    const clientLedgerResult = await sqlService.query(`
       SELECT * FROM iolta_client_ledgers 
       WHERE id = ${transaction.client_ledger_id}
     `);
-    const clientLedger = clientLedgerRows[0] || null;
+    const clientLedger = clientLedgerResult.rows[0] || null;
     
     if (!clientLedger) {
       throw new Error("Client ledger not found for transaction");
