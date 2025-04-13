@@ -9,7 +9,6 @@
  */
 
 import { db } from '../db';
-import { SQL } from '@neondatabase/serverless';
 import { ioltaTrustAccounts } from '../../shared/schema-legal';
 
 export class AffiliateService {
@@ -147,6 +146,11 @@ export class AffiliateService {
    */
   async trackReferral(referralData: any) {
     try {
+      if (!referralData || !referralData.affiliate_id) {
+        console.log('Invalid referral data provided');
+        return null;
+      }
+
       const {
         affiliate_id,
         referral_code,
@@ -160,6 +164,45 @@ export class AffiliateService {
         device_type
       } = referralData;
       
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_referral_tracking'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_referral_tracking does not exist, attempting to create it');
+        try {
+          // Create the table if it doesn't exist
+          await db.execute(`
+            CREATE TABLE IF NOT EXISTS affiliate_referral_tracking (
+              id SERIAL PRIMARY KEY,
+              affiliate_id INTEGER NOT NULL,
+              referral_code TEXT,
+              utm_source TEXT,
+              utm_medium TEXT,
+              utm_campaign TEXT,
+              landing_page TEXT,
+              referrer_url TEXT,
+              ip_address TEXT,
+              user_agent TEXT,
+              device_type TEXT,
+              visit_date TIMESTAMP DEFAULT NOW(),
+              created_at TIMESTAMP DEFAULT NOW(),
+              converted_merchant_id INTEGER,
+              converted_at TIMESTAMP
+            );
+          `);
+          console.log('Created affiliate_referral_tracking table');
+        } catch (createError) {
+          console.error('Error creating affiliate_referral_tracking table:', createError);
+          return null;
+        }
+      }
+      
       const result = await db.execute(`
         INSERT INTO affiliate_referral_tracking (
           affiliate_id, referral_code, utm_source, utm_medium, utm_campaign,
@@ -169,14 +212,23 @@ export class AffiliateService {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
         RETURNING *
       `, [
-        affiliate_id, referral_code, utm_source, utm_medium, utm_campaign,
-        landing_page, referrer_url, ip_address, user_agent, device_type
+        affiliate_id, 
+        referral_code || '', 
+        utm_source || '', 
+        utm_medium || '', 
+        utm_campaign || '',
+        landing_page || '', 
+        referrer_url || '', 
+        ip_address || '', 
+        user_agent || '', 
+        device_type || ''
       ]);
       
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error tracking referral:', error);
-      throw new Error('Failed to track referral');
+      // Return null instead of throwing error for more graceful handling
+      return null;
     }
   }
   
