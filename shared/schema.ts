@@ -2933,7 +2933,7 @@ export const demoRequests = pgTable("demo_requests", {
   processedAt: timestamp("processed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}); {
+});
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
