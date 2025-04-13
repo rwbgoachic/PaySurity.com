@@ -97,18 +97,18 @@ export function setupAffiliateRoutes(app: express.Express) {
       
       // Get the affiliate ID from the referral code
       const refCode = ref as string;
-      const profile = await db.execute(
+      const profile = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_profiles WHERE affiliate_code = $1',
         [refCode]
       );
       
-      if (!profile.rows[0]) {
+      if (!profile || profile.length === 0) {
         return res.status(404).json({ error: 'Invalid referral code' });
       }
       
       // Track the referral
       const referralData = {
-        affiliate_id: profile.rows[0].id,
+        affiliate_id: profile[0].id,
         referral_code: refCode,
         utm_source: utm_source as string || null,
         utm_medium: utm_medium as string || null,
@@ -253,3 +253,4 @@ function detectDeviceType(userAgent: string): string {
 }
 
 import { db } from '../db';
+import { sqlService } from './sql-service';

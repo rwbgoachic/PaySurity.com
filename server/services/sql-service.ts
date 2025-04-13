@@ -55,8 +55,17 @@ class SQLService {
    */
   async parameterizedSQL(sqlQuery: string, values?: any[]): Promise<any[]> {
     try {
+      // Ensure values is an array to prevent "there is no parameter $1" errors
+      const safeValues = values || [];
+      
+      // Check if the query contains parameters ($1, $2, etc.) but no values were provided
+      const paramCount = (sqlQuery.match(/\$\d+/g) || []).length;
+      if (paramCount > 0 && safeValues.length === 0) {
+        console.warn(`SQL query contains ${paramCount} parameters but no values were provided`);
+      }
+      
       // Execute the query directly - PostgreSQL natively supports parameterized queries
-      const result = await db.execute(sqlQuery, values || []);
+      const result = await db.execute(sqlQuery, safeValues);
       // Convert the result to an array if it's not already
       return Array.isArray(result) ? result : (result.rows || []);
     } catch (error) {
