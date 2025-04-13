@@ -308,8 +308,8 @@ export class ClientPortalTestService implements TestService {
     try {
       const portalUser = await clientPortalService.createPortalUser({
         email: this.testPortalUserEmail,
-        password: this.testPortalUserPassword, // This will be hashed into password_hash by the service
-        clientId: this.testClientId,
+        password_hash: this.testPortalUserPassword, // Direct password_hash in test environment
+        clientId: this.testClientId.toString(), // Convert to string to match schema
         merchantId: this.testMerchantId,
         firstName: 'Test',
         lastName: 'Portal',
