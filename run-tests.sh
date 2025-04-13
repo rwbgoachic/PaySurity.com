@@ -22,6 +22,7 @@ tests["IOLTA-Client Portal Integration"]="npx tsx scripts/test-iolta-client-port
 tests["Legal Document Management"]="npx tsx scripts/test-legal-document-management.ts"
 tests["Affiliate Marketing System"]="npx tsx scripts/test-affiliate-marketing.ts"
 tests["Payroll Pricing System"]="npx tsx scripts/test-payroll-pricing.ts"
+tests["Admin Security System"]="npx tsx scripts/test-admin-security.ts"
 
 # Track results
 declare -A results
