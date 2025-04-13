@@ -267,6 +267,9 @@ function Router() {
       <Route path="/payment" component={PaymentPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       
+      {/* Direct admin access - Development only */}
+      <Route path="/direct-admin" component={SuperAdminDashboard} />
+      
       {/* Admin routes */}
       <ProtectedRoute path="/admin/sms-settings" component={() => {
           const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
