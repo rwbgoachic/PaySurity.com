@@ -264,7 +264,7 @@ export class AffiliateService {
         device_type || ''
       ]);
       
-      return result.rows[0] || null;
+      return result[0] || null;
     } catch (error) {
       console.error('Error tracking referral:', error);
       // Return null instead of throwing error for more graceful handling
@@ -300,7 +300,7 @@ export class AffiliateService {
         [affiliateId]
       );
       
-      return result.rows || [];
+      return result || [];
     } catch (error) {
       console.error('Error getting affiliate commissions:', error);
       // Return empty array instead of throwing error for more graceful handling
@@ -336,7 +336,7 @@ export class AffiliateService {
         [affiliateId]
       );
       
-      return result.rows || [];
+      return result || [];
     } catch (error) {
       console.error('Error getting affiliate payouts:', error);
       // Return empty array instead of throwing error for more graceful handling
