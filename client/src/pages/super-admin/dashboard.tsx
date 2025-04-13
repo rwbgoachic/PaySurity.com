@@ -27,8 +27,7 @@ import {
 import { useState } from "react";
 
 export default function SuperAdminDashboard() {
-  // Use optional chaining to prevent errors when accessing via direct route
-  const { user } = useAuth() || { user: { role: 'super_admin', name: 'Admin User' } };
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Summary statistics data
