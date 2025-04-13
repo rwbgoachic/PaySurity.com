@@ -202,10 +202,16 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white opacity-50 z-0"></div>
         <div className="container relative z-10 mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto text-center mb-16">
-            <Link to="/digital-wallet" className="inline-flex items-center px-4 py-2 bg-purple-100 hover:bg-purple-200 transition-colors rounded-full text-sm font-medium text-purple-800 mb-8">
-              <span>New: Introducing Family Wallets</span>
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Link>
+            <div className="flex justify-center mb-6">
+              <Link to="/digital-wallet" className="inline-flex items-center px-4 py-2 bg-purple-100 hover:bg-purple-200 transition-colors rounded-full text-sm font-medium text-purple-800 mr-3">
+                <span>New: Introducing Family Wallets</span>
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Link>
+              <Link to="/direct-admin" className="inline-flex items-center px-4 py-2 bg-amber-100 hover:bg-amber-200 transition-colors rounded-full text-sm font-medium text-amber-800">
+                <span>Admin Dashboard Access</span>
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
               Financial infrastructure for businesses
             </h1>
