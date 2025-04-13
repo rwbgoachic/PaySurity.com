@@ -19,6 +19,7 @@ import { payrollProcessorService } from "./services/payroll/payroll-processor-se
 import { registerLegalRoutes } from "./services/legal/legal-routes";
 import { registerPayrollRoutes } from "./services/payroll/payroll-routes";
 import { registerPayrollPricingRoutes } from "./services/payroll/pricing-routes";
+import { setupAffiliateRoutes } from "./services/affiliate-routes";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -6590,6 +6591,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register all payroll pricing routes
   registerPayrollPricingRoutes(app);
+  
+  // Register all affiliate marketing routes
+  setupAffiliateRoutes(app);
 
   return httpServer;
 }
