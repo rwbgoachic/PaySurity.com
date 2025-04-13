@@ -5,6 +5,7 @@
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { users } from '@shared/schema';
+import { storage } from '../storage'; // Assuming a storage layer exists
 
 /**
  * Email sending options
@@ -22,6 +23,7 @@ interface EmailOptions {
     content: Buffer | string;
     contentType?: string;
   }>;
+  metadata?: any; // Added to pass metadata, like demoRequest object
 }
 
 /**
@@ -48,7 +50,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
     // For now, this is just a stub as we don't have an email provider set up
     // In production, this would use SendGrid, Mailgun, or another email service
-    
+
     // Send to the specified recipient
     console.log('Sending email:', {
       to: options.to,
@@ -58,34 +60,18 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
     // If this is a demo request, also send to admin and create dashboard entry
     if (options.subject?.includes('Demo Request')) {
-      // Send admin notification
-      console.log('Sending admin notification:', {
+      await sendEmail({
         to: process.env.ADMIN_EMAIL || 'admin@paysurity.com',
         subject: `[Admin] New Demo Request Scheduled`,
-        text: options.text
+        text: options.text,
+        from: 'notifications@paysurity.com'
       });
 
-      // Store in admin dashboard
-      try {
-        const demoData = JSON.parse(options.text);
-        await prisma.demoRequests.create({
-          data: {
-            firstName: demoData.firstName,
-            lastName: demoData.lastName,
-            email: demoData.email,
-            phone: demoData.phone,
-            companyName: demoData.companyName,
-            industry: demoData.industry,
-            appointmentDate: demoData.appointmentDate,
-            appointmentTime: demoData.appointmentTime,
-            status: 'scheduled'
-          }
-        });
-      } catch (error) {
-        console.error('Error storing demo request:', error);
+      if (options.metadata?.demoRequest) {
+        await storage.createDemoRequest(options.metadata.demoRequest);
       }
     }
-    
+
     // Return true to simulate successful sending
     return true;
   } catch (error) {
@@ -109,13 +95,13 @@ export async function sendTemplateEmail(
   try {
     // In production, this would fetch templates from database or CMS
     // and render them with the provided data
-    
+
     console.log(`Sending template email (${templateId}) to:`, to);
-    
+
     // Template rendering logic would go here
     const subject = `Template Email: ${templateId}`;
     const text = `This is a template email with data: ${JSON.stringify(data)}`;
-    
+
     return sendEmail({ to, subject, text });
   } catch (error) {
     console.error('Error sending template email:', error);
@@ -131,27 +117,27 @@ export async function sendTemplateEmail(
 export async function sendEmailNotification(options: NotificationOptions): Promise<boolean> {
   try {
     const { subject, message, recipientIds, cc, attachments } = options;
-    
+
     // Get email addresses for recipient users
     const recipientUsers = await db.select()
       .from(users)
       .where(sql`${users.id} = ANY(${recipientIds})`);
-    
+
     if (!recipientUsers.length) {
       console.warn('No users found for notification recipients');
       return false;
     }
-    
+
     // Extract email addresses
     const recipientEmails = recipientUsers
       .filter(user => !!user.email)
       .map(user => user.email as string);
-    
+
     if (!recipientEmails.length) {
       console.warn('No valid email addresses found for notification recipients');
       return false;
     }
-    
+
     // Send the email
     return sendEmail({
       to: recipientEmails,
