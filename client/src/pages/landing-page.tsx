@@ -650,6 +650,7 @@ export default function LandingPage() {
                 <li><Link to="/careers" className="text-gray-600 hover:text-gray-900 transition-colors">Careers</Link></li>
                 <li><Link to="/customers" className="text-gray-600 hover:text-gray-900 transition-colors">Customers</Link></li>
                 <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</Link></li>
+                <li><Link to="/emergency-admin-access" className="text-gray-400 hover:text-gray-600 transition-colors text-xs">Admin</Link></li>
               </ul>
             </div>
             
