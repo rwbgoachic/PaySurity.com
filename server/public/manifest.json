@@ -1,0 +1,61 @@
+{
+  "short_name": "Paysurity",
+  "name": "Paysurity | Comprehensive Digital Payment Solutions",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Paysurity Digital Wallet"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "1280x720",
+      "type": "image/png", 
+      "platform": "wide",
+      "label": "BistroBeast POS System"
+    }
+  ],
+  "categories": ["finance", "business", "productivity"],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#4f46e5",
+  "background_color": "#ffffff",
+  "description": "Comprehensive digital payment and wallet management platform that simplifies financial interactions with intelligent, user-friendly design and advanced integration capabilities.",
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.paysurity.wallet",
+      "id": "com.paysurity.wallet"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/paysurity-wallet/id123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "lang": "en-US",
+  "dir": "ltr"
+}

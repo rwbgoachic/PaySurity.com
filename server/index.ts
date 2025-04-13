@@ -283,7 +283,7 @@ app.use((req, res, next) => {
   
   // For deployment purposes, we'll set a safety mechanism
   // This ensures the application starts even if built files aren't found
-  const forceDevMode = false; // Set to false for actual production deployment
+  const forceDevMode = true; // Set to true to always use development mode for now
   
   // Try to detect if we're in a deployment environment where built files might not be available yet
   const isDeploymentBuild = process.env.NODE_ENV === 'production' && !forceDevMode;

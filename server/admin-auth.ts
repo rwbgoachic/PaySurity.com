@@ -174,9 +174,12 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
   }
   
   // Add admin user info to the request
-  req.adminUser = { id: userId, role };
-  
-  next();
+  if (userId !== undefined && role !== undefined) {
+    req.adminUser = { id: userId, role };
+    next();
+  } else {
+    return res.status(401).json({ error: "Invalid or expired admin token" });
+  }
 }
 
 // Register admin auth routes

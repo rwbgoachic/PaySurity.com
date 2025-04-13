@@ -1,0 +1,18 @@
+# Allow all web crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://paysurity.com/sitemap.xml
+
+# Disallow sensitive areas
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /employer/*
+Disallow: /employee/*
+Disallow: /merchant/dashboard
+Disallow: /merchant/onboarding
+Disallow: /merchant/verification
+Disallow: /merchant/payment-gateways
+Disallow: /merchant/loyalty-programs
+Disallow: /merchant/pos/*
