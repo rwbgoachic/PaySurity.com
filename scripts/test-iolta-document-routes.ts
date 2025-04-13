@@ -20,9 +20,13 @@ import { sqlService } from '../server/services/sql-service';
 const BASE_URL = 'http://localhost:5000';
 const API_BASE = `${BASE_URL}/api/legal`;
 
-// Helper to generate a test PDF file
+// Helper to generate a test PDF file 
 function generateTestPdfFile(): string {
-  const tempDir = path.join(__dirname, '..', 'temp');
+  // Use import.meta.url to get the current file's path in ESM
+  const currentFilePath = new URL(import.meta.url).pathname;
+  const currentDir = path.dirname(currentFilePath);
+  const tempDir = path.join(currentDir, '..', 'temp');
+  
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
   }
@@ -100,6 +104,7 @@ async function testIoltaDocumentRoutes() {
     }
     
     console.log(`Using transaction with ID: ${transaction.id}`);
+    console.log('Transaction details:', JSON.stringify(transaction, null, 2));
     
     // Get the client ledger for our test (using raw SQL)
     const clientLedgerResult = await sqlService.query(`
@@ -128,7 +133,7 @@ async function testIoltaDocumentRoutes() {
     formData.append('description', 'Document uploaded via API for IOLTA transaction');
     formData.append('documentType', 'iolta_deposit');
     formData.append('status', 'final');
-    formData.append('merchantId', transaction.merchantId.toString());
+    formData.append('merchantId', transaction.merchant_id.toString());
     
     // Make the API request
     console.log(`Sending request to attach document to transaction ${transaction.id}...`);
@@ -196,7 +201,7 @@ async function testIoltaDocumentRoutes() {
     console.log("(Simulating successful API response for document retrieval)");
     const simulatedDocumentInfo = {
       id: 9999,
-      merchantId: transaction.merchantId,
+      merchantId: transaction.merchant_id,
       title: 'API Test IOLTA Document',
       documentType: 'iolta_deposit',
       status: 'final',
