@@ -39,6 +39,9 @@ async function fixLegalMattersSchema() {
     await ensureColumnExists('legal_documents', 'show_in_client_portal', 'BOOLEAN', 'true');
     await ensureColumnExists('legal_documents', 'description', 'TEXT');
     await ensureColumnExists('legal_documents', 'document_status', 'TEXT');
+    await ensureColumnExists('legal_documents', 'file_path', 'TEXT');
+    await ensureColumnExists('legal_documents', 'mime_type', 'TEXT');
+    await ensureColumnExists('legal_documents', 'created_by_id', 'INTEGER');
     
     // Add columns to legal_invoices 
     await ensureColumnExists('legal_invoices', 'show_in_client_portal', 'BOOLEAN', 'true');
