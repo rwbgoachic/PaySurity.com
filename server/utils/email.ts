@@ -56,13 +56,34 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       text: options.text?.substring(0, 50) + (options.text && options.text.length > 50 ? '...' : '')
     });
 
-    // If this is a demo request, also send to admin
+    // If this is a demo request, also send to admin and create dashboard entry
     if (options.subject?.includes('Demo Request')) {
+      // Send admin notification
       console.log('Sending admin notification:', {
-        to: 'admin@paysurity.com',
-        subject: `[Admin] ${options.subject}`,
+        to: process.env.ADMIN_EMAIL || 'admin@paysurity.com',
+        subject: `[Admin] New Demo Request Scheduled`,
         text: options.text
       });
+
+      // Store in admin dashboard
+      try {
+        const demoData = JSON.parse(options.text);
+        await prisma.demoRequests.create({
+          data: {
+            firstName: demoData.firstName,
+            lastName: demoData.lastName,
+            email: demoData.email,
+            phone: demoData.phone,
+            companyName: demoData.companyName,
+            industry: demoData.industry,
+            appointmentDate: demoData.appointmentDate,
+            appointmentTime: demoData.appointmentTime,
+            status: 'scheduled'
+          }
+        });
+      } catch (error) {
+        console.error('Error storing demo request:', error);
+      }
     }
     
     // Return true to simulate successful sending

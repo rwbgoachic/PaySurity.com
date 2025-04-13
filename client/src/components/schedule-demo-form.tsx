@@ -262,52 +262,18 @@ Message: ${data.message || 'No message provided'}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Date</FormLabel>
-                  <div className="flex gap-2">
-                    <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
-                        onChange={(e) => {
-                          const date = e.target.value ? new Date(e.target.value) : null;
-                          field.onChange(date);
-                        }}
-                        className="w-full"
-                      />
-                    </FormControl>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          size="icon"
-                          type="button"
-                        >
-                          <CalendarIcon className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            if (date) {
-                              const popover = document.querySelector('[role="dialog"]');
-                              if (popover) {
-                                const parent = popover.parentElement;
-                                if (parent) parent.removeAttribute('data-state');
-                              }
-                            }
-                          }}
-                          disabled={(date) => 
-                            date < new Date() || 
-                            date.getDay() === 0 || 
-                            date.getDay() === 6
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : null;
+                        field.onChange(date);
+                      }}
+                      className="w-full"
+                      min={format(new Date(), "yyyy-MM-dd")}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
