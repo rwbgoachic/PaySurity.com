@@ -181,9 +181,6 @@ export default function LandingPage() {
               <Link to="/pricing">
                 <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</span>
               </Link>
-              <Link to="/super-admin/dashboard">
-                <span className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Admin Dashboard</span>
-              </Link>
             </nav>
           </div>
           
