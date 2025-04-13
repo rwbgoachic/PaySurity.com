@@ -162,6 +162,33 @@ export class IoltaService {
   }
   
   /**
+   * Get all client ledgers for a specific client across all trust accounts
+   * 
+   * @param clientId Client ID (numeric or string)
+   * @param merchantId Merchant ID
+   * @returns Array of client ledgers
+   */
+  async getClientLedgersByClient(clientId: number | string, merchantId: number) {
+    try {
+      // Convert clientId to string format used in IOLTA tables
+      const ioltaClientId = typeof clientId === 'number' ? clientId.toString() : clientId;
+      
+      // Get all client ledgers for this client
+      const results = await db.select()
+        .from(ioltaClientLedgers)
+        .where(and(
+          eq(ioltaClientLedgers.clientId, ioltaClientId),
+          eq(ioltaClientLedgers.merchantId, merchantId)
+        ));
+      
+      return results;
+    } catch (error) {
+      console.error('Error retrieving client ledgers by client:', error);
+      return [];
+    }
+  }
+  
+  /**
    * Records a transaction in the IOLTA system
    * This will update both the client ledger balance and the trust account balance
    * 

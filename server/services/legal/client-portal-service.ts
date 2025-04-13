@@ -1,5 +1,6 @@
 import { db } from '../../db';
 import { toPortalClientId, toIoltaClientId, clientIdsMatch } from './client-id-helper';
+import { ioltaService } from './iolta-service';
 import { 
   legalClients, 
   legalMatters, 
