@@ -273,6 +273,8 @@ function Router() {
       {/* Admin routes */}
       <ProtectedRoute path="/admin/dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="super_admin" />
       <ProtectedRoute path="/admin/sub-dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="sub_admin" />
+      <ProtectedRoute path="/admin/tests" component={React.lazy(() => import("./pages/admin/tests"))} requiredRole="super_admin" />
+      <ProtectedRoute path="/admin/customers" component={React.lazy(() => import("./pages/admin/customers"))} requiredRole="super_admin" />
       <ProtectedRoute path="/admin/sms-settings" component={() => {
           const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
           return (

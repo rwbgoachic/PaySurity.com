@@ -309,6 +309,15 @@ export default function AdminDashboard() {
             <BookOpen className="mr-2 h-5 w-5" />
             Documentation
           </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/tests")}
+          >
+            <Activity className="mr-2 h-5 w-5" />
+            Test Center
+          </Button>
         </nav>
         
         <div className="pt-8 border-t border-indigo-700">
