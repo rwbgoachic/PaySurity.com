@@ -51,12 +51,24 @@ const basePortalUserSchema = createInsertSchema(legalPortalUsers).omit({
   resetToken: true,
   resetTokenExpiry: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
+  password_hash: true
 });
 
-// Extend the schema to allow password for user creation
+// Extend the schema to handle password for user creation
 export const insertLegalPortalUserSchema = basePortalUserSchema.extend({
-  password: z.string().optional() // Allow password field for createPortalUser
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be at most 100 characters")
+    .refine(val => /[A-Z]/.test(val), {
+      message: "Password must contain at least one uppercase letter"
+    })
+    .refine(val => /[a-z]/.test(val), {
+      message: "Password must contain at least one lowercase letter"
+    })
+    .refine(val => /[0-9]/.test(val), {
+      message: "Password must contain at least one number"
+    })
 });
 
 export type LegalPortalUser = typeof legalPortalUsers.$inferSelect;

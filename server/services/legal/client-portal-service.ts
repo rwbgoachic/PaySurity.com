@@ -40,6 +40,7 @@ import { promisify } from 'util';
 import { generateToken } from '../../utils/security';
 import { compareClientIds, parseClientId, ensureStringClientId } from './client-id-helper';
 import { sendEmail } from '../../utils/email';
+import { timingSafeEqual } from 'crypto';
 
 const scryptAsync = promisify(scrypt);
 
@@ -55,7 +56,7 @@ const scryptAsync = promisify(scrypt);
  * - Invoice and payment access
  */
 export class ClientPortalService {
-  
+
   /**
    * Create a new portal user account for a client
    */
@@ -68,28 +69,27 @@ export class ClientPortalService {
           eq(legalPortalUsers.clientId, userData.clientId),
           eq(legalPortalUsers.email, userData.email)
         ));
-      
+
       if (existingUser) {
         throw new Error('A portal user already exists for this client and email');
       }
-      
+
       // Generate salt and hash password
-      const salt = randomBytes(16).toString('hex');
       // Use password field directly or fallback to password_hash if provided directly
       const passwordToHash = userData.password || userData.password_hash;
-      const hash = await this.hashPassword(passwordToHash, salt);
-      
+      const passwordHash = await this.hashPassword(passwordToHash);
+
       // Insert portal user
       const [portalUser] = await db.insert(legalPortalUsers)
         .values({
           ...userData,
-          password_hash: `${hash}.${salt}`, // Using password_hash instead of password
+          password_hash: passwordHash, 
           isActive: true,
           lastLogin: null,
           failedLoginAttempts: 0
         })
         .returning();
-      
+
       // Create welcome activity
       await this.logPortalActivity({
         portalUserId: portalUser.id,
@@ -99,17 +99,17 @@ export class ClientPortalService {
         description: 'Client portal account was created',
         details: { method: 'system' }
       });
-      
+
       // Send welcome email to client (implementation would be in email service)
       // await this.sendWelcomeEmail(portalUser);
-      
+
       return portalUser;
     } catch (error) {
       console.error('Error creating portal user:', error);
       throw new Error(`Failed to create portal user: ${error.message}`);
     }
   }
-  
+
   /**
    * Authenticate a portal user
    */
@@ -122,19 +122,19 @@ export class ClientPortalService {
           eq(legalPortalUsers.email, email),
           eq(legalPortalUsers.merchantId, merchantId)
         ));
-      
+
       if (!portalUser) {
         throw new Error('Invalid email or password');
       }
-      
+
       // Check if the account is active
       if (!portalUser.isActive) {
         throw new Error('Account is inactive or suspended');
       }
-      
+
       // Check password
       const isValidPassword = await this.verifyPassword(password, portalUser.password_hash);
-      
+
       if (!isValidPassword) {
         // Increment failed login attempts
         await db.update(legalPortalUsers)
@@ -144,7 +144,7 @@ export class ClientPortalService {
             isActive: (portalUser.failedLoginAttempts || 0) >= 4 ? false : portalUser.isActive
           })
           .where(eq(legalPortalUsers.id, portalUser.id));
-        
+
         // Log failed login attempt
         await this.logPortalActivity({
           portalUserId: portalUser.id,
@@ -154,10 +154,10 @@ export class ClientPortalService {
           description: 'Failed login attempt',
           details: { ipAddress: '0.0.0.0' } // This would be the actual IP in production
         });
-        
+
         throw new Error('Invalid email or password');
       }
-      
+
       // Update last login and reset failed attempts
       await db.update(legalPortalUsers)
         .set({
@@ -165,12 +165,12 @@ export class ClientPortalService {
           failedLoginAttempts: 0
         })
         .where(eq(legalPortalUsers.id, portalUser.id));
-      
+
       // Create a session
       const sessionToken = generateToken(48);
       const sessionExpiry = new Date();
       sessionExpiry.setDate(sessionExpiry.getDate() + 7); // 7-day session
-      
+
       const [session] = await db.insert(legalPortalSessions)
         .values({
           portalUserId: portalUser.id,
@@ -182,7 +182,7 @@ export class ClientPortalService {
           userAgent: 'Unknown' // This would be the actual user agent in production
         })
         .returning();
-      
+
       // Log successful login
       await this.logPortalActivity({
         portalUserId: portalUser.id,
@@ -192,14 +192,14 @@ export class ClientPortalService {
         description: 'Successful login',
         details: { ipAddress: '0.0.0.0', sessionId: session.id }
       });
-      
+
       return { user: portalUser, session };
     } catch (error) {
       console.error('Error authenticating portal user:', error);
       throw error;
     }
   }
-  
+
   /**
    * Validate a portal session
    */
@@ -212,11 +212,11 @@ export class ClientPortalService {
           gte(legalPortalSessions.expiresAt, new Date()),
           isNull(legalPortalSessions.invalidatedAt)
         ));
-      
+
       if (!session) {
         return { valid: false };
       }
-      
+
       // Get the portal user
       const [user] = await db.select()
         .from(legalPortalUsers)
@@ -224,18 +224,18 @@ export class ClientPortalService {
           eq(legalPortalUsers.id, session.portalUserId),
           eq(legalPortalUsers.isActive, true)
         ));
-      
+
       if (!user) {
         return { valid: false };
       }
-      
+
       return { valid: true, session, user };
     } catch (error) {
       console.error('Error validating session:', error);
       return { valid: false };
     }
   }
-  
+
   /**
    * Log out a portal user (invalidate session)
    */
@@ -250,11 +250,11 @@ export class ClientPortalService {
           isNull(legalPortalSessions.invalidatedAt)
         ))
         .returning();
-      
+
       if (!session) {
         return false;
       }
-      
+
       // Log logout activity
       await this.logPortalActivity({
         portalUserId: session.portalUserId,
@@ -264,14 +264,14 @@ export class ClientPortalService {
         description: 'User logged out',
         details: { sessionId: session.id }
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error logging out portal user:', error);
       return false;
     }
   }
-  
+
   /**
    * Reset portal user password
    */
@@ -285,17 +285,17 @@ export class ClientPortalService {
           eq(legalPortalUsers.merchantId, merchantId),
           eq(legalPortalUsers.isActive, true)
         ));
-      
+
       if (!portalUser) {
         // Don't reveal that the email doesn't exist for security reasons
         return true;
       }
-      
+
       // Generate a reset token
       const resetToken = generateToken(32);
       const resetExpiry = new Date();
       resetExpiry.setHours(resetExpiry.getHours() + 24); // 24-hour token validity
-      
+
       // Store the reset token
       await db.update(legalPortalUsers)
         .set({
@@ -303,7 +303,7 @@ export class ClientPortalService {
           resetTokenExpiry: resetExpiry
         })
         .where(eq(legalPortalUsers.id, portalUser.id));
-      
+
       // Log password reset request
       await this.logPortalActivity({
         portalUserId: portalUser.id,
@@ -313,17 +313,17 @@ export class ClientPortalService {
         description: 'Password reset requested',
         details: { method: 'email' }
       });
-      
+
       // Send reset email (implementation would be in email service)
       // await this.sendPasswordResetEmail(portalUser, resetToken);
-      
+
       return true;
     } catch (error) {
       console.error('Error resetting password:', error);
       return false;
     }
   }
-  
+
   /**
    * Complete password reset
    */
@@ -337,25 +337,24 @@ export class ClientPortalService {
           gte(legalPortalUsers.resetTokenExpiry, new Date()),
           eq(legalPortalUsers.isActive, true)
         ));
-      
+
       if (!portalUser) {
         throw new Error('Invalid or expired reset token');
       }
-      
+
       // Generate salt and hash password
-      const salt = randomBytes(16).toString('hex');
-      const hash = await this.hashPassword(newPassword, salt);
-      
+      const passwordHash = await this.hashPassword(newPassword);
+
       // Update the password and clear reset token
       await db.update(legalPortalUsers)
         .set({
-          password_hash: `${hash}.${salt}`,
+          password_hash: passwordHash,
           resetToken: null,
           resetTokenExpiry: null,
           failedLoginAttempts: 0
         })
         .where(eq(legalPortalUsers.id, portalUser.id));
-      
+
       // Invalidate all existing sessions
       await db.update(legalPortalSessions)
         .set({
@@ -365,7 +364,7 @@ export class ClientPortalService {
           eq(legalPortalSessions.portalUserId, portalUser.id),
           isNull(legalPortalSessions.invalidatedAt)
         ));
-      
+
       // Log password reset completion
       await this.logPortalActivity({
         portalUserId: portalUser.id,
@@ -375,14 +374,14 @@ export class ClientPortalService {
         description: 'Password reset completed',
         details: { invalidatedSessions: true }
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error completing password reset:', error);
       return false;
     }
   }
-  
+
   /**
    * Get client matters for the portal
    */
@@ -397,14 +396,14 @@ export class ClientPortalService {
           eq(legalMatters.showInClientPortal, true)
         ))
         .orderBy(desc(legalMatters.openDate));
-      
+
       return matters;
     } catch (error) {
       console.error('Error getting client matters:', error);
       throw new Error('Failed to retrieve client matters');
     }
   }
-  
+
   /**
    * Get client matter details
    */
@@ -419,11 +418,11 @@ export class ClientPortalService {
           eq(legalMatters.merchantId, merchantId),
           eq(legalMatters.showInClientPortal, true)
         ));
-      
+
       if (!matter) {
         throw new Error('Matter not found or not accessible');
       }
-      
+
       // Get associated documents
       const sharedDocuments = await db.select({
         document: legalDocuments,
@@ -437,7 +436,7 @@ export class ClientPortalService {
           eq(legalPortalSharedDocuments.merchantId, merchantId),
           eq(legalPortalSharedDocuments.isActive, true)
         ));
-      
+
       // Get billable summary
       const timeEntries = await db.select()
         .from(legalTimeEntries)
@@ -446,7 +445,7 @@ export class ClientPortalService {
           eq(legalTimeEntries.merchantId, merchantId),
           eq(legalTimeEntries.showInClientPortal, true)
         ));
-      
+
       const expenseEntries = await db.select()
         .from(legalExpenseEntries)
         .where(and(
@@ -454,7 +453,7 @@ export class ClientPortalService {
           eq(legalExpenseEntries.merchantId, merchantId),
           eq(legalExpenseEntries.showInClientPortal, true)
         ));
-      
+
       // Get invoices
       const invoices = await db.select()
         .from(legalInvoices)
@@ -463,7 +462,7 @@ export class ClientPortalService {
           eq(legalInvoices.merchantId, merchantId),
           eq(legalInvoices.status, 'sent')
         ));
-      
+
       // Log matter view activity
       await this.logPortalActivity({
         portalUserId: 0, // This would need to be provided in the actual call
@@ -473,7 +472,7 @@ export class ClientPortalService {
         description: `Viewed matter: ${matter.title}`,
         details: { matterId: matter.id }
       });
-      
+
       return {
         matter,
         documents: sharedDocuments.map(item => ({
@@ -496,7 +495,7 @@ export class ClientPortalService {
       throw new Error('Failed to retrieve matter details');
     }
   }
-  
+
   /**
    * Share a document with a client
    */
@@ -509,11 +508,11 @@ export class ClientPortalService {
           eq(legalDocuments.id, documentData.documentId),
           eq(legalDocuments.merchantId, documentData.merchantId)
         ));
-      
+
       if (!document) {
         throw new Error('Document not found');
       }
-      
+
       // Check if document is already shared
       const [existingShare] = await db.select()
         .from(legalPortalSharedDocuments)
@@ -521,7 +520,7 @@ export class ClientPortalService {
           eq(legalPortalSharedDocuments.documentId, documentData.documentId),
           eq(legalPortalSharedDocuments.clientId, documentData.clientId)
         ));
-      
+
       if (existingShare) {
         // Update existing share
         const [updatedShare] = await db.update(legalPortalSharedDocuments)
@@ -533,7 +532,7 @@ export class ClientPortalService {
           })
           .where(eq(legalPortalSharedDocuments.id, existingShare.id))
           .returning();
-        
+
         // Log document share activity
         await this.logPortalActivity({
           portalUserId: null,
@@ -543,7 +542,7 @@ export class ClientPortalService {
           description: `Document shared/updated: ${document.title}`,
           details: { documentId: document.id, sharedBy: documentData.sharedById }
         });
-        
+
         return updatedShare;
       } else {
         // Create new share
@@ -554,7 +553,7 @@ export class ClientPortalService {
             isActive: true
           })
           .returning();
-        
+
         // Log document share activity
         await this.logPortalActivity({
           portalUserId: null,
@@ -564,7 +563,7 @@ export class ClientPortalService {
           description: `Document shared: ${document.title}`,
           details: { documentId: document.id, sharedBy: documentData.sharedById }
         });
-        
+
         // Notify client if portal user exists
         const [portalUser] = await db.select()
           .from(legalPortalUsers)
@@ -572,12 +571,12 @@ export class ClientPortalService {
             eq(legalPortalUsers.clientId, documentData.clientId),
             eq(legalPortalUsers.isActive, true)
           ));
-        
+
         if (portalUser) {
           // Send email notification (implementation would be in email service)
           // await this.sendDocumentNotification(portalUser, document);
         }
-        
+
         return newShare;
       }
     } catch (error) {
@@ -585,7 +584,7 @@ export class ClientPortalService {
       throw new Error('Failed to share document');
     }
   }
-  
+
   /**
    * Get client shared documents
    */
@@ -610,7 +609,7 @@ export class ClientPortalService {
         ORDER BY 
           s.shared_at DESC
       `);
-      
+
       // Parse the result
       return documentsResult.rows.map(row => ({
         id: row.id,
@@ -635,7 +634,7 @@ export class ClientPortalService {
       throw new Error('Failed to retrieve client documents');
     }
   }
-  
+
   /**
    * Get client invoices
    */
@@ -649,7 +648,7 @@ export class ClientPortalService {
         AND status = 'sent'
         ORDER BY created_at DESC
       `);
-      
+
       // Transform the raw results to match the expected type
       const invoices = result.rows.map(row => ({
         id: row.id,
@@ -663,14 +662,14 @@ export class ClientPortalService {
         createdAt: row.created_at ? new Date(row.created_at) : new Date(),
         updatedAt: row.updated_at ? new Date(row.updated_at) : new Date()
       }));
-      
+
       return invoices;
     } catch (error) {
       console.error('Error getting client invoices:', error);
       throw new Error('Failed to retrieve client invoices');
     }
   }
-  
+
   /**
    * Get client invoice details
    */
@@ -685,31 +684,31 @@ export class ClientPortalService {
           AND client_id = ${clientId}
           AND merchant_id = ${merchantId}
       `);
-      
+
       if (!invoiceResult.rows || invoiceResult.rows.length === 0) {
         throw new Error('Invoice not found or not accessible');
       }
-      
+
       const invoice = invoiceResult.rows[0];
-      
+
       // Get time entries directly with SQL
       const timeEntriesResult = await db.execute(sql`
         SELECT * FROM legal_time_entries
         WHERE invoice_id = ${invoiceId}
       `);
-      
+
       // Get expense entries directly with SQL
       const expenseEntriesResult = await db.execute(sql`
         SELECT * FROM legal_expense_entries
         WHERE invoice_id = ${invoiceId}
       `);
-      
+
       // Prepare the invoice entries data structure
       const invoiceWithEntries = {
         timeEntries: timeEntriesResult.rows || [],
         expenseEntries: expenseEntriesResult.rows || []
       };
-      
+
       // Log invoice view activity
       await this.logPortalActivity({
         portalUserId: 0, // This would need to be provided in the actual call
@@ -719,7 +718,7 @@ export class ClientPortalService {
         description: `Viewed invoice #${invoice.invoice_number}`,
         details: { invoiceId: invoice.id }
       });
-      
+
       // Format invoice data to match expected structure
       const formattedInvoice = {
         id: invoice.id,
@@ -742,7 +741,7 @@ export class ClientPortalService {
         createdAt: invoice.created_at,
         updatedAt: invoice.updated_at
       };
-      
+
       return {
         invoice: formattedInvoice,
         timeEntries: invoiceWithEntries.timeEntries || [],
@@ -753,7 +752,7 @@ export class ClientPortalService {
       throw new Error('Failed to retrieve invoice details');
     }
   }
-  
+
   /**
    * Log portal activity
    */
@@ -765,21 +764,21 @@ export class ClientPortalService {
           timestamp: new Date()
         })
         .returning();
-      
+
       return activity;
     } catch (error) {
       console.error('Error logging portal activity:', error);
       return null;
     }
   }
-  
+
   /**
    * Get portal activity log for a client
    */
   async getClientActivityLog(clientId: number, merchantId: number, options: { limit?: number, offset?: number } = {}): Promise<LegalPortalActivity[]> {
     try {
       const { limit = 50, offset = 0 } = options;
-      
+
       const activities = await db.select()
         .from(legalPortalActivities)
         .where(and(
@@ -789,40 +788,40 @@ export class ClientPortalService {
         .orderBy(desc(legalPortalActivities.timestamp))
         .limit(limit)
         .offset(offset);
-      
+
       return activities;
     } catch (error) {
       console.error('Error getting client activity log:', error);
       throw new Error('Failed to retrieve activity log');
     }
   }
-  
+
   /**
    * Helper method to hash a password
    */
-  private async hashPassword(password: string, salt: string): Promise<string> {
+  private async hashPassword(password: string): Promise<string> {
+    const salt = randomBytes(16).toString('hex');
     const buf = await scryptAsync(password, salt, 64) as Buffer;
-    return buf.toString('hex');
+    return `${buf.toString('hex')}.${salt}`;
   }
-  
+
   /**
    * Helper method to verify a password
    */
   private async verifyPassword(password: string, storedPassword: string): Promise<boolean> {
-    // For testing: direct comparison if not using salt format
-    if (!storedPassword.includes('.')) {
-      return password === storedPassword;
-    }
-    
-    // Production: use scrypt for hashed passwords
     try {
+      // Always expect the stored password to be in hash.salt format
       const [hash, salt] = storedPassword.split('.');
+      if (!hash || !salt) {
+        console.error('Invalid stored password format');
+        return false;
+      }
+
       const buf = await scryptAsync(password, salt, 64) as Buffer;
-      return buf.toString('hex') === hash;
+      return timingSafeEqual(Buffer.from(buf.toString('hex')), Buffer.from(hash));
     } catch (error) {
       console.error('Password verification error:', error);
-      // Fallback to direct comparison if scrypt fails
-      return password === storedPassword;
+      return false;
     }
   }
 
@@ -839,7 +838,7 @@ export class ClientPortalService {
           readAt: null
         })
         .returning();
-      
+
       // Log message sent activity
       await this.logPortalActivity({
         portalUserId: messageData.senderType === 'client' ? messageData.senderId : 0,
@@ -849,21 +848,21 @@ export class ClientPortalService {
         description: `${messageData.senderType === 'client' ? 'Client' : 'Firm'} sent a message: ${messageData.subject}`,
         details: { messageId: message.id }
       });
-      
+
       return message;
     } catch (error) {
       console.error('Error sending message:', error);
       throw new Error('Failed to send message');
     }
   }
-  
+
   /**
    * Get messages for a client
    */
   async getClientMessages(clientId: number, merchantId: number, options: { limit?: number, offset?: number, matterId?: number } = {}): Promise<LegalPortalMessage[]> {
     try {
       const { limit = 50, offset = 0, matterId } = options;
-      
+
       // Base query
       let query = db.select()
         .from(legalPortalMessages)
@@ -871,25 +870,25 @@ export class ClientPortalService {
           eq(legalPortalMessages.clientId, clientId),
           eq(legalPortalMessages.merchantId, merchantId)
         ));
-      
+
       // Filter by matter if specified
       if (matterId) {
         query = query.where(eq(legalPortalMessages.matterId, matterId));
       }
-      
+
       // Get messages
       const messages = await query
         .orderBy(desc(legalPortalMessages.createdAt))
         .limit(limit)
         .offset(offset);
-      
+
       return messages;
     } catch (error) {
       console.error('Error getting client messages:', error);
       throw new Error('Failed to retrieve messages');
     }
   }
-  
+
   /**
    * Get a specific message
    */
@@ -902,14 +901,14 @@ export class ClientPortalService {
           eq(legalPortalMessages.clientId, clientId),
           eq(legalPortalMessages.merchantId, merchantId)
         ));
-      
+
       return message;
     } catch (error) {
       console.error('Error getting message:', error);
       throw new Error('Failed to retrieve message');
     }
   }
-  
+
   /**
    * Mark a message as read
    */
@@ -923,11 +922,11 @@ export class ClientPortalService {
           eq(legalPortalMessages.clientId, clientId),
           eq(legalPortalMessages.merchantId, merchantId)
         ));
-      
+
       if (!existingMessage) {
         throw new Error('Message not found or not accessible');
       }
-      
+
       // Only mark as read if it's not already read
       if (!existingMessage.isRead) {
         // Mark the message as read
@@ -938,7 +937,7 @@ export class ClientPortalService {
           })
           .where(eq(legalPortalMessages.id, messageId))
           .returning();
-        
+
         // Log message read activity
         await this.logPortalActivity({
           portalUserId,
@@ -948,17 +947,17 @@ export class ClientPortalService {
           description: `Message read: ${existingMessage.subject}`,
           details: { messageId }
         });
-        
+
         return updatedMessage;
       }
-      
+
       return existingMessage;
     } catch (error) {
       console.error('Error marking message as read:', error);
       throw new Error('Failed to mark message as read');
     }
   }
-  
+
   /**
    * Get unread message count for a client
    */
@@ -971,7 +970,7 @@ export class ClientPortalService {
           eq(legalPortalMessages.merchantId, merchantId),
           eq(legalPortalMessages.isRead, false)
         ));
-      
+
       return Number(result[0].count) || 0;
     } catch (error) {
       console.error('Error getting unread message count:', error);
@@ -985,19 +984,19 @@ export class ClientPortalService {
   async getClientTrustAccounts(clientId: number | string, merchantId: number): Promise<IoltaTrustAccount[]> {
     try {
       console.log(`Getting trust accounts for clientId: ${clientId}, merchantId: ${merchantId}`);
-      
+
       // Get all trust accounts for this merchant
       const trustAccounts = await db.select()
         .from(ioltaTrustAccounts)
         .where(
           eq(ioltaTrustAccounts.merchantId, merchantId)
         );
-      
+
       console.log(`Found ${trustAccounts.length} trust accounts for merchant`);
       if (trustAccounts.length > 0) {
         console.log('First trust account:', JSON.stringify(trustAccounts[0], null, 2));
       }
-      
+
       // Get all client ledgers for this client
       const clientLedgers = await db.select()
         .from(ioltaClientLedgers)
@@ -1005,27 +1004,27 @@ export class ClientPortalService {
           eq(ioltaClientLedgers.clientId, clientId.toString()), // Convert to string since clientId might be stored as string
           eq(ioltaClientLedgers.merchantId, merchantId)
         ));
-      
+
       console.log(`Found ${clientLedgers.length} client ledgers for client`);
       if (clientLedgers.length > 0) {
         console.log('First client ledger:', JSON.stringify(clientLedgers[0], null, 2));
       }
-      
+
       // Filter to only include trust accounts that have ledgers for this client
       const trustAccountIds = new Set(clientLedgers.map(ledger => ledger.trustAccountId));
       console.log('Trust account IDs from client ledgers:', Array.from(trustAccountIds));
-      
+
       // Add more debug info
       console.log('Trust account statuses:', trustAccounts.map(a => ({ id: a.id, status: a.accountStatus })));
-      
+
       // Modify filter to include pending_verification accounts as well
       const filteredTrustAccounts = trustAccounts.filter(account => 
         trustAccountIds.has(account.id) && 
         (account.accountStatus === 'active' || account.accountStatus === 'pending_verification')
       );
-      
+
       console.log(`Filtered to ${filteredTrustAccounts.length} trust accounts after applying filters`);
-      
+
       // Log trust account view activity
       await this.logPortalActivity({
         portalUserId: 0, // Will be replaced in the route handler
@@ -1035,7 +1034,7 @@ export class ClientPortalService {
         description: 'Viewed trust accounts',
         details: { trustAccountCount: filteredTrustAccounts.length }
       });
-      
+
       return filteredTrustAccounts;
     } catch (error) {
       console.error('Error getting client trust accounts:', error);
@@ -1055,11 +1054,11 @@ export class ClientPortalService {
           eq(ioltaTrustAccounts.id, trustAccountId),
           eq(ioltaTrustAccounts.merchantId, merchantId)
         ));
-      
+
       if (!trustAccount) {
         throw new Error('Trust account not found or not accessible');
       }
-      
+
       // Get client ledgers for this client and trust account
       const clientLedgers = await db.select()
         .from(ioltaClientLedgers)
@@ -1069,7 +1068,7 @@ export class ClientPortalService {
           eq(ioltaClientLedgers.trustAccountId, trustAccountId),
           eq(ioltaClientLedgers.status, 'active')
         ));
-      
+
       // Log ledger view activity
       await this.logPortalActivity({
         portalUserId: 0, // Will be replaced in the route handler
@@ -1079,7 +1078,7 @@ export class ClientPortalService {
         description: `Viewed trust account ledgers for account ${trustAccount.accountName}`,
         details: { trustAccountId, ledgerCount: clientLedgers.length }
       });
-      
+
       return clientLedgers;
     } catch (error) {
       console.error('Error getting client trust ledgers:', error);
@@ -1100,24 +1099,24 @@ export class ClientPortalService {
           eq(ioltaClientLedgers.clientId, clientId),
           eq(ioltaClientLedgers.merchantId, merchantId)
         ));
-      
+
       if (!clientLedger) {
         throw new Error('Client ledger not found or not accessible');
       }
-      
+
       // Get transactions for this ledger
       console.log(`Getting transactions for ledger ID ${ledgerId}`);
-      
+
       // Debug the schema
       console.log('Transaction schema fields:', Object.keys(ioltaTransactions));
-      
+
       const transactions = await db.select()
         .from(ioltaTransactions)
         .where(
           eq(ioltaTransactions.clientLedgerId, ledgerId)
         )
         .orderBy(desc(ioltaTransactions.createdAt)); // Use createdAt instead of transactionDate
-      
+
       // Log transaction view activity
       await this.logPortalActivity({
         portalUserId: 0, // Will be replaced in the route handler
@@ -1127,7 +1126,7 @@ export class ClientPortalService {
         description: `Viewed transactions for trust account ledger ${clientLedger.matterName}`,
         details: { ledgerId, transactionCount: transactions.length }
       });
-      
+
       return transactions;
     } catch (error) {
       console.error('Error getting ledger transactions:', error);
@@ -1145,13 +1144,13 @@ export class ClientPortalService {
       const defaultEndDate = new Date(now);
       const defaultStartDate = new Date(now);
       defaultStartDate.setMonth(defaultStartDate.getMonth() - 3); // Default to 3 months ago
-      
+
       const effectiveStartDate = startDate || defaultStartDate;
       const effectiveEndDate = endDate || defaultEndDate;
-      
+
       // Get all trust accounts the client has ledgers in
       const trustAccounts = await this.getClientTrustAccounts(clientId, merchantId);
-      
+
       const statement: any = {
         clientId,
         merchantId,
@@ -1160,16 +1159,16 @@ export class ClientPortalService {
         generatedDate: new Date(),
         accounts: []
       };
-      
+
       // For each trust account, get client ledgers and transactions
       for (const account of trustAccounts) {
         const ledgers = await this.getClientTrustLedgers(clientId, merchantId, account.id);
-        
+
         const accountData: any = {
           trustAccount: account,
           ledgers: []
         };
-        
+
         for (const ledger of ledgers) {
           // Get transactions in the date range
           const transactions = await db.select()
@@ -1178,10 +1177,10 @@ export class ClientPortalService {
               eq(ioltaTransactions.clientLedgerId, ledger.id)
             )
             .orderBy(desc(ioltaTransactions.createdAt));
-          
+
           // Calculate the running balance
           let runningBalance = 0;
-          
+
           // Get previous balance (all transactions)
           // For simplicity, we're not filtering by date since we don't have a transactionDate field
           const previousTransactions = await db.select()
@@ -1189,7 +1188,7 @@ export class ClientPortalService {
             .where(
               eq(ioltaTransactions.clientLedgerId, ledger.id)
             );
-          
+
           // Calculate opening balance
           for (const transaction of previousTransactions) {
             if (transaction.transactionType === 'deposit') {
@@ -1198,9 +1197,9 @@ export class ClientPortalService {
               runningBalance -= parseFloat(transaction.amount);
             }
           }
-          
+
           const openingBalance = runningBalance;
-          
+
           // Add running balance to each transaction
           const transactionsWithBalance = transactions.map(transaction => {
             if (transaction.transactionType === 'deposit') {
@@ -1208,13 +1207,13 @@ export class ClientPortalService {
             } else if (transaction.transactionType === 'withdrawal') {
               runningBalance -= parseFloat(transaction.amount);
             }
-            
+
             return {
               ...transaction,
               runningBalance: runningBalance.toFixed(2)
             };
           });
-          
+
           accountData.ledgers.push({
             ledger,
             openingBalance: openingBalance.toFixed(2),
@@ -1222,10 +1221,10 @@ export class ClientPortalService {
             transactions: transactionsWithBalance
           });
         }
-        
+
         statement.accounts.push(accountData);
       }
-      
+
       // Log statement view activity
       await this.logPortalActivity({
         portalUserId: 0, // Will be replaced in the route handler
@@ -1239,7 +1238,7 @@ export class ClientPortalService {
           accountCount: statement.accounts.length
         }
       });
-      
+
       return statement;
     } catch (error) {
       console.error('Error generating client trust statement:', error);
