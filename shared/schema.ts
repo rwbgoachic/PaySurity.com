@@ -2934,6 +2934,8 @@ export const demoRequests = pgTable("demo_requests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const scheduleDemo = pgTable("schedule_demo", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
