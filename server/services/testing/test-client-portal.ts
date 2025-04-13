@@ -162,11 +162,11 @@ export class ClientPortalTestService implements TestService {
     // Add client to IOLTA account
     await ioltaService.createClientLedger({
       merchantId: this.testMerchantId,
-      clientId: this.testClientId.toString(), // Ensure clientId is a string to match schema
-      trustAccountId: account.id, // Use trustAccountId instead of trustAccountId
-      clientName: 'Test PortalUser', // Add required clientName
-      matterName: 'Test Portal Matter', // Add required matterName
-      matterNumber: 'TPM-001', // Add required matterNumber
+      clientId: this.testClientId.toString(), // IOLTA schema expects clientId as text
+      trustAccountId: account.id,
+      clientName: 'Test PortalUser',
+      matterName: 'Test Portal Matter', 
+      matterNumber: 'TPM-001',
       balance: '5000.00',
       status: 'active'
     });
@@ -309,7 +309,7 @@ export class ClientPortalTestService implements TestService {
       const portalUser = await clientPortalService.createPortalUser({
         email: this.testPortalUserEmail,
         password_hash: this.testPortalUserPassword, // Direct password_hash in test environment
-        clientId: this.testClientId.toString(), // Convert to string to match schema
+        clientId: this.testClientId, // Use integer as required by schema
         merchantId: this.testMerchantId,
         firstName: 'Test',
         lastName: 'Portal',
@@ -333,7 +333,7 @@ export class ClientPortalTestService implements TestService {
           id: portalUser.id,
           email: portalUser.email,
           clientId: portalUser.clientId,
-          parsedClientId: parseClientId(portalUser.clientId)
+          parsedClientId: portalUser.clientId
         } : null
       });
       
