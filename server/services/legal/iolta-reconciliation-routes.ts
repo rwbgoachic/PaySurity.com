@@ -367,20 +367,17 @@ router.post(
         const reconciliation = await reconciliationService.completeReconciliation(
           data.trustAccountId,
           merchantId,
-          createdById,
+          createdById, // reconcilerId
           reconciliationDate,
           data.bookBalance,
           data.bankBalance,
-          data.adjustedBookBalance,
-          data.adjustedBankBalance,
           data.difference,
           outstandingChecks,
           outstandingDeposits,
-          data.bankFeesAdjustment || "0.00",
-          data.interestEarnedAdjustment || "0.00",
-          data.otherAdjustments || [],
-          data.reconciliationNotes,
-          data.bankStatementId
+          data.reconciliationNotes, // notes
+          data.bankStatement, // bank statement object if any
+          undefined, // reviewerId - optional
+          undefined // reviewedAt - optional
         );
         
         res.json(reconciliation);
