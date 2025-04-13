@@ -268,24 +268,22 @@ function Router() {
       <Route path="/payment-success" component={PaymentSuccessPage} />
       
       {/* Admin routes */}
-      <ProtectedRoute path="/admin/sms-settings">
-        {() => {
+      <ProtectedRoute path="/admin/sms-settings" component={() => {
           const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
           return (
             <React.Suspense fallback={<div>Loading...</div>}>
               <SmsSettings />
             </React.Suspense>
           );
-        }}
-      </ProtectedRoute>
+        }} requiredRole="super_admin" />
       
-      {/* Super Admin routes - Protected */}
-      <ProtectedRoute path="/super-admin/dashboard" component={SuperAdminDashboard} />
-      <ProtectedRoute path="/super-admin/merchants" component={React.lazy(() => import("./pages/super-admin/merchants"))} />
-      <ProtectedRoute path="/super-admin/partners" component={React.lazy(() => import("./pages/super-admin/partners"))} />
-      <ProtectedRoute path="/super-admin/affiliates" component={React.lazy(() => import("./pages/super-admin/affiliates"))} />
-      <ProtectedRoute path="/super-admin/payments" component={React.lazy(() => import("./pages/super-admin/payments"))} />
-      <ProtectedRoute path="/super-admin/analytics" component={React.lazy(() => import("./pages/super-admin/analytics"))} />
+      {/* Super Admin routes - Protected with role requirements */}
+      <ProtectedRoute path="/super-admin/dashboard" component={SuperAdminDashboard} requiredRole="super_admin" />
+      <ProtectedRoute path="/super-admin/merchants" component={React.lazy(() => import("./pages/super-admin/merchants"))} requiredRole="super_admin" />
+      <ProtectedRoute path="/super-admin/partners" component={React.lazy(() => import("./pages/super-admin/partners"))} requiredRole="super_admin" />
+      <ProtectedRoute path="/super-admin/affiliates" component={React.lazy(() => import("./pages/super-admin/affiliates"))} requiredRole="super_admin" />
+      <ProtectedRoute path="/super-admin/payments" component={React.lazy(() => import("./pages/super-admin/payments"))} requiredRole="super_admin" />
+      <ProtectedRoute path="/super-admin/analytics" component={React.lazy(() => import("./pages/super-admin/analytics"))} requiredRole="super_admin" />
       
       {/* Additional protected admin routes */}
       <ProtectedRoute path="/admin/test-recommendation" component={TestRecommendationEngine} />
