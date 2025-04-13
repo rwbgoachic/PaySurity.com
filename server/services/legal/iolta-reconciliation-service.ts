@@ -646,7 +646,11 @@ export class IoltaReconciliationService {
         .orderBy(ioltaTransactions.createdAt!);
       
       // Calculate starting balance by looking at transactions before the start date
-      const startingBalanceResult = await db.execute(sql`
+      const clientIdStr = clientId.toString();
+      console.log(`Client ID (string): ${clientIdStr}`);
+      
+      // Debug the query
+      const startBalanceQuery = sql`
         SELECT COALESCE(SUM(
           CASE 
             WHEN transaction_type = 'deposit' THEN CAST(amount AS DECIMAL)
@@ -656,10 +660,15 @@ export class IoltaReconciliationService {
         ), 0) as starting_balance
         FROM iolta_transactions
         WHERE trust_account_id = ${accountId}
-        AND client_id = ${clientId.toString()}
+        AND client_id = ${clientIdStr}
         AND status = 'completed'
         AND created_at < ${startDateObj.toISOString()}
-      `);
+      `;
+      
+      console.log("SQL Query for starting balance:", startBalanceQuery.sql);
+      console.log("SQL Params:", startBalanceQuery.params);
+      
+      const startingBalanceResult = await db.execute(startBalanceQuery);
       
       let startingBalance = "0.00";
       if (startingBalanceResult?.rows?.[0]?.starting_balance) {
