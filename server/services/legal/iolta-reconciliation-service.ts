@@ -120,6 +120,22 @@ export class IoltaReconciliationService {
       .where(eq(ioltaReconciliations.trustAccountId, trustAccountId))
       .orderBy(desc(ioltaReconciliations.reconciliationDate));
   }
+  
+  /**
+   * Get all reconciliations for a trust account with merchant access control
+   */
+  async getReconciliations(trustAccountId: number, merchantId: number): Promise<IoltaReconciliation[]> {
+    return await db
+      .select()
+      .from(ioltaReconciliations)
+      .where(
+        and(
+          eq(ioltaReconciliations.trustAccountId, trustAccountId),
+          eq(ioltaReconciliations.merchantId, merchantId)
+        )
+      )
+      .orderBy(desc(ioltaReconciliations.reconciliationDate));
+  }
 
   /**
    * Get the latest reconciliation for a trust account
@@ -469,5 +485,213 @@ export class IoltaReconciliationService {
       clearedDate: t.clearedDate || undefined,
       status: t.clearedDate ? "cleared" : "outstanding"
     }));
+  }
+  
+  /**
+   * Generate a comprehensive reconciliation report for an IOLTA account
+   */
+  async generateReconciliationReport(
+    accountId: number,
+    merchantId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    accountId: number;
+    account: any;
+    clientLedgers: any[];
+    transactions: any[];
+    startingBalance: string;
+    endingBalance: string;
+    deposits: any[];
+    withdrawals: any[];
+    calculatedBalance: string;
+    reconciliationDate: Date;
+  }> {
+    try {
+      // Get the trust account details
+      const account = await this.ioltaService.getTrustAccount(accountId);
+      if (!account || account.merchantId !== merchantId) {
+        throw new Error('Trust account not found or unauthorized');
+      }
+      
+      // Get client ledgers associated with this trust account
+      const clientLedgers = await this.ioltaService.getClientLedgersByTrustAccount(accountId);
+      
+      // Calculate total balance from client ledgers
+      const totalClientBalance = clientLedgers.reduce(
+        (sum, ledger) => sum + Number(ledger.currentBalance || 0),
+        0
+      ).toFixed(2);
+      
+      // Get transactions for the period
+      const transactions = await db
+        .select()
+        .from(ioltaTransactions)
+        .where(
+          and(
+            eq(ioltaTransactions.trustAccountId, accountId),
+            eq(ioltaTransactions.merchantId, merchantId),
+            eq(ioltaTransactions.status, "completed"),
+            gte(ioltaTransactions.createdAt!, startDate),
+            lte(ioltaTransactions.createdAt!, endDate)
+          )
+        )
+        .orderBy(ioltaTransactions.createdAt!);
+      
+      // Calculate starting balance by looking at transactions before the start date
+      const startingBalanceResult = await db.execute(sql`
+        SELECT COALESCE(SUM(
+          CASE 
+            WHEN transaction_type = 'deposit' THEN CAST(amount AS DECIMAL)
+            WHEN transaction_type IN ('withdrawal', 'payment', 'transfer', 'fee') THEN -CAST(amount AS DECIMAL)
+            ELSE 0
+          END
+        ), 0) as starting_balance
+        FROM iolta_transactions
+        WHERE trust_account_id = ${accountId}
+        AND merchant_id = ${merchantId}
+        AND status = 'completed'
+        AND created_at < ${startDate.toISOString()}
+      `);
+      
+      let startingBalance = "0.00";
+      if (startingBalanceResult?.rows?.[0]?.starting_balance) {
+        startingBalance = Number(startingBalanceResult.rows[0].starting_balance).toFixed(2);
+      }
+      
+      // Split transactions into deposits and withdrawals for the report
+      const deposits = transactions.filter(t => 
+        t.transactionType === 'deposit' || 
+        (t.transactionType === 'transfer' && Number(t.amount) > 0)
+      );
+      
+      const withdrawals = transactions.filter(t => 
+        t.transactionType === 'withdrawal' || 
+        t.transactionType === 'payment' || 
+        t.transactionType === 'fee' ||
+        (t.transactionType === 'transfer' && Number(t.amount) < 0)
+      );
+      
+      // Calculate ending balance
+      const depositsTotal = deposits.reduce((sum, t) => sum + Number(t.amount), 0);
+      const withdrawalsTotal = withdrawals.reduce((sum, t) => sum + Number(t.amount), 0);
+      const endingBalance = (Number(startingBalance) + depositsTotal - withdrawalsTotal).toFixed(2);
+      
+      return {
+        accountId,
+        account,
+        clientLedgers,
+        transactions,
+        startingBalance,
+        endingBalance,
+        deposits,
+        withdrawals,
+        calculatedBalance: totalClientBalance,
+        reconciliationDate: new Date()
+      };
+    } catch (error) {
+      console.error("Error generating reconciliation report:", error);
+      throw new Error(`Failed to generate reconciliation report: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * Generate a reconciliation report for a specific client's IOLTA ledger
+   */
+  async generateClientReconciliationReport(
+    clientId: number | string,
+    accountId: number,
+    merchantId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    clientId: string;
+    accountId: number;
+    ledger: any;
+    transactions: any[];
+    startingBalance: string;
+    endingBalance: string;
+    deposits: any[];
+    withdrawals: any[];
+    reconciliationDate: Date;
+  }> {
+    try {
+      // Get the client ledger
+      const ledger = await this.ioltaService.getClientLedger(clientId.toString(), accountId, merchantId);
+      if (!ledger) {
+        throw new Error('Client ledger not found');
+      }
+      
+      // Get transactions for this client in the period
+      const transactions = await db
+        .select()
+        .from(ioltaTransactions)
+        .where(
+          and(
+            eq(ioltaTransactions.trustAccountId, accountId),
+            eq(ioltaTransactions.merchantId, merchantId),
+            eq(ioltaTransactions.clientId, clientId.toString()),
+            eq(ioltaTransactions.status, "completed"),
+            gte(ioltaTransactions.createdAt!, startDate),
+            lte(ioltaTransactions.createdAt!, endDate)
+          )
+        )
+        .orderBy(ioltaTransactions.createdAt!);
+      
+      // Calculate starting balance by looking at transactions before the start date
+      const startingBalanceResult = await db.execute(sql`
+        SELECT COALESCE(SUM(
+          CASE 
+            WHEN transaction_type = 'deposit' THEN CAST(amount AS DECIMAL)
+            WHEN transaction_type IN ('withdrawal', 'payment', 'transfer', 'fee') THEN -CAST(amount AS DECIMAL)
+            ELSE 0
+          END
+        ), 0) as starting_balance
+        FROM iolta_transactions
+        WHERE trust_account_id = ${accountId}
+        AND merchant_id = ${merchantId}
+        AND client_id = ${clientId.toString()}
+        AND status = 'completed'
+        AND created_at < ${startDate.toISOString()}
+      `);
+      
+      let startingBalance = "0.00";
+      if (startingBalanceResult?.rows?.[0]?.starting_balance) {
+        startingBalance = Number(startingBalanceResult.rows[0].starting_balance).toFixed(2);
+      }
+      
+      // Split transactions into deposits and withdrawals for the report
+      const deposits = transactions.filter(t => 
+        t.transactionType === 'deposit' || 
+        (t.transactionType === 'transfer' && Number(t.amount) > 0)
+      );
+      
+      const withdrawals = transactions.filter(t => 
+        t.transactionType === 'withdrawal' || 
+        t.transactionType === 'payment' || 
+        t.transactionType === 'fee' ||
+        (t.transactionType === 'transfer' && Number(t.amount) < 0)
+      );
+      
+      // Calculate ending balance
+      const depositsTotal = deposits.reduce((sum, t) => sum + Number(t.amount), 0);
+      const withdrawalsTotal = withdrawals.reduce((sum, t) => sum + Number(t.amount), 0);
+      const endingBalance = (Number(startingBalance) + depositsTotal - withdrawalsTotal).toFixed(2);
+      
+      return {
+        clientId: clientId.toString(),
+        accountId,
+        ledger,
+        transactions,
+        startingBalance,
+        endingBalance,
+        deposits,
+        withdrawals,
+        reconciliationDate: new Date()
+      };
+    } catch (error) {
+      console.error("Error generating client reconciliation report:", error);
+      throw new Error(`Failed to generate client reconciliation report: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }

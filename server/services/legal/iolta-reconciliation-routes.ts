@@ -140,6 +140,90 @@ router.get(
 );
 
 /**
+ * Generate a comprehensive reconciliation report for an IOLTA account
+ */
+router.get(
+  "/api/legal/iolta/reconciliation/report/:trustAccountId",
+  validateUserAuth,
+  validateMerchantAccess,
+  async (req, res) => {
+    try {
+      const trustAccountId = parseInt(req.params.trustAccountId);
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Default to last 30 days
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+      
+      if (isNaN(trustAccountId)) {
+        return res.status(400).json({ error: "Invalid trust account ID" });
+      }
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: "Invalid date format" });
+      }
+      
+      // Get merchant ID from authenticated user
+      const merchantId = req.user!.merchantId;
+      
+      const report = await reconciliationService.generateReconciliationReport(
+        trustAccountId,
+        merchantId,
+        startDate,
+        endDate
+      );
+      
+      res.json(report);
+    } catch (error: any) {
+      console.error("Error generating reconciliation report:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * Generate a reconciliation report for a specific client's IOLTA ledger
+ */
+router.get(
+  "/api/legal/iolta/reconciliation/client-report/:clientId/:trustAccountId",
+  validateUserAuth,
+  validateMerchantAccess,
+  async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      const trustAccountId = parseInt(req.params.trustAccountId);
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Default to last 30 days
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+      
+      if (!clientId) {
+        return res.status(400).json({ error: "Invalid client ID" });
+      }
+      
+      if (isNaN(trustAccountId)) {
+        return res.status(400).json({ error: "Invalid trust account ID" });
+      }
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: "Invalid date format" });
+      }
+      
+      // Get merchant ID from authenticated user
+      const merchantId = req.user!.merchantId;
+      
+      const report = await reconciliationService.generateClientReconciliationReport(
+        clientId,
+        trustAccountId,
+        merchantId,
+        startDate,
+        endDate
+      );
+      
+      res.json(report);
+    } catch (error: any) {
+      console.error("Error generating client reconciliation report:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
  * Mark a transaction as cleared
  */
 router.post(
