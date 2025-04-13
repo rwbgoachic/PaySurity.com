@@ -71,7 +71,7 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  role: text("role", { enum: ["super_admin", "admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"] }).notNull().default("executive"),
+  role: text("role", { enum: ["super_admin", "sub_super_admin", "admin", "developer", "executive", "finance", "marketing", "employee", "employer", "parent", "child", "affiliate", "merchant"] }).notNull().default("executive"),
   avatar: text("avatar"),
   department: text("department"),
   organizationId: integer("organization_id"),

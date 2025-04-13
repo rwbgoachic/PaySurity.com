@@ -11,7 +11,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import * as crypto from "crypto";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "../shared/schema";
 import { timingSafeEqual } from "crypto";
@@ -98,9 +98,9 @@ function verifyAdminToken(token: string): { valid: boolean; userId?: number; rol
   }
 }
 
-// Admin authentication API endpoint
+// Admin authentication API endpoint - Step 1: Password validation
 export async function handleAdminAuth(req: Request, res: Response) {
-  const { username, password } = req.body;
+  const { username, password, twoFactorCode } = req.body;
   
   if (!username || !password) {
     return res.status(400).json({ error: "Username and password are required" });
@@ -119,8 +119,8 @@ export async function handleAdminAuth(req: Request, res: Response) {
     
     const user = adminUser[0];
     
-    // Verify this is an admin account
-    if (user.role !== 'super_admin') {
+    // Verify this is an admin account with proper role
+    if (user.role !== 'super_admin' && user.role !== 'sub_super_admin') {
       console.log("Admin auth failed: Not an admin account:", username);
       return res.status(401).json({ error: "Unauthorized access" });
     }
@@ -145,15 +145,41 @@ export async function handleAdminAuth(req: Request, res: Response) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
     
+    // Check if 2FA is enabled for this user
+    if (user.twoFactorEnabled) {
+      // If 2FA is required but code wasn't provided, request it
+      if (!twoFactorCode) {
+        return res.status(200).json({
+          requiresTwoFactor: true,
+          userId: user.id,
+          message: "Two-factor authentication code required"
+        });
+      }
+      
+      // Verify the provided 2FA code
+      const isValidToken = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: 'base32',
+        token: twoFactorCode,
+        window: 1 // Allow a 30-second window before/after current time
+      });
+      
+      if (!isValidToken) {
+        return res.status(401).json({ error: "Invalid two-factor authentication code" });
+      }
+    }
+    
+    // If we got here, either 2FA is not enabled or the code was valid
     // Generate admin auth token
     const token = generateSecureToken(user.id, user.role);
     
-    // Return admin token and user info (excluding password)
-    const { password: _, ...userWithoutPassword } = user;
+    // Return admin token and user info (excluding password and 2FA secret)
+    const { password: _, twoFactorSecret: __, ...userWithoutSensitiveData } = user;
     
     return res.status(200).json({ 
       token,
-      user: userWithoutPassword
+      user: userWithoutSensitiveData,
+      twoFactorVerified: user.twoFactorEnabled
     });
   } catch (error) {
     console.error("Admin authentication error:", error);
@@ -176,7 +202,8 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
     return res.status(401).json({ error: "Invalid or expired admin token" });
   }
   
-  if (role !== 'super_admin') {
+  // Check if role is either super_admin or sub_super_admin
+  if (role !== 'super_admin' && role !== 'sub_super_admin') {
     return res.status(403).json({ error: "Insufficient permissions" });
   }
   
@@ -189,10 +216,191 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
   }
 }
 
+// Middleware specifically for super_admin only routes
+export function requireSuperAdminAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: "Admin authentication required" });
+  }
+  
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  const { valid, userId, role } = verifyAdminToken(token);
+  
+  if (!valid) {
+    return res.status(401).json({ error: "Invalid or expired admin token" });
+  }
+  
+  // Only super_admin can access these routes
+  if (role !== 'super_admin') {
+    return res.status(403).json({ error: "This action requires super admin privileges" });
+  }
+  
+  // Add admin user info to the request
+  if (userId !== undefined && role !== undefined) {
+    req.adminUser = { id: userId, role };
+    next();
+  } else {
+    return res.status(401).json({ error: "Invalid or expired admin token" });
+  }
+}
+
+// Generate 2FA setup for an admin user
+export async function setupTwoFactorAuth(req: Request, res: Response) {
+  try {
+    // Ensure this is a valid admin user
+    if (!req.adminUser || !req.adminUser.id) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Generate new secret
+    const secret = speakeasy.generateSecret({
+      name: `Paysurity Admin (${req.adminUser.id})`,
+      issuer: 'Paysurity'
+    });
+
+    // Generate QR code for easy setup with authenticator apps
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
+
+    // Save the secret to the user's record in the database
+    await db.update(users)
+      .set({
+        twoFactorSecret: secret.base32,
+        // Don't enable 2FA yet until it's verified
+      })
+      .where(eq(users.id, req.adminUser.id));
+
+    // Return the secret and QR code
+    return res.status(200).json({
+      secret: secret.base32,
+      qrCode: qrCodeUrl,
+      message: "Scan this QR code with your authenticator app, then verify with a code"
+    });
+  } catch (error) {
+    console.error("2FA setup error:", error);
+    return res.status(500).json({ error: "Failed to setup two-factor authentication" });
+  }
+}
+
+// Verify and enable 2FA for an admin user
+export async function verifyAndEnableTwoFactorAuth(req: Request, res: Response) {
+  try {
+    const { token } = req.body;
+
+    // Ensure this is a valid admin user
+    if (!req.adminUser || !req.adminUser.id) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Fetch the user with their stored secret
+    const adminUser = await db.select().from(users)
+      .where(eq(users.id, req.adminUser.id))
+      .limit(1);
+
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].twoFactorSecret) {
+      return res.status(400).json({ error: "Two-factor authentication not set up" });
+    }
+
+    // Verify the token against the stored secret
+    const verified = speakeasy.totp.verify({
+      secret: adminUser[0].twoFactorSecret,
+      encoding: 'base32',
+      token: token,
+      window: 1
+    });
+
+    if (!verified) {
+      return res.status(400).json({ error: "Invalid verification code" });
+    }
+
+    // Enable 2FA on the user account
+    await db.update(users)
+      .set({
+        twoFactorEnabled: true
+      })
+      .where(eq(users.id, req.adminUser.id));
+
+    return res.status(200).json({
+      success: true,
+      message: "Two-factor authentication has been enabled"
+    });
+  } catch (error) {
+    console.error("2FA verification error:", error);
+    return res.status(500).json({ error: "Failed to verify and enable two-factor authentication" });
+  }
+}
+
+// Create a new sub-super admin - only available to super_admin
+export async function createSubSuperAdmin(req: Request, res: Response) {
+  try {
+    const { username, password, email, firstName, lastName } = req.body;
+
+    // Ensure this is a super_admin
+    if (!req.adminUser || req.adminUser.role !== 'super_admin') {
+      return res.status(403).json({ error: "Only super admins can create sub-super admin accounts" });
+    }
+
+    // Validate inputs
+    if (!username || !password || !email || !firstName || !lastName) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Check if username or email already exists
+    const existingUser = await db.select().from(users)
+      .where(
+        or(
+          eq(users.username, username),
+          eq(users.email, email)
+        )
+      ).limit(1);
+
+    if (existingUser && existingUser.length > 0) {
+      return res.status(400).json({ error: "Username or email already exists" });
+    }
+
+    // Generate a salt and hash the password
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hashedPassword = crypto.scryptSync(password, salt, 128).toString('hex');
+    const passwordWithSalt = `${hashedPassword}.${salt}`;
+
+    // Create the new sub-super admin
+    const result = await db.insert(users).values({
+      username,
+      password: passwordWithSalt,
+      email,
+      firstName,
+      lastName,
+      role: 'sub_super_admin',
+      twoFactorEnabled: false, // Will be enabled during setup
+      createdAt: new Date()
+    }).returning({ id: users.id });
+
+    if (!result || result.length === 0) {
+      throw new Error("Failed to create user record");
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Sub-super admin created successfully",
+      userId: result[0].id
+    });
+  } catch (error) {
+    console.error("Create sub-super admin error:", error);
+    return res.status(500).json({ error: "Failed to create sub-super admin" });
+  }
+}
+
 // Register admin auth routes
 export function setupAdminAuth(app: any) {
   // Special admin authentication endpoint
   app.post('/api/admin/auth', handleAdminAuth);
+  
+  // Two-Factor Authentication endpoints
+  app.post('/api/admin/2fa/setup', requireAdminAuth, setupTwoFactorAuth);
+  app.post('/api/admin/2fa/verify', requireAdminAuth, verifyAndEnableTwoFactorAuth);
+  
+  // Sub-super admin management - only super_admin can access
+  app.post('/api/admin/sub-admins', requireSuperAdminAuth, createSubSuperAdmin);
   
   // Example of a protected admin route
   app.get('/api/admin/system-info', requireAdminAuth, (req: Request, res: Response) => {
