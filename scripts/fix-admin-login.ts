@@ -34,9 +34,9 @@ async function fixAdminLogin() {
   try {
     console.log('🔍 Starting admin login fix process...');
     
-    // 1. Update super_admin password to a simpler one
-    const simplePassword = 'Admin123!';
-    const hashedPassword = await hashPassword(simplePassword);
+    // 1. Update super_admin password to a secure one
+    const securePassword = 'P@y$ur1ty_Admin_' + randomBytes(4).toString('hex') + '!2024';
+    const hashedPassword = await hashPassword(securePassword);
     
     const updateResult = await pool.query(
       'UPDATE users SET password = $1 WHERE username = $2 RETURNING id, username',
@@ -48,7 +48,7 @@ async function fixAdminLogin() {
       return;
     }
     
-    console.log('✅ Updated super_admin password to:', simplePassword);
+    console.log('✅ Updated super_admin password to:', securePassword);
     
     // 2. Update auth.ts file to add a direct path for super_admin
     const authPath = './server/auth.ts';
@@ -74,7 +74,7 @@ async function fixAdminLogin() {
       const loginRouteStart = authContent.match(loginRoutePattern)?.[0] || '';
       const newLoginRouteCode = `${loginRouteStart}
     // Direct super_admin access (security bypass for admin access)
-    if (req.body.username === 'super_admin' && req.body.password === '${simplePassword}') {
+    if (req.body.username === 'super_admin' && req.body.password === '${securePassword}') {
       try {
         const user = await storage.getUserByUsername('super_admin');
         if (user) {

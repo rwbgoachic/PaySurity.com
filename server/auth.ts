@@ -202,24 +202,6 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", loginBruteforce.prevent, async (req, res, next) => {
-    // Direct super_admin access (security bypass for admin access)
-    if (req.body.username === 'super_admin' && req.body.password === 'Admin123!') {
-      try {
-        const user = await storage.getUserByUsername('super_admin');
-        if (user) {
-          console.log('Super admin direct login successful');
-          req.login(user, (loginErr) => {
-            if (loginErr) return next(loginErr);
-            const { password, ...userWithoutPassword } = user;
-            return res.status(200).json(userWithoutPassword);
-          });
-          return;
-        }
-      } catch (err) {
-        console.error('Super admin direct login error:', err);
-      }
-    }
-    
     
     // Check if username and password are provided
     if (!req.body || !req.body.username || !req.body.password) {
@@ -287,32 +269,5 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
   
-  // Special direct admin access endpoint - ONLY FOR DEVELOPMENT
-  app.get("/api/admin-access", async (req, res) => {
-    try {
-      console.log("Admin direct access endpoint called");
-      // Get the super_admin user from the database
-      const adminUser = await storage.getUserByUsername('super_admin');
-      
-      if (!adminUser) {
-        console.error("No super_admin user found in database");
-        return res.status(500).send("Admin user not found");
-      }
-      
-      // Login as super_admin directly
-      req.login(adminUser, (err) => {
-        if (err) {
-          console.error("Admin login error:", err);
-          return res.status(500).send("Error during admin login");
-        }
-        
-        console.log("Admin login successful via direct access endpoint");
-        // Redirect to admin dashboard
-        res.redirect("/super-admin/dashboard");
-      });
-    } catch (error) {
-      console.error("Admin access error:", error);
-      res.status(500).send("Error accessing admin account");
-    }
-  });
+  // No direct admin access endpoint - proper authentication required
 }
