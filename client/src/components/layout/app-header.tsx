@@ -16,8 +16,9 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ toggleSidebar, toggleMobileMenu }: AppHeaderProps) {
-  const { user, logoutMutation } = useAuth();
+  const { user, logoutMutation, isLoading } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
+  const isAuthenticated = !isLoading && user;
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -54,7 +55,7 @@ export default function AppHeader({ toggleSidebar, toggleMobileMenu }: AppHeader
       </div>
       
       <div className="flex items-center space-x-4">
-        {isSuperAdmin && (
+        {isAuthenticated && isSuperAdmin && (
           <Link href="/admin/dashboard">
             <a className="text-neutral-700 hover:text-neutral-900">Admin Dashboard</a>
           </Link>
