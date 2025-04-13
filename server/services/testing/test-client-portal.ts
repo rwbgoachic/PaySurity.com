@@ -108,10 +108,10 @@ export class ClientPortalTestService implements TestService {
         console.log("Creating test client using minimal fields approach - guaranteed to work");
         const result = await db.execute(sql`
           INSERT INTO legal_clients (
-            id, merchant_id, client_number, email, status, client_type, first_name, last_name, is_active
+            id, merchant_id, client_number, email, status, client_type, first_name, last_name, is_active, jurisdiction
           ) VALUES (
             ${this.testClientId}, ${this.testMerchantId}, 'PORTAL-001', 
-            'test.portal@example.com', 'active', 'individual', 'Test', 'PortalUser', true
+            'test.portal@example.com', 'active', 'individual', 'Test', 'PortalUser', true, 'CA'
           ) RETURNING id
         `);
         this.testClientId = Number(result.rows[0].id);
