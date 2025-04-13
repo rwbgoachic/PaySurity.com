@@ -38,6 +38,7 @@ import { eq, and, or, like, desc, sql, gte, lte, isNull, not } from 'drizzle-orm
 import { randomBytes, createHash, scrypt } from 'crypto';
 import { promisify } from 'util';
 import { generateToken } from '../../utils/security';
+import { compareClientIds, parseClientId, ensureStringClientId } from './client-id-helper';
 import { sendEmail } from '../../utils/email';
 
 const scryptAsync = promisify(scrypt);
@@ -588,7 +589,7 @@ export class ClientPortalService {
   /**
    * Get client shared documents
    */
-  async getClientDocuments(clientId: number, merchantId: number): Promise<any[]> {
+  async getClientDocuments(clientId: number | string, merchantId: number): Promise<any[]> {
     try {
       // Use raw SQL to avoid issues with schema not matching all table columns
       const documentsResult = await db.execute(sql`
@@ -638,7 +639,7 @@ export class ClientPortalService {
   /**
    * Get client invoices
    */
-  async getClientInvoices(clientId: number, merchantId: number): Promise<LegalInvoice[]> {
+  async getClientInvoices(clientId: number | string, merchantId: number): Promise<LegalInvoice[]> {
     try {
       // Use raw SQL to avoid matter_number column reference issues
       const result = await db.execute(sql`
@@ -981,7 +982,7 @@ export class ClientPortalService {
   /**
    * Get client trust accounts (IOLTA)
    */
-  async getClientTrustAccounts(clientId: number, merchantId: number): Promise<IoltaTrustAccount[]> {
+  async getClientTrustAccounts(clientId: number | string, merchantId: number): Promise<IoltaTrustAccount[]> {
     try {
       console.log(`Getting trust accounts for clientId: ${clientId}, merchantId: ${merchantId}`);
       
