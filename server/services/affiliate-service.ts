@@ -10,6 +10,7 @@
 
 import { db } from '../db';
 import { ioltaTrustAccounts } from '../../shared/schema-legal';
+import { sqlService } from './sql-service';
 
 export class AffiliateService {
   /**
@@ -22,7 +23,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await db.execute(`
+      const tableCheckResult = await sqlService.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_profiles'
@@ -36,7 +37,7 @@ export class AffiliateService {
       }
       
       // Check if the affiliate exists - use parameterized query with user_id
-      const result = await db.execute(
+      const result = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_profiles WHERE user_id = $1',
         [userId]
       );
@@ -54,7 +55,25 @@ export class AffiliateService {
    */
   async getAffiliateById(affiliateId: number) {
     try {
-      const result = await db.execute(
+      if (!affiliateId) {
+        return null;
+      }
+
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await sqlService.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_profiles'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_profiles does not exist');
+        return null;
+      }
+      
+      const result = await sqlService.parameterizedSQL(
         'SELECT * FROM affiliate_profiles WHERE id = $1',
         [affiliateId]
       );
@@ -62,7 +81,8 @@ export class AffiliateService {
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error getting affiliate by ID:', error);
-      throw new Error('Failed to get affiliate by ID');
+      // Return null instead of throwing error for more graceful handling
+      return null;
     }
   }
   
@@ -71,6 +91,25 @@ export class AffiliateService {
    */
   async updateAffiliateProfile(affiliateId: number, profileData: any) {
     try {
+      if (!affiliateId) {
+        console.log('No affiliate ID provided');
+        return null;
+      }
+      
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await sqlService.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_profiles'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_profiles does not exist');
+        return null;
+      }
+      
       // Create SQL SET clauses and parameters dynamically
       const setClauses = [];
       const params = [];
@@ -97,11 +136,12 @@ export class AffiliateService {
         RETURNING *
       `;
       
-      const result = await db.execute(query, params);
+      const result = await sqlService.parameterizedSQL(query, params);
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error updating affiliate profile:', error);
-      throw new Error('Failed to update affiliate profile');
+      // Return null instead of throwing error for more graceful handling
+      return null;
     }
   }
   

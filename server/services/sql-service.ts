@@ -55,10 +55,8 @@ class SQLService {
    */
   async parameterizedSQL(sqlQuery: string, values?: any[]): Promise<any[]> {
     try {
-      // Create a prepared statement using Drizzle's sql template literals
-      const preparedQuery = sql.raw(sqlQuery);
-      // Execute the query with the provided values
-      const result = await db.execute(preparedQuery, values || []);
+      // Execute the query directly - PostgreSQL natively supports parameterized queries
+      const result = await db.execute(sqlQuery, values || []);
       // Convert the result to an array if it's not already
       return Array.isArray(result) ? result : (result.rows || []);
     } catch (error) {
