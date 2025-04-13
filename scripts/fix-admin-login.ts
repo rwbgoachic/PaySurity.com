@@ -2,8 +2,8 @@
  * Fix Admin Login Script
  * 
  * This script fixes the admin login issue by:
- * 1. Updating the super_admin's password to a simpler one
- * 2. Creating a direct auth bypass for the super_admin account in the auth middleware
+ * 1. Updating the super_admin's password to a secure, randomly generated password
+ * 2. Requiring proper authentication (no backdoors or direct access)
  * 
  * Run with: npx tsx scripts/fix-admin-login.ts
  */
@@ -50,58 +50,13 @@ async function fixAdminLogin() {
     
     console.log('✅ Updated super_admin password to:', securePassword);
     
-    // 2. Update auth.ts file to add a direct path for super_admin
-    const authPath = './server/auth.ts';
-    if (!fs.existsSync(authPath)) {
-      console.error('❌ Could not find auth.ts file at', authPath);
-      return;
-    }
-    
-    let authContent = fs.readFileSync(authPath, 'utf8');
-    
-    // Find the login route handler
-    const loginRoutePattern = /app\.post\("\/api\/login",[^{]*{/;
-    if (!loginRoutePattern.test(authContent)) {
-      console.error('❌ Could not find login route in auth.ts');
-      return;
-    }
-    
-    // Check if we've already added the direct login
-    if (authContent.includes('// Direct super_admin access')) {
-      console.log('✅ Direct super_admin access already added');
-    } else {
-      // Add direct access code
-      const loginRouteStart = authContent.match(loginRoutePattern)?.[0] || '';
-      const newLoginRouteCode = `${loginRouteStart}
-    // Direct super_admin access (security bypass for admin access)
-    if (req.body.username === 'super_admin' && req.body.password === '${securePassword}') {
-      try {
-        const user = await storage.getUserByUsername('super_admin');
-        if (user) {
-          console.log('Super admin direct login successful');
-          req.login(user, (loginErr) => {
-            if (loginErr) return next(loginErr);
-            const { password, ...userWithoutPassword } = user;
-            return res.status(200).json(userWithoutPassword);
-          });
-          return;
-        }
-      } catch (err) {
-        console.error('Super admin direct login error:', err);
-      }
-    }
-    
-    `;
-      
-      authContent = authContent.replace(loginRoutePattern, newLoginRouteCode);
-      fs.writeFileSync(authPath, authContent);
-      
-      console.log('✅ Added direct super_admin access to auth.ts');
-    }
+    // We no longer add a direct path for super_admin
+    // This ensures proper secure authentication is always required
+    console.log('✅ Proper authentication required - no backdoor access');
     
     console.log('\n✨ Admin login fix complete! Try logging in with:');
     console.log('Username: super_admin');
-    console.log(`Password: ${simplePassword}`);
+    console.log(`Password: ${securePassword}`);
     console.log('\nPlease restart the application for changes to take effect.');
     
   } catch (error) {
