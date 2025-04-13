@@ -1016,7 +1016,7 @@ export class ClientPortalService {
       const clientLedgers = await db.select()
         .from(ioltaClientLedgers)
         .where(and(
-          eq(ioltaClientLedgers.clientId, clientId.toString()), // Convert to string since clientId might be stored as string
+          eq(ioltaClientLedgers.clientId, toIoltaClientId(clientId)), // Use helper function to convert
           eq(ioltaClientLedgers.merchantId, merchantId)
         ));
 
@@ -1078,7 +1078,7 @@ export class ClientPortalService {
       const clientLedgers = await db.select()
         .from(ioltaClientLedgers)
         .where(and(
-          eq(ioltaClientLedgers.clientId, clientId),
+          eq(ioltaClientLedgers.clientId, toIoltaClientId(clientId)),
           eq(ioltaClientLedgers.merchantId, merchantId),
           eq(ioltaClientLedgers.trustAccountId, trustAccountId),
           eq(ioltaClientLedgers.status, 'active')
@@ -1111,7 +1111,7 @@ export class ClientPortalService {
         .from(ioltaClientLedgers)
         .where(and(
           eq(ioltaClientLedgers.id, ledgerId),
-          eq(ioltaClientLedgers.clientId, clientId),
+          eq(ioltaClientLedgers.clientId, toIoltaClientId(clientId)),
           eq(ioltaClientLedgers.merchantId, merchantId)
         ));
 
