@@ -1009,17 +1009,9 @@ export class ClientPortalService {
         );
 
       console.log(`Found ${trustAccounts.length} trust accounts for merchant`);
-      if (trustAccounts.length > 0) {
-        console.log('First trust account:', JSON.stringify(trustAccounts[0], null, 2));
-      }
-
-      // Get all client ledgers for this client
-      const clientLedgers = await db.select()
-        .from(ioltaClientLedgers)
-        .where(and(
-          eq(ioltaClientLedgers.clientId, toIoltaClientId(clientId)), // Use helper function to convert
-          eq(ioltaClientLedgers.merchantId, merchantId)
-        ));
+      
+      // Get all client ledgers for this client using the IOLTA service
+      const clientLedgers = await ioltaService.getClientLedgersByClient(clientId, merchantId);
 
       console.log(`Found ${clientLedgers.length} client ledgers for client`);
       if (clientLedgers.length > 0) {
@@ -1075,15 +1067,14 @@ export class ClientPortalService {
         throw new Error('Trust account not found or not accessible');
       }
 
-      // Get client ledgers for this client and trust account
-      const clientLedgers = await db.select()
-        .from(ioltaClientLedgers)
-        .where(and(
-          eq(ioltaClientLedgers.clientId, toIoltaClientId(clientId)),
-          eq(ioltaClientLedgers.merchantId, merchantId),
-          eq(ioltaClientLedgers.trustAccountId, trustAccountId),
-          eq(ioltaClientLedgers.status, 'active')
-        ));
+      // Get client ledgers for this client and trust account using IOLTA service
+      const allClientLedgers = await ioltaService.getClientLedgersByClient(clientId, merchantId);
+      
+      // Filter for only the requested trust account and active status
+      const clientLedgers = allClientLedgers.filter(ledger => 
+        ledger.trustAccountId === trustAccountId && 
+        ledger.status === 'active'
+      );
 
       // Log ledger view activity
       await this.logPortalActivity({
@@ -1120,18 +1111,11 @@ export class ClientPortalService {
         throw new Error('Client ledger not found or not accessible');
       }
 
-      // Get transactions for this ledger
+      // Get transactions for this ledger using IOLTA service
       console.log(`Getting transactions for ledger ID ${ledgerId}`);
-
-      // Debug the schema
-      console.log('Transaction schema fields:', Object.keys(ioltaTransactions));
-
-      const transactions = await db.select()
-        .from(ioltaTransactions)
-        .where(
-          eq(ioltaTransactions.clientLedgerId, ledgerId)
-        )
-        .orderBy(desc(ioltaTransactions.createdAt)); // Use createdAt instead of transactionDate
+      
+      // Use the IOLTA service to get transactions - this ensures consistent logic
+      const transactions = await ioltaService.getTransactionsByClientLedger(ledgerId);
 
       // Log transaction view activity
       await this.logPortalActivity({
@@ -1186,24 +1170,20 @@ export class ClientPortalService {
         };
 
         for (const ledger of ledgers) {
-          // Get transactions in the date range
-          const transactions = await db.select()
-            .from(ioltaTransactions)
-            .where(
-              eq(ioltaTransactions.clientLedgerId, ledger.id)
-            )
-            .orderBy(desc(ioltaTransactions.createdAt));
+          // Get transactions for this ledger using IOLTA service
+          const transactions = await ioltaService.getTransactionsByClientLedger(ledger.id);
+          
+          // Sort transactions by created date in descending order (most recent first)
+          const sortedTransactions = [...transactions].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
 
           // Calculate the running balance
           let runningBalance = 0;
-
+          
           // Get previous balance (all transactions)
-          // For simplicity, we're not filtering by date since we don't have a transactionDate field
-          const previousTransactions = await db.select()
-            .from(ioltaTransactions)
-            .where(
-              eq(ioltaTransactions.clientLedgerId, ledger.id)
-            );
+          // We're using the same transactions array since we already have all transactions
+          const previousTransactions = transactions;
 
           // Calculate opening balance
           for (const transaction of previousTransactions) {
