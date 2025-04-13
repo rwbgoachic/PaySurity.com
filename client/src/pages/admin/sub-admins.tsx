@@ -69,10 +69,7 @@ export default function SubAdminManagementPage() {
   // Mutation to create a sub-super admin
   const createSubAdminMutation = useMutation({
     mutationFn: async (data: Omit<SubAdminFormValues, 'confirmPassword'>) => {
-      return apiRequest('/api/admin/sub-admins', {
-        method: 'POST',
-        data,
-      });
+      return apiRequest("POST", '/api/admin/sub-admins', data);
     },
     onSuccess: () => {
       setSuccessMessage('Sub-super admin created successfully! They must set up 2FA after first login.');

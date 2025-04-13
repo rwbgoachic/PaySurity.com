@@ -158,7 +158,7 @@ export async function handleAdminAuth(req: Request, res: Response) {
       
       // Verify the provided 2FA code
       const isValidToken = speakeasy.totp.verify({
-        secret: user.twoFactorSecret,
+        secret: user.twoFactorSecret || '',
         encoding: 'base32',
         token: twoFactorCode,
         window: 1 // Allow a 30-second window before/after current time

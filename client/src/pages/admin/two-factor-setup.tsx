@@ -28,7 +28,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle, ShieldAlert, Loader2 } from 'lucide-react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 
 // Define the form schema for 2FA verification
 const twoFactorVerifySchema = z.object({
@@ -44,7 +44,7 @@ export default function TwoFactorSetupPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState<boolean>(false);
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
 
   // Initialize the form
   const form = useForm<TwoFactorVerifyValues>({
@@ -58,9 +58,8 @@ export default function TwoFactorSetupPage() {
   const setupQuery = useQuery({
     queryKey: ['/api/admin/2fa/setup'],
     queryFn: async () => {
-      return apiRequest('/api/admin/2fa/setup', {
-        method: 'POST',
-      });
+      const response = await apiRequest("POST", '/api/admin/2fa/setup');
+      return response;
     },
     enabled: !isSetupComplete,
   });
@@ -76,10 +75,7 @@ export default function TwoFactorSetupPage() {
   // Mutation to verify and enable 2FA
   const verifyMutation = useMutation({
     mutationFn: async (data: TwoFactorVerifyValues) => {
-      return apiRequest('/api/admin/2fa/verify', {
-        method: 'POST',
-        data,
-      });
+      return apiRequest("POST", '/api/admin/2fa/verify', data);
     },
     onSuccess: () => {
       setIsSetupComplete(true);
