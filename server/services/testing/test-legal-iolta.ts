@@ -411,7 +411,8 @@ export class IoltaTestService implements TestService {
         referenceNumber: 'DEP-12345',
         fundType: 'trust', // Add required fundType field
         createdBy: 1, // Add required createdBy field
-        status: 'completed'
+        status: 'completed',
+        balanceAfter: '1000.00' // Add the required balance_after field
       });
       
       const [deposit] = await db.insert(ioltaTransactions)
@@ -455,7 +456,8 @@ export class IoltaTestService implements TestService {
         referenceNumber: 'WIT-12345',
         fundType: 'trust', // Add required fundType field
         createdBy: 1, // Add required createdBy field
-        status: 'completed'
+        status: 'completed',
+        balanceAfter: '700.00' // Add the required balance_after field
       });
       
       const [withdrawal] = await db.insert(ioltaTransactions)
