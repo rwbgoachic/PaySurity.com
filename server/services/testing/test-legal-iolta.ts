@@ -398,6 +398,46 @@ export class IoltaTestService implements TestService {
       passed: true
     };
     
+    // Helper function to create a transaction safely with balance calculation
+    async function createTransaction(db, data) {
+      // Get current balance from client ledger
+      const ledgerResult = await db.execute(sql`
+        SELECT current_balance 
+        FROM iolta_client_ledgers 
+        WHERE id = ${data.clientLedgerId}
+      `);
+      
+      const currentBalance = ledgerResult.rows[0]?.current_balance || '0';
+      let newBalance = parseFloat(currentBalance);
+      
+      // Update balance based on transaction type
+      if (data.transactionType === 'deposit' || data.transactionType === 'interest') {
+        newBalance += parseFloat(data.amount);
+      } else if (data.transactionType === 'withdrawal' || data.transactionType === 'fee') {
+        newBalance -= parseFloat(data.amount);
+      }
+      
+      // Add balance_after to the transaction data
+      const transactionData = {
+        ...data,
+        balanceAfter: newBalance.toString()
+      };
+      
+      // Insert the transaction
+      const [transaction] = await db.insert(ioltaTransactions)
+        .values(transactionData)
+        .returning();
+      
+      // Update the client ledger balance
+      await db.execute(sql`
+        UPDATE iolta_client_ledgers
+        SET current_balance = ${newBalance.toString()}, balance = ${newBalance.toString()}
+        WHERE id = ${data.clientLedgerId}
+      `);
+      
+      return transaction;
+    }
+    
     // Test creating a deposit transaction
     try {
       const depositData = insertIoltaTransactionSchema.parse({
@@ -409,16 +449,14 @@ export class IoltaTestService implements TestService {
         amount: '1000.00',
         description: 'Initial deposit',
         referenceNumber: 'DEP-12345',
-        fundType: 'trust', // Add required fundType field
-        createdBy: 1, // Add required createdBy field
-        status: 'completed',
-        balanceAfter: '1000.00' // Add the required balance_after field
+        fundType: 'trust',
+        createdBy: 1,
+        status: 'completed'
       });
       
-      const [deposit] = await db.insert(ioltaTransactions)
-        .values(depositData)
-        .returning();
-        
+      // Use our helper function instead of direct db.insert
+      const deposit = await createTransaction(db, depositData);
+      
       this.transactionIds.push(deposit.id);
       
       testGroup.tests.push({
@@ -427,13 +465,6 @@ export class IoltaTestService implements TestService {
         passed: !!deposit && deposit.transactionType === 'deposit' && deposit.amount === '1000.00',
         error: (!!deposit && deposit.transactionType === 'deposit' && deposit.amount === '1000.00') ? null : 'Failed to create deposit transaction'
       });
-      
-      // Update client ledger balance using direct SQL
-      await db.execute(sql`
-        UPDATE iolta_client_ledgers
-        SET current_balance = '1000.00', balance = '1000.00'
-        WHERE id = ${this.clientLedgerId}
-      `);
     } catch (error) {
       testGroup.tests.push({
         name: 'Create Deposit Transaction',
@@ -454,16 +485,14 @@ export class IoltaTestService implements TestService {
         amount: '300.00',
         description: 'Withdrawal for client expenses',
         referenceNumber: 'WIT-12345',
-        fundType: 'trust', // Add required fundType field
-        createdBy: 1, // Add required createdBy field
-        status: 'completed',
-        balanceAfter: '700.00' // Add the required balance_after field
+        fundType: 'trust',
+        createdBy: 1,
+        status: 'completed'
       });
       
-      const [withdrawal] = await db.insert(ioltaTransactions)
-        .values(withdrawalData)
-        .returning();
-        
+      // Use our helper function instead of direct db.insert
+      const withdrawal = await createTransaction(db, withdrawalData);
+      
       this.transactionIds.push(withdrawal.id);
       
       testGroup.tests.push({
@@ -472,13 +501,6 @@ export class IoltaTestService implements TestService {
         passed: !!withdrawal && withdrawal.transactionType === 'withdrawal' && withdrawal.amount === '300.00',
         error: (!!withdrawal && withdrawal.transactionType === 'withdrawal' && withdrawal.amount === '300.00') ? null : 'Failed to create withdrawal transaction'
       });
-      
-      // Update client ledger balance using direct SQL
-      await db.execute(sql`
-        UPDATE iolta_client_ledgers
-        SET current_balance = '700.00', balance = '700.00'
-        WHERE id = ${this.clientLedgerId}
-      `);
     } catch (error) {
       testGroup.tests.push({
         name: 'Create Withdrawal Transaction',
