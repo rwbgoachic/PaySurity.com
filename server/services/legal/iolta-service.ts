@@ -16,6 +16,7 @@ import { eq, and, desc, sql, lt, gte, lte } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import { ioltaTransactionSqlService } from "./iolta-transaction-sql-service";
 import { documentService } from './document-service';
+import { sqlService } from '../../services/sql-service';
 
 /**
  * IOLTA Service - Handles Interest on Lawyers Trust Accounts compliance
