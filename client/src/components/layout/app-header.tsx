@@ -1,6 +1,7 @@
 import { Bell, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ toggleSidebar, toggleMobileMenu }: AppHeaderProps) {
   const { user, logoutMutation } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -52,6 +54,11 @@ export default function AppHeader({ toggleSidebar, toggleMobileMenu }: AppHeader
       </div>
       
       <div className="flex items-center space-x-4">
+        {isSuperAdmin && (
+          <Link href="/admin/dashboard">
+            <a className="text-neutral-700 hover:text-neutral-900">Admin Dashboard</a>
+          </Link>
+        )}
         <Button variant="ghost" size="icon" className="text-neutral-600 hover:text-neutral-900">
           <Bell className="h-5 w-5" />
         </Button>
