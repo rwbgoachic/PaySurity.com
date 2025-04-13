@@ -11,6 +11,7 @@ import { ioltaTrustAccounts, ioltaClientLedgers, ioltaTransactions } from '../sh
 import { eq, sql } from 'drizzle-orm';
 import { ClientPortalService } from '../server/services/legal/client-portal-service';
 import { toIoltaClientId, toPortalClientId } from '../server/services/legal/client-id-helper';
+import { ioltaTransactionSqlService } from '../server/services/legal/iolta-transaction-sql-service';
 
 async function runIoltaTests() {
   console.log("╔═════════════════════════════════════════════════╗");
@@ -80,8 +81,8 @@ async function runIoltaTests() {
     } else {
       console.log("No transactions found, creating a test transaction");
       
-      // Create a test transaction
-      testTransaction = await ioltaService.createTransaction({
+      // Create a test transaction using the transaction SQL service
+      const result = await transactionService.createTransaction({
         merchantId: testMerchantId,
         trustAccountId: testAccount.id,
         clientLedgerId: testLedger.id,
@@ -92,9 +93,11 @@ async function runIoltaTests() {
         status: "completed",
         checkNumber: "TEST-001",
         payee: "N/A",
-        reference: "Test transaction",
+        referenceNumber: "Test transaction",
         createdBy: 1
       });
+      
+      testTransaction = result.transaction;
       
       console.log(`Created test transaction with ID ${testTransaction.id}`);
     }
