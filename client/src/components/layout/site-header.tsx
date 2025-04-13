@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
       <div className="container flex justify-between items-center h-16 px-4 md:px-6">
@@ -29,7 +29,7 @@ export function SiteHeader() {
             </span>
             <span className="font-bold text-xl">Surity</span>
           </Link>
-          
+
           <NavigationMenu className="hidden md:flex ml-6">
             <NavigationMenuList className="flex items-center gap-1">
               <NavigationMenuItem>
@@ -89,7 +89,7 @@ export function SiteHeader() {
                   Pricing
                 </Link>
               </NavigationMenuItem>
-              
+
               <NavigationMenuItem>
                 <Link to="/blog" className={navigationMenuTriggerStyle()}>
                   Blog
@@ -163,7 +163,7 @@ export function SiteHeader() {
                 </Link>
               </div>
             </details>
-            
+
             <details className="group">
               <summary className="flex cursor-pointer items-center justify-between rounded-lg px-2 py-2 text-gray-900">
                 <span className="text-sm font-medium">Solutions</span>
@@ -192,19 +192,19 @@ export function SiteHeader() {
                 </Link>
               </div>
             </details>
-            
+
             <Link to="/pricing">
               <div className="block rounded-lg px-2 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">
                 Pricing
               </div>
             </Link>
-            
+
             <Link to="/blog">
               <div className="block rounded-lg px-2 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">
                 Blog
               </div>
             </Link>
-            
+
             <div className="border-t border-gray-100 pt-3">
               <div className="mb-3">
                 <select className="w-full text-sm border border-gray-300 rounded-md py-2 px-2 bg-white">
