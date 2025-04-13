@@ -146,7 +146,8 @@ async function testIntegration() {
           balanceAfter: '1000.00',
           description: 'Initial deposit',
           transactionType: 'deposit',
-          status: 'completed'
+          status: 'completed',
+          createdBy: 1 // Admin user
         });
         
         console.log(`Created test transaction: ${newTransaction.id}`);
@@ -189,7 +190,8 @@ async function testIntegration() {
             balanceAfter: '500.00',
             description: 'Test deposit',
             transactionType: 'deposit',
-            status: 'completed'
+            status: 'completed',
+            createdBy: 1 // Admin user
           });
           
           console.log(`Created test transaction: ${newTransaction.id}`);
