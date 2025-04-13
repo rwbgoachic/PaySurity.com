@@ -18,6 +18,7 @@ const testData = {
   merchantId: 1,
   trustAccountId: 0, // Will be populated after trust account creation
   clientId: 0, // Will be populated after client creation
+  clientLedgerId: 0, // Will be populated after client ledger creation
   clientData: {
     merchantId: 1,
     firstName: "Test",
@@ -98,7 +99,7 @@ async function setupTestData() {
   console.log(`Created test trust account with ID: ${trustAccount.id}`);
   
   // Add a client ledger
-  await ioltaService.createClientLedger({
+  const clientLedger = await ioltaService.createClientLedger({
     merchantId: testData.merchantId,
     trustAccountId: trustAccount.id,
     clientId: testData.clientId,
@@ -112,6 +113,10 @@ async function setupTestData() {
     notes: "Test client ledger for reconciliation testing"
   });
   
+  console.log("Created client ledger:", JSON.stringify(clientLedger, null, 2));
+  const clientLedgerId = clientLedger.id;
+  testData.clientLedgerId = clientLedgerId;
+  
   console.log(`Created test client ledger for client: ${testData.clientId}`);
   
   // Add some transactions
@@ -119,7 +124,7 @@ async function setupTestData() {
     {
       merchantId: testData.merchantId,
       trustAccountId: trustAccount.id,
-      clientId: testData.clientId,
+      clientLedgerId: testData.clientLedgerId,
       description: "Initial deposit",
       amount: "5000.00",
       transactionType: "deposit",
@@ -127,12 +132,14 @@ async function setupTestData() {
       referenceNumber: "REF001",
       status: "completed",
       notes: "Test transaction 1",
+      createdBy: 1, // Adding required createdBy field
+      fundType: "trust", // Adding required fundType field
       createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) // 10 days ago
     },
     {
       merchantId: testData.merchantId,
       trustAccountId: trustAccount.id,
-      clientId: testData.clientId,
+      clientLedgerId: testData.clientLedgerId,
       description: "Court filing fee",
       amount: "500.00",
       transactionType: "withdrawal",
@@ -141,12 +148,14 @@ async function setupTestData() {
       referenceNumber: "REF002",
       status: "completed",
       notes: "Test transaction 2",
+      createdBy: 1, // Adding required createdBy field
+      fundType: "trust", // Adding required fundType field
       createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
     },
     {
       merchantId: testData.merchantId,
       trustAccountId: trustAccount.id,
-      clientId: testData.clientId,
+      clientLedgerId: testData.clientLedgerId,
       description: "Additional deposit",
       amount: "2000.00",
       transactionType: "deposit",
@@ -154,6 +163,8 @@ async function setupTestData() {
       referenceNumber: "REF003",
       status: "completed",
       notes: "Test transaction 3",
+      createdBy: 1, // Adding required createdBy field
+      fundType: "trust", // Adding required fundType field
       createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
     }
   ];
