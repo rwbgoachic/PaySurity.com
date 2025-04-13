@@ -43,7 +43,8 @@ export const legalPortalUsers = pgTable("legal_portal_users", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
-export const insertLegalPortalUserSchema = createInsertSchema(legalPortalUsers).omit({
+// Create base schema
+const basePortalUserSchema = createInsertSchema(legalPortalUsers).omit({
   id: true,
   lastLogin: true,
   failedLoginAttempts: true,
@@ -51,6 +52,11 @@ export const insertLegalPortalUserSchema = createInsertSchema(legalPortalUsers).
   resetTokenExpiry: true,
   createdAt: true,
   updatedAt: true
+});
+
+// Extend the schema to allow password for user creation
+export const insertLegalPortalUserSchema = basePortalUserSchema.extend({
+  password: z.string().optional() // Allow password field for createPortalUser
 });
 
 export type LegalPortalUser = typeof legalPortalUsers.$inferSelect;
