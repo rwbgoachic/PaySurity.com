@@ -213,10 +213,10 @@ export class AffiliateSystemTestService {
       if (!isGetReferralsStatusCorrect) testGroup.passed = false;
       
       // Test referral tracking endpoint
-      const trackReferralResponse = await fetch(`${baseUrl}/api/affiliates/track`, {
+      const trackReferralResponse = await fetch(`${baseUrl}/api/affiliates/track?ref=TEST123`, {
         method: 'GET',
         headers: {
-          'Referer': 'https://example.com?ref=TEST123'
+          'Referer': 'https://example.com'
         }
       });
       
