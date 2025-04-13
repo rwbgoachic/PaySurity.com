@@ -4488,7 +4488,8 @@ export const legalDocuments = pgTable("legal_documents", {
   fileSize: integer("file_size"), // Size in bytes
   fileType: text("file_type"), // MIME type or extension
   versionNumber: text("version_number").default("1.0"),
-  authorId: integer("author_id").notNull(), // User who created the document
+  authorId: integer("author_id"),
+  uploaded_by: integer("uploaded_by").notNull(),  // Required by database schema // User who created the document
   lastModifiedById: integer("last_modified_by_id"), // User who last modified the document
   createdAt: timestamp("created_at").defaultNow(),
   lastModifiedAt: timestamp("last_modified_at"),
