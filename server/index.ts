@@ -31,12 +31,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "*.stripe.com"],
-      connectSrc: ["'self'", "api.stripe.com", "newsapi.org", "*.paysurity.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.stripe.com", "wss://*.replit.dev"],
+      connectSrc: ["'self'", "api.stripe.com", "newsapi.org", "*.paysurity.com", "wss://*.replit.dev", "https://*.replit.dev", "ws://localhost:*"],
       frameSrc: ["'self'", "*.stripe.com"],
-      imgSrc: ["'self'", "data:", "*.stripe.com", "*.newsapi.org", "*.paysurity.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-      fontSrc: ["'self'", "fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "*.stripe.com", "*.newsapi.org", "*.paysurity.com", "https://*.replit.dev"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "https://*.replit.dev"],
+      fontSrc: ["'self'", "fonts.gstatic.com", "data:"],
       upgradeInsecureRequests: [],
     },
   },

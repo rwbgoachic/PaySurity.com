@@ -283,12 +283,33 @@ export default function AdminDashboard() {
             System Users
           </Button>
           
+          {/* Only show Sub-Admin management to super_admin */}
+          {user.role === "super_admin" && (
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+              onClick={() => navigate("/admin/sub-admins")}
+            >
+              <UserPlus className="mr-2 h-5 w-5" />
+              Sub-Admin Management
+            </Button>
+          )}
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/two-factor-setup")}
+          >
+            <ShieldAlert className="mr-2 h-5 w-5" />
+            Two-Factor Setup
+          </Button>
+          
           <Button 
             variant="ghost" 
             className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
             onClick={() => navigate("/admin/security")}
           >
-            <ShieldAlert className="mr-2 h-5 w-5" />
+            <Lock className="mr-2 h-5 w-5" />
             Security
           </Button>
           
