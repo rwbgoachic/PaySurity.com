@@ -2882,6 +2882,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Process the payment
     await processPayment(req, res);
   });
+
+  // Schedule demo endpoint
+  app.post('/api/schedule-demo', async (req, res) => {
+    try {
+      const demoRequest = {
+        ...req.body,
+        status: 'pending',
+        createdAt: new Date()
+      };
+
+      // Store the demo request
+      const savedRequest = await storage.createDemoRequest(demoRequest);
+
+      // Send confirmation email to the user
+      const userEmailContent = `
+        Thank you for scheduling a demo with PaySurity!
+        
+        Your demo is scheduled for: ${new Date(demoRequest.date).toLocaleDateString()} at ${demoRequest.time}
+        
+        We look forward to showing you how PaySurity can help your business.
+      `;
+
+      await sendEmail({
+        to: demoRequest.email,
+        subject: 'PaySurity Demo Confirmation',
+        text: userEmailContent
+      });
+
+      // Send notification to admin
+      const adminEmailContent = `
+        New demo request scheduled:
+        Name: ${demoRequest.firstName} ${demoRequest.lastName}
+        Company: ${demoRequest.companyName}
+        Email: ${demoRequest.email}
+        Phone: ${demoRequest.phone}
+        Date: ${new Date(demoRequest.date).toLocaleDateString()}
+        Time: ${demoRequest.time}
+      `;
+
+      await sendEmail({
+        to: process.env.ADMIN_EMAIL || 'admin@paysurity.com',
+        subject: 'New Demo Request',
+        text: adminEmailContent
+      });
+
+      res.status(201).json({ success: true, data: savedRequest });
+    } catch (error) {
+      console.error('Error scheduling demo:', error);
+      res.status(500).json({ error: 'Failed to schedule demo' });
+    }
+  });
   
   // End of Payment Processing API
   // -------------------------------------------------

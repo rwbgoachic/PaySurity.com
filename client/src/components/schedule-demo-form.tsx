@@ -93,15 +93,16 @@ Appointment: ${format(data.appointmentDate, 'PPP')} at ${data.appointmentTime}
 Message: ${data.message || 'No message provided'}
 `;
 
-      // Submit the demo request to the API with email content
-      await apiRequest('POST', '/api/schedule-demo', {
-        ...data,
-        emailContent: emailDetails
-      });
+      // Submit the demo request to the API
+      const response = await apiRequest('POST', '/api/schedule-demo', data);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to schedule demo');
+      }
 
       toast({
         title: "Success!",
-        description: "Your demo has been scheduled. We'll send you a confirmation email with the details.",
+        description: "Your demo has been scheduled. You'll receive a confirmation email shortly.",
         variant: "default",
       });
 
