@@ -112,6 +112,7 @@
     "recaptcha-v3": "^1.11.3",
     "recharts": "^2.13.0",
     "sitemap": "^8.0.0",
+    "speakeasy": "^2.0.0",
     "stripe": "^18.0.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",

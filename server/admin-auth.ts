@@ -1,17 +1,22 @@
 /**
- * Secure Admin Authentication System
+ * Secure Admin Authentication System with Two-Factor Authentication
  * 
  * This module provides a completely separate authentication system for admin access
  * that doesn't depend on the session mechanism. This gives us a separate, more reliable
  * method to access admin functionality even when the main auth system has issues.
+ * 
+ * Now with enhanced security via Two-Factor Authentication (2FA) for super_admin and 
+ * sub_super_admin roles.
  */
 
 import { Request, Response, NextFunction } from "express";
 import * as crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "../shared/schema";
 import { timingSafeEqual } from "crypto";
+import * as speakeasy from "speakeasy";
+import * as QRCode from "qrcode";
 
 // Add admin user to the Express Request type
 declare global {
@@ -20,6 +25,8 @@ declare global {
       adminUser?: {
         id: number;
         role: string;
+        requiresTwoFactor?: boolean;
+        twoFactorVerified?: boolean;
       };
     }
   }
