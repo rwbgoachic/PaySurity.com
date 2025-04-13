@@ -40,13 +40,13 @@ async function runAffiliateProgramTests() {
     
     // Save report to file
     const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const reportDir = path.join(__dirname, '../test-reports');
+    const reportDir = './test-reports';
     
     if (!fs.existsSync(reportDir)) {
       fs.mkdirSync(reportDir, { recursive: true });
     }
     
-    const reportPath = path.join(reportDir, `affiliate-test-report-${timestamp}.json`);
+    const reportPath = `${reportDir}/affiliate-test-report-${timestamp}.json`;
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
     
     // Log summary
@@ -93,7 +93,7 @@ async function createDeliberateTestFailure() {
     // to test that error detection is working properly
     await db.execute(`
       INSERT INTO affiliate_referral_tracking 
-        (affiliate_id, referred_merchant_id, referral_code, status, commission_amount)
+        (affiliate_id, converted_merchant_id, referral_code, status, conversion_value)
       VALUES 
         (9999, 9999, 'INVALID-TEST', 'converted', -100)
       RETURNING id;
