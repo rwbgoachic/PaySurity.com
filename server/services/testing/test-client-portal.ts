@@ -7,7 +7,7 @@
 
 import { TestService, TestReport, TestGroup, TestResult } from './test-interfaces';
 import { db } from '../../db';
-import { clientPortalService } from '../legal/client-portal-service';
+import { ClientPortalService, clientPortalService } from '../legal/client-portal-service';
 import { ioltaService } from '../legal/iolta-service';
 import { compareClientIds, parseClientId } from '../legal/client-id-helper';
 import {
@@ -27,6 +27,9 @@ import { v4 as uuidv4 } from 'uuid';
  * ClientPortalTestService implements tests for the client portal functionality
  */
 export class ClientPortalTestService implements TestService {
+  // Service reference
+  clientPortalService = clientPortalService;
+  
   // Test data
   private testMerchantId = 1;
   private testClientId = 1;
@@ -239,11 +242,13 @@ export class ClientPortalTestService implements TestService {
     await db.execute(sql`
       INSERT INTO legal_invoices (
         merchant_id, client_id, matter_id, invoice_number, invoice_date, 
-        due_date, status, total_amount, notes, show_in_client_portal
+        due_date, status, total_amount, subtotal, tax_amount, discount_amount,
+        balance_due, notes, show_in_client_portal
       ) VALUES (
         ${this.testMerchantId}, ${this.testClientId}, ${this.testMatterId}, 
         ${'TEST-PORTAL-' + Date.now()}, ${invoiceDate}, ${dueDate}, 
-        'sent', '500.00', 'Test portal invoice', true
+        'sent', '500.00', '450.00', '50.00', '0.00',
+        '500.00', 'Test portal invoice', true
       );
     `);
   }

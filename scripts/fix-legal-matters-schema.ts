@@ -46,6 +46,10 @@ async function fixLegalMattersSchema() {
     // Add columns to legal_invoices 
     await ensureColumnExists('legal_invoices', 'show_in_client_portal', 'BOOLEAN', 'true');
     await ensureColumnExists('legal_invoices', 'invoice_date', 'TIMESTAMP');
+    await ensureColumnExists('legal_invoices', 'subtotal', 'DECIMAL(10,2)', '0');
+    await ensureColumnExists('legal_invoices', 'tax_amount', 'DECIMAL(10,2)', '0');
+    await ensureColumnExists('legal_invoices', 'discount_amount', 'DECIMAL(10,2)', '0');
+    await ensureColumnExists('legal_invoices', 'balance_due', 'DECIMAL(10,2)', '0');
     
     console.log(chalk.green('legal_matters schema fix completed successfully'));
   } catch (error) {
