@@ -82,18 +82,18 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
     try {
       // Submit the demo request to the API
       await apiRequest('POST', '/api/schedule-demo', data);
-      
+
       toast({
         title: "Success!",
         description: "Your demo has been scheduled. We'll send you a confirmation email with the details.",
         variant: "default",
       });
-      
+
       // Call success callback if provided
       if (onSuccess) {
         onSuccess();
       }
-      
+
     } catch (error) {
       toast({
         title: "Something went wrong",
@@ -114,7 +114,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
           using the PaySurity Appointment Scheduler
         </DialogDescription>
       </DialogHeader>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -131,7 +131,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="lastName"
@@ -146,7 +146,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               )}
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -161,7 +161,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="phone"
@@ -176,7 +176,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               )}
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -191,7 +191,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="industry"
@@ -220,7 +220,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="message"
@@ -238,7 +238,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               </FormItem>
             )}
           />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -269,7 +269,16 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          if (date) {
+                            const popover = document.querySelector('[role="dialog"]');
+                            if (popover) {
+                              const parent = popover.parentElement;
+                              if (parent) parent.removeAttribute('data-state');
+                            }
+                          }
+                        }}
                         disabled={(date) => 
                           date < new Date() || 
                           date.getDay() === 0 || 
@@ -283,7 +292,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="appointmentTime"
@@ -312,7 +321,7 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               )}
             />
           </div>
-          
+
           <DialogFooter className="pt-4">
             <Button 
               type="submit" 
