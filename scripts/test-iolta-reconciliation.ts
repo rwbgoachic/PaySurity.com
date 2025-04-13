@@ -186,11 +186,11 @@ async function setupTestData() {
     reconciliationDate: formattedDate,
     bookBalance: "10000.00",
     bankBalance: "10000.00",
-    adjustedBookBalance: "10000.00",
-    adjustedBankBalance: "10000.00",
+    difference: "0.00",
     isBalanced: true,
     status: "completed",
-    createdById: 1
+    reconcilerId: 1, // Using reconcilerId instead of createdById
+    notes: "Test reconciliation"
   });
   
   console.log("Created test reconciliation record");

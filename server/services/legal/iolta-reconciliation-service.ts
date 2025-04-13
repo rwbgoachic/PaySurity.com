@@ -1,18 +1,19 @@
 import { db } from "../../db";
 import { eq, and, between, desc, sql, lt, gt, gte, lte, isNotNull } from "drizzle-orm";
 import { 
-  ioltaAccounts, 
   ioltaTransactions, 
-  ioltaClientLedgers, 
+  ioltaClientLedgers,
+  IoltaTransaction
+} from "../../../shared/schema";
+import { 
   ioltaReconciliations,
   ioltaBankStatements,
   InsertIoltaReconciliation,
   InsertIoltaBankStatement,
   IoltaReconciliation,
-  IoltaBankStatement,
-  IoltaTransaction
-} from "../../../shared/schema";
-import { getCurrentDateFormatted } from "../../utils/date-utils";
+  IoltaBankStatement
+} from "../../../shared/schema-legal";
+import { format } from "date-fns"; // Using date-fns instead of getCurrentDateFormatted
 import { IoltaService } from "./iolta-service";
 import * as fs from 'fs';
 import * as path from 'path';
@@ -281,20 +282,17 @@ export class IoltaReconciliationService {
   async completeReconciliation(
     trustAccountId: number,
     merchantId: number,
-    createdById: number,
+    reconcilerId: number,
     reconciliationDate: Date,
     bookBalance: string,
     bankBalance: string,
-    adjustedBookBalance: string,
-    adjustedBankBalance: string,
     difference: string,
     outstandingChecks: OutstandingItem[],
     outstandingDeposits: OutstandingItem[],
-    bankFeesAdjustment: string = "0.00",
-    interestEarnedAdjustment: string = "0.00",
-    otherAdjustments: any[] = [],
-    reconciliationNotes?: string,
-    bankStatementId?: number
+    notes?: string,
+    bankStatement?: any,
+    reviewerId?: number,
+    reviewedAt?: Date
   ): Promise<IoltaReconciliation> {
     // Determine if the reconciliation is balanced
     const isBalanced = difference === "0.00";
@@ -304,27 +302,20 @@ export class IoltaReconciliationService {
       trustAccountId,
       merchantId,
       reconciliationDate,
+      bankStatement: bankStatement ? JSON.stringify(bankStatement) : null,
       bookBalance,
       bankBalance,
-      adjustedBookBalance,
-      adjustedBankBalance,
-      isBalanced,
       difference,
-      reconciliationNotes,
-      outstandingDeposits: JSON.stringify(outstandingDeposits),
-      outstandingChecks: JSON.stringify(outstandingChecks),
-      bankFeesAdjustment,
-      interestEarnedAdjustment,
-      otherAdjustments: JSON.stringify(otherAdjustments),
-      bankStatementId,
-      createdById,
-      status: isBalanced ? "completed" : "discrepancy",
+      isBalanced,
+      notes,
+      reconcilerId,
+      reviewerId,
+      reviewedAt,
+      status: isBalanced ? "completed" : "draft"
     });
 
-    // If we have bank fees or interest earned, we might need to create adjustment transactions
-    if (Number(bankFeesAdjustment) !== 0 || Number(interestEarnedAdjustment) !== 0) {
-      // Implementation for creating adjustment transactions would go here
-    }
+    // In the future we might add handling for bank fees or interest adjustments
+    // Implementation for creating adjustment transactions would go here
 
     return reconciliation;
   }
