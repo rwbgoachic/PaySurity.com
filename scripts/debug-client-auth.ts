@@ -90,10 +90,10 @@ async function debugAuthentication() {
     
     // Clean up
     console.log('\nCleaning up test user...');
-    const deleteResult = await db.delete(legalPortalUsers)
+    await db.delete(legalPortalUsers)
       .where(eq(legalPortalUsers.email, TEST_EMAIL));
     
-    console.log(`Deleted ${deleteResult.count} test user(s)`);
+    console.log('Test user cleanup complete');
     
   } catch (error) {
     console.error('Debug session error:', error);
