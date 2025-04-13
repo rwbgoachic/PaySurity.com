@@ -17,10 +17,10 @@ const ioltaService = new IoltaService();
 const testData = {
   merchantId: 1,
   trustAccountId: 0, // Will be populated after trust account creation
-  clientId: "test-client-1",
+  clientId: 12345, // Using numeric ID as expected by the schema
   clientData: {
     merchantId: 1,
-    clientId: "test-client-1",
+    clientId: 12345,
     clientName: "Test Client",
     email: "test@example.com",
     status: "active",
@@ -65,10 +65,18 @@ async function runTest() {
 async function setupTestData() {
   console.log("Setting up test data...");
   
+  // First, create a test client
+  await db.execute(`
+    INSERT INTO legal_clients (merchant_id, client_id, client_type, first_name, last_name, email, phone_number, status, jurisdiction)
+    VALUES (${testData.merchantId}, ${testData.clientId}, 'business', 'Test', 'Client', 'test@example.com', '555-1234', 'active', 'CA')
+  `);
+  
+  console.log("Created test client with ID:", testData.clientId);
+  
   // Create a test trust account
   const trustAccount = await ioltaService.createTrustAccount({
     merchantId: testData.merchantId,
-    clientId: null, // Not client-specific
+    clientId: testData.clientId,
     accountNumber: "TEST-RECON-" + Date.now(),
     accountName: "Test Reconciliation Account",
     bankName: "Test Bank",
@@ -262,7 +270,7 @@ async function cleanupTestData() {
   await db.execute(`
     DELETE FROM iolta_client_ledgers 
     WHERE trust_account_id = ${testData.trustAccountId}
-    AND client_id = '${testData.clientId}'
+    AND client_id = ${testData.clientId}
   `);
   
   // Delete reconciliation records
@@ -275,6 +283,13 @@ async function cleanupTestData() {
   await db.execute(`
     DELETE FROM iolta_trust_accounts 
     WHERE id = ${testData.trustAccountId}
+  `);
+  
+  // Delete the test client
+  await db.execute(`
+    DELETE FROM legal_clients
+    WHERE client_id = ${testData.clientId}
+    AND merchant_id = ${testData.merchantId}
   `);
   
   console.log("Test data cleaned up successfully");
