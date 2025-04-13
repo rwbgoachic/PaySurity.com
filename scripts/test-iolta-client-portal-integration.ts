@@ -96,7 +96,7 @@ async function testIntegration() {
         console.log(`Created test client ledger: ${newClientLedger.id}`);
         
         // Add a test transaction
-        const [newTransaction] = await ioltaService.recordTransaction({
+        const newTransaction = await ioltaService.recordTransaction({
           merchantId,
           trustAccountId: newTrustAccount.id,
           clientLedgerId: newClientLedger.id,
@@ -104,7 +104,8 @@ async function testIntegration() {
           balanceAfter: '1000.00',
           description: 'Initial deposit',
           transactionType: 'deposit',
-          status: 'completed'
+          status: 'completed',
+          createdBy: 1 // Admin user
         });
         
         console.log(`Created test transaction: ${newTransaction.id}`);
@@ -137,7 +138,7 @@ async function testIntegration() {
         console.log(`Created test client ledger: ${newClientLedger.id}`);
         
         // Add a test transaction
-        const [newTransaction] = await ioltaService.recordTransaction({
+        const newTransaction = await ioltaService.recordTransaction({
           merchantId,
           trustAccountId,
           clientLedgerId: newClientLedger.id,
@@ -180,7 +181,7 @@ async function testIntegration() {
           console.log('No transactions found for this ledger. Creating a test transaction...');
           
           // Add a test transaction
-          const [newTransaction] = await ioltaService.recordTransaction({
+          const newTransaction = await ioltaService.recordTransaction({
             merchantId,
             trustAccountId,
             clientLedgerId: ledgerId,
