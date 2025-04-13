@@ -113,16 +113,37 @@ export class IoltaService {
    */
   async getClientLedger(id: number, isClientId: boolean = false) {
     let ledger;
-    if (isClientId) {
-      // Find by client ID (converted to string to match schema type)
-      const [result] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.clientId, id.toString()));
-      ledger = result;
-    } else {
-      // Find by ledger ID
-      const [result] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.id, id));
-      ledger = result;
+    try {
+      if (isClientId) {
+        // Find by client ID (converted to string to match schema type)
+        const [result] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.clientId, id.toString()));
+        ledger = result;
+      } else {
+        // Find by ledger ID
+        const [result] = await db.select().from(ioltaClientLedgers).where(eq(ioltaClientLedgers.id, id));
+        ledger = result;
+      }
+      return ledger;
+    } catch (error) {
+      console.error("Error getting client ledger:", error);
+      // Fall back to parameterized SQL to handle potential schema inconsistencies
+      try {
+        if (isClientId) {
+          // Use parameterized query for client_id lookup (as string)
+          const query = "SELECT * FROM iolta_client_ledgers WHERE client_id = $1 LIMIT 1";
+          const results = await sqlService.parameterizedSQL(query, [id.toString()]);
+          return results.length > 0 ? results[0] : null;
+        } else {
+          // Use parameterized query for id lookup
+          const query = "SELECT * FROM iolta_client_ledgers WHERE id = $1 LIMIT 1";
+          const results = await sqlService.parameterizedSQL(query, [id]);
+          return results.length > 0 ? results[0] : null;
+        }
+      } catch (sqlError) {
+        console.error("Secondary SQL error in getClientLedger:", sqlError);
+        return null;
+      }
     }
-    return ledger;
   }
   
   /**
@@ -159,25 +180,59 @@ export class IoltaService {
       if (!account) {
         throw new Error("Trust account not found");
       }
+
+      // Calculate the balance change
+      let balanceChange = new Decimal(data.amount);
+      if (data.transactionType === 'withdrawal' || data.transactionType === 'fee') {
+        balanceChange = balanceChange.negated();
+      }
+
+      // Calculate new balances
+      const currentLedgerBalance = new Decimal(ledger.balance || '0');
+      const newLedgerBalance = currentLedgerBalance.plus(balanceChange);
       
-      // Use the SQL service to create the transaction with proper balance handling
-      const result = await ioltaTransactionSqlService.createTransaction({
+      const currentAccountBalance = new Decimal(account.balance || '0');
+      const newAccountBalance = currentAccountBalance.plus(balanceChange);
+
+      // Prepare transaction data with proper type handling
+      const transactionData = {
         merchantId: data.merchantId,
         trustAccountId: data.trustAccountId,
         clientLedgerId: data.clientLedgerId,
         amount: data.amount,
+        balanceAfter: newLedgerBalance.toString(), // Set the balance after the transaction
         description: data.description,
-        transactionType: data.transactionType as any, // type conversion
-        fundType: data.fundType as any, // type conversion
+        transactionType: data.transactionType,
+        fundType: data.fundType,
         createdBy: data.createdBy,
-        status: data.status as any, // type conversion
-        checkNumber: data.checkNumber,
-        referenceNumber: data.referenceNumber,
-        payee: data.payee,
-        payor: data.payor,
-        notes: data.notes,
-        bankReference: data.bankReference
-      });
+        status: data.status || 'completed',
+        checkNumber: data.checkNumber || undefined,
+        referenceNumber: data.referenceNumber || undefined,
+        payee: data.payee || undefined,
+        payor: data.payor || undefined,
+        notes: data.notes || undefined,
+        bankReference: data.bankReference || undefined
+      };
+      
+      // Use the SQL service to create the transaction with proper balance handling
+      const result = await ioltaTransactionSqlService.createTransaction(transactionData);
+      
+      // Update the client ledger balance
+      await db.update(ioltaClientLedgers)
+        .set({ 
+          balance: newLedgerBalance.toString(),
+          currentBalance: newLedgerBalance.toString(),
+          lastTransactionDate: new Date()
+        })
+        .where(eq(ioltaClientLedgers.id, data.clientLedgerId));
+      
+      // Update the trust account balance
+      await db.update(ioltaTrustAccounts)
+        .set({ 
+          balance: newAccountBalance.toString(),
+          lastActivityDate: sql`CURRENT_DATE`
+        })
+        .where(eq(ioltaTrustAccounts.id, data.trustAccountId));
       
       // Return the created transaction
       return result.transaction;
@@ -440,21 +495,45 @@ export class IoltaService {
     fileBuffer: Buffer
   ) {
     try {
+      // Get the client ledger first to access its clientId
+      const clientLedger = await this.getClientLedger(transactionData.clientLedgerId);
+      if (!clientLedger) {
+        throw new Error(`Client ledger with ID ${transactionData.clientLedgerId} not found`);
+      }
+      
       // Record the transaction first
       const transaction = await this.recordTransaction(transactionData);
+      
+      // Convert client ID from string to number (if it's a string)
+      let numericClientId: number | undefined = undefined;
+      if (clientLedger.clientId) {
+        try {
+          // Handle both string and number client IDs
+          numericClientId = typeof clientLedger.clientId === 'string' 
+            ? parseInt(clientLedger.clientId, 10)
+            : clientLedger.clientId;
+          
+          // Validate the parsed ID is a valid number
+          if (isNaN(numericClientId)) {
+            console.warn(`Invalid client ID format: ${clientLedger.clientId}, cannot convert to number`);
+            numericClientId = undefined;
+          }
+        } catch (parseError) {
+          console.warn(`Error parsing client ID: ${parseError}`);
+          numericClientId = undefined;
+        }
+      }
       
       // Create the document
       const document = await documentService.createDocument({
         ...documentData,
         // Associate the document with the transaction's merchant and matter
         merchantId: transactionData.merchantId,
-        // Use clientId from the client ledger
-        clientId: (await this.getClientLedger(transactionData.clientLedgerId))?.clientId 
-          ? parseInt((await this.getClientLedger(transactionData.clientLedgerId))?.clientId || '0')
-          : undefined,
+        // Use the parsed clientId from the client ledger
+        clientId: numericClientId,
         // Set reference information in metadata
         metaData: {
-          ...documentData.metaData,
+          ...documentData.metaData || {},
           transactionId: transaction.id,
           transactionType: transactionData.transactionType,
           transactionDate: transaction.createdAt

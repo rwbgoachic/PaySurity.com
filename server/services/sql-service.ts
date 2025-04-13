@@ -50,10 +50,10 @@ class SQLService {
    * This is safer than rawSQL for user input as it prevents SQL injection
    * 
    * @param sqlQuery The SQL query with $1, $2, etc placeholders
-   * @param values The values for the placeholders
+   * @param values The values for the placeholders (optional)
    * @returns The query results as an array
    */
-  async parameterizedSQL(sqlQuery: string, values: any[]): Promise<any[]> {
+  async parameterizedSQL(sqlQuery: string, values?: any[]): Promise<any[]> {
     try {
       // Create a prepared statement using Drizzle's sql template literals
       const preparedQuery = sql.raw(sqlQuery);
