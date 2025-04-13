@@ -49,11 +49,21 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     // For now, this is just a stub as we don't have an email provider set up
     // In production, this would use SendGrid, Mailgun, or another email service
     
+    // Send to the specified recipient
     console.log('Sending email:', {
       to: options.to,
       subject: options.subject,
       text: options.text?.substring(0, 50) + (options.text && options.text.length > 50 ? '...' : '')
     });
+
+    // If this is a demo request, also send to admin
+    if (options.subject?.includes('Demo Request')) {
+      console.log('Sending admin notification:', {
+        to: 'admin@paysurity.com',
+        subject: `[Admin] ${options.subject}`,
+        text: options.text
+      });
+    }
     
     // Return true to simulate successful sending
     return true;

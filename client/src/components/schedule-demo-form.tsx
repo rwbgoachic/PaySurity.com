@@ -80,8 +80,24 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
   async function onSubmit(data: FormValues) {
     setIsSubmitting(true);
     try {
-      // Submit the demo request to the API
-      await apiRequest('POST', '/api/schedule-demo', data);
+      // Format the email content
+      const emailDetails = `
+Demo Request Details:
+-------------------
+Name: ${data.firstName} ${data.lastName}
+Email: ${data.email}
+Phone: ${data.phone}
+Company: ${data.companyName}
+Industry: ${data.industry}
+Appointment: ${format(data.appointmentDate, 'PPP')} at ${data.appointmentTime}
+Message: ${data.message || 'No message provided'}
+`;
+
+      // Submit the demo request to the API with email content
+      await apiRequest('POST', '/api/schedule-demo', {
+        ...data,
+        emailContent: emailDetails
+      });
 
       toast({
         title: "Success!",
