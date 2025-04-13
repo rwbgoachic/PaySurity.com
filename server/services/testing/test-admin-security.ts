@@ -56,13 +56,13 @@ export async function testAdminSecurity() {
       totalTests,
       message: `Admin Security Tests: ${passedTests}/${totalTests} tests passed`,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error(chalk.red('❌ Error running admin security tests:'), error);
     return {
       success: false,
       passedTests,
       totalTests,
-      message: `Admin Security Tests failed with error: ${error.message}`,
+      message: `Admin Security Tests failed with error: ${error.message || 'Unknown error'}`,
     };
   }
 }
@@ -180,25 +180,32 @@ async function testPasswordHashing(): Promise<boolean> {
  * Create users for testing
  */
 async function createTestUsers() {
-  // Create a regular test user
-  await db.insert(users).values({
-    username: TEST_USERNAME,
-    password: await hashPassword(TEST_PASSWORD),
-    email: 'test_user@example.com',
-    firstName: 'Test',
-    lastName: 'User',
-    role: 'user',
-  }).onConflictDoNothing();
-  
-  // Create a super admin test user
-  await db.insert(users).values({
-    username: TEST_SUPER_ADMIN,
-    password: await hashPassword(TEST_PASSWORD),
-    email: 'test_admin@example.com',
-    firstName: 'Test',
-    lastName: 'Admin',
-    role: 'super_admin',
-  }).onConflictDoNothing();
+  try {
+    // Create a regular test user
+    await db.insert(users).values({
+      username: TEST_USERNAME,
+      password: await hashPassword(TEST_PASSWORD),
+      email: 'test_user@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'employee', // Using a standard role that exists in the enum
+    }).onConflictDoNothing();
+    
+    // Create a super admin test user
+    await db.insert(users).values({
+      username: TEST_SUPER_ADMIN,
+      password: await hashPassword(TEST_PASSWORD),
+      email: 'test_admin@example.com',
+      firstName: 'Test',
+      lastName: 'Admin',
+      role: 'super_admin',
+    }).onConflictDoNothing();
+    
+    console.log(chalk.green('✅ Test users created successfully'));
+  } catch (error: any) {
+    console.error(chalk.red('❌ Error creating test users:'), error.message);
+    // Continue anyway as this is just a test setup
+  }
 }
 
 /**
