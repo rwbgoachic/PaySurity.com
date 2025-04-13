@@ -22,7 +22,7 @@ async function debugClientLedgerAccess() {
     // First, check if we have any trust accounts in the system
     console.log(`Looking for trust accounts for merchant ${testMerchantId}...`);
     
-    const accounts = await ioltaService.listTrustAccounts(testMerchantId);
+    const accounts = await ioltaService.getTrustAccountsByMerchant(testMerchantId);
     console.log(`Found ${accounts.length} trust accounts`);
     
     if (accounts.length === 0) {
