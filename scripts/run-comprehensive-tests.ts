@@ -13,7 +13,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { db } from '../server/db';
 import fetch from 'node-fetch';
 import { sqlService } from '../server/services/sql-service';
 
@@ -306,7 +305,7 @@ async function fixWalletIssue(issue: Issue): Promise<void> {
         RETURNING id;
       `;
       
-      await db.execute(createWalletQuery);
+      await sqlService.query(createWalletQuery);
       issue.fixed = true;
       issue.fixMethod = 'wallet_creation';
       issue.fixDetails = `Created test wallet record.`;
@@ -366,7 +365,7 @@ async function fixMerchantIssue(issue: Issue): Promise<void> {
         RETURNING id;
       `;
       
-      await db.execute(createMerchantQuery);
+      await sqlService.query(createMerchantQuery);
       issue.fixed = true;
       issue.fixMethod = 'merchant_creation';
       issue.fixDetails = `Created test merchant record.`;
@@ -406,7 +405,7 @@ async function fixAffiliateIssue(issue: Issue): Promise<void> {
         RETURNING id;
       `;
       
-      await db.execute(createAffiliateQuery);
+      await sqlService.query(createAffiliateQuery);
       issue.fixed = true;
       issue.fixMethod = 'affiliate_creation';
       issue.fixDetails = `Created test affiliate record.`;
@@ -523,7 +522,7 @@ async function createMissingTable(tableName: string): Promise<void> {
     }
     
     // Execute the create table statement
-    await db.execute(createTableSQL);
+    await sqlService.query(createTableSQL);
     console.log(`  ✅ Successfully created table: ${tableName}`);
   } catch (error) {
     console.error(`  ❌ Failed to create table ${tableName}:`, error);
