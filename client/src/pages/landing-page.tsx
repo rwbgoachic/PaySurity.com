@@ -202,10 +202,10 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white opacity-50 z-0"></div>
         <div className="container relative z-10 mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-100 rounded-full text-sm font-medium text-purple-800 mb-8">
+            <Link to="/digital-wallet" className="inline-flex items-center px-4 py-2 bg-purple-100 hover:bg-purple-200 transition-colors rounded-full text-sm font-medium text-purple-800 mb-8">
               <span>New: Introducing Family Wallets</span>
               <ChevronRight className="h-4 w-4 ml-2" />
-            </div>
+            </Link>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
               Financial infrastructure for businesses
             </h1>
@@ -313,10 +313,12 @@ export default function LandingPage() {
               <div className="rounded-full bg-purple-100 w-12 h-12 flex items-center justify-center mb-5">
                 <CreditCard className="h-6 w-6 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Payments</h3>
-              <p className="text-gray-600 mb-4">
-                A complete payments platform engineered for growth and scale. Accept payments online or in-person.
-              </p>
+              <Link to="/payments" className="group">
+                <h3 className="text-xl font-semibold mb-3 group-hover:text-purple-600 transition-colors">Payments</h3>
+                <p className="text-gray-600 mb-4">
+                  A complete payments platform engineered for growth and scale. Accept payments online or in-person.
+                </p>
+              </Link>
               <a href="/payments" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
                 Explore Payments <ArrowRight className="ml-2 h-4 w-4" />
               </a>
