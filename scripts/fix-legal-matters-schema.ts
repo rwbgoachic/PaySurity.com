@@ -38,6 +38,7 @@ async function fixLegalMattersSchema() {
     // Add columns to legal_documents
     await ensureColumnExists('legal_documents', 'show_in_client_portal', 'BOOLEAN', 'true');
     await ensureColumnExists('legal_documents', 'description', 'TEXT');
+    await ensureColumnExists('legal_documents', 'document_status', 'TEXT');
     
     // Add columns to legal_invoices 
     await ensureColumnExists('legal_invoices', 'show_in_client_portal', 'BOOLEAN', 'true');
