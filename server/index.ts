@@ -314,6 +314,9 @@ app.use((req, res, next) => {
   // Try to detect if we're in a deployment environment where built files might not be available yet
   const isDeploymentBuild = process.env.NODE_ENV === 'production' && !forceDevMode;
   
+  // Force development mode for Vite
+  process.env.NODE_ENV = 'development';
+  
   try {
     if (forceDevMode || app.get("env") === "development") {
       await setupVite(app, server);

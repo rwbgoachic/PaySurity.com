@@ -273,6 +273,9 @@ function Router() {
       {/* Simple test page for connectivity debugging */}
       <Route path="/admin/simple" component={React.lazy(() => import("./pages/admin/simple"))} />
       
+      {/* Minimal React test page with inline styles */}
+      <Route path="/admin/minimal" component={React.lazy(() => import("./pages/admin/minimal"))} />
+      
       {/* Admin routes */}
       <ProtectedRoute path="/admin/dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="super_admin" />
       <ProtectedRoute path="/admin/dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="sub_super_admin" />

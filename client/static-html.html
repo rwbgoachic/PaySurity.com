@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static HTML Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    .success {
+      background-color: #d1fae5;
+      border: 1px solid #10b981;
+      color: #047857;
+    }
+    .info {
+      background-color: #dbeafe;
+      border: 1px solid #3b82f6;
+      color: #1e40af;
+    }
+    .warning {
+      background-color: #fef3c7;
+      border: 1px solid #d97706;
+      color: #92400e;
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    .card p {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Static HTML Test</h1>
+    
+    <div class="card success">
+      <h2>Static HTML Working</h2>
+      <p>If you can see this page, static HTML content is being served correctly.</p>
+    </div>
+    
+    <div class="card info">
+      <h2>CSS Working</h2>
+      <p>If this box has blue styling, CSS is working correctly.</p>
+    </div>
+    
+    <div class="card warning">
+      <h2>Troubleshooting</h2>
+      <p>If you're seeing this page but not the React application, the issue is specifically with the Vite/React setup.</p>
+    </div>
+  </div>
+</body>
+</html>
