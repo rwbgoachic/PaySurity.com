@@ -224,11 +224,12 @@ export class ClientPortalTestService implements TestService {
     await db.execute(sql`
       INSERT INTO legal_documents (
         merchant_id, title, document_type, document_status, client_id, 
-        matter_id, file_path, file_size, mime_type, show_in_client_portal, created_by_id
+        matter_id, file_path, file_size, mime_type, show_in_client_portal, 
+        created_by_id, uploaded_by, uploaded_at
       ) VALUES (
         ${this.testMerchantId}, 'Test Portal Document', 'client_communication', 'final',
         ${this.testClientId}, ${this.testMatterId}, '/test/portal/document.pdf',
-        1024, 'application/pdf', true, 1
+        1024, 'application/pdf', true, 1, 1, CURRENT_TIMESTAMP
       );
     `);
     
@@ -491,52 +492,6 @@ export class ClientPortalTestService implements TestService {
     };
   }
   
-  /**
-   * Test invoice access functionality
-   */
-  private async testInvoiceAccess(): Promise<TestGroup> {
-    const tests: TestResult[] = [];
-    let groupPassed = true;
-    
-    try {
-      // Get invoices for the client
-      const invoices = await this.clientPortalService.getClientInvoices(
-        this.testClientId,
-        this.testMerchantId
-      );
-      
-      // Validate invoice data
-      const valid = Array.isArray(invoices) && invoices.length > 0;
-      tests.push({
-        name: 'Get client invoices',
-        passed: valid,
-        description: 'Should retrieve invoices for the client',
-        error: valid ? null : 'Failed to retrieve client invoices'
-      });
-      
-      if (!valid) {
-        groupPassed = false;
-      }
-      
-    } catch (error) {
-      console.error('Error getting client invoices:', error);
-      tests.push({
-        name: 'Get client invoices',
-        passed: false,
-        description: 'Should retrieve invoices for the client',
-        error: error instanceof Error ? error.message : String(error)
-      });
-      groupPassed = false;
-    }
-    
-    return {
-      name: 'Invoice Access',
-      description: 'Tests for accessing client invoices via the portal',
-      tests,
-      passed: groupPassed
-    };
-  }
-      
   /**
    * Test invoice access functionality
    */
