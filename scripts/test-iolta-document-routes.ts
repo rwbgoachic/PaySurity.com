@@ -84,12 +84,15 @@ async function testIoltaDocumentRoutes() {
     // Find a test transaction to work with
     const testMerchantId = 12345; // Same as in our previous test
     
-    // Get the most recent transaction for our test merchant
-    const [transaction] = await db.select()
-      .from(ioltaTransactions)
-      .where(eq(ioltaTransactions.merchantId, testMerchantId))
-      .orderBy(desc(ioltaTransactions.createdAt))
-      .limit(1);
+    // Get the most recent transaction for our test
+    // Using raw SQL since there's a schema mismatch with merchantId
+    const { rows: transactionRows } = await db.query(`
+      SELECT * FROM iolta_transactions 
+      WHERE merchant_id = ${testMerchantId}
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `);
+    const transaction = transactionRows[0] || null;
     
     if (!transaction) {
       throw new Error("No test transaction found. Run test-iolta-document-integration.ts first.");
@@ -97,10 +100,12 @@ async function testIoltaDocumentRoutes() {
     
     console.log(`Using transaction with ID: ${transaction.id}`);
     
-    // Get the client ledger for our test
-    const clientLedger = await db.query.ioltaClientLedgers.findFirst({
-      where: eq(ioltaClientLedgers.id, transaction.clientLedgerId)
-    });
+    // Get the client ledger for our test (using raw SQL)
+    const { rows: clientLedgerRows } = await db.query(`
+      SELECT * FROM iolta_client_ledgers 
+      WHERE id = ${transaction.client_ledger_id}
+    `);
+    const clientLedger = clientLedgerRows[0] || null;
     
     if (!clientLedger) {
       throw new Error("Client ledger not found for transaction");
@@ -254,9 +259,11 @@ async function testIoltaDocumentRoutes() {
     console.log("\nTest 4: Creating transaction with document in one call...");
     
     // Get test trust account
-    const trustAccount = await db.query.ioltaTrustAccounts.findFirst({
-      where: eq(ioltaTrustAccounts.id, transaction.trustAccountId)
-    });
+    const { rows: trustAccountRows } = await db.query(`
+      SELECT * FROM iolta_trust_accounts 
+      WHERE id = ${transaction.trust_account_id}
+    `);
+    const trustAccount = trustAccountRows[0] || null;
     
     if (!trustAccount) {
       throw new Error("Trust account not found");
