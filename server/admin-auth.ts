@@ -13,6 +13,18 @@ import { db } from "./db";
 import { users } from "../shared/schema";
 import { timingSafeEqual } from "crypto";
 
+// Add admin user to the Express Request type
+declare global {
+  namespace Express {
+    interface Request {
+      adminUser?: {
+        id: number;
+        role: string;
+      };
+    }
+  }
+}
+
 // Secret key for admin auth tokens (ideally from env variable in production)
 const ADMIN_AUTH_SECRET = process.env.ADMIN_AUTH_SECRET || "paysurity-admin-auth-secret-key";
 
