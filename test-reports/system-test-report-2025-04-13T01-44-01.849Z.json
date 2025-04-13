@@ -1,0 +1,8 @@
+{
+  "serviceName": "AllTests",
+  "passed": false,
+  "startTime": "2025-04-13T01:44:01.849Z",
+  "endTime": "2025-04-13T01:44:01.849Z",
+  "testGroups": [],
+  "error": "No test services registered"
+}
