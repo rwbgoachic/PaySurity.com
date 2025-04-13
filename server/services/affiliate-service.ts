@@ -23,7 +23,7 @@ export class AffiliateService {
       }
       
       // First check if the table exists to avoid SQL errors
-      const tableCheckResult = await sqlService.query(`
+      const tableCheckResult = await sqlService.rawSQL(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_name = 'affiliate_profiles'
@@ -31,7 +31,7 @@ export class AffiliateService {
       `);
       
       // Extract the exists property from the first row
-      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
+      const tableExists = tableCheckResult && tableCheckResult[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_profiles does not exist');
         return null;
