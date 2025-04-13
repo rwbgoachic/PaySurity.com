@@ -18,6 +18,25 @@ export class AffiliateService {
    */
   async getAffiliateProfile(userId: number) {
     try {
+      if (!userId) {
+        return null;
+      }
+      
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_profiles'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_profiles does not exist');
+        return null;
+      }
+      
+      // Check if the affiliate exists - use parameterized query with user_id
       const result = await db.execute(
         'SELECT * FROM affiliate_profiles WHERE user_id = $1',
         [userId]
@@ -26,7 +45,8 @@ export class AffiliateService {
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error getting affiliate profile:', error);
-      throw new Error('Failed to get affiliate profile');
+      // Return null instead of throwing error for more graceful handling
+      return null;
     }
   }
   
@@ -176,11 +196,11 @@ export class AffiliateService {
   }
   
   /**
-   * Get affiliate by subdomain
+   * Get affiliate by subdomain/code
    */
   async getAffiliateBySubdomain(subdomain: string) {
     try {
-      // Check if the affiliate exists
+      // Check if the affiliate exists - use affiliate_code instead of subdomain column
       const result = await db.execute(
         'SELECT * FROM affiliate_profiles WHERE affiliate_code = $1',
         [subdomain]
