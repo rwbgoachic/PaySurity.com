@@ -56,8 +56,8 @@ export default function AppHeader({ toggleSidebar, toggleMobileMenu }: AppHeader
       
       <div className="flex items-center space-x-4">
         {isAuthenticated && isSuperAdmin && (
-          <Link href="/admin/dashboard">
-            <a className="text-neutral-700 hover:text-neutral-900">Admin Dashboard</a>
+          <Link to="/super-admin/dashboard">
+            <span className="text-neutral-700 hover:text-neutral-900">Admin Dashboard</span>
           </Link>
         )}
         <Button variant="ghost" size="icon" className="text-neutral-600 hover:text-neutral-900">
