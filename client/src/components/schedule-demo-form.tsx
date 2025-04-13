@@ -246,48 +246,52 @@ export function ScheduleDemoForm({ onSuccess }: ScheduleDemoFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                        onChange={(e) => {
+                          const date = e.target.value ? new Date(e.target.value) : null;
+                          field.onChange(date);
+                        }}
+                        className="w-full"
+                      />
+                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
-                          className={cn(
-                            "w-full h-10 pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
+                          size="icon"
+                          type="button"
                         >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Select a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          <CalendarIcon className="h-4 w-4" />
                         </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={(date) => {
-                          field.onChange(date);
-                          if (date) {
-                            const popover = document.querySelector('[role="dialog"]');
-                            if (popover) {
-                              const parent = popover.parentElement;
-                              if (parent) parent.removeAttribute('data-state');
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            if (date) {
+                              const popover = document.querySelector('[role="dialog"]');
+                              if (popover) {
+                                const parent = popover.parentElement;
+                                if (parent) parent.removeAttribute('data-state');
+                              }
                             }
+                          }}
+                          disabled={(date) => 
+                            date < new Date() || 
+                            date.getDay() === 0 || 
+                            date.getDay() === 6
                           }
-                        }}
-                        disabled={(date) => 
-                          date < new Date() || 
-                          date.getDay() === 0 || 
-                          date.getDay() === 6
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
