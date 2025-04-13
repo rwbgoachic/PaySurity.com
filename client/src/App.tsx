@@ -267,10 +267,12 @@ function Router() {
       <Route path="/payment" component={PaymentPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       
-      {/* Emergency admin access route */}
-      <Route path="/emergency-admin-access" component={React.lazy(() => import("./pages/direct-admin"))} />
+      {/* Admin portal access route - this is the only path to access admin functionality */}
+      <Route path="/admin" component={React.lazy(() => import("./pages/admin/login"))} />
       
       {/* Admin routes */}
+      <ProtectedRoute path="/admin/dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="super_admin" />
+      <ProtectedRoute path="/admin/sub-dashboard" component={React.lazy(() => import("./pages/admin/dashboard"))} requiredRole="sub_admin" />
       <ProtectedRoute path="/admin/sms-settings" component={() => {
           const SmsSettings = React.lazy(() => import("./pages/admin/sms-settings"));
           return (

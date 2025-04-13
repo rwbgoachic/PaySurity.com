@@ -99,6 +99,10 @@ app.get('/sitemap.xml', generateSitemap);
 // Set up auth which will handle session creation
 setupAuth(app);
 
+// Import and setup admin authentication endpoints (bypassing session issues)
+import { setupAdminAuth } from "./admin-auth";
+setupAdminAuth(app);
+
 // CSRF protection - using the session to store csrf secret
 // This must come AFTER session setup
 const csrfProtection = csurf({

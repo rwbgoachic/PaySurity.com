@@ -12,11 +12,30 @@ import {
   Settings,
   ShieldAlert,
   LogOut,
+  UserPlus,
+  UserMinus,
+  FileDown,
+  ChevronRight,
+  Coffee,
+  FileText,
+  UsersRound,
+  Download,
+  Activity,
+  BookOpen,
+  FileCheck,
+  User,
+  UserCheck,
+  BrainCircuit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Admin dashboard component with role-based content
 export default function AdminDashboard() {
@@ -146,29 +165,149 @@ export default function AdminDashboard() {
             Dashboard
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700">
-            <Users className="mr-2 h-5 w-5" />
-            Users & Accounts
+          {/* Business Data Access */}
+          <div className="pt-4 pb-2">
+            <h3 className="px-3 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+              Business Data
+            </h3>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/customers")}
+          >
+            <UsersRound className="mr-2 h-5 w-5" />
+            Customers & Packages
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/merchants")}
+          >
             <DollarSign className="mr-2 h-5 w-5" />
-            Payments
+            Merchants
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700">
-            <Bell className="mr-2 h-5 w-5" />
-            Notifications
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/affiliates")}
+          >
+            <Users className="mr-2 h-5 w-5" />
+            Affiliates
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/partners")}
+          >
+            <Users className="mr-2 h-5 w-5" />
+            Partners
+          </Button>
+
+          {/* Financial Data Access */}
+          <div className="pt-4 pb-2">
+            <h3 className="px-3 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+              Financial Data
+            </h3>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/transactions")}
+          >
+            <DollarSign className="mr-2 h-5 w-5" />
+            Transactions
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/iolta-accounts")}
+          >
             <Lock className="mr-2 h-5 w-5" />
+            IOLTA Accounts
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/payouts")}
+          >
+            <DollarSign className="mr-2 h-5 w-5" />
+            Payouts
+          </Button>
+
+          {/* Analytics & Reports */}
+          <div className="pt-4 pb-2">
+            <h3 className="px-3 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+              Analytics & Reports
+            </h3>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/analytics")}
+          >
+            <BarChart className="mr-2 h-5 w-5" />
+            Analytics Dashboard
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/reports")}
+          >
+            <FileText className="mr-2 h-5 w-5" />
+            Reports
+          </Button>
+
+          {/* System Administration */}
+          <div className="pt-4 pb-2">
+            <h3 className="px-3 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+              System
+            </h3>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/system-users")}
+          >
+            <UsersRound className="mr-2 h-5 w-5" />
+            System Users
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/security")}
+          >
+            <ShieldAlert className="mr-2 h-5 w-5" />
             Security
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/settings")}
+          >
             <Settings className="mr-2 h-5 w-5" />
             Settings
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-indigo-200 hover:text-white hover:bg-indigo-700"
+            onClick={() => navigate("/admin/project-documentation")}
+          >
+            <BookOpen className="mr-2 h-5 w-5" />
+            Documentation
           </Button>
         </nav>
         
@@ -396,6 +535,243 @@ export default function AdminDashboard() {
             
             {/* Right Sidebar - 1/3 width */}
             <div className="space-y-6">
+              {/* Super Admin Section - Only visible for super_admin role */}
+              {user.role === "super_admin" && (
+                <Card className="mb-6 bg-blue-50 border-blue-200">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center">
+                      <UserCheck className="mr-2 h-5 w-5 text-blue-600" />
+                      <CardTitle>Super Admin Controls</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Manage system administrators and access controls
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue="admins">
+                      <TabsList className="mb-4">
+                        <TabsTrigger value="admins">Admin Users</TabsTrigger>
+                        <TabsTrigger value="reports">Documentation</TabsTrigger>
+                        <TabsTrigger value="system">System</TabsTrigger>
+                      </TabsList>
+                      
+                      {/* Admin Users Tab */}
+                      <TabsContent value="admins">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold">System Administrators</h3>
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                              <UserPlus className="mr-1 h-4 w-4" /> Add Admin
+                            </Button>
+                          </div>
+                          
+                          <div className="bg-white rounded-md border border-blue-100 overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Username</TableHead>
+                                  <TableHead>Role</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow>
+                                  <TableCell className="font-medium">super_admin</TableCell>
+                                  <TableCell>
+                                    <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">
+                                      Super Admin
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="flex items-center">
+                                      <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                                      Active
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow>
+                                  <TableCell className="font-medium">john.smith</TableCell>
+                                  <TableCell>
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                      Sub Admin
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="flex items-center">
+                                      <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                                      Active
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end space-x-1">
+                                      <Button variant="ghost" size="sm" className="text-amber-500 hover:text-amber-700">
+                                        <UserMinus className="h-4 w-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                                        <Settings className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow>
+                                  <TableCell className="font-medium">sarah.tech</TableCell>
+                                  <TableCell>
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                      Sub Admin
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="flex items-center">
+                                      <div className="h-2 w-2 rounded-full bg-yellow-500 mr-2"></div>
+                                      Suspended
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end space-x-1">
+                                      <Button variant="ghost" size="sm" className="text-green-500 hover:text-green-700">
+                                        <UserCheck className="h-4 w-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                                        <Settings className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      {/* Documentation & Reports Tab */}
+                      <TabsContent value="reports">
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-semibold">Project Documentation</h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="bg-white p-3 rounded-md border hover:shadow-md transition-shadow">
+                              <div className="flex items-start">
+                                <div className="bg-indigo-100 p-2 rounded">
+                                  <FileText className="h-5 w-5 text-indigo-600" />
+                                </div>
+                                <div className="ml-3">
+                                  <h4 className="text-sm font-medium">Technical Documentation</h4>
+                                  <p className="text-xs text-gray-500 mb-2">System architecture and implementation details</p>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs">
+                                    <Download className="h-3 w-3 mr-1" /> Download PDF
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="bg-white p-3 rounded-md border hover:shadow-md transition-shadow">
+                              <div className="flex items-start">
+                                <div className="bg-green-100 p-2 rounded">
+                                  <BookOpen className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="ml-3">
+                                  <h4 className="text-sm font-medium">User Manuals</h4>
+                                  <p className="text-xs text-gray-500 mb-2">Complete guide for all user types</p>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs">
+                                    <Download className="h-3 w-3 mr-1" /> Download PDF
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="bg-white p-3 rounded-md border hover:shadow-md transition-shadow">
+                              <div className="flex items-start">
+                                <div className="bg-amber-100 p-2 rounded">
+                                  <Activity className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <div className="ml-3">
+                                  <h4 className="text-sm font-medium">Analytics Reports</h4>
+                                  <p className="text-xs text-gray-500 mb-2">Monthly analytics and performance data</p>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs">
+                                    <Download className="h-3 w-3 mr-1" /> Download CSV
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="bg-white p-3 rounded-md border hover:shadow-md transition-shadow">
+                              <div className="flex items-start">
+                                <div className="bg-red-100 p-2 rounded">
+                                  <FileCheck className="h-5 w-5 text-red-600" />
+                                </div>
+                                <div className="ml-3">
+                                  <h4 className="text-sm font-medium">Compliance Reports</h4>
+                                  <p className="text-xs text-gray-500 mb-2">Security and regulatory compliance</p>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs">
+                                    <Download className="h-3 w-3 mr-1" /> Download PDF
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      {/* System Controls Tab */}
+                      <TabsContent value="system">
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-semibold">System Management</h3>
+                          
+                          <div className="bg-white p-4 rounded-md border">
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <BrainCircuit className="h-5 w-5 text-purple-600 mr-2" />
+                                  <div>
+                                    <p className="text-sm font-medium">AI Recommendation Engine</p>
+                                    <p className="text-xs text-gray-500">Intelligent recommendations for users</p>
+                                  </div>
+                                </div>
+                                <Switch />
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <Bell className="h-5 w-5 text-amber-600 mr-2" />
+                                  <div>
+                                    <p className="text-sm font-medium">System-wide Notifications</p>
+                                    <p className="text-xs text-gray-500">Emergency broadcasts to all users</p>
+                                  </div>
+                                </div>
+                                <Button size="sm" variant="outline">Configure</Button>
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <Lock className="h-5 w-5 text-red-600 mr-2" />
+                                  <div>
+                                    <p className="text-sm font-medium">System Lockdown</p>
+                                    <p className="text-xs text-gray-500">Emergency system access restriction</p>
+                                  </div>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
+                                  Activate Lockdown
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              )}
+              
               {/* Security Alerts */}
               <Card className={`${adminStats.securityAlerts > 0 ? "border-red-200 bg-red-50" : ""}`}>
                 <CardHeader className={`${adminStats.securityAlerts > 0 ? "text-red-800" : ""}`}>
