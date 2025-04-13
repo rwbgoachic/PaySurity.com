@@ -303,7 +303,7 @@ app.use((req, res, next) => {
 
   // Use PORT environment variable if available (for deployment) or default to 5000
   // this serves both the API and the client.
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
   server.listen({
     port,
     host: "0.0.0.0",
