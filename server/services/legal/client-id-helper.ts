@@ -1,57 +1,42 @@
 /**
- * Client ID Helper Functions
+ * Client ID Helper
  * 
- * This module provides helper functions for working with clientId values
- * in the IOLTA trust accounting system. It helps standardize the handling
- * of clientId fields that may be stored as text in the database but used
- * as numbers in the application code.
+ * Utility functions to handle the conversion between string and numeric client IDs
+ * across different parts of the legal practice management system.
+ * 
+ * This is needed because:
+ * - IOLTA tables store clientId as string
+ * - Portal tables store clientId as number
  */
 
 /**
- * Ensures that a clientId is properly formatted as a string for storage
- * @param clientId The client ID (number or string)
- * @returns The client ID as a string
+ * Convert client ID to string format for IOLTA operations
  */
-export function ensureStringClientId(clientId: number | string): string {
+export function toIoltaClientId(clientId: string | number): string {
   return String(clientId);
 }
 
 /**
- * Compares two clientId values safely, handling type conversion
- * @param id1 First client ID (can be number or string)
- * @param id2 Second client ID (can be number or string)
- * @returns True if the IDs match when normalized
+ * Convert client ID to number format for portal operations
  */
-export function compareClientIds(id1: number | string | null | undefined, id2: number | string | null | undefined): boolean {
-  if (id1 === null || id1 === undefined || id2 === null || id2 === undefined) {
-    return false;
+export function toPortalClientId(clientId: string | number): number {
+  // If it's already a number, return it
+  if (typeof clientId === 'number') return clientId;
+  
+  // Try to convert to number
+  const numericId = Number(clientId);
+  
+  // Check if conversion was successful and valid
+  if (isNaN(numericId)) {
+    throw new Error(`Invalid client ID: ${clientId}`);
   }
+  
+  return numericId;
+}
+
+/**
+ * Safely compare client IDs regardless of type
+ */
+export function clientIdsMatch(id1: string | number, id2: string | number): boolean {
   return String(id1) === String(id2);
-}
-
-/**
- * Converts a string clientId to a number if possible
- * @param clientId The client ID as a string
- * @returns The client ID as a number, or null if invalid
- */
-export function parseClientId(clientId: string | null | undefined): number | null {
-  if (!clientId) return null;
-  
-  const parsed = parseInt(clientId, 10);
-  return isNaN(parsed) ? null : parsed;
-}
-
-/**
- * Normalize client ID values in an object
- * @param obj Object containing client ID fields
- * @returns New object with normalized client IDs 
- */
-export function normalizeClientIdFields<T extends Record<string, any>>(obj: T): T {
-  const result = { ...obj };
-  
-  if ('clientId' in obj && obj.clientId !== undefined && obj.clientId !== null) {
-    (result as any).clientId = ensureStringClientId(obj.clientId);
-  }
-  
-  return result;
 }

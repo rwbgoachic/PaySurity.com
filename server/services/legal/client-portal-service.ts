@@ -1,4 +1,5 @@
 import { db } from '../../db';
+import { toPortalClientId, toIoltaClientId, clientIdsMatch } from './client-id-helper';
 import { 
   legalClients, 
   legalMatters, 
