@@ -42,7 +42,7 @@ export class AffiliateService {
         [userId]
       );
       
-      return result.rows[0] || null;
+      return result[0] || null;
     } catch (error) {
       console.error('Error getting affiliate profile:', error);
       // Return null instead of throwing error for more graceful handling
@@ -78,7 +78,7 @@ export class AffiliateService {
         [affiliateId]
       );
       
-      return result.rows[0] || null;
+      return result[0] || null;
     } catch (error) {
       console.error('Error getting affiliate by ID:', error);
       // Return null instead of throwing error for more graceful handling
@@ -137,7 +137,7 @@ export class AffiliateService {
       `;
       
       const result = await sqlService.parameterizedSQL(query, params);
-      return result.rows[0] || null;
+      return result[0] || null;
     } catch (error) {
       console.error('Error updating affiliate profile:', error);
       // Return null instead of throwing error for more graceful handling
@@ -162,7 +162,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_referral_tracking does not exist');
         return [];
@@ -173,7 +174,7 @@ export class AffiliateService {
         [affiliateId]
       );
       
-      return result.rows || [];
+      return result || [];
     } catch (error) {
       console.error('Error getting affiliate referrals:', error);
       // Return empty array instead of throwing error for more graceful handling
@@ -212,7 +213,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_referral_tracking does not exist, attempting to create it');
         try {
@@ -289,7 +291,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_commissions does not exist');
         return [];
@@ -325,7 +328,8 @@ export class AffiliateService {
         );
       `);
       
-      const tableExists = tableCheckResult.rows[0]?.exists;
+      // Extract the exists property from the first row
+      const tableExists = tableCheckResult.rows && tableCheckResult.rows[0]?.exists;
       if (!tableExists) {
         console.log('Table affiliate_payouts does not exist');
         return [];
