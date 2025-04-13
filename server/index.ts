@@ -147,15 +147,32 @@ app.use((req, res, next) => {
 
 // Body parser already set up above
 
+// Add global options handler for CORS preflight requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.status(200).end();
+});
+
 // Add performance-optimized caching strategy for assets
 app.use((req, res, next) => {
   // Performance headers
   res.setHeader('Vary', 'Accept-Encoding, User-Agent');
   
-  // Advanced caching strategy for different types of assets
+  // Set explicit mime types for common file extensions
   const path = req.path;
+  if (path.endsWith('.js')) {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  } else if (path.endsWith('.css')) {
+    res.setHeader('Content-Type', 'text/css; charset=utf-8');
+  } else if (path.endsWith('.json')) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  } else if (path.endsWith('.html')) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  }
   
-  // Improved pattern matching for better performance
+  // Advanced caching strategy for different types of assets
   // Cache fonts and immutable assets for 1 year (immutable, 31536000s)
   if (/\.(woff|woff2|ttf|eot)$/.test(path)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
