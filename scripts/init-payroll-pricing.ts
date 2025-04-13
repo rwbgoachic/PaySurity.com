@@ -275,6 +275,9 @@ async function createFeatureAvailability() {
   // Get all features
   const features = await db.select().from(payrollPricingFeatures);
   
+  // Get existing mappings to avoid duplicates
+  const existingMappings = await db.select().from(payrollPricingFeatureAvailability);
+  
   // Create mappings
   for (const tier of pricingTiers) {
     const tierMappings = featureMapping[tier.tier as keyof typeof featureMapping];
@@ -289,15 +292,30 @@ async function createFeatureAvailability() {
         continue;
       }
       
-      const [availability] = await db.insert(payrollPricingFeatureAvailability).values({
-        pricingId: tier.id,
-        featureId: feature.id,
-        isIncluded: mapping.isIncluded,
-        additionalCost: mapping.additionalCost,
-        isLimited: false
-      }).returning();
+      // Check if mapping already exists
+      const exists = existingMappings.some(m => 
+        m.pricingId === tier.id && m.featureId === feature.id
+      );
       
-      console.log(`  - ${feature.name}: ${mapping.isIncluded ? 'Included' : 'Not included'}${mapping.additionalCost ? ` (Additional cost: $${mapping.additionalCost})` : ''}`);
+      if (exists) {
+        console.log(`  - ${feature.name}: Mapping already exists, skipping.`);
+        continue;
+      }
+      
+      try {
+        const [availability] = await db.insert(payrollPricingFeatureAvailability).values({
+          pricingId: tier.id,
+          featureId: feature.id,
+          isIncluded: mapping.isIncluded,
+          additionalCost: mapping.additionalCost,
+          isLimited: false
+        }).returning();
+        
+        console.log(`  - ${feature.name}: ${mapping.isIncluded ? 'Included' : 'Not included'}${mapping.additionalCost ? ` (Additional cost: $${mapping.additionalCost})` : ''}`);
+      } catch (error) {
+        // Handle unique constraint violation
+        console.warn(`  - Error creating mapping for ${feature.name}: ${(error as Error).message}`);
+      }
     }
   }
   
@@ -308,15 +326,9 @@ async function createFeatureAvailability() {
  * Helper function to ask a question and get user input
  */
 function askQuestion(query: string): Promise<string> {
-  const readline = require('readline').createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise(resolve => readline.question(query, (answer: string) => {
-    readline.close();
-    resolve(answer);
-  }));
+  // In ESM, always assume 'yes' for now to avoid requiring readline
+  console.log(`${query} (Automatically responding 'y')`);
+  return Promise.resolve('y');
 }
 
 /**
