@@ -82,7 +82,7 @@ async function runIoltaTests() {
       console.log("No transactions found, creating a test transaction");
       
       // Create a test transaction using the transaction SQL service
-      const result = await transactionService.createTransaction({
+      const result = await ioltaTransactionSqlService.createTransaction({
         merchantId: testMerchantId,
         trustAccountId: testAccount.id,
         clientLedgerId: testLedger.id,
