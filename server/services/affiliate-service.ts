@@ -111,6 +111,24 @@ export class AffiliateService {
    */
   async getAffiliateReferrals(affiliateId: number) {
     try {
+      if (!affiliateId) {
+        return [];
+      }
+      
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_referral_tracking'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_referral_tracking does not exist');
+        return [];
+      }
+      
       const result = await db.execute(
         'SELECT * FROM affiliate_referral_tracking WHERE affiliate_id = $1 ORDER BY created_at DESC',
         [affiliateId]
@@ -119,7 +137,8 @@ export class AffiliateService {
       return result.rows || [];
     } catch (error) {
       console.error('Error getting affiliate referrals:', error);
-      throw new Error('Failed to get affiliate referrals');
+      // Return empty array instead of throwing error for more graceful handling
+      return [];
     }
   }
   
@@ -166,6 +185,24 @@ export class AffiliateService {
    */
   async getAffiliateCommissions(affiliateId: number) {
     try {
+      if (!affiliateId) {
+        return [];
+      }
+      
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_commissions'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_commissions does not exist');
+        return [];
+      }
+      
       const result = await db.execute(
         'SELECT * FROM affiliate_commissions WHERE affiliate_id = $1 ORDER BY created_at DESC',
         [affiliateId]
@@ -174,7 +211,8 @@ export class AffiliateService {
       return result.rows || [];
     } catch (error) {
       console.error('Error getting affiliate commissions:', error);
-      throw new Error('Failed to get affiliate commissions');
+      // Return empty array instead of throwing error for more graceful handling
+      return [];
     }
   }
   
@@ -183,6 +221,24 @@ export class AffiliateService {
    */
   async getAffiliatePayouts(affiliateId: number) {
     try {
+      if (!affiliateId) {
+        return [];
+      }
+      
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_payouts'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_payouts does not exist');
+        return [];
+      }
+      
       const result = await db.execute(
         'SELECT * FROM affiliate_payouts WHERE affiliate_id = $1 ORDER BY created_at DESC',
         [affiliateId]
@@ -191,7 +247,8 @@ export class AffiliateService {
       return result.rows || [];
     } catch (error) {
       console.error('Error getting affiliate payouts:', error);
-      throw new Error('Failed to get affiliate payouts');
+      // Return empty array instead of throwing error for more graceful handling
+      return [];
     }
   }
   
@@ -200,7 +257,58 @@ export class AffiliateService {
    */
   async getAffiliateBySubdomain(subdomain: string) {
     try {
-      // Check if the affiliate exists - use affiliate_code instead of subdomain column
+      if (!subdomain) {
+        return null;
+      }
+      
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'affiliate_profiles'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table affiliate_profiles does not exist');
+        return null;
+      }
+      
+      // Check if affiliate_code column exists
+      const columnCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'affiliate_profiles' AND column_name = 'affiliate_code'
+        );
+      `);
+      
+      const columnExists = columnCheckResult.rows[0]?.exists;
+      if (!columnExists) {
+        console.log('Column affiliate_code does not exist in affiliate_profiles table');
+        
+        // Try using subdomain column instead as fallback
+        const subdomainColumnCheckResult = await db.execute(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_name = 'affiliate_profiles' AND column_name = 'subdomain'
+          );
+        `);
+        
+        const subdomainColumnExists = subdomainColumnCheckResult.rows[0]?.exists;
+        if (subdomainColumnExists) {
+          const result = await db.execute(
+            'SELECT * FROM affiliate_profiles WHERE subdomain = $1',
+            [subdomain]
+          );
+          
+          return result.rows[0] || null;
+        }
+        
+        return null;
+      }
+      
+      // Use affiliate_code column
       const result = await db.execute(
         'SELECT * FROM affiliate_profiles WHERE affiliate_code = $1',
         [subdomain]
@@ -209,7 +317,8 @@ export class AffiliateService {
       return result.rows[0] || null;
     } catch (error) {
       console.error('Error getting affiliate by subdomain:', error);
-      throw new Error('Failed to get affiliate by subdomain');
+      // Return null instead of throwing error for more graceful handling
+      return null;
     }
   }
   
@@ -218,6 +327,11 @@ export class AffiliateService {
    */
   async updateMicrositeSettings(affiliateId: number, settings: any) {
     try {
+      if (!affiliateId) {
+        console.log('No affiliate ID provided');
+        return null;
+      }
+      
       const {
         subdomain,
         theme,
@@ -225,20 +339,52 @@ export class AffiliateService {
         customColors
       } = settings;
       
-      // First check if we have a microsite settings record for this affiliate
+      // First check if the table exists to avoid SQL errors
+      const tableCheckResult = await db.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'merchant_microsite_settings'
+        );
+      `);
+      
+      const tableExists = tableCheckResult.rows[0]?.exists;
+      if (!tableExists) {
+        console.log('Table merchant_microsite_settings does not exist, attempting to create it');
+        try {
+          // Create the table if it doesn't exist
+          await db.execute(`
+            CREATE TABLE IF NOT EXISTS merchant_microsite_settings (
+              id SERIAL PRIMARY KEY,
+              affiliate_id INTEGER NOT NULL,
+              subdomain TEXT,
+              theme TEXT,
+              custom_logo TEXT,
+              custom_colors JSONB,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            );
+          `);
+          console.log('Created merchant_microsite_settings table');
+        } catch (createError) {
+          console.error('Error creating merchant_microsite_settings table:', createError);
+          return null;
+        }
+      }
+      
+      // Check if we have a microsite settings record for this affiliate
       const existingResult = await db.execute(
         'SELECT * FROM merchant_microsite_settings WHERE affiliate_id = $1',
         [affiliateId]
       );
       
-      if (existingResult.rows.length > 0) {
+      if (existingResult.rows && existingResult.rows.length > 0) {
         // Update existing record
         const updateResult = await db.execute(`
           UPDATE merchant_microsite_settings
           SET subdomain = $1, theme = $2, custom_logo = $3, custom_colors = $4, updated_at = NOW()
           WHERE affiliate_id = $5
           RETURNING *
-        `, [subdomain, theme, customLogo, JSON.stringify(customColors), affiliateId]);
+        `, [subdomain, theme, customLogo, JSON.stringify(customColors || {}), affiliateId]);
         
         return updateResult.rows[0] || null;
       } else {
@@ -249,13 +395,14 @@ export class AffiliateService {
           )
           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
           RETURNING *
-        `, [affiliateId, subdomain, theme, customLogo, JSON.stringify(customColors)]);
+        `, [affiliateId, subdomain, theme, customLogo, JSON.stringify(customColors || {})]);
         
         return insertResult.rows[0] || null;
       }
     } catch (error) {
       console.error('Error updating microsite settings:', error);
-      throw new Error('Failed to update microsite settings');
+      // Return null instead of throwing error for more graceful handling
+      return null;
     }
   }
 }
