@@ -333,7 +333,7 @@ export class ClientPortalTestService implements TestService {
           id: portalUser.id,
           email: portalUser.email,
           clientId: portalUser.clientId,
-          parsedClientId: portalUser.clientId
+          clientIdStr: String(portalUser.clientId)
         } : null
       });
       
