@@ -105,6 +105,18 @@ export class IoltaTransactionSqlService {
       }
       
       // 4. Insert the transaction with the calculated balance_after
+      // Log parameters to help with debugging
+      console.log('Transaction parameters:', {
+        merchantId: data.merchantId,
+        trustAccountId: data.trustAccountId,
+        clientLedgerId: data.clientLedgerId,
+        amount: data.amount,
+        balanceAfter: newLedgerBalance.toString(), // This is the key field causing errors
+        description: data.description,
+        transactionType: data.transactionType,
+        fundType: data.fundType
+      });
+      
       const insertResult = await client.query(
         `INSERT INTO iolta_transactions (
           merchant_id, 
@@ -133,7 +145,7 @@ export class IoltaTransactionSqlService {
           data.trustAccountId,
           data.clientLedgerId,
           data.amount,
-          newLedgerBalance.toString(), // The balance_after value
+          newLedgerBalance.toString(), // The balance_after value - ensuring string format
           data.description,
           data.transactionType,
           data.fundType,
