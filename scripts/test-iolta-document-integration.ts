@@ -209,6 +209,7 @@ async function testIoltaDocumentIntegration() {
       status: "final",
       authorId: testUserId, // Use numeric user ID
       lastModifiedById: testUserId, // Use numeric user ID
+      uploaded_by: testUserId, // Explicitly set the uploaded_by field
       clientId: testClient.id, // Use the test client's ID
       fileLocation: "test-document.pdf", // Add required fileLocation field
       fileSize: fileBuffer.length, // Add file size based on buffer length
@@ -263,6 +264,7 @@ async function testIoltaDocumentIntegration() {
       status: "final",
       authorId: testUserId, // Use numeric user ID 
       lastModifiedById: testUserId, // Use numeric user ID
+      uploaded_by: testUserId, // Explicitly set the uploaded_by field
       clientId: testClient.id, // Use the test client's ID
       fileLocation: "combined-transaction-document.pdf", // Add required fileLocation field
       fileSize: fileBuffer.length, // Add file size based on buffer length
