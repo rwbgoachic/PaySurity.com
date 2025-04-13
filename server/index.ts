@@ -30,18 +30,21 @@ app.use(compression());
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.stripe.com", "wss://*.replit.dev"],
-      connectSrc: ["'self'", "api.stripe.com", "newsapi.org", "*.paysurity.com", "wss://*.replit.dev", "https://*.replit.dev", "ws://localhost:*"],
+      defaultSrc: ["'self'", "https://*.replit.dev", "wss://*.replit.dev"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.stripe.com", "wss://*.replit.dev", "https://*.replit.dev"],
+      connectSrc: ["'self'", "api.stripe.com", "newsapi.org", "*.paysurity.com", "wss://*.replit.dev", "https://*.replit.dev", "ws://localhost:*", "ws://*", "wss://*"],
       frameSrc: ["'self'", "*.stripe.com"],
-      imgSrc: ["'self'", "data:", "*.stripe.com", "*.newsapi.org", "*.paysurity.com", "https://*.replit.dev"],
-      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "https://*.replit.dev"],
-      fontSrc: ["'self'", "fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "*.stripe.com", "*.newsapi.org", "*.paysurity.com", "https://*.replit.dev", "*"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "https://*.replit.dev", "*"],
+      fontSrc: ["'self'", "fonts.gstatic.com", "data:", "https://*.replit.dev", "*"],
+      workerSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
       upgradeInsecureRequests: [],
     },
   },
   xssFilter: true,
-  noSniff: true,
+  noSniff: false, // Allow proper MIME type detection for Vite HMR websockets
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   hsts: {
     maxAge: 15552000, // 180 days in seconds
