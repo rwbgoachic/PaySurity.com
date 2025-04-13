@@ -261,6 +261,9 @@ app.use((req, res, next) => {
     // Legal pages
     '/terms', '/privacy', '/compliance', '/security',
     
+    // Admin portal routes
+    '/admin', '/admin/*',
+    
     // All other client-side routes that might be in the footer
     '/payments'
   ], (req, res, next) => {
