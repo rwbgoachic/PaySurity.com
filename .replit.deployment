@@ -1,6 +1,6 @@
-run = "node server.js"
+run = "node server/index.js"
 deploymentTarget = "cloudrun"
-build = ["npm", "install", "&&", "./build-for-deploy.sh"]
+build = ["npm", "install", "&&", "chmod +x build-for-deploy.sh", "&&", "./build-for-deploy.sh"]
 
 [env]
 NODE_ENV = "production"

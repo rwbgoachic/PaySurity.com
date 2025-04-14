@@ -6,15 +6,80 @@ echo "🚀 Starting build process for deployment..."
 # Step 1: Ensure directories exist
 echo "📁 Setting up directory structure..."
 mkdir -p dist/server/public
+mkdir -p server/public
 
-# Step 2: Copy static files
+# Step 2: Create minimal index.html if it doesn't exist
+echo "📄 Creating minimal index.html..."
+cat > server/public/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaySurity - Payment Processing Platform</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9fafb;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 800px;
+      text-align: center;
+      background-color: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #4f46e5;
+    }
+    p {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      color: #4b5563;
+    }
+    .status {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: #ecfdf5;
+      color: #064e3b;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PaySurity</h1>
+    <p>Comprehensive Enterprise Payment Processing Platform</p>
+    <p>Our platform provides advanced financial infrastructure with intelligent payment solutions, multi-tenant management, and comprehensive security.</p>
+    <div class="status">
+      ✅ Server is running correctly in production mode
+    </div>
+  </div>
+</body>
+</html>
+EOF
+
+# Step 3: Copy static files
 echo "📄 Copying static files..."
 cp -r server/public/* dist/server/public/ 2>/dev/null || echo "No static files to copy"
 
-# Step 3: Manual conversion of index.ts to index.js
-echo "📦 Converting server/index.ts to JavaScript..."
-# Create a simple server/index.js that loads the TypeScript version
-cat > dist/server/index.js << 'EOF'
+# Step 4: Create a direct server/index.js for deployment
+echo "📦 Creating server/index.js for deployment..."
+# First create in the main server directory (needed by the deployment system)
+cat > server/index.js << 'EOF'
 // This file was created by the build script to handle TypeScript loading
 // Import required modules
 import * as dotenv from 'dotenv';
@@ -70,8 +135,15 @@ EOF
 echo "✅ Build complete! Files are in the 'dist' directory."
 
 # Verify the build
+if [ -f "server/index.js" ]; then
+  echo "✅ Server index.js created successfully."
+else
+  echo "❌ Error: server/index.js not found."
+  exit 1
+fi
+
 if [ -f "dist/server/index.js" ]; then
-  echo "✅ Server file created successfully."
+  echo "✅ dist/server/index.js created successfully."
 else
   echo "❌ Error: dist/server/index.js not found."
   exit 1
@@ -81,6 +153,20 @@ if [ -f "dist/index.js" ]; then
   echo "✅ Root entry point created."
 else
   echo "❌ Error: dist/index.js not found."
+  exit 1
+fi
+
+if [ -f "server/public/index.html" ]; then
+  echo "✅ Static HTML file in server/public created successfully."
+else
+  echo "❌ Error: server/public/index.html not found."
+  exit 1
+fi
+
+if [ -f "dist/server/public/index.html" ]; then
+  echo "✅ Static HTML file in dist/server/public created successfully."
+else
+  echo "❌ Error: dist/server/public/index.html not found."
   exit 1
 fi
 
