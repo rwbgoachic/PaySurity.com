@@ -51,13 +51,13 @@ export function SiteHeader() {
                         </Link>
                       </NavigationMenuLink>
                     </li>
-                    <ProductItem to="/digital-wallet-page" title="Digital Wallet">
+                    <ProductItem to="/digital-wallet" title="Digital Wallet">
                       Card-present transactions, online payments, and ACH services
                     </ProductItem>
-                    <ProductItem to="/pos-systems-page" title="POS Systems">
+                    <ProductItem to="/pos-systems" title="POS Systems">
                       Specialized POS solutions for different industries
                     </ProductItem>
-                    <ProductItem to="/industry-solutions-page" title="Industry Solutions">
+                    <ProductItem to="/industry-solutions" title="Industry Solutions">
                       Tailored payment solutions for restaurant, legal, healthcare, and retail
                     </ProductItem>
                   </ul>
@@ -68,16 +68,16 @@ export function SiteHeader() {
                 <NavigationMenuTrigger className="h-10">Solutions</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid gap-3 p-4 w-[500px] md:grid-cols-2">
-                    <ProductItem to="/industry-solutions-page#restaurant" title="Restaurant">
+                    <ProductItem to="/industry-solutions#restaurant" title="Restaurant">
                       Table management, order processing, tip calculations
                     </ProductItem>
-                    <ProductItem to="/industry-solutions-page#legal" title="Legal Practices">
+                    <ProductItem to="/industry-solutions#legal" title="Legal Practices">
                       Client billing, time tracking, case management
                     </ProductItem>
-                    <ProductItem to="/industry-solutions-page#healthcare" title="Healthcare">
+                    <ProductItem to="/industry-solutions#healthcare" title="Healthcare">
                       Insurance verification, HIPAA compliance, patient billing
                     </ProductItem>
-                    <ProductItem to="/industry-solutions-page#retail" title="Retail">
+                    <ProductItem to="/industry-solutions#retail" title="Retail">
                       Inventory management, customer loyalty, sales reporting
                     </ProductItem>
                   </ul>
@@ -146,17 +146,17 @@ export function SiteHeader() {
                 <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
               </summary>
               <div className="ml-2 mt-1 space-y-2">
-                <Link to="/digital-wallet-page">
+                <Link to="/digital-wallet">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Digital Wallet
                   </div>
                 </Link>
-                <Link to="/pos-systems-page">
+                <Link to="/pos-systems">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     POS Systems
                   </div>
                 </Link>
-                <Link to="/industry-solutions-page">
+                <Link to="/industry-solutions">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Industry Solutions
                   </div>
@@ -170,22 +170,22 @@ export function SiteHeader() {
                 <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
               </summary>
               <div className="ml-2 mt-1 space-y-2">
-                <Link to="/industry-solutions-page#restaurant">
+                <Link to="/industry-solutions#restaurant">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Restaurant
                   </div>
                 </Link>
-                <Link to="/industry-solutions-page#legal">
+                <Link to="/industry-solutions#legal">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Legal Practices
                   </div>
                 </Link>
-                <Link to="/industry-solutions-page#healthcare">
+                <Link to="/industry-solutions#healthcare">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Healthcare
                   </div>
                 </Link>
-                <Link to="/industry-solutions-page#retail">
+                <Link to="/industry-solutions#retail">
                   <div className="block rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Retail
                   </div>
