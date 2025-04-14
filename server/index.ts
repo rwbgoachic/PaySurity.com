@@ -99,6 +99,17 @@ app.use('/api/register', authLimiter);
 // First set up the routes that need to be registered before authentication and CSRF
 app.get('/sitemap.xml', generateSitemap);
 
+// Health check endpoint - useful for deployment verification and monitoring
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    service: 'paysurity-api',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Serve a static landing page on the root route to ensure we always have content
 app.get('/', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
