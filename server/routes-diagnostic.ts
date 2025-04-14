@@ -161,5 +161,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Create and return an HTTP server
   const server = createServer(app);
+  app.set('host', '0.0.0.0');
   return server;
 }
