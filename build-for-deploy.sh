@@ -76,9 +76,18 @@ EOF
 echo "📄 Copying static files..."
 cp -r server/public/* dist/server/public/ 2>/dev/null || echo "No static files to copy"
 
-# Step 4: Create a direct server/index.js for deployment
+# Step 4: Add package.json type: module if not already there
+echo "📦 Ensuring package.json has correct type..."
+if ! grep -q '"type": "module"' package.json; then
+  # Use temporary file to avoid issues with inline editing
+  cat package.json | jq '. + {"type": "module"}' > package.json.tmp && mv package.json.tmp package.json
+  echo "Added type: module to package.json"
+else
+  echo "package.json already has type: module"
+fi
+
+# Step 5: Create a direct server/index.js for deployment (this is just a backup, we'll use root server.js)
 echo "📦 Creating server/index.js for deployment..."
-# First create in the main server directory (needed by the deployment system)
 cat > server/index.js << 'EOF'
 // This file was created by the build script to handle TypeScript loading
 // Import required modules

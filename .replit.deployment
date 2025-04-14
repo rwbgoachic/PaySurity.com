@@ -1,4 +1,4 @@
-run = "node server/index.js"
+run = "node server.js"
 deploymentTarget = "cloudrun"
 build = ["npm", "install", "&&", "chmod +x build-for-deploy.sh", "&&", "./build-for-deploy.sh"]
 
