@@ -12,7 +12,7 @@ PORT = "5000"
 channel = "stable-22_11"
 
 [deployment]
-run = "node start.js"
+run = "node server.js"
 deploymentTarget = "cloudrun"
 build = ["npm", "install", "&&", "./build-for-deploy.sh"]
 ignorePorts = false
