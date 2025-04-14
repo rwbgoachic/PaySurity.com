@@ -913,13 +913,15 @@ app.use((req, res, next) => {
   
   // For deployment purposes, we'll set a safety mechanism
   // This ensures the application starts even if built files aren't found
-  const forceDevMode = true; // Set to true to always use development mode for now
+  const forceDevMode = false; // Set to false to allow production mode for deployment
   
   // Try to detect if we're in a deployment environment where built files might not be available yet
   const isDeploymentBuild = process.env.NODE_ENV === 'production' && !forceDevMode;
   
-  // Force development mode for Vite
-  process.env.NODE_ENV = 'development';
+  // Only set development mode if it's not already set to production
+  if (!isDeploymentBuild) {
+    process.env.NODE_ENV = 'development';
+  }
   
   try {
     if (forceDevMode || app.get("env") === "development") {
