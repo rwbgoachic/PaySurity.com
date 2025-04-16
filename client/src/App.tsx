@@ -1,15 +1,14 @@
 import React from "react";
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "./providers/auth-provider";
+import { AuthProvider } from "@/providers/auth-provider";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 
-// Our new dark-themed landing page
-import MainLandingPage from "@/pages/dark/landing-page";
+// DIRECT APPROACH - Using our simplified dark landing page
+import DirectDarkLanding from "./pages/direct-dark-landing";
 
 // Fallback to existing pages for now
-import LandingPageOld from "@/pages/landing-page-new-content";
 import ProductsPage from "@/pages/products-page";
 import PricingPage from "@/pages/pricing-page";
 import IndustrySolutionsPage from "@/pages/industry-solutions-page";
@@ -29,10 +28,19 @@ function Router() {
     setupCSRFInterceptor();
   }, []);
 
+  // Force-log to browser console for debugging
+  React.useEffect(() => {
+    console.log('🔵 APP LOADED: Using dark theme landing page');
+
+    // Log any theme data
+    const theme = document.documentElement.getAttribute('data-theme');
+    console.log('Theme from document:', theme);
+  }, []);
+
   return (
     <Switch>
-      {/* Main public routes - using our new dark-themed landing page */}
-      <Route path="/" component={MainLandingPage} />
+      {/* Main public routes - using our DIRECT dark-themed landing page */}
+      <Route path="/" component={DirectDarkLanding} />
       
       {/* Fall back to existing pages for now */}
       <Route path="/products" component={ProductsPage} />

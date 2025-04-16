@@ -1,44 +1,27 @@
-import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
-import { Redirect, Route } from "wouter";
+import React from "react";
+import { Route, useLocation, useRoute } from "wouter";
+import { useAuth } from "@/providers/auth-provider";
 
-export function ProtectedRoute({
-  path,
-  component: Component,
-  requiredRole,
-}: {
-  path: string;
-  component: React.FC<any>;
-  requiredRole?: string;
-}) {
-  const { user, isLoading } = useAuth();
+// Generic protected route component that redirects to login if not authenticated
+export function ProtectedRoute({ component: Component, ...rest }: any) {
+  const { isAuthenticated, loading } = useAuth();
+  const [, navigate] = useLocation();
 
-  if (isLoading) {
-    return (
-      <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-border" />
-        </div>
-      </Route>
-    );
+  // Use matchRoute to check if current route matches the protected path
+  const [matches] = useRoute(rest.path);
+
+  React.useEffect(() => {
+    // Only redirect when finished loading and on a matching route
+    if (!loading && !isAuthenticated && matches) {
+      navigate("/auth?mode=login&redirect=" + encodeURIComponent(rest.path));
+    }
+  }, [isAuthenticated, loading, matches, navigate, rest.path]);
+
+  // Show nothing while checking auth status
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
-  if (!user) {
-    return (
-      <Route path={path}>
-        <Redirect to="/auth" />
-      </Route>
-    );
-  }
-
-  // Check for role-based access if requiredRole is specified
-  if (requiredRole && user.role !== requiredRole && user.role !== 'super_admin') {
-    return (
-      <Route path={path}>
-        <Redirect to="/unauthorized" />
-      </Route>
-    );
-  }
-
-  return <Route path={path} component={Component} />;
+  // Return the normal route, the redirect happens via the effect
+  return <Route {...rest} component={Component} />;
 }
