@@ -154,46 +154,26 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Top Navigation */}
-      <header className="border-b border-gray-100 bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-8">
-            {/* Logo */}
-            <Link to="/">
-              <div className="flex items-center">
-                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">PaySurity</span>
-              </div>
+      <header className="border-b border-gray-100 py-4 bg-white">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center">
+              <img src="/logo.svg" alt="PaySurity" className="h-8 w-auto" />
+              <span className="ml-2 text-xl font-bold text-gray-900">PaySurity</span>
             </Link>
-            
-            {/* Main Navigation */}
-            <nav className="hidden md:flex space-x-6">
-              <Link to="/products">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Products</span>
-              </Link>
-              <Link to="/digital-wallet">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Digital Wallet</span>
-              </Link>
-              <Link to="/industry-solutions">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Solutions</span>
-              </Link>
-              <Link to="/pos-systems">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">POS Systems</span>
-              </Link>
-              <Link to="/pricing">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</span>
-              </Link>
-            </nav>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <Link to="/auth">
-              <span className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Sign in</span>
-            </Link>
-            <Button asChild className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white">
-              <Link to="/auth">
-                <span>Get started</span>
-              </Link>
+          <nav className="hidden md:flex items-center space-x-8">
+            <Link to="/products" className="text-gray-600 hover:text-gray-900">Products</Link>
+            <Link to="/solutions" className="text-gray-600 hover:text-gray-900">Solutions</Link>
+            <Link to="/digital-wallet" className="text-gray-600 hover:text-gray-900">Digital Wallet</Link>
+            <Link to="/pricing" className="text-gray-600 hover:text-gray-900">Pricing</Link>
+            <Link to="/documentation" className="text-gray-600 hover:text-gray-900">Docs</Link>
+            <Link to="/auth" className="text-gray-600 hover:text-gray-900">Sign in</Link>
+            <Button asChild>
+              <Link to="/contact">Contact Sales</Link>
             </Button>
-          </div>
+          </nav>
         </div>
       </header>
       
