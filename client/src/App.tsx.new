@@ -1,0 +1,114 @@
+import React from "react";
+import { Switch, Route } from "wouter";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "./providers/auth-provider";
+import NotFound from "@/pages/not-found";
+import AuthPage from "@/pages/auth-page";
+
+// Base Pages
+import MainLandingPage from "@/pages/dark/landing-page";
+import ProductsPage from "@/pages/dark/products-page";
+import PricingPage from "@/pages/dark/pricing-page";
+import IndustrySolutionsPage from "@/pages/dark/industry-solutions-page";
+import DigitalWalletPage from "@/pages/dark/digital-wallet-page";
+import PosSystemsPage from "@/pages/dark/pos-systems-page";
+import PaymentsPage from "@/pages/dark/payments-page";
+import DocumentationPage from "@/pages/dark/documentation-page";
+import FAQPage from "@/pages/dark/faq-page";
+import SupportPage from "@/pages/dark/support-page";
+import AboutPage from "@/pages/dark/about-page";
+import CareersPage from "@/pages/dark/careers-page";
+import ContactPage from "@/pages/dark/contact-page";
+import LegalPage from "@/pages/dark/legal-page";
+import PartnersPage from "@/pages/dark/partners-page";
+import AffiliatesPage from "@/pages/dark/affiliates-page";
+import PartnerPortalPage from "@/pages/dark/partner-portal-page";
+import AffiliatePortalPage from "@/pages/dark/affiliate-portal-page";
+
+// Blog Pages
+import BlogPage from "@/pages/dark/blog-page";
+import BlogPostPage from "@/pages/dark/blog-post-page";
+
+// Protected Routes
+import { ProtectedRoute } from "./lib/protected-route";
+import Dashboard from "@/pages/dark/dashboard";
+
+// Admin Routes
+import AdminLoginPage from "@/pages/dark/admin/login-page";
+import AdminDashboardPage from "@/pages/dark/admin/dashboard-page";
+
+// Merchant Routes
+import MerchantDashboardPage from "@/pages/dark/merchant/dashboard-page";
+import MerchantOnboardingPage from "@/pages/dark/merchant/onboarding-page";
+import MerchantVerificationPage from "@/pages/dark/merchant/verification-page";
+
+// POS Routes
+import BistroBeastPOS from "@/pages/dark/pos/bistro-beast-page";
+import RetailPOSSystem from "@/pages/dark/pos/retail-pos-page";
+
+// Utility
+import { setupCSRFInterceptor } from "./lib/csrf";
+
+function Router() {
+  // Set up CSRF token fetch on app load
+  React.useEffect(() => {
+    setupCSRFInterceptor();
+  }, []);
+
+  return (
+    <Switch>
+      {/* Main public routes */}
+      <Route path="/" component={MainLandingPage} />
+      <Route path="/products" component={ProductsPage} />
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/industry-solutions" component={IndustrySolutionsPage} />
+      <Route path="/digital-wallet" component={DigitalWalletPage} />
+      <Route path="/pos-systems" component={PosSystemsPage} />
+      <Route path="/payments" component={PaymentsPage} />
+      <Route path="/documentation" component={DocumentationPage} />
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/support" component={SupportPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/careers" component={CareersPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/legal" component={LegalPage} />
+      <Route path="/partners" component={PartnersPage} />
+      <Route path="/affiliates" component={AffiliatesPage} />
+      <Route path="/partner-portal" component={PartnerPortalPage} />
+      <Route path="/affiliate-portal" component={AffiliatePortalPage} />
+      <Route path="/auth" component={AuthPage} />
+      
+      {/* Blog routes */}
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/:slug" component={BlogPostPage} />
+      
+      {/* Protected dashboard routes */}
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
+      
+      {/* Merchant routes */}
+      <ProtectedRoute path="/merchant/dashboard" component={MerchantDashboardPage} />
+      <ProtectedRoute path="/merchant/onboarding" component={MerchantOnboardingPage} />
+      <ProtectedRoute path="/merchant/verification" component={MerchantVerificationPage} />
+      
+      {/* POS Routes */}
+      <ProtectedRoute path="/pos/bistro" component={BistroBeastPOS} />
+      <ProtectedRoute path="/pos/retail" component={RetailPOSSystem} />
+      
+      {/* Admin routes */}
+      <Route path="/admin" component={AdminLoginPage} />
+      <ProtectedRoute path="/admin/dashboard" component={AdminDashboardPage} />
+      
+      {/* Catch-all route */}
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router />
+      <Toaster />
+    </AuthProvider>
+  );
+}
