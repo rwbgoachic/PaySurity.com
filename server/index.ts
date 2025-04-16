@@ -673,17 +673,14 @@ app.get('/emergency-april-16-landing', (req, res) => {
   // doesn't interfere with the other routes
   
   // Check if we're in development or production mode
-  const isDevelopment = process.env.NODE_ENV !== "production";
-  console.log(`Running in ${isDevelopment ? 'development' : 'production'} mode`);
+  // Force development mode to ensure Vite is used for our new dark themed UI
+  const isDevelopment = true; // Override for our redesign
+  console.log(`Running in ${isDevelopment ? 'development' : 'production'} mode - Force development ON for dark theme redesign`);
   
   try {
-    if (isDevelopment) {
-      console.log('Setting up Vite development middleware');
-      await setupVite(app, server);
-    } else {
-      console.log('Serving static files from public directory');
-      serveStatic(app);
-    }
+    // Always use Vite for now since we're testing our new dark theme
+    console.log('Setting up Vite development middleware for dark theme testing');
+    await setupVite(app, server);
   } catch (err: any) {
     console.warn('Error setting up server:', err.message || 'Unknown error');
     console.warn('Attempting to fall back to Vite middleware');
