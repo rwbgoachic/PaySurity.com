@@ -613,10 +613,10 @@ p {
 .hero {
   position: relative;
   overflow: hidden;
-  padding: var(--spacing-24) var(--spacing-4) var(--spacing-16);
+  padding: var(--spacing-12) var(--spacing-4) var(--spacing-8);
   background-color: var(--bg-primary);
   text-align: center;
-  min-height: 80vh;
+  min-height: 50vh; /* Reduced from 80vh */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -695,7 +695,7 @@ p {
   font-size: 1.25rem;
   line-height: 1.7;
   color: var(--gray-300);
-  margin-bottom: var(--spacing-12);
+  margin-bottom: var(--spacing-6); /* Reduced from spacing-12 to spacing-6 */
   max-width: 36rem;
   margin-left: auto;
   margin-right: auto;
@@ -710,7 +710,7 @@ p {
 
 /* Sections */
 section {
-  padding: var(--spacing-24) 0;
+  padding: var(--spacing-12) 0; /* Reduced from spacing-24 to spacing-12 */
   position: relative;
   overflow: hidden;
 }
@@ -721,7 +721,7 @@ section:nth-child(odd) {
 
 .section-title {
   max-width: 50rem;
-  margin: 0 auto var(--spacing-16);
+  margin: 0 auto var(--spacing-8); /* Reduced from spacing-16 to spacing-8 */
   text-align: center;
   position: relative;
 }
@@ -773,7 +773,7 @@ section:nth-child(odd) {
     var(--cyan-500),
     transparent
   );
-  margin: var(--spacing-12) 0;
+  margin: var(--spacing-6) 0; /* Reduced from spacing-12 to spacing-6 */
   opacity: 0.3;
 }
 
