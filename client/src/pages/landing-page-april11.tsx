@@ -153,6 +153,22 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* VERY LARGE BANNER that's impossible to miss */}
+      <div style={{
+        background: "red",
+        color: "white",
+        fontSize: "24px",
+        padding: "20px",
+        textAlign: "center",
+        fontWeight: "bold",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999
+      }}>
+        THIS IS THE APRIL 11TH VERSION - NOW CLEARLY VISIBLE
+      </div>
       {/* Top Navigation */}
       <header className="border-b border-gray-100 bg-white">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
