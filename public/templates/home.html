@@ -1,54 +1,39 @@
-<!-- Full Viewport Hero Section -->
+<!-- Hero Section -->
 <style>
-  #hero-fullscreen-fixed {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background-color: #0a0c16;
-    z-index: -1;
+  .hero-section {
+    min-height: 85vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
-    margin: 0;
-  }
-  
-  #hero-content-box {
-    max-width: 42rem;
-    width: 90%;
-    background-color: rgba(17, 24, 39, 0.7);
-    border-radius: 1.5rem;
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    padding: 3rem;
     text-align: center;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+    padding: 3rem 1rem;
+    position: relative;
   }
   
-  #hero-content-box h1 {
+  .hero-content {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: rgba(15, 23, 42, 0.7);
+    border-radius: 1rem;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+  }
+  
+  .hero-title {
     font-size: 3.5rem;
     font-weight: 800;
     margin-bottom: 1.5rem;
-    color: white;
     line-height: 1.2;
   }
   
-  #hero-content-box .text-accent {
-    color: #a855f7;
-    background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  
-  #hero-content-box p {
+  .hero-description {
     font-size: 1.25rem;
     line-height: 1.7;
-    color: #d1d5db;
     margin-bottom: 2rem;
+    color: var(--text-secondary);
   }
   
-  #hero-buttons {
+  .hero-buttons {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -56,14 +41,14 @@
     margin-bottom: 2rem;
   }
   
-  #hero-badges {
+  .hero-badges {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     justify-content: center;
   }
   
-  #hero-badges .badge {
+  .badge {
     display: inline-flex;
     align-items: center;
     padding: 0.5rem 1rem;
@@ -71,80 +56,106 @@
     border: 1px solid rgba(99, 102, 241, 0.3);
     border-radius: 2rem;
     font-size: 0.875rem;
-    color: #d1d5db;
   }
   
-  #hero-badges .check {
+  .check {
     color: #0ea5e9;
     margin-right: 0.5rem;
     font-weight: bold;
   }
-  
-  #content-wrapper {
-    position: relative;
-    z-index: 1;
-    background-color: #0f172a;
-    margin-top: 100vh;
-    border-top: 1px solid rgba(99, 102, 241, 0.2);
-  }
-  
-  /* Custom card styling to match approved design */
-  .card {
-    background-color: #1e1e38 !important;
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 0.5rem;
+
+  /* Card styling - matching the approved purple design */
+  .custom-card {
+    background-color: #4d0c9c !important;
+    border-radius: 0.75rem;
     overflow: hidden;
-    position: relative;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  .card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 4px;
     height: 100%;
-    background: linear-gradient(to bottom, #6366f1, #a855f7);
   }
   
-  .card-content {
+  .custom-card .card-content {
     padding: 1.5rem;
-    position: relative;
-    z-index: 1;
+  }
+  
+  .custom-card .icon-bg {
+    background-color: rgba(255, 255, 255, 0.1);
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  
+  .custom-card .card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+  
+  .custom-card .card-description {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 1.5rem;
+  }
+  
+  .custom-card .feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .custom-card .feature-check {
+    color: #0ea5e9;
+    margin-right: 0.5rem;
+    font-weight: bold;
+  }
+
+  /* Feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+  }
+  
+  @media (min-width: 768px) {
+    .feature-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
   
   @media (max-width: 640px) {
-    #hero-content-box h1 {
+    .hero-title {
       font-size: 2.5rem;
     }
-    
-    #hero-content-box {
-      padding: 2rem;
-    }
+  }
+
+  /* Purple section */
+  .purple-section {
+    background-color: #4d0c9c;
+    padding: 4rem 0;
   }
 </style>
 
-<div id="hero-fullscreen-fixed">
-  <div id="hero-content-box">
-    <h1>Modern Payment <span class="text-accent">Infrastructure</span></h1>
-    <p>
+<!-- Full Screen Hero -->
+<section class="hero-section">
+  <div class="hero-content">
+    <h1 class="hero-title">Modern Payment <span class="text-accent">Infrastructure</span></h1>
+    <p class="hero-description">
       Comprehensive payment solutions empowering businesses with seamless 
       processing, integrated POS systems, and advanced financial tools.
     </p>
-    <div id="hero-buttons">
+    <div class="hero-buttons">
       <a href="/products" class="btn btn-gradient-primary">Get Started →</a>
       <a href="/merchant-services" class="btn btn-gradient-secondary">Explore Solutions</a>
     </div>
-    <div id="hero-badges">
+    <div class="hero-badges">
       <div class="badge"><span class="check">✓</span> PCI Compliant</div>
       <div class="badge"><span class="check">✓</span> Next-Day Funding</div>
       <div class="badge"><span class="check">✓</span> 24/7 Support</div>
     </div>
   </div>
-</div>
-
-<div id="content-wrapper">
+</section>
 
 <!-- Features Section -->
 <section class="py-8">
@@ -159,7 +170,7 @@
     
     <div class="feature-grid">
       <!-- Feature 1 -->
-      <div class="card gradient-border animate-on-scroll hover-lift shadow-md">
+      <div class="custom-card animate-on-scroll hover-lift shadow-md">
         <div class="card-content p-6">
           <div class="icon-bg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -187,7 +198,7 @@
       </div>
       
       <!-- Feature 2 -->
-      <div class="card gradient-border animate-on-scroll hover-lift shadow-md">
+      <div class="custom-card animate-on-scroll hover-lift shadow-md">
         <div class="card-content p-6">
           <div class="icon-bg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -216,7 +227,7 @@
       </div>
       
       <!-- Feature 3 -->
-      <div class="card gradient-border animate-on-scroll hover-lift shadow-md">
+      <div class="custom-card animate-on-scroll hover-lift shadow-md">
         <div class="card-content p-6">
           <div class="icon-bg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -258,7 +269,7 @@
     
     <div class="feature-grid">
       <!-- Product 1 -->
-      <div class="card gradient-border animate-on-scroll hover-lift shadow-md">
+      <div class="custom-card animate-on-scroll hover-lift shadow-md">
         <div class="product-media-placeholder">
           <div class="media-content">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="hero-placeholder-icon">
@@ -300,7 +311,7 @@
       </div>
       
       <!-- Product 2 -->
-      <div class="card gradient-border animate-on-scroll hover-lift shadow-md">
+      <div class="custom-card animate-on-scroll hover-lift shadow-md">
         <div class="product-media-placeholder">
           <div class="media-content">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="hero-placeholder-icon">
@@ -346,7 +357,7 @@
       </div>
       
       <!-- Product 3 -->
-      <div class="card gradient-border animate-on-scroll hover-lift shadow-md">
+      <div class="custom-card animate-on-scroll hover-lift shadow-md">
         <div class="product-media-placeholder">
           <div class="media-content">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="hero-placeholder-icon">
