@@ -44,7 +44,7 @@
   /* Background colors */
   --bg-primary: #0f172a; /* Darker slate background */
   --bg-secondary: #1e293b; /* Lighter slate for contrast */
-  --bg-card: #1e1e2e; /* Slightly purple-tinted dark background */
+  --bg-card: #4d0c9c; /* Purple background for cards as shown in screenshot */
   --bg-card-hover: #2a2a3c; /* Lighter version for hover states */
   --bg-accent: rgba(99, 102, 241, 0.1); /* Indigo with opacity for subtle accent backgrounds */
   
@@ -616,10 +616,12 @@ p {
   padding: 0;
   background-color: var(--bg-primary);
   text-align: center;
-  min-height: 70vh;
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 0;
 }
 
 .hero::before {
@@ -892,7 +894,7 @@ p {
 
 /* Sections */
 section {
-  padding: var(--spacing-12) 0; /* Reduced from spacing-24 to spacing-12 */
+  padding: var(--spacing-6) 0; /* Further reduced to fix vertical spacing */
   position: relative;
   overflow: hidden;
 }
