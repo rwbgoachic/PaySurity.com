@@ -1,18 +1,12 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 /**
- * Formats a number as currency with $ sign and 2 decimal places
+ * Combines multiple class names with Tailwind CSS, supporting conditional classes
+ * 
+ * @param inputs Class names or conditional expressions
+ * @returns Merged class string
  */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }

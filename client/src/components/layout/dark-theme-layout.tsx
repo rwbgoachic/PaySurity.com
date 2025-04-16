@@ -1,150 +1,212 @@
 import React from "react";
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface DarkThemeLayoutProps {
   children: React.ReactNode;
   className?: string;
-  showNav?: boolean;
-  showFooter?: boolean;
+  hideNav?: boolean;
+  hideFooter?: boolean;
 }
 
 export function DarkThemeLayout({
   children,
   className,
-  showNav = true,
-  showFooter = true,
+  hideNav = false,
+  hideFooter = false,
 }: DarkThemeLayoutProps) {
   return (
-    <div className="min-h-screen bg-black text-white">
-      {showNav && <DarkNavbar />}
-      <main className={cn("", className)}>{children}</main>
-      {showFooter && <DarkFooter />}
+    <div className="flex min-h-screen flex-col bg-black text-white">
+      {!hideNav && <DarkThemeNavbar />}
+      <main className={cn("flex-1", className)}>{children}</main>
+      {!hideFooter && <DarkThemeFooter />}
     </div>
   );
 }
 
-export function DarkNavbar() {
+function DarkThemeNavbar() {
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-lg border-b border-gray-800/30 bg-black/80">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            {/* Logo */}
-            <Link to="/">
-              <div className="flex items-center">
-                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">PaySurity</span>
-              </div>
-            </Link>
-            
-            {/* Main Navigation */}
-            <nav className="hidden lg:flex items-center space-x-8">
-              <Link to="/products">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Products</span>
-              </Link>
-              <Link to="/digital-wallet">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Digital Wallet</span>
-              </Link>
-              <Link to="/industry-solutions">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Solutions</span>
-              </Link>
-              <Link to="/pos-systems">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">POS Systems</span>
-              </Link>
-              <Link to="/pricing">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Pricing</span>
-              </Link>
-            </nav>
-          </div>
-          
-          {/* Right Side Navigation */}
-          <div className="flex items-center space-x-4">
-            <Link to="/auth">
-              <Button variant="ghost" size="sm" className="hidden md:inline-flex text-gray-300 hover:text-white hover:bg-gray-800">Login</Button>
-            </Link>
-            <Link to="/auth">
-              <Button variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700">Get Started</Button>
-            </Link>
-          </div>
+    <header className="sticky top-0 z-50 w-full border-b border-gray-800 bg-black/70 backdrop-blur-md">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex items-center">
+          <Link href="/">
+            <a className="flex items-center space-x-2">
+              <span className="text-2xl font-bold text-blue-500">PaySurity</span>
+            </a>
+          </Link>
+        </div>
+        
+        <nav className="hidden md:flex space-x-8">
+          <NavLink href="/products">Products</NavLink>
+          <NavLink href="/pricing">Pricing</NavLink>
+          <NavLink href="/industry-solutions">Industries</NavLink>
+          <NavLink href="/digital-wallet">Digital Wallet</NavLink>
+          <NavLink href="/pos-systems">POS Systems</NavLink>
+        </nav>
+        
+        <div className="flex items-center space-x-4">
+          <Link href="/auth?mode=login">
+            <a className="rounded-md px-4 py-2 text-sm font-medium text-white hover:text-blue-300 transition-colors">
+              Log in
+            </a>
+          </Link>
+          <Link href="/auth?mode=register">
+            <a className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+              Get Started
+            </a>
+          </Link>
         </div>
       </div>
     </header>
   );
 }
 
-export function DarkFooter() {
+interface NavLinkProps {
+  href: string;
+  children: React.ReactNode;
+}
+
+function NavLink({ href, children }: NavLinkProps) {
   return (
-    <footer className="py-16 border-t border-gray-800/30 bg-black">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-          <div className="col-span-2">
-            <h3 className="text-xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">PaySurity</h3>
-            <p className="text-gray-400 mb-4 max-w-xs">
-              Comprehensive payment infrastructure for modern businesses of all sizes.
+    <Link href={href}>
+      <a className="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">
+        {children}
+      </a>
+    </Link>
+  );
+}
+
+function DarkThemeFooter() {
+  return (
+    <footer className="w-full border-t border-gray-800 bg-black py-10">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+          <div className="flex flex-col space-y-4">
+            <h3 className="text-lg font-bold text-white">PaySurity</h3>
+            <p className="text-sm text-gray-400">
+              Modern payment infrastructure for businesses of all sizes
             </p>
-            <div className="flex space-x-4 mt-6">
-              <a href="#" className="text-gray-400 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+            <div className="flex space-x-4">
+              <FooterSocialLink href="#" aria-label="Twitter">
+                <svg 
+                  width="20" 
+                  height="20" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24" 
+                  className="h-5 w-5 text-gray-400 hover:text-blue-500 transition-colors"
+                >
+                  <path d="M22.162 5.656a8.385 8.385 0 0 1-2.402.658A4.196 4.196 0 0 0 21.6 4c-.82.488-1.719.83-2.656 1.015a4.182 4.182 0 0 0-7.126 3.814 11.874 11.874 0 0 1-8.62-4.37 4.168 4.168 0 0 0-.566 2.103c0 1.45.738 2.731 1.86 3.481a4.168 4.168 0 0 1-1.894-.523v.052a4.185 4.185 0 0 0 3.355 4.101 4.191 4.191 0 0 1-1.89.072A4.185 4.185 0 0 0 7.97 16.65a8.395 8.395 0 0 1-6.191 1.732 11.83 11.83 0 0 0 6.41 1.88c7.693 0 11.9-6.373 11.9-11.9 0-.18-.005-.362-.013-.54a8.495 8.495 0 0 0 2.087-2.165"/>
                 </svg>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
+              </FooterSocialLink>
+              <FooterSocialLink href="#" aria-label="LinkedIn">
+                <svg 
+                  width="20" 
+                  height="20" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24" 
+                  className="h-5 w-5 text-gray-400 hover:text-blue-500 transition-colors"
+                >
+                  <path d="M6.94 5a2 2 0 1 1-4-.002 2 2 0 0 1 4 .002M7 8.48H3V21h4zm6.32 0H9.34V21h3.94v-6.57c0-3.66 4.77-4 4.77 0V21H22v-7.93c0-6.17-7.06-5.94-8.72-2.91z"/>
                 </svg>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </FooterSocialLink>
+              <FooterSocialLink href="#" aria-label="Facebook">
+                <svg 
+                  width="20" 
+                  height="20" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24" 
+                  className="h-5 w-5 text-gray-400 hover:text-blue-500 transition-colors"
+                >
+                  <path d="M9.198 21.5h4v-8.01h3.604l.396-3.98h-4V7.5a1 1 0 0 1 1-1h3v-4h-3a5 5 0 0 0-5 5v2.01h-2l-.396 3.98h2.396z"/>
                 </svg>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
-                  <rect x="2" y="9" width="4" height="12"></rect>
-                  <circle cx="4" cy="4" r="2"></circle>
-                </svg>
-              </a>
+              </FooterSocialLink>
             </div>
-            <p className="text-gray-500 text-sm mt-6">
-              © {new Date().getFullYear()} PaySurity. All rights reserved.
-            </p>
           </div>
           
-          <div>
-            <h4 className="font-semibold mb-6 text-sm uppercase tracking-wider text-gray-400">Products</h4>
-            <ul className="space-y-4">
-              <li><Link to="/products"><span className="text-gray-400 hover:text-white text-sm">Overview</span></Link></li>
-              <li><Link to="/digital-wallet"><span className="text-gray-400 hover:text-white text-sm">Digital Wallet</span></Link></li>
-              <li><Link to="/pos-systems"><span className="text-gray-400 hover:text-white text-sm">POS Systems</span></Link></li>
-              <li><Link to="/payments"><span className="text-gray-400 hover:text-white text-sm">Payment Processing</span></Link></li>
-            </ul>
-          </div>
+          <FooterColumn title="Products">
+            <FooterLink href="/products">All Products</FooterLink>
+            <FooterLink href="/payments">Payment Processing</FooterLink>
+            <FooterLink href="/digital-wallet">Digital Wallet</FooterLink>
+            <FooterLink href="/pos-systems">POS Systems</FooterLink>
+          </FooterColumn>
           
-          <div>
-            <h4 className="font-semibold mb-6 text-sm uppercase tracking-wider text-gray-400">Company</h4>
-            <ul className="space-y-4">
-              <li><Link to="/about"><span className="text-gray-400 hover:text-white text-sm">About</span></Link></li>
-              <li><Link to="/careers"><span className="text-gray-400 hover:text-white text-sm">Careers</span></Link></li>
-              <li><Link to="/contact"><span className="text-gray-400 hover:text-white text-sm">Contact</span></Link></li>
-              <li><Link to="/blog"><span className="text-gray-400 hover:text-white text-sm">Blog</span></Link></li>
-            </ul>
-          </div>
+          <FooterColumn title="Company">
+            <FooterLink href="/about">About</FooterLink>
+            <FooterLink href="/careers">Careers</FooterLink>
+            <FooterLink href="/blog">Blog</FooterLink>
+            <FooterLink href="/contact">Contact Us</FooterLink>
+          </FooterColumn>
           
-          <div>
-            <h4 className="font-semibold mb-6 text-sm uppercase tracking-wider text-gray-400">Resources</h4>
-            <ul className="space-y-4">
-              <li><Link to="/documentation"><span className="text-gray-400 hover:text-white text-sm">Documentation</span></Link></li>
-              <li><Link to="/faq"><span className="text-gray-400 hover:text-white text-sm">FAQ</span></Link></li>
-              <li><Link to="/support"><span className="text-gray-400 hover:text-white text-sm">Support</span></Link></li>
-              <li><Link to="/legal"><span className="text-gray-400 hover:text-white text-sm">Legal</span></Link></li>
-            </ul>
-          </div>
+          <FooterColumn title="Resources">
+            <FooterLink href="/documentation">Documentation</FooterLink>
+            <FooterLink href="/support">Support</FooterLink>
+            <FooterLink href="/faq">FAQ</FooterLink>
+            <FooterLink href="/api">API Reference</FooterLink>
+          </FooterColumn>
+          
+          <FooterColumn title="Legal">
+            <FooterLink href="/legal/terms">Terms of Service</FooterLink>
+            <FooterLink href="/legal/privacy">Privacy Policy</FooterLink>
+            <FooterLink href="/legal/compliance">Compliance</FooterLink>
+            <FooterLink href="/legal/security">Security</FooterLink>
+          </FooterColumn>
+        </div>
+        
+        <div className="mt-10 border-t border-gray-800 pt-8">
+          <p className="text-center text-sm text-gray-400">
+            © {new Date().getFullYear()} PaySurity, Inc. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
+  );
+}
+
+interface FooterColumnProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+function FooterColumn({ title, children }: FooterColumnProps) {
+  return (
+    <div className="flex flex-col space-y-4">
+      <h3 className="text-sm font-bold uppercase text-gray-200">{title}</h3>
+      <div className="flex flex-col space-y-2">{children}</div>
+    </div>
+  );
+}
+
+interface FooterLinkProps {
+  href: string;
+  children: React.ReactNode;
+}
+
+function FooterLink({ href, children }: FooterLinkProps) {
+  return (
+    <Link href={href}>
+      <a className="text-sm text-gray-400 hover:text-blue-500 transition-colors">
+        {children}
+      </a>
+    </Link>
+  );
+}
+
+interface FooterSocialLinkProps {
+  href: string;
+  children: React.ReactNode;
+  'aria-label': string;
+}
+
+function FooterSocialLink({ href, children, 'aria-label': ariaLabel }: FooterSocialLinkProps) {
+  return (
+    <a 
+      href={href} 
+      className="hover:text-blue-500 transition-colors" 
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={ariaLabel}
+    >
+      {children}
+    </a>
   );
 }
