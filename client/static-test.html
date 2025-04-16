@@ -1,63 +1,234 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Static Test Page</title>
+  <title>PaySurity - Modern Payment Infrastructure</title>
+  
+  <!-- Import Tailwind directly from CDN for testing purposes -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#3B82F6', // Main blue color
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+              950: '#172554',
+            },
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
     }
-    .container {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      padding: 2rem;
-      max-width: 500px;
-      width: 100%;
-    }
-    h1 {
-      color: #333;
-      margin-top: 0;
-      text-align: center;
-    }
-    .success-box {
-      background-color: #d1fae5;
-      border: 1px solid #10b981;
-      color: #047857;
-      padding: 1rem;
-      border-radius: 6px;
-      margin-bottom: 1rem;
-    }
-    .info-box {
-      background-color: #dbeafe;
-      border: 1px solid #3b82f6;
-      color: #1e40af;
-      padding: 1rem;
-      border-radius: 6px;
+    
+    .bg-grid-pattern {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%232563eb' fill-opacity='0.05'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1>Static Test Page</h1>
-    
-    <div class="success-box">
-      <p><strong>Connection Test</strong></p>
-      <p>If you can see this page, the web server is responding correctly.</p>
+<body class="bg-black text-white min-h-screen">
+  <!-- Navigation Bar -->
+  <header class="sticky top-0 z-50 w-full border-b border-gray-800 bg-black/70 backdrop-blur-md">
+    <div class="container mx-auto flex h-16 items-center justify-between px-4">
+      <div class="flex items-center">
+        <a href="/" class="text-2xl font-bold text-blue-500">PaySurity</a>
+      </div>
+      
+      <nav class="hidden md:flex space-x-8">
+        <a href="/products" class="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">Products</a>
+        <a href="/pricing" class="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">Pricing</a>
+        <a href="/industry-solutions" class="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">Industries</a>
+        <a href="/digital-wallet" class="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">Digital Wallet</a>
+      </nav>
+      
+      <div class="flex items-center space-x-4">
+        <a href="/auth?mode=login" class="rounded-md px-4 py-2 text-sm font-medium text-white hover:text-blue-300 transition-colors">
+          Log in
+        </a>
+        <a href="/auth?mode=register" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+          Get Started
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <div class="relative overflow-hidden bg-grid-pattern bg-black px-6 py-24 sm:py-32 lg:px-8">
+      <div class="mx-auto max-w-2xl text-center">
+        <h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+          <span class="block">Modern Payment</span>
+          <span class="block text-blue-500">Infrastructure</span>
+        </h1>
+        <p class="mt-6 text-lg leading-8 text-gray-300">
+          Comprehensive payment solutions empowering businesses with seamless 
+          processing, digital wallets, and integrated POS systems.
+        </p>
+        <div class="mt-10 flex items-center justify-center gap-x-6">
+          <a href="/auth?mode=register" class="rounded-md bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+            Get started
+          </a>
+          <a href="/products" class="text-sm font-semibold leading-6 text-white hover:text-blue-300">
+            Explore products <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
     </div>
     
-    <div class="info-box">
-      <p><strong>CSS Test</strong></p>
-      <p>If you can see colors and styling, CSS is working properly.</p>
+    <!-- Features Section -->
+    <div class="py-24 bg-black">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center">
+          <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Payment solutions for every business</h2>
+          <p class="mt-6 text-lg leading-8 text-gray-300">
+            Our comprehensive suite of tools helps businesses process payments securely and efficiently,
+            with solutions tailored to your specific needs.
+          </p>
+        </div>
+        
+        <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+          <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+            <!-- Feature 1 -->
+            <div class="flex flex-col">
+              <dt class="flex items-center gap-x-3 text-xl font-semibold leading-7 text-white">
+                <div class="h-10 w-10 flex items-center justify-center rounded-lg bg-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                  </svg>
+                </div>
+                Payment Processing
+              </dt>
+              <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                <p class="flex-auto">Fast, secure payment processing for online and in-person transactions with competitive rates.</p>
+              </dd>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="flex flex-col">
+              <dt class="flex items-center gap-x-3 text-xl font-semibold leading-7 text-white">
+                <div class="h-10 w-10 flex items-center justify-center rounded-lg bg-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                  </svg>
+                </div>
+                Digital Wallet
+              </dt>
+              <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                <p class="flex-auto">Secure multi-wallet management with instant transfers, advanced authentication, and detailed transaction history.</p>
+              </dd>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="flex flex-col">
+              <dt class="flex items-center gap-x-3 text-xl font-semibold leading-7 text-white">
+                <div class="h-10 w-10 flex items-center justify-center rounded-lg bg-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+                  </svg>
+                </div>
+                POS Systems
+              </dt>
+              <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                <p class="flex-auto">Complete point-of-sale solutions with hardware options, inventory management, and customer relationship tools.</p>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
     </div>
-  </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full border-t border-gray-800 bg-black py-10">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between">
+        <div class="mb-8 md:mb-0">
+          <h3 class="text-lg font-bold text-white">PaySurity</h3>
+          <p class="text-sm text-gray-400 mt-2 max-w-md">
+            Modern payment infrastructure for businesses of all sizes
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-8 sm:grid-cols-4">
+          <div>
+            <h4 class="text-sm font-bold uppercase text-gray-200 mb-4">Products</h4>
+            <ul class="space-y-2">
+              <li><a href="/products" class="text-sm text-gray-400 hover:text-blue-500">Payment Processing</a></li>
+              <li><a href="/digital-wallet" class="text-sm text-gray-400 hover:text-blue-500">Digital Wallet</a></li>
+              <li><a href="/pos-systems" class="text-sm text-gray-400 hover:text-blue-500">POS Systems</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-bold uppercase text-gray-200 mb-4">Company</h4>
+            <ul class="space-y-2">
+              <li><a href="/about" class="text-sm text-gray-400 hover:text-blue-500">About</a></li>
+              <li><a href="/contact" class="text-sm text-gray-400 hover:text-blue-500">Contact</a></li>
+              <li><a href="/careers" class="text-sm text-gray-400 hover:text-blue-500">Careers</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-bold uppercase text-gray-200 mb-4">Resources</h4>
+            <ul class="space-y-2">
+              <li><a href="/documentation" class="text-sm text-gray-400 hover:text-blue-500">Documentation</a></li>
+              <li><a href="/support" class="text-sm text-gray-400 hover:text-blue-500">Support</a></li>
+              <li><a href="/faq" class="text-sm text-gray-400 hover:text-blue-500">FAQ</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-bold uppercase text-gray-200 mb-4">Legal</h4>
+            <ul class="space-y-2">
+              <li><a href="/legal/terms" class="text-sm text-gray-400 hover:text-blue-500">Terms</a></li>
+              <li><a href="/legal/privacy" class="text-sm text-gray-400 hover:text-blue-500">Privacy</a></li>
+              <li><a href="/legal/security" class="text-sm text-gray-400 hover:text-blue-500">Security</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-10 border-t border-gray-800 pt-8">
+        <p class="text-center text-sm text-gray-400">
+          © 2025 PaySurity, Inc. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </footer>
+  
+  <script>
+    // Simple analytics trigger to show the site is working
+    console.log('PaySurity Dark Theme Landing Page Loaded');
+    
+    // Add current date at the bottom of the page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Create a small element to show when the page was generated
+      const timestamp = document.createElement('div');
+      timestamp.className = 'fixed bottom-2 right-2 text-xs text-gray-600';
+      timestamp.innerText = 'Generated: ' + new Date().toLocaleString();
+      document.body.appendChild(timestamp);
+    });
+  </script>
 </body>
 </html>
