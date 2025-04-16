@@ -3,89 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="PaySurity - Modern Payment Infrastructure for businesses of all sizes. Secure payment processing, digital wallets, and integrated POS systems.">
-  <title>PaySurity - Modern Payment Infrastructure</title>
+  <title>PaySurity - Payment Processing Solutions</title>
   
-  <!-- Stylesheets -->
+  <!-- Meta Tags -->
+  <meta name="description" content="PaySurity offers modern payment infrastructure including processing, digital wallets, and POS solutions for businesses of all sizes.">
+  <meta name="keywords" content="payment processing, digital wallet, POS systems, merchant services, payment gateway">
+  
+  <!-- Styles -->
   <link rel="stylesheet" href="/css/dark-theme.css">
   <link rel="stylesheet" href="/css/mobile-menu.css">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/images/favicon.png">
-  
-  <!-- Open Graph Meta Tags for Better Social Sharing -->
-  <meta property="og:title" content="PaySurity - Modern Payment Infrastructure">
-  <meta property="og:description" content="Secure payment processing, digital wallets, and integrated POS systems for businesses of all sizes.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://paysurity.com">
-  <meta property="og:image" content="https://paysurity.com/images/og-image.jpg">
-  
-  <!-- Twitter Card Meta Tags -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="PaySurity - Modern Payment Infrastructure">
-  <meta name="twitter:description" content="Secure payment processing, digital wallets, and integrated POS systems for businesses of all sizes.">
-  <meta name="twitter:image" content="https://paysurity.com/images/og-image.jpg">
-  
-  <!-- Accessibility -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Skip to main content link for accessibility -->
-  <a href="#main-content" class="skip-link">Skip to main content</a>
-  
-  <!-- Header/Navigation -->
-  <header>
+  <!-- Navigation -->
+  <header class="main-header">
     <div class="container">
-      <!-- Mobile menu toggle button -->
-      <button id="mobile-menu-toggle" aria-expanded="false" aria-controls="mobile-nav">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-        <span class="sr-only">Menu</span>
-      </button>
-      
       <a href="/" class="logo">PaySurity</a>
       
-      <nav aria-label="Main navigation">
-        <a href="/products" class="nav-link">Products</a>
-        <a href="/merchant-services" class="nav-link">Merchant Services</a>
-        <a href="/blog" class="nav-link">Blog</a>
-        <a href="/about" class="nav-link">About Us</a>
-        <a href="/contact" class="nav-link">Contact Us</a>
+      <nav class="main-nav">
+        <a href="/products">POS Products</a>
+        <a href="/merchant-services">Merchant Services</a>
+        <a href="/blog">Blog</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+        <a href="/faqs">FAQs</a>
       </nav>
       
-      <div class="actions">
+      <div class="header-actions">
+        <a href="/login" class="btn btn-ghost">Log in</a>
+        <a href="/signup" class="btn btn-primary">Get Started</a>
+      </div>
+      
+      <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
+        <span class="hamburger"></span>
+      </button>
+    </div>
+  </header>
+  
+  <!-- Mobile Menu -->
+  <div class="mobile-menu">
+    <div class="mobile-menu-container">
+      <div class="mobile-menu-header">
+        <a href="/" class="logo">PaySurity</a>
+        <button class="mobile-menu-close" aria-label="Close mobile menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
+      <nav class="mobile-nav">
+        <a href="/products">POS Products</a>
+        <a href="/merchant-services">Merchant Services</a>
+        <a href="/blog">Blog</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+        <a href="/faqs">FAQs</a>
+      </nav>
+      
+      <div class="mobile-actions">
         <a href="/login" class="btn btn-ghost">Log in</a>
         <a href="/signup" class="btn btn-primary">Get Started</a>
       </div>
     </div>
-  </header>
-  
-  <!-- Mobile Navigation -->
-  <div id="mobile-nav" aria-hidden="true">
-    <div class="mobile-nav-links">
-      <a href="/products">Products</a>
-      <a href="/merchant-services">Merchant Services</a>
-      <a href="/blog">Blog</a>
-      <a href="/about">About Us</a>
-      <a href="/contact">Contact Us</a>
-    </div>
-    <div class="mobile-nav-actions">
-      <a href="/login" class="btn btn-ghost">Log in</a>
-      <a href="/signup" class="btn btn-primary">Get Started</a>
-    </div>
-    <div class="mobile-nav-footer">
-      &copy; 2025 PaySurity, Inc.
-    </div>
   </div>
   
-  <!-- Mobile Navigation Backdrop -->
-  <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
-  
-  <!-- Main Content Area -->
-  <main id="main-content">
+  <!-- Main Content -->
+  <main>
+    <!-- Page content will be inserted here -->
