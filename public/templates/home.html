@@ -1,5 +1,5 @@
 <!-- Full Screen Hero Section -->
-<div class="fullscreen-hero">
+<div class="fullscreen-hero" id="true-fullscreen-hero">
   <div class="hero-background">
     <div class="hero-content-container">
       <div class="hero-text">
@@ -21,6 +21,29 @@
     </div>
   </div>
 </div>
+
+<!-- Hero Control Script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const heroElement = document.getElementById('true-fullscreen-hero');
+    const mainContent = document.querySelector('section:first-of-type');
+    
+    // Set hero to take up full viewport
+    heroElement.style.height = window.innerHeight + 'px';
+    heroElement.style.width = window.innerWidth + 'px';
+    
+    // Add resize listener
+    window.addEventListener('resize', function() {
+      heroElement.style.height = window.innerHeight + 'px';
+      heroElement.style.width = window.innerWidth + 'px';
+    });
+    
+    // Push down first section
+    if (mainContent) {
+      mainContent.style.marginTop = window.innerHeight + 'px';
+    }
+  });
+</script>
 
 <!-- Features Section -->
 <section class="py-8">

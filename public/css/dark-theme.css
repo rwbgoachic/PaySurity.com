@@ -1817,7 +1817,7 @@ textarea {
   border-radius: var(--radius-full);
   font-size: 0.875rem;
   font-weight: 500;
-  background-color: var(--bg-card);
+  background-color: #4d0c9c; /* Explicit purple background color */
 }
 
 .badge-outline {
@@ -1841,7 +1841,7 @@ textarea {
 
 /* Blog Page Styles */
 .post {
-  background-color: var(--bg-card);
+  background-color: #4d0c9c; /* Explicit purple background color */
   padding: 1.5rem;
   border-radius: 0.5rem;
   margin-bottom: 2rem;
@@ -1908,7 +1908,7 @@ textarea {
   font-size: 0.75rem;
   font-weight: 600;
   margin-bottom: 0.75rem;
-  background-color: var(--bg-card);
+  background-color: #4d0c9c; /* Explicit purple background color */
   color: var(--indigo-400);
   border: 1px solid var(--indigo-500);
   position: absolute;

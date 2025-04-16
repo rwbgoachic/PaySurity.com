@@ -70,44 +70,8 @@
     </div>
   </div>
   
-  <!-- Fullscreen Hero (Home page only) -->
-  <div id="fullscreen-hero">
-    <div class="hero-overlay">
-      <div class="hero-content">
-        <h1>Modern Payment <span class="accent">Infrastructure</span></h1>
-        <p>Comprehensive payment solutions empowering businesses with seamless 
-          processing, integrated POS systems, and advanced financial tools.</p>
-        <div class="hero-buttons">
-          <a href="/products" class="btn btn-gradient-primary">Get Started →</a>
-          <a href="/merchant-services" class="btn btn-gradient-secondary">Explore Solutions</a>
-        </div>
-        <div class="hero-badges">
-          <div class="badge"><span class="check">✓</span> PCI Compliant</div>
-          <div class="badge"><span class="check">✓</span> Next-Day Funding</div>
-          <div class="badge"><span class="check">✓</span> 24/7 Support</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Script to show hero only on home page -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const heroElement = document.getElementById('fullscreen-hero');
-      const mainElement = document.querySelector('main');
-      const currentPath = window.location.pathname;
-      
-      // Only show hero on home page
-      if (currentPath === '/' || currentPath === '/home' || currentPath.endsWith('/home')) {
-        heroElement.style.display = 'block';
-        if (mainElement) mainElement.classList.add('with-hero');
-      } else {
-        heroElement.style.display = 'none';
-        if (mainElement) mainElement.classList.remove('with-hero');
-      }
-    });
-  </script>
+  <!-- We've moved the hero to home.html, removing it from here -->
 
   <!-- Main Content -->
-  <main class="with-hero">
+  <main>
     <!-- Page content will be inserted here -->
