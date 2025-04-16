@@ -38,6 +38,9 @@
   --black: #000000;
   --white: #ffffff;
   
+  /* Fonts */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
   /* Background colors */
   --bg-primary: #0f172a; /* Darker slate background */
   --bg-secondary: #1e293b; /* Lighter slate for contrast */
@@ -119,7 +122,7 @@
 html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   min-height: 100vh;
 }
@@ -240,103 +243,76 @@ p {
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
+  transition: background-color 0.15s, transform 0.15s;
   text-align: center;
   min-width: 120px;
   letter-spacing: 0.025em;
-  border: 1px solid rgba(70, 70, 100, 0.5);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  border: none;
+  box-shadow: none;
+  font-family: var(--font-sans);
 }
 
 .btn-primary {
   background-color: var(--indigo-600);
   color: var(--white);
-  border: 1px solid var(--indigo-700);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
 }
 
 .btn-primary:hover {
   background-color: var(--indigo-500);
-  color: var(--white);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn-primary:active {
   transform: translateY(0);
   background-color: var(--indigo-700);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary {
   background-color: var(--cyan-600);
   color: var(--white);
-  border: 1px solid var(--cyan-700);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
 }
 
 .btn-secondary:hover {
   background-color: var(--cyan-500);
-  color: var(--white);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn-secondary:active {
   transform: translateY(0);
   background-color: var(--cyan-700);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn-accent {
   background-color: var(--pink-500);
   color: var(--white);
-  border: 1px solid var(--pink-600);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
 }
 
 .btn-accent:hover {
   background-color: var(--pink-400);
-  color: var(--white);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn-accent:active {
   transform: translateY(0);
   background-color: var(--pink-600);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn-ghost {
   background-color: transparent;
   color: var(--gray-200);
-  border: 1px solid transparent;
-  box-shadow: none;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-ghost::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(99, 102, 241, 0.03));
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s;
+  border: none;
 }
 
 .btn-ghost:hover {
   color: var(--cyan-400);
-  transform: translateY(-2px);
-}
-
-.btn-ghost:hover::before {
-  opacity: 1;
+  transform: translateY(-1px);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .btn-ghost:active {
@@ -347,39 +323,18 @@ p {
   background-color: transparent;
   color: var(--gray-300);
   border: 1px solid var(--indigo-500);
-  box-shadow: none;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.btn-outline::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(6, 182, 212, 0.05));
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
 .btn-outline:hover {
   border-color: var(--cyan-500);
   color: var(--cyan-400);
-  transform: translateY(-3px);
-  box-shadow: 0 4px 10px rgba(6, 182, 212, 0.15);
-}
-
-.btn-outline:hover::before {
-  opacity: 1;
+  transform: translateY(-1px);
+  background-color: rgba(79, 70, 229, 0.05);
 }
 
 .btn-outline:active {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1);
+  background-color: rgba(79, 70, 229, 0.1);
 }
 
 .btn-sm {
