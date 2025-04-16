@@ -12,6 +12,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes-diagnostic";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
+import fs from "fs";
 import compression from "compression";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -20,6 +21,7 @@ import csurf from "csurf";
 import createSecureHeaders from "content-security-policy";
 import { setupAuth } from "./auth";
 import { generateSitemap } from "./sitemap";
+import { renderPage, renderErrorPage } from "./template-engine";
 
 const app = express();
 
@@ -110,7 +112,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root route now redirects to our dark-themed landing page
+// Root route now redirects to our dark-themed home page
 app.get('/', (req, res) => {
   // Log request details for debugging
   console.log('Root route accessed:');
@@ -126,7 +128,7 @@ app.get('/', (req, res) => {
   }
   
   // Redirect to our dark-themed landing page
-  res.redirect('/dark');
+  res.redirect('/home');
 });
 
 // Static test page for debugging connectivity issues
@@ -392,540 +394,93 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // EMERGENCY DARK THEME ROUTE - Direct dark themed landing page
-app.get('/dark', (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  // Set up template routes
   
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PaySurity - Modern Payment Infrastructure</title>
+  // Helper function to read template files
+  function getTemplateContent(templateName: string): string {
+    try {
+      const templatePath = path.join(process.cwd(), 'public', 'templates', `${templateName}.html`);
+      return fs.readFileSync(templatePath, 'utf8');
+    } catch (error) {
+      console.error(`Error reading template: ${templateName}`, error);
+      return '';
+    }
+  }
   
-  <style>
-    :root {
-      --blue-400: #60a5fa;
-      --blue-500: #3b82f6;
-      --blue-600: #2563eb;
-      --blue-700: #1d4ed8;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-300: #d1d5db;
-      --gray-400: #9ca3af;
-      --gray-600: #4b5563;
-      --gray-700: #374151;
-      --gray-800: #1f2937;
-      --gray-900: #111827;
-      --black: #000000;
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    html, body {
-      background-color: var(--black);
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.5;
-      height: 100%;
-    }
-    
-    .container {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1rem;
-    }
-    
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      width: 100%;
-      border-bottom: 1px solid var(--gray-800);
-      background-color: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(8px);
-    }
-    
-    header .container {
-      display: flex;
-      height: 4rem;
-      align-items: center;
-      justify-content: space-between;
-    }
-    
-    .logo {
-      color: var(--blue-500);
-      font-size: 1.5rem;
-      font-weight: bold;
-      text-decoration: none;
-    }
-    
-    nav {
-      display: none;
-    }
-    
-    @media (min-width: 768px) {
-      nav {
-        display: flex;
-        gap: 2rem;
-      }
-    }
-    
-    nav a {
-      color: var(--gray-300);
-      text-decoration: none;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    
-    nav a:hover {
-      color: var(--blue-500);
-    }
-    
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    .btn {
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      border-radius: 0.375rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-    
-    .btn-ghost {
-      color: white;
-    }
-    
-    .btn-ghost:hover {
-      color: var(--blue-400);
-    }
-    
-    .btn-primary {
-      background-color: var(--blue-600);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      background-color: var(--blue-700);
-    }
-    
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: 6rem 1.5rem;
-      background-color: var(--black);
-      text-align: center;
-    }
-    
-    .bg-grid {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%232563eb' fill-opacity='0.05'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      opacity: 0.8;
-      z-index: 0;
-    }
-    
-    .hero-content {
-      position: relative;
-      z-index: 10;
-      max-width: 42rem;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      font-size: 2.25rem;
-      font-weight: 800;
-      line-height: 1.2;
-      letter-spacing: -0.025em;
-      margin-bottom: 1.5rem;
-    }
-    
-    @media (min-width: 640px) {
-      h1 {
-        font-size: 3.75rem;
-      }
-    }
-    
-    .text-blue {
-      color: var(--blue-500);
-    }
-    
-    .hero-description {
-      font-size: 1.125rem;
-      color: var(--gray-300);
-      margin-bottom: 2.5rem;
-      max-width: 36rem;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
-    }
-    
-    .features {
-      padding: 6rem 1.5rem;
-      background-color: var(--black);
-    }
-    
-    .section-title {
-      max-width: 42rem;
-      margin: 0 auto 3rem;
-      text-align: center;
-    }
-    
-    h2 {
-      font-size: 1.875rem;
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: -0.025em;
-      margin-bottom: 1.5rem;
-    }
-    
-    @media (min-width: 640px) {
-      h2 {
-        font-size: 2.25rem;
-      }
-    }
-    
-    .section-description {
-      font-size: 1.125rem;
-      color: var(--gray-300);
-      max-width: 32rem;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    
-    .feature-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    @media (min-width: 768px) {
-      .feature-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-    
-    .feature {
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .feature-icon {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    
-    .icon-bg {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 0.5rem;
-      background-color: var(--blue-600);
-      margin-right: 0.75rem;
-    }
-    
-    .feature-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-    
-    .feature-description {
-      font-size: 1rem;
-      color: var(--gray-400);
-      flex-grow: 1;
-    }
-    
-    footer {
-      border-top: 1px solid var(--gray-800);
-      background-color: var(--black);
-      padding: 3rem 1.5rem;
-    }
-    
-    .footer-content {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    .footer-main {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 2rem;
-    }
-    
-    @media (min-width: 768px) {
-      .footer-main {
-        flex-direction: row;
-        justify-content: space-between;
-      }
-    }
-    
-    .footer-brand {
-      margin-bottom: 2rem;
-    }
-    
-    @media (min-width: 768px) {
-      .footer-brand {
-        margin-bottom: 0;
-      }
-    }
-    
-    .footer-brand h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    
-    .footer-brand p {
-      font-size: 0.875rem;
-      color: var(--gray-400);
-      max-width: 20rem;
-    }
-    
-    .footer-links {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 2rem;
-    }
-    
-    @media (min-width: 640px) {
-      .footer-links {
-        grid-template-columns: repeat(4, 1fr);
-      }
-    }
-    
-    .footer-group h4 {
-      font-size: 0.875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: var(--gray-200);
-      margin-bottom: 1rem;
-    }
-    
-    .footer-group ul {
-      list-style: none;
-    }
-    
-    .footer-group li {
-      margin-bottom: 0.5rem;
-    }
-    
-    .footer-group a {
-      font-size: 0.875rem;
-      color: var(--gray-400);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    
-    .footer-group a:hover {
-      color: var(--blue-500);
-    }
-    
-    .footer-bottom {
-      padding-top: 2rem;
-      border-top: 1px solid var(--gray-800);
-      text-align: center;
-    }
-    
-    .copyright {
-      font-size: 0.875rem;
-      color: var(--gray-400);
-    }
-  </style>
+  // Serve static files from public directory
+  app.use(express.static('public'));
   
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <!-- Navigation -->
-  <header>
-    <div class="container">
-      <a href="/dark" class="logo">PaySurity</a>
-      
-      <nav>
-        <a href="/dark?page=products">Products</a>
-        <a href="/dark?page=pricing">Pricing</a>
-        <a href="/dark?page=industries">Industries</a>
-        <a href="/dark?page=wallet">Digital Wallet</a>
-      </nav>
-      
-      <div class="actions">
-        <a href="/dark?page=login" class="btn btn-ghost">Log in</a>
-        <a href="/dark?page=signup" class="btn btn-primary">Get Started</a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="bg-grid"></div>
-    <div class="hero-content">
-      <h1>Modern Payment <span class="text-blue">Infrastructure</span></h1>
-      <p class="hero-description">
-        Comprehensive payment solutions empowering businesses with seamless 
-        processing, digital wallets, and integrated POS systems.
-      </p>
-      <div class="hero-actions">
-        <a href="/dark?page=signup" class="btn btn-primary">Get started</a>
-        <a href="/dark?page=products" class="btn btn-ghost">Explore products →</a>
-      </div>
-    </div>
-  </section>
-  
-  <!-- Features Section -->
-  <section class="features">
-    <div class="section-title">
-      <h2>Payment solutions for every business</h2>
-      <p class="section-description">
-        Our comprehensive suite of tools helps businesses process payments securely and efficiently,
-        with solutions tailored to your specific needs.
-      </p>
-    </div>
+  // Home page - now using template engine
+  app.get('/home', (req, res) => {
+    const content = getTemplateContent('home');
+    const html = renderPage(content, 'Home');
     
-    <div class="feature-grid">
-      <!-- Feature 1 -->
-      <div class="feature">
-        <div class="feature-icon">
-          <div class="icon-bg">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2.25 8.25H21.75M2.25 9H21.75M5.25 14.25H11.25M5.25 16.5H8.25M4.5 19.5H19.5C20.0967 19.5 20.669 19.2629 21.091 18.841C21.5129 18.419 21.75 17.8467 21.75 17.25V6.75C21.75 6.15326 21.5129 5.58097 21.091 5.15901C20.669 4.73705 20.0967 4.5 19.5 4.5H4.5C3.90326 4.5 3.33097 4.73705 2.90901 5.15901C2.48705 5.58097 2.25 6.15326 2.25 6.75V17.25C2.25 17.8467 2.48705 18.419 2.90901 18.841C3.33097 19.2629 3.90326 19.5 4.5 19.5Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3 class="feature-title">Payment Processing</h3>
-        </div>
-        <p class="feature-description">
-          Fast, secure payment processing for online and in-person transactions with competitive rates.
-        </p>
-      </div>
-      
-      <!-- Feature 2 -->
-      <div class="feature">
-        <div class="feature-icon">
-          <div class="icon-bg">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21 12C21 11.1716 20.3284 10.5 19.5 10.5H15C13.6193 10.5 12.5 11.6193 12.5 13C12.5 14.3807 13.6193 15.5 15 15.5H19.5C20.3284 15.5 21 14.8284 21 14M21 12V9M21 12V14M21 14C21 15.1046 20.1046 16 19 16H5C3.89543 16 3 15.1046 3 14M3 12C3 13.1046 3.89543 14 5 14M3 12C3 10.8954 3.89543 10 5 10M3 12V9M3 12V14M21 9C21 7.89543 20.1046 7 19 7H5C3.89543 7 3 7.89543 3 9M21 9V6C21 4.89543 20.1046 4 19 4H5C3.89543 4 3 4.89543 3 6V9" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3 class="feature-title">Digital Wallet</h3>
-        </div>
-        <p class="feature-description">
-          Secure multi-wallet management with instant transfers, advanced authentication, and detailed transaction history.
-        </p>
-      </div>
-      
-      <!-- Feature 3 -->
-      <div class="feature">
-        <div class="feature-icon">
-          <div class="icon-bg">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 17.25V18.257C9 19.1835 8.65079 20.0718 8.02252 20.7215C7.87897 20.8692 7.72602 21 7.5 21H16.5C16.274 21 16.121 20.8692 15.9775 20.7215C15.3492 20.0718 15 19.1835 15 18.257V17.25M6 12H18C19.2426 12 20.25 10.9926 20.25 9.75V5.25C20.25 4.00736 19.2426 3 18 3H6C4.75736 3 3.75 4.00736 3.75 5.25V9.75C3.75 10.9926 4.75736 12 6 12Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3 class="feature-title">POS Systems</h3>
-        </div>
-        <p class="feature-description">
-          Complete point-of-sale solutions with hardware options, inventory management, and customer relationship tools.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-content">
-      <div class="footer-main">
-        <div class="footer-brand">
-          <h3>PaySurity</h3>
-          <p>Modern payment infrastructure for businesses of all sizes</p>
-        </div>
-        
-        <div class="footer-links">
-          <div class="footer-group">
-            <h4>Products</h4>
-            <ul>
-              <li><a href="/dark?page=products">Payment Processing</a></li>
-              <li><a href="/dark?page=wallet">Digital Wallet</a></li>
-              <li><a href="/dark?page=pos">POS Systems</a></li>
-            </ul>
-          </div>
-          
-          <div class="footer-group">
-            <h4>Company</h4>
-            <ul>
-              <li><a href="/dark?page=about">About</a></li>
-              <li><a href="/dark?page=contact">Contact</a></li>
-              <li><a href="/dark?page=careers">Careers</a></li>
-            </ul>
-          </div>
-          
-          <div class="footer-group">
-            <h4>Resources</h4>
-            <ul>
-              <li><a href="/dark?page=docs">Documentation</a></li>
-              <li><a href="/dark?page=support">Support</a></li>
-              <li><a href="/dark?page=faq">FAQ</a></li>
-            </ul>
-          </div>
-          
-          <div class="footer-group">
-            <h4>Legal</h4>
-            <ul>
-              <li><a href="/dark?page=terms">Terms</a></li>
-              <li><a href="/dark?page=privacy">Privacy</a></li>
-              <li><a href="/dark?page=security">Security</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-      
-      <div class="footer-bottom">
-        <p class="copyright">© ${new Date().getFullYear()} PaySurity, Inc. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.send(html);
+  });
   
-  <script>
-    console.log('PaySurity Direct Dark Theme Landing Page Loaded - April ${new Date().toISOString().split('T')[0]}');
-  </script>
-</body>
-</html>`);
-});
+  // Products page
+  app.get('/products', (req, res) => {
+    const content = getTemplateContent('products');
+    const html = renderPage(content, 'POS Products');
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // Merchant Services page
+  app.get('/merchant-services', (req, res) => {
+    const content = getTemplateContent('merchant-services');
+    const html = renderPage(content, 'Merchant Services');
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // Blog page
+  app.get('/blog', (req, res) => {
+    const content = getTemplateContent('blog');
+    const html = renderPage(content, 'Blog');
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // About Us page
+  app.get('/about', (req, res) => {
+    const content = getTemplateContent('about');
+    const html = renderPage(content, 'About Us');
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // Contact Us page
+  app.get('/contact', (req, res) => {
+    const content = getTemplateContent('contact');
+    const html = renderPage(content, 'Contact Us');
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // FAQs page
+  app.get('/faqs', (req, res) => {
+    const content = getTemplateContent('faqs');
+    const html = renderPage(content, 'FAQs');
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+  
+  // Legacy dark route for backward compatibility
+  app.get('/dark', (req, res) => {
+    res.redirect('/home');
+  });
 
 // SUPER EMERGENCY ROUTE - A unique route that shouldn't be cached anywhere
 app.get('/emergency-april-16-landing', (req, res) => {
