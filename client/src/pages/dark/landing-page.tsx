@@ -1,606 +1,357 @@
+import React from "react";
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { DarkThemeLayout } from "@/components/layout/dark-theme-layout";
+import { cn } from "@/lib/utils";
 
 export default function MainLandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
-      {/* Header - Dark Theme */}
-      <header className="border-b border-gray-800 bg-gray-900">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-8">
-            {/* Logo */}
-            <Link to="/">
-              <div className="flex items-center">
-                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">PaySurity</span>
-              </div>
+    <DarkThemeLayout>
+      <HeroSection />
+      <LogoCloudSection />
+      <FeaturesSection />
+      <ProductsSection />
+      <TestimonialsSection />
+      <StatisticsSection />
+      <CtaSection />
+    </DarkThemeLayout>
+  );
+}
+
+function HeroSection() {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-b from-black to-gray-900 px-6 py-24 sm:py-32 lg:px-8">
+      <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+      <div className="relative mx-auto max-w-2xl">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            <span className="block">Modern Payment</span>
+            <span className="block text-blue-500">Infrastructure</span>
+          </h1>
+          <p className="mt-6 text-lg leading-8 text-gray-300">
+            Comprehensive payment solutions empowering businesses with seamless 
+            processing, digital wallets, and integrated POS systems.
+          </p>
+          <div className="mt-10 flex items-center justify-center gap-x-6">
+            <Link href="/auth?mode=register">
+              <a className="rounded-md bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                Get started
+              </a>
             </Link>
-            
-            {/* Main Navigation */}
-            <nav className="hidden md:flex space-x-6">
-              <Link to="/products">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Products</span>
-              </Link>
-              <Link to="/digital-wallet">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Digital Wallet</span>
-              </Link>
-              <Link to="/industry-solutions">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Solutions</span>
-              </Link>
-              <Link to="/pos-systems">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">POS Systems</span>
-              </Link>
-              <Link to="/pricing">
-                <span className="text-sm text-gray-400 hover:text-white transition-colors">Pricing</span>
-              </Link>
-            </nav>
-          </div>
-          
-          {/* Right Side Navigation */}
-          <div className="flex items-center space-x-4">
-            <Link to="/auth">
-              <Button variant="outline" size="sm" className="hidden md:inline-flex bg-transparent text-gray-300 border-gray-700 hover:bg-gray-800">Login</Button>
-            </Link>
-            <Link to="/auth">
-              <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">Get Started</Button>
+            <Link href="/products">
+              <a className="text-sm font-semibold leading-6 text-white hover:text-blue-300">
+                Explore products <span aria-hidden="true">→</span>
+              </a>
             </Link>
           </div>
         </div>
-      </header>
+      </div>
       
-      {/* Hero Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6 leading-tight">Complete Payment Infrastructure for Modern Business</h1>
-            <p className="text-xl text-gray-300 mb-8">
-              Streamline payments, reduce costs, and boost your business growth with secure, flexible payment solutions.
-            </p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" className="px-8 bg-indigo-600 hover:bg-indigo-700">
-                Start Now
-              </Button>
-              <Button variant="outline" size="lg" className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800">
-                Schedule Demo
-              </Button>
-            </div>
-          </div>
+      {/* Payment cards floating effect */}
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 transform">
+        <div className="relative">
+          <div className="absolute -left-32 -top-16 h-64 w-96 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 p-4 shadow-xl transform rotate-6 opacity-30 blur-sm"></div>
+          <div className="absolute -right-32 top-8 h-64 w-96 rounded-xl bg-gradient-to-r from-purple-600 to-blue-700 p-4 shadow-xl transform -rotate-6 opacity-30 blur-sm"></div>
+          <div className="h-64 w-96 rounded-xl bg-gradient-to-r from-blue-700 to-blue-900 p-4 shadow-xl transform opacity-75"></div>
         </div>
-      </section>
-      
-      {/* Core Features Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Payment Solutions for Every Need</h2>
-            <p className="text-lg text-gray-300 max-w-3xl mx-auto">
-              From processing credit cards to managing complex financial workflows, PaySurity offers everything you need.
+      </div>
+    </div>
+  );
+}
+
+function LogoCloudSection() {
+  return (
+    <div className="bg-black py-16 sm:py-24">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <h2 className="text-center text-lg font-semibold leading-8 text-gray-300">
+          Trusted by thousands of businesses worldwide
+        </h2>
+        <div className="mx-auto mt-10 grid max-w-lg grid-cols-4 items-center gap-x-8 gap-y-10 sm:max-w-xl sm:grid-cols-6 sm:gap-x-10 lg:mx-0 lg:max-w-none lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-12 w-full bg-gradient-to-r from-gray-700 to-gray-600 opacity-30 rounded"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeaturesSection() {
+  const features = [
+    {
+      title: "Secure Payment Processing",
+      description: "Advanced encryption and fraud detection systems ensure your transactions are always protected and compliant.",
+      icon: (
+        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+      ),
+    },
+    {
+      title: "Omni-Channel Experience",
+      description: "Deliver consistent payment experiences across in-store, online, and mobile touchpoints for your customers.",
+      icon: (
+        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+        </svg>
+      ),
+    },
+    {
+      title: "Real-time Analytics",
+      description: "Gain valuable insights into your business performance with comprehensive reporting and analytics tools.",
+      icon: (
+        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+      ),
+    },
+    {
+      title: "Global Reach",
+      description: "Accept payments in multiple currencies and expand your business globally with our international payment solutions.",
+      icon: (
+        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+        </svg>
+      ),
+    },
+    {
+      title: "Developer-Friendly APIs",
+      description: "Easily integrate our payment solutions into your existing systems with our comprehensive API documentation.",
+      icon: (
+        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+        </svg>
+      ),
+    },
+    {
+      title: "24/7 Support",
+      description: "Our dedicated support team is available around the clock to help you with any issues or questions you may have.",
+      icon: (
+        <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+        </svg>
+      ),
+    },
+  ];
+  
+  return (
+    <div className="bg-gray-900 py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl lg:text-center">
+          <h2 className="text-base font-semibold leading-7 text-blue-500">Comprehensive Solutions</h2>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Everything you need for payment processing
+          </p>
+          <p className="mt-6 text-lg leading-8 text-gray-300">
+            From secure transactions to detailed analytics, our platform provides everything 
+            you need to accept payments and grow your business.
+          </p>
+        </div>
+        <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+          <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+            {features.map((feature, index) => (
+              <div key={index} className="flex flex-col">
+                <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-gray-800">
+                    {feature.icon}
+                  </div>
+                  {feature.title}
+                </dt>
+                <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                  <p className="flex-auto">{feature.description}</p>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductsSection() {
+  const products = [
+    {
+      name: "Payment Processing",
+      description: "Secure, reliable payment processing for businesses of all sizes.",
+      href: "/payments",
+      icon: (
+        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+      ),
+      bgClass: "bg-gradient-to-r from-blue-600 to-blue-800",
+    },
+    {
+      name: "Digital Wallet",
+      description: "Store, send, and receive money with our secure digital wallet.",
+      href: "/digital-wallet",
+      icon: (
+        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+        </svg>
+      ),
+      bgClass: "bg-gradient-to-r from-indigo-600 to-indigo-800",
+    },
+    {
+      name: "POS Systems",
+      description: "Modern point-of-sale systems for retail and restaurant businesses.",
+      href: "/pos-systems",
+      icon: (
+        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+        </svg>
+      ),
+      bgClass: "bg-gradient-to-r from-purple-600 to-purple-800",
+    },
+  ];
+  
+  return (
+    <div className="bg-black py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl lg:max-w-none">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Our Products
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-gray-300">
+              Comprehensive payment solutions for modern businesses
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Card 1 */}
-            <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
-              <div className="h-12 w-12 rounded-full bg-indigo-900 flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold mb-2">Payment Processing</h3>
-              <p className="text-gray-300 mb-4">Secure, reliable payment acceptance across all channels</p>
-              <ul className="space-y-2 mb-4">
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Credit & debit cards</span>
-                </li>
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">ACH & bank transfers</span>
-                </li>
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Digital wallets</span>
-                </li>
-              </ul>
-              <Link to="/products">
-                <Button variant="link" className="p-0 h-auto text-indigo-400 hover:text-indigo-300">
-                  Learn more →
-                </Button>
+          <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-6 sm:mt-20 lg:max-w-none lg:grid-cols-3">
+            {products.map((product, index) => (
+              <Link key={index} href={product.href}>
+                <a className={cn(
+                  "group relative isolate flex flex-col justify-between overflow-hidden rounded-2xl px-8 pb-8 pt-16 transition-transform duration-300 hover:scale-105",
+                  product.bgClass
+                )}>
+                  <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/50 via-black/0"></div>
+                  <div className="absolute left-4 top-4 h-10 w-10 flex items-center justify-center rounded-lg bg-white/10">
+                    {product.icon}
+                  </div>
+                  
+                  <div>
+                    <h3 className="mt-10 text-xl font-bold leading-7 text-white">{product.name}</h3>
+                    <p className="mt-2 leading-7 text-gray-200">{product.description}</p>
+                  </div>
+                  
+                  <div className="mt-6 flex items-center gap-x-2 text-white">
+                    <span className="text-sm font-medium">Learn more</span>
+                    <span className="group-hover:translate-x-1 transition duration-300" aria-hidden="true">→</span>
+                  </div>
+                </a>
               </Link>
-            </div>
-            
-            {/* Card 2 */}
-            <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
-              <div className="h-12 w-12 rounded-full bg-indigo-900 flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold mb-2">POS Systems</h3>
-              <p className="text-gray-300 mb-4">Modern point-of-sale solutions for every industry</p>
-              <ul className="space-y-2 mb-4">
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Restaurant POS (BistroBeast)</span>
-                </li>
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Retail & e-commerce</span>
-                </li>
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Mobile & contactless</span>
-                </li>
-              </ul>
-              <Link to="/pos-systems">
-                <Button variant="link" className="p-0 h-auto text-indigo-400 hover:text-indigo-300">
-                  Learn more →
-                </Button>
-              </Link>
-            </div>
-            
-            {/* Card 3 */}
-            <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
-              <div className="h-12 w-12 rounded-full bg-indigo-900 flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold mb-2">Digital Wallet</h3>
-              <p className="text-gray-300 mb-4">Integrated financial management for businesses and consumers</p>
-              <ul className="space-y-2 mb-4">
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Multi-currency support</span>
-                </li>
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Expense management</span>
-                </li>
-                <li className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-gray-300">Family accounts</span>
-                </li>
-              </ul>
-              <Link to="/digital-wallet">
-                <Button variant="link" className="p-0 h-auto text-indigo-400 hover:text-indigo-300">
-                  Learn more →
-                </Button>
-              </Link>
-            </div>
+            ))}
           </div>
         </div>
-      </section>
-      
-      {/* Industry Solutions Section */}
-      <section className="py-20 bg-gray-900">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Industry-Specific Solutions</h2>
-            <p className="text-lg text-gray-300 max-w-3xl mx-auto">
-              Tailored payment systems designed for the unique needs of your industry.
+      </div>
+    </div>
+  );
+}
+
+function TestimonialsSection() {
+  const testimonials = [
+    {
+      content: "PaySurity's payment processing solution has been a game-changer for our business. The integration was seamless, and we've seen a significant increase in our conversion rates.",
+      author: "Sarah Johnson",
+      role: "CEO, TechRetail Inc."
+    },
+    {
+      content: "The digital wallet has transformed how we handle payments. Our customers love the convenience, and we love the reduced processing times and fees.",
+      author: "Michael Chen",
+      role: "Founder, Fusion Eats"
+    },
+    {
+      content: "Implementing PaySurity's POS system in our restaurant chain has streamlined our operations and improved customer satisfaction. The support team is always there when we need them.",
+      author: "Laura Rodriguez",
+      role: "Operations Director, Urban Dining Group"
+    }
+  ];
+  
+  return (
+    <div className="bg-gray-900 py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-xl text-center">
+          <h2 className="text-lg font-semibold leading-8 text-blue-500">Testimonials</h2>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Trusted by thousands of businesses
+          </p>
+        </div>
+        <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 lg:mx-0 lg:max-w-none lg:grid-cols-3">
+          {testimonials.map((testimonial, index) => (
+            <div key={index} className="flex flex-col justify-between rounded-2xl bg-gray-800 p-8 shadow-sm ring-1 ring-gray-700">
+              <blockquote className="text-lg leading-8 text-gray-200">
+                <p>"{testimonial.content}"</p>
+              </blockquote>
+              <div className="mt-6 flex items-center">
+                <div className="h-12 w-12 rounded-full bg-gray-600"></div>
+                <div className="ml-4">
+                  <p className="font-semibold text-white">{testimonial.author}</p>
+                  <p className="text-sm text-gray-400">{testimonial.role}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatisticsSection() {
+  const stats = [
+    { id: 1, name: "Merchants", value: "10,000+" },
+    { id: 2, name: "Transactions", value: "$2B+" },
+    { id: 3, name: "Countries", value: "50+" },
+    { id: 4, name: "Uptime", value: "99.99%" },
+  ];
+  
+  return (
+    <div className="bg-black py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl lg:max-w-none">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Trusted by businesses worldwide
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-gray-300">
+              Our platform processes billions in transactions annually
             </p>
           </div>
-          
-          <Tabs defaultValue="restaurant" className="max-w-4xl mx-auto">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-gray-800">
-              <TabsTrigger value="restaurant" className="data-[state=active]:bg-indigo-800 data-[state=active]:text-white">Restaurant</TabsTrigger>
-              <TabsTrigger value="retail" className="data-[state=active]:bg-indigo-800 data-[state=active]:text-white">Retail</TabsTrigger>
-              <TabsTrigger value="legal" className="data-[state=active]:bg-indigo-800 data-[state=active]:text-white">Legal</TabsTrigger>
-              <TabsTrigger value="healthcare" className="data-[state=active]:bg-indigo-800 data-[state=active]:text-white">Healthcare</TabsTrigger>
-            </TabsList>
-            
-            <div className="mt-8">
-              <TabsContent value="restaurant">
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                      </svg>
-                      <div>
-                        <h3 className="text-xl font-bold">Restaurant & Hospitality</h3>
-                        <p className="text-gray-300">Complete payment & POS solutions for food service</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Key Features</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">BistroBeast™ POS system with table management</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Tableside ordering & payment</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Tip management & distribution</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Kitchen display system integration</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Benefits</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Faster table turnover</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Reduced order errors</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Streamlined operations</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Enhanced customer experience</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 text-center">
-                      <Link to="/industry-solutions">
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">Explore Restaurant Solutions</Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="retail">
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                      </svg>
-                      <div>
-                        <h3 className="text-xl font-bold">Retail & E-Commerce</h3>
-                        <p className="text-gray-300">Omnichannel payment solutions for modern retail</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Key Features</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Integrated online & in-store payments</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Inventory management</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Customer loyalty programs</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">E-commerce integrations</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Benefits</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Synchronized inventory</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Customer insights</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Unified reporting</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Seamless checkout</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 text-center">
-                      <Link to="/industry-solutions">
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">Explore Retail Solutions</Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="legal">
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <h3 className="text-xl font-bold">Legal Practice Management</h3>
-                        <p className="text-gray-300">Specialized payment solutions for law firms</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Key Features</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">IOLTA trust accounting</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Secure client portal payments</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Billing and invoicing templates</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Payment plans for clients</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Benefits</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Regulatory compliance</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Improved cash flow</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Reduced payment delays</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Comprehensive reporting</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 text-center">
-                      <Link to="/industry-solutions">
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">Explore Legal Solutions</Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="healthcare">
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                      </svg>
-                      <div>
-                        <h3 className="text-xl font-bold">Healthcare Payment Solutions</h3>
-                        <p className="text-gray-300">Specialized payment processing for healthcare providers</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Key Features</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">HIPAA-compliant payments</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Insurance eligibility verification</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Patient payment portals</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Payment plans & financing</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3 text-lg">Benefits</h4>
-                        <ul className="space-y-2">
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Reduced billing complexity</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Improved patient satisfaction</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Streamlined collections</span>
-                          </li>
-                          <li className="flex items-start">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-300">Regulatory compliance</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 text-center">
-                      <Link to="/industry-solutions">
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">Explore Healthcare Solutions</Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </div>
-          </Tabs>
+          <dl className="mt-16 grid grid-cols-1 gap-0.5 overflow-hidden rounded-2xl sm:grid-cols-2 lg:grid-cols-4">
+            {stats.map((stat) => (
+              <div key={stat.id} className="flex flex-col bg-gray-800 p-8">
+                <dt className="text-sm font-semibold leading-6 text-gray-300">{stat.name}</dt>
+                <dd className="order-first text-3xl font-semibold tracking-tight text-blue-500">{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      </section>
-      
-      {/* Footer */}
-      <footer className="py-12 border-t border-gray-800">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div className="col-span-2">
-              <h3 className="text-xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">PaySurity</h3>
-              <p className="text-gray-400 mb-4 max-w-xs">
-                Comprehensive payment infrastructure for modern businesses of all sizes.
-              </p>
-              <p className="text-gray-500 text-sm">
-                © {new Date().getFullYear()} PaySurity. All rights reserved.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-gray-400">Products</h4>
-              <ul className="space-y-2">
-                <li><Link to="/products"><span className="text-gray-400 hover:text-white text-sm">Overview</span></Link></li>
-                <li><Link to="/digital-wallet"><span className="text-gray-400 hover:text-white text-sm">Digital Wallet</span></Link></li>
-                <li><Link to="/pos-systems"><span className="text-gray-400 hover:text-white text-sm">POS Systems</span></Link></li>
-                <li><Link to="/payments"><span className="text-gray-400 hover:text-white text-sm">Payment Processing</span></Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-gray-400">Company</h4>
-              <ul className="space-y-2">
-                <li><Link to="/about"><span className="text-gray-400 hover:text-white text-sm">About</span></Link></li>
-                <li><Link to="/careers"><span className="text-gray-400 hover:text-white text-sm">Careers</span></Link></li>
-                <li><Link to="/contact"><span className="text-gray-400 hover:text-white text-sm">Contact</span></Link></li>
-                <li><Link to="/blog"><span className="text-gray-400 hover:text-white text-sm">Blog</span></Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-gray-400">Resources</h4>
-              <ul className="space-y-2">
-                <li><Link to="/documentation"><span className="text-gray-400 hover:text-white text-sm">Documentation</span></Link></li>
-                <li><Link to="/faq"><span className="text-gray-400 hover:text-white text-sm">FAQ</span></Link></li>
-                <li><Link to="/support"><span className="text-gray-400 hover:text-white text-sm">Support</span></Link></li>
-                <li><Link to="/legal"><span className="text-gray-400 hover:text-white text-sm">Legal</span></Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="mt-12 text-center text-gray-400 text-xs">
-            Generated on: {new Date().toISOString()} | Build: 2025-04-16-1
-          </div>
+      </div>
+    </div>
+  );
+}
+
+function CtaSection() {
+  return (
+    <div className="bg-blue-600">
+      <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8">
+        <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          Ready to transform your payment experience?
+        </h2>
+        <div className="mt-10 flex items-center gap-x-6">
+          <Link href="/auth?mode=register">
+            <a className="rounded-md bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+              Get started
+            </a>
+          </Link>
+          <Link href="/contact">
+            <a className="text-sm font-semibold leading-6 text-white">
+              Contact sales <span aria-hidden="true">→</span>
+            </a>
+          </Link>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
