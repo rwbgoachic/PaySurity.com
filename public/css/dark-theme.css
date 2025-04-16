@@ -610,72 +610,78 @@ p {
 }
 
 /* Hero Section */
-/* FULLSCREEN HERO IN HEADER - Taking full viewport */
-#fullscreen-hero {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100vh;
-  width: 100vw;
-  background-color: #0a0c16; /* Dark navy */
-  z-index: 5; 
-  overflow: hidden;
-}
-
-/* Hero overlay with centered content */
-.hero-overlay {
-  position: absolute;
+/* TRUE FULLSCREEN HERO */
+.fullscreen-hero {
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  z-index: 10;
+  z-index: 1;
+  background-color: #0a0c16; /* Dark navy background */
+  overflow: hidden;
 }
 
-/* Hero content container */
-.hero-content {
-  max-width: 42rem;
-  width: 90%;
-  background-color: rgba(17, 24, 39, 0.7);
+.hero-background {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 35%, rgba(99, 102, 241, 0.15) 0%, transparent 30%),
+    radial-gradient(circle at 75% 65%, rgba(6, 182, 212, 0.15) 0%, transparent 30%);
   backdrop-filter: blur(5px);
-  border-radius: 1rem;
+  z-index: 2;
+}
+
+.hero-content-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  padding: 2rem;
+}
+
+.hero-text {
+  max-width: 42rem;
+  width: 100%;
+  background-color: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 1.5rem;
   border: 1px solid rgba(99, 102, 241, 0.3);
   padding: 3rem;
   text-align: center;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
 }
 
-/* Hero heading */
-#fullscreen-hero h1 {
-  font-size: 3rem;
+.fullscreen-hero h1 {
+  font-size: 3.5rem;
   font-weight: 800;
   margin-bottom: 1.5rem;
   color: white;
   line-height: 1.2;
 }
 
-/* Hero accent text */
-#fullscreen-hero .accent {
+.fullscreen-hero .text-accent {
   color: #a855f7;
   background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Hero paragraph */
-#fullscreen-hero p {
+.fullscreen-hero p {
   font-size: 1.25rem;
   line-height: 1.7;
   color: #d1d5db;
   margin-bottom: 2rem;
 }
 
-/* Hero buttons wrapper */
 .hero-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -684,7 +690,6 @@ p {
   margin-bottom: 2rem;
 }
 
-/* Hero badges */
 .hero-badges {
   display: flex;
   flex-wrap: wrap;
@@ -709,9 +714,27 @@ p {
   font-weight: bold;
 }
 
-/* Main content pushed down when hero is present */
-main.with-hero {
-  margin-top: 100vh; /* Push main content below hero */
+/* Make room for the hero section */
+section:first-of-type {
+  margin-top: 100vh;
+  position: relative;
+  z-index: 20;
+}
+
+@media (max-width: 640px) {
+  .fullscreen-hero h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero-text {
+    padding: 2rem;
+  }
+}
+
+/* Ensure the rest of the content appears above the hero */
+main {
+  position: relative;
+  z-index: 20;
 }
 
 .hero::before {
@@ -1666,7 +1689,7 @@ textarea {
 }
 
 .bg-card {
-  background-color: var(--bg-card);
+  background-color: #4d0c9c; /* Explicit purple background color */
 }
 
 .border {
@@ -1691,7 +1714,7 @@ textarea {
   border-radius: var(--radius-md);
   background-clip: padding-box;
   border: 2px solid transparent;
-  background-color: var(--bg-card);
+  background-color: #4d0c9c; /* Explicit purple background color */
   overflow: hidden;
 }
 
