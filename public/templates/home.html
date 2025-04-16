@@ -302,10 +302,16 @@
     <div class="flex flex-col md:flex-row gap-8 items-center">
       <div class="md:w-1/2">
         <div class="video-container gradient-border animate-on-scroll shadow-lg">
-          <!-- Video placeholder - Using a responsive ratio container with image overlay -->
+          <!-- Video placeholder - Using a responsive ratio container with proper placeholder -->
           <div class="aspect-video bg-card-dark relative overflow-hidden">
             <div class="absolute inset-0 flex items-center justify-center">
-              <img src="/images/video-thumbnail.jpg" alt="PaySurity Demo Video" class="video-thumbnail w-full h-full object-cover">
+              <div class="media-content">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="hero-placeholder-icon">
+                  <circle cx="12" cy="12" r="11" stroke="rgba(99, 102, 241, 0.6)" stroke-width="1.5"/>
+                  <path d="M16 12L10 16.5V7.5L16 12Z" fill="rgba(99, 102, 241, 0.6)"/>
+                </svg>
+                <p class="placeholder-text">Product Demo Video</p>
+              </div>
               <div class="play-button absolute">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="12" fill="rgba(79, 70, 229, 0.9)"/>
