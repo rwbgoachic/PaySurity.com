@@ -88,31 +88,24 @@
     border-top: 1px solid rgba(99, 102, 241, 0.2);
   }
   
-  /* Custom card styling for purple background */
+  /* Custom card styling to match approved design */
   .card {
-    background-color: #4d0c9c !important;
-    border-radius: 1rem;
-    overflow: hidden;
+    background-color: #1e1e38 !important;
     border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 0.5rem;
+    overflow: hidden;
     position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
   
   .card::before {
     content: '';
     position: absolute;
-    top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 1rem;
-    padding: 2px;
-    background: linear-gradient(135deg, #6366f1, #a855f7);
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    top: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, #6366f1, #a855f7);
   }
   
   .card-content {
@@ -254,7 +247,7 @@
 </section>
 
 <!-- POS Products Showcase -->
-<section class="py-8 bg-card">
+<section class="py-8" style="background-color: #4d0c9c;">
   <div class="container">
     <div class="section-title text-center max-w-3xl mx-auto mb-8">
       <h2 class="gradient-text">Specialized <span class="text-accent">POS Solutions</span></h2>
