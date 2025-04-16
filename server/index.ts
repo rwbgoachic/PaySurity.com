@@ -304,46 +304,12 @@ app.options('*', (req, res) => {
   res.status(200).end();
 });
 
-// Add performance-optimized caching strategy for assets
+// Simple caching strategy - disable caching for all routes to ensure fresh content
 app.use((req, res, next) => {
-  // Performance headers
-  res.setHeader('Vary', 'Accept-Encoding, User-Agent');
-  
-  // Set explicit mime types for common file extensions
-  const path = req.path;
-  if (path.endsWith('.js')) {
-    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  } else if (path.endsWith('.css')) {
-    res.setHeader('Content-Type', 'text/css; charset=utf-8');
-  } else if (path.endsWith('.json')) {
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  } else if (path.endsWith('.html')) {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  }
-  
-  // Advanced caching strategy for different types of assets
-  // Cache fonts and immutable assets for 1 year (immutable, 31536000s)
-  if (/\.(woff|woff2|ttf|eot)$/.test(path)) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  }
-  // Cache images and media for 1 week (604800s) with stale-while-revalidate
-  else if (/\.(png|jpg|jpeg|gif|ico|svg|webp|avif|mp4|webm)$/.test(path)) {
-    res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
-  }
-  // Cache CSS/JS for 1 day (86400s) with stale-while-revalidate
-  else if (/\.(css|js)$/.test(path)) {
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=43200');
-  }
-  // Don't cache HTML and API endpoints
-  else if (/\.html$/.test(path) || path.startsWith('/api/')) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-  }
-  // Default - short cache for everything else (30 seconds) for better performance
-  else {
-    res.setHeader('Cache-Control', 'public, max-age=30, must-revalidate');
-  }
+  // Don't cache anything to ensure fresh content during development
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   
   next();
 });
@@ -453,27 +419,22 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   
-  // For deployment purposes, we'll set a safety mechanism
-  // This ensures the application starts even if built files aren't found
-  const forceDevMode = true; // Setting to true to ensure Vite handles routing properly
-  
-  // Always use development mode to ensure proper React routing
-  console.log('Setting NODE_ENV to development for proper React routing');
-  process.env.NODE_ENV = 'development';
-  
-  // Explicitly set Express app environment to development
-  app.set('env', 'development');
-  console.log('Current Express environment:', app.get('env'));
+  // Check if we're in development or production mode
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  console.log(`Running in ${isDevelopment ? 'development' : 'production'} mode`);
   
   try {
-    // Always use setupVite to ensure React handles routing properly
-    console.log('Using Vite middleware to handle React routing');
-    await setupVite(app, server);
-    // Note: serveStatic is not used to prevent it from capturing the root route
+    if (isDevelopment) {
+      console.log('Setting up Vite development middleware');
+      await setupVite(app, server);
+    } else {
+      console.log('Serving static files from public directory');
+      serveStatic(app);
+    }
   } catch (err: any) {
-    console.warn('Error setting up Vite:', err.message || 'Unknown error');
-    console.warn('Attempting to continue anyway');
-    // Still try to use Vite even if there was an error
+    console.warn('Error setting up server:', err.message || 'Unknown error');
+    console.warn('Attempting to fall back to Vite middleware');
+    // Fallback to Vite if there's an error
     await setupVite(app, server);
   }
 
