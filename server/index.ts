@@ -768,6 +768,17 @@ app.use((req, res, next) => {
 
 // Body parser already set up above
 
+// Domain handling middleware
+app.use((req, res, next) => {
+  const host = req.get('host');
+  // Allow both paysurity.com and the replit.app domain
+  if (host && (host.includes('paysurity.com') || host.includes('replit.app'))) {
+    next();
+  } else {
+    res.redirect(`https://paysurity.com${req.url}`);
+  }
+});
+
 // Add global options handler for CORS preflight requests
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
