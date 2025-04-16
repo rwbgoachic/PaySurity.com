@@ -5,8 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
-// Using new dark-themed landing page
-import LandingPage from "@/pages/landing-page-dark";
+// Using a completely fresh new dark-themed landing page
+import LandingPage from "@/pages/fresh-dark-landing";
 import ProjectDependenciesPage from "@/pages/project-dependencies-page";
 import PricingPage from "@/pages/pricing-page";
 import IndustrySolutionsPage from "@/pages/industry-solutions-page";
@@ -89,7 +89,7 @@ function Router() {
   return (
     <Switch>
       {/* Main marketing site routes */}
-      {/* New contemporary dark-themed landing page */}
+      {/* Fresh contemporary dark-themed landing page with new component name */}
       <Route path="/" component={() => {
         console.log("Loading new landing page - " + new Date().toISOString());
         return <LandingPage key={"forced-new-"+Date.now()} />;
