@@ -452,26 +452,21 @@ app.use((req, res, next) => {
   
   // For deployment purposes, we'll set a safety mechanism
   // This ensures the application starts even if built files aren't found
-  const forceDevMode = false; // Set to false to allow production mode for deployment
+  const forceDevMode = true; // Setting to true to ensure Vite handles routing properly
   
-  // Try to detect if we're in a deployment environment where built files might not be available yet
-  const isDeploymentBuild = process.env.NODE_ENV === 'production' && !forceDevMode;
-  
-  // Only set development mode if it's not already set to production
-  if (!isDeploymentBuild) {
-    process.env.NODE_ENV = 'development';
-  }
+  // Always use development mode to ensure proper React routing
+  console.log('Setting NODE_ENV to development for proper React routing');
+  process.env.NODE_ENV = 'development';
   
   try {
-    if (forceDevMode || app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
+    // Always use setupVite to ensure React handles routing properly
+    console.log('Using Vite middleware to handle React routing');
+    await setupVite(app, server);
+    // Note: serveStatic is not used to prevent it from capturing the root route
   } catch (err: any) {
-    console.warn('Error serving static files:', err.message || 'Unknown error');
-    console.warn('Falling back to development mode');
-    // If serveStatic fails, fall back to development mode
+    console.warn('Error setting up Vite:', err.message || 'Unknown error');
+    console.warn('Attempting to continue anyway');
+    // Still try to use Vite even if there was an error
     await setupVite(app, server);
   }
 
