@@ -12,6 +12,10 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Test Banner - ORIGINAL APRIL 3RD VERSION */}
+      <div className="bg-red-500 text-white py-4 text-center font-bold text-2xl">
+        THIS IS THE ORIGINAL APRIL 3RD VERSION - FULLY RESTORED
+      </div>
       {/* Navbar */}
       <header className="border-b bg-white sticky top-0 z-10">
         <div className="container mx-auto py-4 px-4 md:px-6 flex items-center justify-between">
