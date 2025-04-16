@@ -173,42 +173,52 @@
 <!-- Blog Integration Script for News API -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // This is a placeholder for the News API integration
-  // In a production environment, you would make an API call to fetch news articles
+  // Fetch news articles from our server-side API
+  // This protects our API key and provides fallback content if the API is unavailable
   
-  const newsApiKey = ''; // Would be populated from server-side environment variable
+  // Status message container
+  const blogPostsContainer = document.getElementById('blog-posts');
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.className = 'loading-indicator';
+  loadingIndicator.innerHTML = `
+    <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span>Loading latest payment industry news...</span>
+  `;
   
-  // Example of how to fetch news from the News API
+  // Only show loading indicator if we're replacing existing content
+  if (blogPostsContainer.children.length > 0) {
+    blogPostsContainer.innerHTML = '';
+    blogPostsContainer.appendChild(loadingIndicator);
+  }
+  
   async function fetchNewsArticles() {
-    // This would normally be done through a server-side endpoint to protect your API key
-    if (!newsApiKey) {
-      console.log('News API key not available. Using placeholder content.');
-      return;
-    }
-    
     try {
-      const response = await fetch(`https://newsapi.org/v2/everything?q=payment+processing&apiKey=${newsApiKey}&pageSize=5`);
+      const response = await fetch('/api/news/payment-industry');
+      
+      if (!response.ok) {
+        console.error('Error fetching news:', response.status, response.statusText);
+        return;
+      }
+      
       const data = await response.json();
       
-      if (data.status === 'ok') {
-        const blogPostsContainer = document.getElementById('blog-posts');
-        blogPostsContainer.innerHTML = ''; // Clear placeholder content
+      if (data.status === 'ok' && data.articles && data.articles.length > 0) {
+        // Clear any existing content or loading indicator
+        blogPostsContainer.innerHTML = '';
         
+        // Add articles to the container
         data.articles.forEach(article => {
-          const publishedDate = new Date(article.publishedAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-          
           const postHtml = `
             <div class="post animate-on-scroll">
               <div class="post-header">
-                <p class="post-date">${publishedDate}</p>
+                <p class="post-date">${article.date}</p>
                 <h2 class="post-title">${article.title}</h2>
               </div>
               <p class="post-excerpt">
-                ${article.description}
+                ${article.summary}
               </p>
               <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="post-link">
                 Read more
@@ -221,14 +231,25 @@ document.addEventListener('DOMContentLoaded', function() {
           
           blogPostsContainer.innerHTML += postHtml;
         });
+        
+        // Add category badges to each post
+        const posts = document.querySelectorAll('.post');
+        posts.forEach((post, index) => {
+          if (data.articles[index] && data.articles[index].category) {
+            const categoryBadge = document.createElement('span');
+            categoryBadge.className = 'category-badge';
+            categoryBadge.textContent = data.articles[index].category;
+            post.querySelector('.post-header').appendChild(categoryBadge);
+          }
+        });
       }
     } catch (error) {
-      console.error('Error fetching news articles:', error);
+      console.error('Error fetching or processing news articles:', error);
     }
   }
   
-  // Uncomment to fetch real news articles when API key is available
-  // fetchNewsArticles();
+  // Fetch articles immediately
+  fetchNewsArticles();
   
   // Newsletter form submission
   const newsletterForm = document.getElementById('newsletter-form');

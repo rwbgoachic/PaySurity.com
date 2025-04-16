@@ -22,6 +22,7 @@ import createSecureHeaders from "content-security-policy";
 import { setupAuth } from "./auth";
 import { generateSitemap } from "./sitemap";
 import { renderPage, renderErrorPage } from "./template-engine";
+import { fetchPaymentNews } from "./news-api";
 
 const app = express();
 
@@ -110,6 +111,24 @@ app.get('/api/health', (req, res) => {
     service: 'paysurity-api',
     timestamp: new Date().toISOString()
   });
+});
+
+// News API endpoint for blog content
+app.get('/api/news/payment-industry', async (req, res) => {
+  try {
+    const articles = await fetchPaymentNews();
+    res.json({ 
+      status: 'ok',
+      articles: articles
+    });
+  } catch (error) {
+    console.error('Error in News API route:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Error fetching news data',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Root route now redirects to our dark-themed home page
