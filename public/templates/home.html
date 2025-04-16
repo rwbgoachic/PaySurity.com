@@ -1,49 +1,157 @@
-<!-- Full Screen Hero Section -->
-<div class="fullscreen-hero" id="true-fullscreen-hero">
-  <div class="hero-background">
-    <div class="hero-content-container">
-      <div class="hero-text">
-        <h1>Modern Payment <span class="text-accent">Infrastructure</span></h1>
-        <p>
-          Comprehensive payment solutions empowering businesses with seamless 
-          processing, integrated POS systems, and advanced financial tools.
-        </p>
-        <div class="hero-buttons">
-          <a href="/products" class="btn btn-gradient-primary">Get Started →</a>
-          <a href="/merchant-services" class="btn btn-gradient-secondary">Explore Solutions</a>
-        </div>
-        <div class="hero-badges">
-          <div class="badge"><span class="check">✓</span> PCI Compliant</div>
-          <div class="badge"><span class="check">✓</span> Next-Day Funding</div>
-          <div class="badge"><span class="check">✓</span> 24/7 Support</div>
-        </div>
-      </div>
+<!-- Full Viewport Hero Section -->
+<style>
+  #hero-fullscreen-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: #0a0c16;
+    z-index: -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+  }
+  
+  #hero-content-box {
+    max-width: 42rem;
+    width: 90%;
+    background-color: rgba(17, 24, 39, 0.7);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 3rem;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+  
+  #hero-content-box h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    color: white;
+    line-height: 1.2;
+  }
+  
+  #hero-content-box .text-accent {
+    color: #a855f7;
+    background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  #hero-content-box p {
+    font-size: 1.25rem;
+    line-height: 1.7;
+    color: #d1d5db;
+    margin-bottom: 2rem;
+  }
+  
+  #hero-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  #hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  #hero-badges .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #4d0c9c;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    color: #d1d5db;
+  }
+  
+  #hero-badges .check {
+    color: #0ea5e9;
+    margin-right: 0.5rem;
+    font-weight: bold;
+  }
+  
+  #content-wrapper {
+    position: relative;
+    z-index: 1;
+    background-color: #0f172a;
+    margin-top: 100vh;
+    border-top: 1px solid rgba(99, 102, 241, 0.2);
+  }
+  
+  /* Custom card styling for purple background */
+  .card {
+    background-color: #4d0c9c !important;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    position: relative;
+  }
+  
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 1rem;
+    padding: 2px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  
+  .card-content {
+    padding: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+  
+  @media (max-width: 640px) {
+    #hero-content-box h1 {
+      font-size: 2.5rem;
+    }
+    
+    #hero-content-box {
+      padding: 2rem;
+    }
+  }
+</style>
+
+<div id="hero-fullscreen-fixed">
+  <div id="hero-content-box">
+    <h1>Modern Payment <span class="text-accent">Infrastructure</span></h1>
+    <p>
+      Comprehensive payment solutions empowering businesses with seamless 
+      processing, integrated POS systems, and advanced financial tools.
+    </p>
+    <div id="hero-buttons">
+      <a href="/products" class="btn btn-gradient-primary">Get Started →</a>
+      <a href="/merchant-services" class="btn btn-gradient-secondary">Explore Solutions</a>
+    </div>
+    <div id="hero-badges">
+      <div class="badge"><span class="check">✓</span> PCI Compliant</div>
+      <div class="badge"><span class="check">✓</span> Next-Day Funding</div>
+      <div class="badge"><span class="check">✓</span> 24/7 Support</div>
     </div>
   </div>
 </div>
 
-<!-- Hero Control Script -->
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const heroElement = document.getElementById('true-fullscreen-hero');
-    const mainContent = document.querySelector('section:first-of-type');
-    
-    // Set hero to take up full viewport
-    heroElement.style.height = window.innerHeight + 'px';
-    heroElement.style.width = window.innerWidth + 'px';
-    
-    // Add resize listener
-    window.addEventListener('resize', function() {
-      heroElement.style.height = window.innerHeight + 'px';
-      heroElement.style.width = window.innerWidth + 'px';
-    });
-    
-    // Push down first section
-    if (mainContent) {
-      mainContent.style.marginTop = window.innerHeight + 'px';
-    }
-  });
-</script>
+<div id="content-wrapper">
 
 <!-- Features Section -->
 <section class="py-8">
