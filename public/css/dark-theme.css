@@ -610,106 +610,108 @@ p {
 }
 
 /* Hero Section */
-/* ABSOLUTE FULLSCREEN HERO - Fixed to viewport */
-#hero-fullscreen {
-  position: fixed;
+/* FULLSCREEN HERO IN HEADER - Taking full viewport */
+#fullscreen-hero {
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100vw;
+  right: 0;
   height: 100vh;
-  margin: 0;
-  padding: 0;
-  z-index: 1;
+  width: 100vw;
+  background-color: #0a0c16; /* Dark navy */
+  z-index: 5; 
   overflow: hidden;
 }
 
-/* Hero background fully covering viewport */
-.hero-fullscreen-bg {
+/* Hero overlay with centered content */
+.hero-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #0a0c16; /* Dark navy background */
-  z-index: -1;
-}
-
-/* Center content vertically and horizontally */
-.hero-center-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
-  padding: 0;
+  padding: 1rem;
+  z-index: 10;
 }
 
-/* Content container with semi-transparent background */
-.hero-content-box {
-  max-width: 36rem;
+/* Hero content container */
+.hero-content {
+  max-width: 42rem;
   width: 90%;
   background-color: rgba(17, 24, 39, 0.7);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
   border-radius: 1rem;
   border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 2.5rem;
+  padding: 3rem;
   text-align: center;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
 }
 
-/* Gradient headline text */
-.hero-headline {
-  font-size: 2.5rem;
+/* Hero heading */
+#fullscreen-hero h1 {
+  font-size: 3rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #f6f0fd 0%, #f0e5ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  color: white;
+  line-height: 1.2;
 }
 
-/* Accent text within headline */
-.hero-accent {
+/* Hero accent text */
+#fullscreen-hero .accent {
   color: #a855f7;
   background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Hero tagline/description */
-.hero-tagline {
+/* Hero paragraph */
+#fullscreen-hero p {
   font-size: 1.25rem;
   line-height: 1.7;
   color: #d1d5db;
   margin-bottom: 2rem;
 }
 
-/* Button container */
-.hero-button-group {
+/* Hero buttons wrapper */
+.hero-buttons {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
-/* Badge container */
-.hero-badge-group {
+/* Hero badges */
+.hero-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: center;
-  margin-top: 1.5rem;
 }
 
-/* Special CSS to ensure content below hero displays correctly */
-section:first-of-type {
-  margin-top: 100vh; /* Push first section below the fixed hero */
-  position: relative;
-  z-index: 2;
+.hero-badges .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  color: #d1d5db;
+}
+
+.hero-badges .check {
+  color: #0ea5e9;
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+/* Main content pushed down when hero is present */
+main.with-hero {
+  margin-top: 100vh; /* Push main content below hero */
 }
 
 .hero::before {
