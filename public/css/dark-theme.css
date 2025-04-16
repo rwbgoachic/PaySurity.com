@@ -1397,8 +1397,43 @@ textarea {
 }
 
 .gradient-border {
-  border: 2px solid var(--indigo-600);
+  position: relative;
   border-radius: var(--radius-md);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  background-color: var(--bg-card);
+  overflow: hidden;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    135deg,
+    var(--indigo-500),
+    var(--cyan-500),
+    var(--indigo-600),
+    var(--indigo-700)
+  );
+  z-index: -1;
+  border-radius: var(--radius-md);
+  animation: animateGradient 8s ease infinite;
+}
+
+@keyframes animateGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Clean Button Styles */
