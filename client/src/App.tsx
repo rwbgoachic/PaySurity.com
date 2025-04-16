@@ -88,7 +88,10 @@ function Router() {
   return (
     <Switch>
       {/* Main marketing site routes */}
-      <Route path="/" component={LandingPage} />
+      <Route path="/" component={() => {
+        // Force remount with unique key to bust any caching issues
+        return <LandingPage key={Date.now()} />;
+      }} />
       <Route path="/products" component={ProductsPage} />
       <Route path="/pricing" component={PricingPage} />
       <Route path="/industry-solutions" component={IndustrySolutionsPage} />
