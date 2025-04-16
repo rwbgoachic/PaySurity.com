@@ -610,25 +610,21 @@ p {
 }
 
 /* Hero Section */
-/* TRUE Fullscreen Hero with Fixed Positioning */
-.true-fullscreen-hero {
-  position: relative;
-  height: 100vh; /* Viewport height */
-  width: 100vw; /* Viewport width */
-  max-width: 100%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  left: 0;
-  right: 0;
+/* ABSOLUTE FULLSCREEN HERO - Fixed to viewport */
+#hero-fullscreen {
+  position: fixed;
   top: 0;
-  bottom: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
   z-index: 1;
+  overflow: hidden;
 }
 
-.hero-background {
+/* Hero background fully covering viewport */
+.hero-fullscreen-bg {
   position: absolute;
   top: 0;
   left: 0;
@@ -638,28 +634,35 @@ p {
   z-index: -1;
 }
 
-.hero-content-wrapper {
+/* Center content vertically and horizontally */
+.hero-center-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   z-index: 2;
-  padding: 1rem;
+  padding: 0;
 }
 
-.hero-content-container {
+/* Content container with semi-transparent background */
+.hero-content-box {
   max-width: 36rem;
+  width: 90%;
   background-color: rgba(17, 24, 39, 0.7);
   backdrop-filter: blur(4px);
   border-radius: 1rem;
   border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 2rem;
+  padding: 2.5rem;
   text-align: center;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
 }
 
-.hero-title {
+/* Gradient headline text */
+.hero-headline {
   font-size: 2.5rem;
   font-weight: 800;
   background: linear-gradient(135deg, #f6f0fd 0%, #f0e5ff 100%);
@@ -668,21 +671,24 @@ p {
   margin-bottom: 1rem;
 }
 
-.hero-title .text-accent {
+/* Accent text within headline */
+.hero-accent {
   color: #a855f7;
   background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.hero-subtitle {
+/* Hero tagline/description */
+.hero-tagline {
   font-size: 1.25rem;
   line-height: 1.7;
   color: #d1d5db;
   margin-bottom: 2rem;
 }
 
-.hero-cta-buttons {
+/* Button container */
+.hero-button-group {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -690,12 +696,20 @@ p {
   margin-bottom: 1.5rem;
 }
 
-.hero-trust-badges {
+/* Badge container */
+.hero-badge-group {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: center;
   margin-top: 1.5rem;
+}
+
+/* Special CSS to ensure content below hero displays correctly */
+section:first-of-type {
+  margin-top: 100vh; /* Push first section below the fixed hero */
+  position: relative;
+  z-index: 2;
 }
 
 .hero::before {
