@@ -1,0 +1,23 @@
+Landing Page Version Sizes:
+-rw-r--r-- 1 runner runner 37485 Apr 16 04:56 client/src/pages/landing-page-april11.tsx
+-rw-r--r-- 1 runner runner 37485 Apr 16 05:01 client/src/pages/landing-page-328c87c.tsx
+-rw-r--r-- 1 runner runner 37485 Apr 16 05:01 client/src/pages/landing-page.tsx
+-rw-r--r-- 1 runner runner 37472 Apr 16 04:59 client/src/pages/landing-page-april14.tsx
+-rw-r--r-- 1 runner runner 32519 Apr 16 04:56 client/src/pages/landing-page-april10.tsx
+-rw-r--r-- 1 runner runner 32315 Apr 16 04:56 client/src/pages/landing-page-april9.tsx
+-rw-r--r-- 1 runner runner 32298 Apr 16 05:02 client/src/pages/landing-page-april6.tsx
+-rw-r--r-- 1 runner runner 30377 Apr 16 05:01 client/src/pages/landing-page-d6ddf79.tsx
+\nOldest commits found:
+dc6e970 2025-04-05 Add new merchant card options to the landing page
+d645c27 2025-04-05 Enhance landing page with payroll and expense management features.
+2eb13f7 2025-04-05 Update landing page savings claim
+2b651e7 2025-04-05 Update authentication page to allow switching between login and registration and update landing page links to include tab parameters.
+44a3e9a 2025-04-05 Update "Schedule Demo" CTA button text consistency across blog and landing page
+33107c6 2025-04-03 Improve page load times by optimizing images, reducing code size, and implementing caching strategies.
+c617a60 2025-04-03 Enhance website security and SEO by adding security headers, improving manifest.json for PWA, and implementing schema markup.
+f471e34 2025-04-03 Add blog section to website with industry-specific articles
+47d2ac3 2025-04-03 Update landing page to improve messaging and broaden appeal
+a0a59af 2025-04-03 Add point of sale (POS) system for merchants.\n\nLet's check if there's anything even older:
+a0a59af 2025-04-03 Add point of sale (POS) system for merchants.
+47d2ac3 2025-04-03 Update landing page to improve messaging and broaden appeal
+f471e34 2025-04-03 Add blog section to website with industry-specific articles
