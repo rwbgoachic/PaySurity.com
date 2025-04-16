@@ -35,50 +35,6 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Top Navigation */}
-      <header className="border-b border-gray-100 bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-8">
-            {/* Logo */}
-            <Link to="/">
-              <div className="flex items-center">
-                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">PaySurity</span>
-              </div>
-            </Link>
-            
-            {/* Main Navigation */}
-            <nav className="hidden md:flex space-x-6">
-              <Link to="/products">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Products</span>
-              </Link>
-              <Link to="/digital-wallet">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Digital Wallet</span>
-              </Link>
-              <Link to="/industry-solutions">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Solutions</span>
-              </Link>
-              <Link to="/pos-systems">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">POS Systems</span>
-              </Link>
-              <Link to="/pricing">
-                <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</span>
-              </Link>
-            </nav>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <Link to="/auth">
-              <span className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Sign in</span>
-            </Link>
-            <Button asChild className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white">
-              <Link to="/auth">
-                <span>Get started</span>
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-      
       {/* Hero Section */}
       <section className="py-20 bg-white overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-white opacity-50 z-0"></div>
@@ -102,9 +58,7 @@ export default function LandingPage() {
                 <ScheduleDemoForm onSuccess={() => setIsScheduleModalOpen(false)} />
               </Dialog>
               <Button size="lg" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
-                <Link to="/pricing">
-                  <span>Contact sales</span>
-                </Link>
+                <Link href="/pricing">Contact sales</Link>
               </Button>
             </div>
           </div>
@@ -332,8 +286,8 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="mt-auto">
-                <Link to="/pos-systems" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
-                  <span>Learn more <ArrowRight className="ml-2 h-4 w-4 inline" /></span>
+                <Link href="/pos-systems" className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800">
+                  Learn more <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>
             </div>
@@ -439,6 +393,507 @@ export default function LandingPage() {
         </div>
       </section>
     
+      {/* No hidden content */}
+            <AccordionItem value="item-1">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="bistrobeast">
+                <h3 className="text-xl font-semibold mr-auto">BistroBeast Restaurant Management System</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Complete restaurant management solution with POS, inventory, scheduling, and payment processing.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>Integrated tip calculations</li>
+                      <li>Table management</li>
+                      <li>Employee scheduling</li>
+                      <li>Delivery management</li>
+                      <li>Customizable menus</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">$129<span className="text-sm font-normal">/month</span></p>
+                      <p className="text-sm text-slate-500 mb-4">Plus transaction fees</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Add to Cart</Button>
+                      <Button variant="outline">
+                        <Link href="/pos-systems">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="ecom-ready">
+                <h3 className="text-xl font-semibold mr-auto">PaySurity ECom Ready</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">E-commerce integration package with shopping cart plugins, payment gateways, and fraud prevention.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>One-click checkout</li>
+                      <li>Multi-currency support</li>
+                      <li>Inventory synchronization</li>
+                      <li>Abandoned cart recovery</li>
+                      <li>Subscription billing</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">$89<span className="text-sm font-normal">/month</span></p>
+                      <p className="text-sm text-slate-500 mb-4">Plus transaction fees</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Add to Cart</Button>
+                      <Button variant="outline">
+                        <Link href="/industry-solutions">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="legaledge">
+                <h3 className="text-xl font-semibold mr-auto">PaySurity LegalEdge</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Practice management solution for law firms with trust accounting, billing, and client payment portals.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>IOLTA compliant trust accounting</li>
+                      <li>Automated invoice generation</li>
+                      <li>Client payment portals</li>
+                      <li>Retainer management</li>
+                      <li>Time tracking integration</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">$149<span className="text-sm font-normal">/month</span></p>
+                      <p className="text-sm text-slate-500 mb-4">Plus transaction fees</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Add to Cart</Button>
+                      <Button variant="outline">
+                        <Link href="/industry-solutions">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="medpay">
+                <h3 className="text-xl font-semibold mr-auto">PaySurityMedPay</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Healthcare payment solution with insurance verification, patient billing, and payment plans.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>HIPAA compliant</li>
+                      <li>Insurance eligibility verification</li>
+                      <li>Patient payment plans</li>
+                      <li>Automated claims processing</li>
+                      <li>Patient billing portal</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">$199<span className="text-sm font-normal">/month</span></p>
+                      <p className="text-sm text-slate-500 mb-4">Plus transaction fees</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Add to Cart</Button>
+                      <Button variant="outline">
+                        <Link href="/industry-solutions">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="pos-hardware">
+                <h3 className="text-xl font-semibold mr-auto">PaySurity POS Hardware</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Enterprise-grade POS hardware solutions with seamless software integration and support.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>NFC-enabled terminals</li>
+                      <li>Mobile card readers</li>
+                      <li>Receipt printers</li>
+                      <li>Cash drawers</li>
+                      <li>Customer displays</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">Custom Pricing</p>
+                      <p className="text-sm text-slate-500 mb-4">Contact for quote</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Request Quote</Button>
+                      <Button variant="outline">
+                        <Link href="/pos-systems">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-6">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="webcon">
+                <h3 className="text-xl font-semibold mr-auto">PaySurity WebCon</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Website payment integration for businesses needing simple online payment solutions.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>Payment buttons/links</li>
+                      <li>Hosted checkout pages</li>
+                      <li>Recurring billing options</li>
+                      <li>Multi-currency support</li>
+                      <li>Developer API access</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">$69<span className="text-sm font-normal">/month</span></p>
+                      <p className="text-sm text-slate-500 mb-4">Plus transaction fees</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Add to Cart</Button>
+                      <Button variant="outline">
+                        <Link href="/industry-solutions">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-7">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="merchant-services">
+                <h3 className="text-xl font-semibold mr-auto">PaySurity Merchant Services</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Comprehensive merchant account services with competitive rates and premium support.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>Next-day funding</li>
+                      <li>Chargeback protection</li>
+                      <li>Fraud monitoring</li>
+                      <li>Virtual terminal</li>
+                      <li>24/7 merchant support</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">2.5% + 30¢</p>
+                      <p className="text-sm text-slate-500 mb-4">Per transaction</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Apply Now</Button>
+                      <Button variant="outline">
+                        <Link href="/pricing">View Pricing</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-8">
+              <TrackedAccordionTrigger className="flex items-center" eventCategory="product" eventName="appointment-scheduler">
+                <h3 className="text-xl font-semibold mr-auto">PaySurity Appointment Scheduler</h3>
+              </TrackedAccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+                  <div className="col-span-2">
+                    <p className="mb-4">Complete scheduling solution with payment integration for service-based businesses.</p>
+                    <ul className="list-disc pl-5 mb-4">
+                      <li>Online booking system</li>
+                      <li>Automatic reminders</li>
+                      <li>Payment collection</li>
+                      <li>Staff scheduling</li>
+                      <li>Calendar integrations</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <p className="text-2xl font-bold mb-2">$59<span className="text-sm font-normal">/month</span></p>
+                      <p className="text-sm text-slate-500 mb-4">Plus transaction fees</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button>Add to Cart</Button>
+                      <Button variant="outline">
+                        <Link href="/industry-solutions">Learn More</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </TrackedAccordion>
+        </div>
+      </section>
+
+      {/* Industry solutions section */}
+      <section id="industries" className="py-20 bg-gradient-to-br from-neutral-50 to-neutral-100">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold mb-4">Boost ROI & Delight Shareholders</h2>
+            <p className="text-slate-600">
+              Tailored payment solutions for diverse industries with specific compliance needs
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="shadow-md hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="rounded-full bg-green-100 p-4 w-16 h-16 flex items-center justify-center mb-6">
+                  <Store className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="font-bold text-xl mb-2">Retail</h3>
+                <p className="text-slate-600 mb-4">
+                  Seamless in-store and online payment solutions with inventory management.
+                </p>
+                <Button variant="outline" className="w-full">
+                  <Link href="/industry-solutions">Learn More</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-md hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="rounded-full bg-blue-100 p-4 w-16 h-16 flex items-center justify-center mb-6">
+                  <CheckCircle2 className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="font-bold text-xl mb-2">Healthcare</h3>
+                <p className="text-slate-600 mb-4">
+                  HIPAA-compliant payment processing with patient billing capabilities.
+                </p>
+                <Button variant="outline" className="w-full">
+                  <Link href="/industry-solutions">Learn More</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-md hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="rounded-full bg-purple-100 p-4 w-16 h-16 flex items-center justify-center mb-6">
+                  <Building2 className="h-8 w-8 text-purple-600" />
+                </div>
+                <h3 className="font-bold text-xl mb-2">Legal</h3>
+                <p className="text-slate-600 mb-4">
+                  Trust account compliant payment solutions for law firms and practices.
+                </p>
+                <Button variant="outline" className="w-full">
+                  <Link href="/industry-solutions">Learn More</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-md hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="rounded-full bg-amber-100 p-4 w-16 h-16 flex items-center justify-center mb-6">
+                  <Clock className="h-8 w-8 text-amber-600" />
+                </div>
+                <h3 className="font-bold text-xl mb-2">Restaurants</h3>
+                <p className="text-slate-600 mb-4">
+                  Table service, delivery, and takeout payment solutions with tip management.
+                </p>
+                <Button variant="outline" className="w-full">
+                  <Link href="/industry-solutions">Learn More</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Digital Wallet Section */}
+      <section id="digital-wallet" className="py-20 bg-white">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold mb-6">Secure Digital Wallet Solutions for Organizational Expense Management, with Free Family Plans*</h2>
+              <p className="text-slate-600 mb-6">
+                Simplify expense tracking, manage multiple cards, and keep your finances secure with PaySurity's digital wallet technology.
+              </p>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                  <span>Secure card tokenization technology</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                  <span>Parent-child account relationships with spending controls</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                  <span>Expense categorization and reporting</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                  <span>Contactless payment capabilities</span>
+                </li>
+              </ul>
+              <p className="text-xs text-slate-500 mb-6">
+                * Family plans are free with any business subscription. See pricing for details.
+              </p>
+              <Button asChild>
+                <Link href="/digital-wallet">Explore Digital Wallet</Link>
+              </Button>
+            </div>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-xl shadow-lg">
+              <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+                <h3 className="font-bold text-lg mb-2">Expense Management Made Simple</h3>
+                <p className="text-slate-600 mb-4">
+                  Track expenses, set budgets, and generate reports with our intuitive dashboard.
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Corporate Plan</span>
+                  <span className="text-sm font-bold">$99/mo</span>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="font-bold text-lg mb-2">Family Wallet (Free*)</h3>
+                <p className="text-slate-600 mb-4">
+                  Create sub-accounts for family members with customizable spending limits.
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">With Business Subscription</span>
+                  <span className="text-sm font-bold text-green-600">Free</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-24 bg-white border-t border-gray-100">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">Trusted by businesses of every size</h2>
+            <p className="text-lg text-gray-600 text-center">
+              From startups to Fortune 500 companies, businesses trust PaySurity to power their payments infrastructure.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-16">
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm relative">
+              <div className="absolute top-6 right-6 text-purple-600">
+                <svg width="30" height="24" viewBox="0 0 30 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.7 0C8.7 0 6.5 1.4 5 4.2C3.6 7 2.9 10.4 3 14.5H5.2C5 10.9 5.4 8.1 6.3 6C7.3 3.9 8.8 2.9 10.7 2.9C11.5 2.9 12.1 3.2 12.7 3.7C13.2 4.3 13.5 5 13.5 5.9C13.5 6.9 13.3 7.7 12.8 8.4C12.3 9.1 11.6 9.7 10.6 10.3C9.2 11.1 8.1 12.1 7.3 13.2C6.5 14.3 6.1 15.7 6.1 17.3C6.1 18 6.2 18.6 6.3 19.1C6.4 19.6 6.6 20.1 6.9 20.5H9.6C9.2 19.8 9 18.9 9 17.9C9 16.9 9.2 16.1 9.7 15.4C10.2 14.7 10.9 14.1 11.9 13.5C13.3 12.7 14.4 11.8 15.1 10.6C15.9 9.4 16.3 8 16.3 6.3C16.3 4.4 15.7 2.9 14.4 1.7C13.1 0.6 11.7 0 11.7 0ZM25.4 0C22.4 0 20.2 1.4 18.8 4.2C17.3 7 16.6 10.4 16.7 14.5H18.9C18.7 10.9 19.1 8.1 20 6C21 3.9 22.5 2.9 24.4 2.9C25.2 2.9 25.8 3.2 26.4 3.7C26.9 4.3 27.2 5 27.2 5.9C27.2 6.9 27 7.7 26.5 8.4C26 9.1 25.3 9.7 24.3 10.3C22.9 11.1 21.8 12.1 21 13.2C20.2 14.3 19.8 15.7 19.8 17.3C19.8 18 19.9 18.6 20 19.1C20.1 19.6 20.3 20.1 20.6 20.5H23.3C22.9 19.8 22.7 18.9 22.7 17.9C22.7 16.9 22.9 16.1 23.4 15.4C23.9 14.7 24.6 14.1 25.6 13.5C27 12.7 28.1 11.8 28.8 10.6C29.6 9.4 30 8 30 6.3C30 4.4 29.4 2.9 28.1 1.7C26.8 0.6 25.4 0 25.4 0Z" fill="currentColor"/>
+                </svg>
+              </div>
+              <div className="mb-8">
+                <p className="text-gray-700 text-lg">
+                  BistroBeast Restaurant Management System completely transformed our operations. The integrated payment solution and inventory management saved us countless hours and improved our bottom line.
+                </p>
+              </div>
+              <div className="flex items-center">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 overflow-hidden">
+                  <span className="text-blue-700 font-bold text-xl">SM</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">Sean Murphy</h4>
+                  <p className="text-sm text-gray-500">CFO, Café Milano</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm relative">
+              <div className="absolute top-6 right-6 text-purple-600">
+                <svg width="30" height="24" viewBox="0 0 30 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.7 0C8.7 0 6.5 1.4 5 4.2C3.6 7 2.9 10.4 3 14.5H5.2C5 10.9 5.4 8.1 6.3 6C7.3 3.9 8.8 2.9 10.7 2.9C11.5 2.9 12.1 3.2 12.7 3.7C13.2 4.3 13.5 5 13.5 5.9C13.5 6.9 13.3 7.7 12.8 8.4C12.3 9.1 11.6 9.7 10.6 10.3C9.2 11.1 8.1 12.1 7.3 13.2C6.5 14.3 6.1 15.7 6.1 17.3C6.1 18 6.2 18.6 6.3 19.1C6.4 19.6 6.6 20.1 6.9 20.5H9.6C9.2 19.8 9 18.9 9 17.9C9 16.9 9.2 16.1 9.7 15.4C10.2 14.7 10.9 14.1 11.9 13.5C13.3 12.7 14.4 11.8 15.1 10.6C15.9 9.4 16.3 8 16.3 6.3C16.3 4.4 15.7 2.9 14.4 1.7C13.1 0.6 11.7 0 11.7 0ZM25.4 0C22.4 0 20.2 1.4 18.8 4.2C17.3 7 16.6 10.4 16.7 14.5H18.9C18.7 10.9 19.1 8.1 20 6C21 3.9 22.5 2.9 24.4 2.9C25.2 2.9 25.8 3.2 26.4 3.7C26.9 4.3 27.2 5 27.2 5.9C27.2 6.9 27 7.7 26.5 8.4C26 9.1 25.3 9.7 24.3 10.3C22.9 11.1 21.8 12.1 21 13.2C20.2 14.3 19.8 15.7 19.8 17.3C19.8 18 19.9 18.6 20 19.1C20.1 19.6 20.3 20.1 20.6 20.5H23.3C22.9 19.8 22.7 18.9 22.7 17.9C22.7 16.9 22.9 16.1 23.4 15.4C23.9 14.7 24.6 14.1 25.6 13.5C27 12.7 28.1 11.8 28.8 10.6C29.6 9.4 30 8 30 6.3C30 4.4 29.4 2.9 28.1 1.7C26.8 0.6 25.4 0 25.4 0Z" fill="currentColor"/>
+                </svg>
+              </div>
+              <div className="mb-8">
+                <p className="text-gray-700 text-lg">
+                  PaySurity's healthcare solution has streamlined our patient billing process while ensuring HIPAA compliance. The payment plans feature has significantly improved our collection rates.
+                </p>
+              </div>
+              <div className="flex items-center">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-4 overflow-hidden">
+                  <span className="text-purple-700 font-bold text-xl">EO</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">Erin O'Connor</h4>
+                  <p className="text-sm text-gray-500">Payroll Manager, Horizon Health</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm relative">
+              <div className="absolute top-6 right-6 text-purple-600">
+                <svg width="30" height="24" viewBox="0 0 30 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11.7 0C8.7 0 6.5 1.4 5 4.2C3.6 7 2.9 10.4 3 14.5H5.2C5 10.9 5.4 8.1 6.3 6C7.3 3.9 8.8 2.9 10.7 2.9C11.5 2.9 12.1 3.2 12.7 3.7C13.2 4.3 13.5 5 13.5 5.9C13.5 6.9 13.3 7.7 12.8 8.4C12.3 9.1 11.6 9.7 10.6 10.3C9.2 11.1 8.1 12.1 7.3 13.2C6.5 14.3 6.1 15.7 6.1 17.3C6.1 18 6.2 18.6 6.3 19.1C6.4 19.6 6.6 20.1 6.9 20.5H9.6C9.2 19.8 9 18.9 9 17.9C9 16.9 9.2 16.1 9.7 15.4C10.2 14.7 10.9 14.1 11.9 13.5C13.3 12.7 14.4 11.8 15.1 10.6C15.9 9.4 16.3 8 16.3 6.3C16.3 4.4 15.7 2.9 14.4 1.7C13.1 0.6 11.7 0 11.7 0ZM25.4 0C22.4 0 20.2 1.4 18.8 4.2C17.3 7 16.6 10.4 16.7 14.5H18.9C18.7 10.9 19.1 8.1 20 6C21 3.9 22.5 2.9 24.4 2.9C25.2 2.9 25.8 3.2 26.4 3.7C26.9 4.3 27.2 5 27.2 5.9C27.2 6.9 27 7.7 26.5 8.4C26 9.1 25.3 9.7 24.3 10.3C22.9 11.1 21.8 12.1 21 13.2C20.2 14.3 19.8 15.7 19.8 17.3C19.8 18 19.9 18.6 20 19.1C20.1 19.6 20.3 20.1 20.6 20.5H23.3C22.9 19.8 22.7 18.9 22.7 17.9C22.7 16.9 22.9 16.1 23.4 15.4C23.9 14.7 24.6 14.1 25.6 13.5C27 12.7 28.1 11.8 28.8 10.6C29.6 9.4 30 8 30 6.3C30 4.4 29.4 2.9 28.1 1.7C26.8 0.6 25.4 0 25.4 0Z" fill="currentColor"/>
+                </svg>
+              </div>
+              <div className="mb-8">
+                <p className="text-gray-700 text-lg">
+                  PaySurity's legal practice solution has been a game-changer for our firm. The trust accounting features ensure compliance, and the client payment portal has improved cash flow tremendously.
+                </p>
+              </div>
+              <div className="flex items-center">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4 overflow-hidden">
+                  <span className="text-green-700 font-bold text-xl">DR</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">David Rosenberg</h4>
+                  <p className="text-sm text-gray-500">Partner, Rosenberg & Associates</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 border-t border-gray-100">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Ready to modernize your payments?
+            </h2>
+            <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
+              Join thousands of businesses using PaySurity to process payments and drive growth.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="font-medium bg-purple-600 hover:bg-purple-700 px-8">Start now</Button>
+                </DialogTrigger>
+                <ScheduleDemoForm onSuccess={() => setIsScheduleModalOpen(false)} />
+              </Dialog>
+              <Link href="/pricing">
+                <Button size="lg" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8">
+                  Contact sales
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-gray-50 py-12 text-gray-600">
         <div className="container mx-auto px-4 md:px-6">
