@@ -6,7 +6,6 @@ import { TrackedAccordion, TrackedAccordionTrigger } from "@/lib/analytics";
 import { Accordion, AccordionContent, AccordionItem } from "@/components/ui/accordion";
 import { ScheduleDemoForm } from "@/components/schedule-demo-form";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 
 import { 
   CreditCard, 
@@ -27,126 +26,10 @@ import {
   Globe,
   Smartphone,
   PiggyBank,
-  ArrowUpRight,
-  Newspaper,
-  ExternalLink,
-  Loader2
+  ArrowUpRight
 } from "lucide-react";
 import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover, SiApple, SiGoogle } from "react-icons/si";
-import { useState, useEffect } from "react";
-import { fetchPaymentNews, type NewsItem } from "@/lib/newsapi";
-
-// PaymentNewsSection Component
-const PaymentNewsSection = () => {
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      setIsLoading(true);
-      try {
-        const news = await fetchPaymentNews();
-        // Only display up to 3 news items on the home page
-        setNewsItems(news.slice(0, 3));
-      } catch (err) {
-        console.error('Error fetching payment news:', err);
-        setError('Could not load latest industry news. Please try again later.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchNews();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <Newspaper className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-        <p className="text-gray-500">{error}</p>
-      </div>
-    );
-  }
-
-  if (newsItems.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Newspaper className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-        <p className="text-gray-500">No industry news available at the moment.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {newsItems.map((item, index) => (
-        <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className={`h-2 ${
-              item.category === "Innovation" ? "bg-blue-500" :
-              item.category === "Regulation" ? "bg-amber-500" :
-              item.category === "Market Trends" ? "bg-green-500" :
-              "bg-red-500"
-            }`}></div>
-            {item.urlToImage && (
-              <div className="relative h-40 w-full overflow-hidden">
-                <img 
-                  src={item.urlToImage} 
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    // Hide image on error
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-            <div className="p-6">
-              <div className="mb-3">
-                <Badge variant="outline" className={`
-                  ${item.category === "Innovation" ? "text-blue-500 border-blue-200" :
-                    item.category === "Regulation" ? "text-amber-500 border-amber-200" :
-                    item.category === "Market Trends" ? "text-green-500 border-green-200" :
-                    "text-red-500 border-red-200"}
-                `}>
-                  {item.category}
-                </Badge>
-              </div>
-              <h3 className="text-xl font-bold mb-2 line-clamp-2">{item.title}</h3>
-              <p className="text-gray-600 mb-4 line-clamp-3">{item.summary}</p>
-              <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>{item.date}</span>
-                </div>
-                <div>{item.source}</div>
-              </div>
-              <a 
-                href={item.url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-purple-600 font-medium flex items-center hover:underline"
-              >
-                Read full article <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-};
+import { useState } from "react";
 
 export default function LandingPage() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -582,28 +465,6 @@ export default function LandingPage() {
             <Link to="/industry-solutions">
               <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
                 See all industry solutions
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-      
-      {/* Payment Industry News Section */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-3xl mx-auto mb-12 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Payment Industry News</h2>
-            <p className="text-lg text-gray-600">
-              Stay informed with the latest developments in the payment processing industry.
-            </p>
-          </div>
-          
-          <PaymentNewsSection />
-          
-          <div className="text-center mt-12">
-            <Link to="/blog/payment-industry-news">
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                View All Industry News <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </div>
