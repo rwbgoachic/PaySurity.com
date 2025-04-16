@@ -110,8 +110,215 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root route is now handled by React routing
-// This allows the React app to handle all routes including the landing page
+// EMERGENCY FIX: Directly handle root route with a hardcoded response
+app.get('/', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>PaySurity - Emergency Landing Page</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
+        }
+        h1, h2, h3 {
+          color: #5925DC;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid #eee;
+        }
+        .logo {
+          font-size: 1.5rem;
+          font-weight: bold;
+          background: linear-gradient(90deg, #5925DC, #8A63D2);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
+        .nav {
+          display: flex;
+          gap: 1.5rem;
+        }
+        .nav a {
+          color: #666;
+          text-decoration: none;
+        }
+        .nav a:hover {
+          color: #333;
+        }
+        .buttons {
+          display: flex;
+          gap: 1rem;
+        }
+        .btn {
+          padding: 0.5rem 1rem;
+          border-radius: 4px;
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .btn-primary {
+          background-color: #5925DC;
+          color: white;
+        }
+        .btn-secondary {
+          background-color: white;
+          color: #5925DC;
+          border: 1px solid #5925DC;
+        }
+        .hero {
+          text-align: center;
+          padding: 4rem 0;
+          background-color: #f9f9ff;
+          border-radius: 8px;
+          margin-bottom: 3rem;
+        }
+        .hero h1 {
+          font-size: 2.5rem;
+          margin-bottom: 1rem;
+        }
+        .hero p {
+          font-size: 1.25rem;
+          color: #666;
+          max-width: 800px;
+          margin: 0 auto 2rem auto;
+        }
+        .features {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 2rem;
+          margin-bottom: 3rem;
+        }
+        .feature {
+          padding: 1.5rem;
+          border-radius: 8px;
+          background-color: white;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .feature-icon {
+          display: inline-block;
+          width: 3rem;
+          height: 3rem;
+          background-color: #f0e7ff;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+          position: relative;
+        }
+        .feature-icon::before {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 1.5rem;
+          height: 1.5rem;
+          background-color: #5925DC;
+          mask-size: cover;
+        }
+        .feature h3 {
+          margin-top: 0;
+        }
+        .section-title {
+          text-align: center;
+          margin-bottom: 2.5rem;
+        }
+        .section-title h2 {
+          font-size: 2rem;
+          margin-bottom: 0.5rem;
+        }
+        .section-title p {
+          color: #666;
+          max-width: 700px;
+          margin: 0 auto;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo">PaySurity</div>
+        <div class="nav">
+          <a href="/products">Products</a>
+          <a href="/solutions">Solutions</a>
+          <a href="/pricing">Pricing</a>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+        </div>
+        <div class="buttons">
+          <a href="/auth" class="btn btn-secondary">Log In</a>
+          <a href="/auth" class="btn btn-primary">Sign Up</a>
+        </div>
+      </div>
+
+      <div class="hero">
+        <h1>Advanced Payment Solutions for Modern Businesses</h1>
+        <p>PaySurity provides integrated payment processing, financial management, and workflow optimization tools to streamline your business operations.</p>
+        <div class="buttons">
+          <a href="/solutions" class="btn btn-primary">Explore Solutions</a>
+          <a href="/contact" class="btn btn-secondary">Contact Sales</a>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <h2>Core Features</h2>
+        <p>Discover how our comprehensive platform can help you manage payments, optimize workflows, and grow your business.</p>
+      </div>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon"></div>
+          <h3>Payment Processing</h3>
+          <p>Process payments securely with multiple gateway options, fraud protection, and PCI compliance.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"></div>
+          <h3>Financial Management</h3>
+          <p>Comprehensive tools for invoicing, accounting, and financial reporting to keep your business on track.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"></div>
+          <h3>Workflow Optimization</h3>
+          <p>Automate routine tasks, streamline approvals, and optimize business processes for maximum efficiency.</p>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <h2>Our POS Solutions</h2>
+        <p>Specialized point-of-sale systems designed for different industries</p>
+      </div>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon"></div>
+          <h3>BistroBeast</h3>
+          <p>Complete restaurant management system with tableside ordering, kitchen display, and staff management.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"></div>
+          <h3>GrocerEase</h3>
+          <p>Grocery and convenience store POS with inventory management and customer loyalty programs.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"></div>
+          <h3>ECom Ready Retail</h3>
+          <p>Omnichannel retail solution that integrates in-store and online sales with inventory tracking.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+});
 
 // Static test page for debugging connectivity issues
 app.get('/static-test', (req, res) => {
@@ -285,15 +492,10 @@ app.use((req, res, next) => {
 
 // Body parser already set up above
 
-// Domain handling middleware
+// DISABLED: Domain handling middleware
+// We're no longer redirecting to paysurity.com to fix the landing page issue
 app.use((req, res, next) => {
-  const host = req.get('host');
-  // Allow both paysurity.com and the replit.app domain
-  if (host && (host.includes('paysurity.com') || host.includes('replit.app'))) {
-    next();
-  } else {
-    res.redirect(`https://paysurity.com${req.url}`);
-  }
+  next();
 });
 
 // Add global options handler for CORS preflight requests
