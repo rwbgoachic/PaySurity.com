@@ -688,18 +688,7 @@ p {
   position: relative;
   display: inline-block;
   z-index: 1;
-}
-
-.hero-content h1 .text-accent::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 30%;
-  background-color: rgba(99, 102, 241, 0.2);
-  z-index: -1;
-  transform: skewX(-10deg);
+  color: var(--indigo-400);
 }
 
 .hero-description {
@@ -762,17 +751,6 @@ section:nth-child(odd) {
 .section-title h2 .text-accent {
   color: var(--indigo-400);
   font-weight: 700;
-}
-
-.section-title h2 .text-accent::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 30%;
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.1));
-  z-index: -1;
 }
 
 .section-description {
@@ -1427,8 +1405,8 @@ textarea {
 .btn-gradient-primary {
   background-color: var(--indigo-600);
   color: var(--white);
-  border: 1px solid var(--indigo-700);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
 }
 
 .btn-gradient-primary:hover {
@@ -1444,8 +1422,8 @@ textarea {
 .btn-gradient-secondary {
   background-color: var(--cyan-600);
   color: var(--white);
-  border: 1px solid var(--cyan-700);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
 }
 
 .btn-gradient-secondary:hover {
@@ -1461,11 +1439,11 @@ textarea {
 .btn-gradient-outline {
   background-color: transparent;
   color: var(--gray-200);
-  border: 1px solid var(--indigo-500);
+  border: none;
 }
 
 .btn-gradient-outline:hover {
-  background-color: rgba(79, 70, 229, 0.1);
+  background-color: rgba(79, 70, 229, 0.05);
   color: var(--white);
 }
 
