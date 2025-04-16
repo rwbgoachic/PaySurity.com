@@ -5,8 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
-// Force using April 11 version explicitly
-import LandingPage from "@/pages/landing-page-april11";
+// Force using completely new landing page
+import LandingPage from "@/pages/landing-page-new";
 import ProjectDependenciesPage from "@/pages/project-dependencies-page";
 import PricingPage from "@/pages/pricing-page";
 import IndustrySolutionsPage from "@/pages/industry-solutions-page";
@@ -89,9 +89,10 @@ function Router() {
   return (
     <Switch>
       {/* Main marketing site routes */}
+      {/* NEW COMPLETELY DIFFERENT ROUTE - No caching */}
       <Route path="/" component={() => {
-        // Force remount with unique key to bust any caching issues
-        return <LandingPage key={Date.now()} />;
+        console.log("Loading new landing page - " + new Date().toISOString());
+        return <LandingPage key={"forced-new-"+Date.now()} />;
       }} />
       <Route path="/products" component={ProductsPage} />
       <Route path="/pricing" component={PricingPage} />
