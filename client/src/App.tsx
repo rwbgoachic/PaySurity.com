@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
-import LandingPage from "@/pages/landing-page.tsx";
+import LandingPage from "@/pages/landing-page";
 import ProjectDependenciesPage from "@/pages/project-dependencies-page";
 import PricingPage from "@/pages/pricing-page";
 import IndustrySolutionsPage from "@/pages/industry-solutions-page";
