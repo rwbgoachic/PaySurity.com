@@ -417,6 +417,9 @@ app.use((req, res, next) => {
 
   // Add a special route for client-side routing paths that should not be handled by the API
   app.get([
+    // Root path explicitly listed to ensure React routing
+    '/',
+    
     // Main routes
     '/partners', '/affiliates', '/partner-portal', '/affiliate-portal',
     '/products', '/pricing', '/industry-solutions', '/digital-wallet', '/pos-systems',
@@ -457,6 +460,10 @@ app.use((req, res, next) => {
   // Always use development mode to ensure proper React routing
   console.log('Setting NODE_ENV to development for proper React routing');
   process.env.NODE_ENV = 'development';
+  
+  // Explicitly set Express app environment to development
+  app.set('env', 'development');
+  console.log('Current Express environment:', app.get('env'));
   
   try {
     // Always use setupVite to ensure React handles routing properly
