@@ -6,6 +6,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
+import { getStandaloneTemplate } from "./template-engine";
 import { z } from "zod";
 import { 
   insertWalletSchema, 

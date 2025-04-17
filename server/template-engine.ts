@@ -26,6 +26,14 @@ function getTemplate(templatePath: string): string {
 }
 
 /**
+ * Read a standalone template without header/footer
+ */
+export function getStandaloneTemplate(templateName: string): string {
+  const templatePath = path.join(process.cwd(), 'public', 'templates', templateName);
+  return getTemplate(templatePath);
+}
+
+/**
  * Render a page with header and footer templates
  */
 export function renderPage(content: string, title?: string): string {
