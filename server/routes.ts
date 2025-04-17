@@ -2975,6 +2975,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to complete savings goal" });
     }
   });
+  
+  // BistroBeast POS Routes
+  app.get("/bistrobeast/cashier", (req, res) => {
+    try {
+      const cashierTemplate = getStandaloneTemplate("bistrobeast-cashier.html");
+      res.send(cashierTemplate);
+    } catch (error) {
+      console.error("Error serving BistroBeast cashier template:", error);
+      res.status(500).send("Error loading POS system");
+    }
+  });
 
   return httpServer;
 }
