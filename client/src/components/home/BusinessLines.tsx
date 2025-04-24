@@ -1,60 +1,51 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { businessLines } from '../../data/businessLines';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '../ui/Card';
+import Section from '../ui/Section';
+import { ArrowRight } from 'lucide-react';
 
 const BusinessLines = () => {
-  const businessLines = [
-    {
-      title: 'Merchant Services',
-      description: 'Comprehensive payment processing solutions for businesses of all sizes.',
-      icon: '💳',
-      link: '/solutions/merchants'
-    },
-    {
-      title: 'BistroBeast POS',
-      description: 'Powerful restaurant management system with integrated payments.',
-      icon: '🍽️',
-      link: '/solutions/restaurant'
-    },
-    {
-      title: 'GrocerEase POS',
-      description: 'Streamlined checkout and inventory management for grocery stores.',
-      icon: '🛒',
-      link: '/solutions/grocery'
-    },
-    {
-      title: 'Digital Wallet',
-      description: 'Secure digital wallet for consumers with multi-currency support.',
-      icon: '💼',
-      link: '/digital-wallet'
-    }
-  ];
+  const navigate = useNavigate();
+
+  const handleLearnMore = (url: string) => {
+    navigate(url);
+    window.scrollTo(0, 0);
+  };
 
   return (
-    <div className="bg-gray-950 py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Complete Payment Ecosystem</h2>
-          <p className="mt-6 text-lg leading-8 text-gray-300">
-            Discover our full suite of payment solutions designed to streamline your business operations.
-          </p>
-        </div>
-        <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-4">
-          {businessLines.map((item, index) => (
-            <div key={index} className="flex flex-col bg-gray-900 p-8 shadow-md hover:shadow-xl transition-all duration-300 rounded-xl border border-gray-800">
-              <div className="text-4xl mb-4">{item.icon}</div>
-              <h3 className="text-lg font-semibold leading-8 text-white">{item.title}</h3>
-              <p className="mt-2 text-base leading-7 text-gray-300 flex-grow">{item.description}</p>
-              <Link
-                to={item.link}
-                className="mt-6 inline-flex items-center text-sm font-semibold text-blue-400 hover:text-blue-300"
-              >
-                Learn more <span aria-hidden="true" className="ml-1">→</span>
-              </Link>
-            </div>
-          ))}
-        </div>
+    <Section className="bg-gray-50">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Solutions</h2>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Tailored payment and management systems for your industry
+        </p>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {businessLines.map((business, index) => (
+          <Card key={index} className="overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-lg border-t-4 border-t-cyan-500">
+            <CardHeader>
+              <CardTitle>{business.name}</CardTitle>
+              <CardDescription>{business.shortDescription}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <p className="text-gray-700">
+                {business.description}
+              </p>
+            </CardContent>
+            <CardFooter className="border-t border-gray-100 pt-4">
+              <button 
+                onClick={() => handleLearnMore(business.url)}
+                className="text-cyan-600 flex items-center hover:underline"
+              >
+                Learn more <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </Section>
   );
 };
 
