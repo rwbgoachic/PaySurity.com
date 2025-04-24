@@ -1,136 +1,120 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
-// Theme type definitions
-export type ThemeVariant = 'professional' | 'tint' | 'vibrant';
-export type ThemeAppearance = 'light' | 'dark' | 'system';
-
-export interface ThemeSettings {
+export type ThemeSettings = {
   primary: string;
-  variant: ThemeVariant;
-  appearance: ThemeAppearance;
+  variant: 'professional' | 'tint' | 'vibrant';
+  appearance: 'light' | 'dark' | 'system';
   radius: number;
-}
+};
 
-// Context interface
 interface ThemeContextType {
   theme: ThemeSettings;
-  setTheme: (theme: ThemeSettings) => void;
-  previewMode: boolean;
-  setPreviewMode: (active: boolean) => void;
   previewTheme: ThemeSettings | null;
+  previewMode: boolean;
+  setTheme: (theme: ThemeSettings) => void;
   setPreviewTheme: (theme: ThemeSettings | null) => void;
+  setPreviewMode: (mode: boolean) => void;
   saveTheme: () => void;
   resetPreview: () => void;
-  isDarkMode: boolean;
 }
 
 // Default theme settings
 const defaultTheme: ThemeSettings = {
   primary: 'hsl(222, 72%, 59%)',
-  variant: 'vibrant',
+  variant: 'professional',
   appearance: 'light',
   radius: 0.5,
 };
 
-// Create context with default values
-const ThemeContext = createContext<ThemeContextType>({
-  theme: defaultTheme,
-  setTheme: () => {},
-  previewMode: false,
-  setPreviewMode: () => {},
-  previewTheme: null,
-  setPreviewTheme: () => {},
-  saveTheme: () => {},
-  resetPreview: () => {},
-  isDarkMode: false,
-});
+// Create the context with a default undefined value
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Provider component
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Main theme state
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeSettings>(defaultTheme);
-  // Preview theme state (only active during preview mode)
-  const [previewTheme, setPreviewTheme] = useState<ThemeSettings | null>(null);
-  // Preview mode toggle
-  const [previewMode, setPreviewMode] = useState<boolean>(false);
+  const [previewTheme, setPreviewThemeState] = useState<ThemeSettings | null>(null);
+  const [previewMode, setPreviewModeState] = useState<boolean>(false);
   
-  // Derived state for dark mode
-  const isDarkMode = (previewMode && previewTheme 
-    ? previewTheme.appearance === 'dark' 
-    : theme.appearance === 'dark') 
-    || (theme.appearance === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-  // Load theme from localStorage or theme.json on initial render
+  // Load theme from localStorage on initial render
   useEffect(() => {
-    const fetchTheme = async () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
       try {
-        // Try to get theme from localStorage first
-        const storedTheme = localStorage.getItem('paysurity-theme');
-        if (storedTheme) {
-          setThemeState(JSON.parse(storedTheme));
-          return;
-        }
-        
-        // If not in localStorage, fetch from theme.json
-        const response = await fetch('/theme.json');
-        const themeData = await response.json();
-        setThemeState(themeData);
+        const parsedTheme = JSON.parse(savedTheme);
+        setThemeState(parsedTheme);
       } catch (error) {
-        console.error('Failed to load theme:', error);
-        // Fallback to default theme if both methods fail
+        console.error('Failed to parse saved theme:', error);
+        // Fall back to default theme
+        setThemeState(defaultTheme);
       }
-    };
-    
-    fetchTheme();
+    }
   }, []);
-
-  // Apply theme changes to document when theme or preview changes
+  
+  // Apply theme CSS variables whenever theme or previewTheme changes
   useEffect(() => {
-    const activeTheme = previewMode && previewTheme ? previewTheme : theme;
+    const currentTheme = previewMode && previewTheme ? previewTheme : theme;
+    const htmlElement = document.documentElement;
     
-    // Update CSS variables and classes based on theme
-    document.documentElement.style.setProperty('--radius', `${activeTheme.radius}rem`);
-    
-    // Handle appearance
-    if (activeTheme.appearance === 'dark' || 
-        (activeTheme.appearance === 'system' && 
-         window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    // Extract HSL values from primary color string
+    const primaryMatch = currentTheme.primary.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
+    if (primaryMatch) {
+      const h = primaryMatch[1];
+      const s = primaryMatch[2];
+      const l = primaryMatch[3];
+      
+      // Set primary color
+      htmlElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
+      
+      // Set theme variant styles
+      if (currentTheme.variant === 'professional') {
+        // Professional variant uses more muted colors
+        htmlElement.style.setProperty('--secondary', '210 40% 96.1%');
+        htmlElement.style.setProperty('--accent', '215 25% 27%');
+      } else if (currentTheme.variant === 'tint') {
+        // Tint variant uses lighter variations of the primary color
+        htmlElement.style.setProperty('--secondary', `${h} 30% 96%`);
+        htmlElement.style.setProperty('--accent', `${h} 40% 90%`);
+      } else if (currentTheme.variant === 'vibrant') {
+        // Vibrant variant uses more saturated colors
+        htmlElement.style.setProperty('--secondary', `${Number(h) + 40} ${s}% 90%`);
+        htmlElement.style.setProperty('--accent', `${Number(h) - 40} ${s}% 85%`);
+      }
+      
+      // Set appearance (light/dark mode)
+      if (currentTheme.appearance === 'light') {
+        htmlElement.classList.remove('dark');
+      } else if (currentTheme.appearance === 'dark') {
+        htmlElement.classList.add('dark');
+      } else if (currentTheme.appearance === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          htmlElement.classList.add('dark');
+        } else {
+          htmlElement.classList.remove('dark');
+        }
+      }
+      
+      // Set border radius
+      htmlElement.style.setProperty('--radius', `${currentTheme.radius}rem`);
     }
-    
-    // Extract RGB components from HSL to set primary color
-    // This is a simplified approximation - in a real app, you'd use a proper color conversion
-    const hslMatch = activeTheme.primary.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-    if (hslMatch) {
-      const [_, h, s, l] = hslMatch.map(Number);
-      document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
-    }
-    
-    // Handle other theme properties like variant
-    document.documentElement.setAttribute('data-theme-variant', activeTheme.variant);
-    
   }, [theme, previewTheme, previewMode]);
-
-  // Save theme changes
+  
+  // Functions to update theme state
   const setTheme = (newTheme: ThemeSettings) => {
     setThemeState(newTheme);
-    localStorage.setItem('paysurity-theme', JSON.stringify(newTheme));
-    
-    // Optionally send to server to update theme.json
-    fetch('/api/theme', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newTheme),
-    }).catch(error => {
-      console.error('Failed to save theme to server:', error);
-    });
+    localStorage.setItem('theme', JSON.stringify(newTheme));
   };
-
-  // Save preview theme as the active theme
+  
+  const setPreviewTheme = (newTheme: ThemeSettings | null) => {
+    setPreviewThemeState(newTheme);
+  };
+  
+  const setPreviewMode = (mode: boolean) => {
+    setPreviewModeState(mode);
+    if (!mode) {
+      setPreviewTheme(null);
+    }
+  };
+  
   const saveTheme = () => {
     if (previewTheme) {
       setTheme(previewTheme);
@@ -138,25 +122,23 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setPreviewTheme(null);
     }
   };
-
-  // Reset preview to current theme
+  
   const resetPreview = () => {
     setPreviewTheme(null);
     setPreviewMode(false);
   };
-
+  
   return (
     <ThemeContext.Provider
       value={{
         theme,
-        setTheme,
-        previewMode,
-        setPreviewMode,
         previewTheme,
+        previewMode,
+        setTheme,
         setPreviewTheme,
+        setPreviewMode,
         saveTheme,
         resetPreview,
-        isDarkMode
       }}
     >
       {children}
@@ -165,4 +147,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 };
 
 // Custom hook to use the theme context
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = (): ThemeContextType => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

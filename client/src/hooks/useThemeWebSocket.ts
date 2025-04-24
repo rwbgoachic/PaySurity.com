@@ -1,121 +1,120 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useTheme, ThemeSettings } from '../contexts/ThemeContext';
 
-interface ThemeMessage {
-  type: 'theme_update' | 'theme_reset' | 'theme_preview' | 'theme_save';
-  theme?: ThemeSettings;
-  clientId?: string;
-}
+// WebSocket message types
+type WebSocketMessage = {
+  type: 'PREVIEW_THEME' | 'SAVE_THEME' | 'RESET_THEME';
+  payload?: ThemeSettings;
+};
 
-export function useThemeWebSocket() {
-  const { setPreviewTheme, previewTheme, theme } = useTheme();
-  const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<ThemeMessage | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+export const useThemeWebSocket = () => {
+  const { setPreviewTheme, setPreviewMode, theme, previewTheme, resetPreview, setTheme } = useTheme();
   
   // Initialize WebSocket connection
   useEffect(() => {
     // Create WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws/theme`;
-    
-    console.log('Connecting to theme WebSocket:', wsUrl);
-    
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const wsUrl = `${protocol}//${window.location.host}/ws/theme`;
+    const socket = new WebSocket(wsUrl);
     
     // Connection opened
-    ws.addEventListener('open', () => {
-      console.log('Theme WebSocket connection established');
-      setIsConnected(true);
-      setError(null);
+    socket.addEventListener('open', (event) => {
+      console.log('WebSocket connection established for theme preview');
     });
     
     // Listen for messages
-    ws.addEventListener('message', (event) => {
+    socket.addEventListener('message', (event) => {
       try {
-        const message: ThemeMessage = JSON.parse(event.data);
-        console.log('Theme WebSocket message received:', message);
+        const message: WebSocketMessage = JSON.parse(event.data);
         
-        setLastMessage(message);
-        
-        // Handle different message types
-        if (message.type === 'theme_update' && message.theme) {
-          setPreviewTheme(message.theme);
+        switch (message.type) {
+          case 'PREVIEW_THEME':
+            if (message.payload) {
+              setPreviewTheme(message.payload);
+              setPreviewMode(true);
+            }
+            break;
+          case 'SAVE_THEME':
+            if (previewTheme) {
+              setTheme(previewTheme);
+              resetPreview();
+            }
+            break;
+          case 'RESET_THEME':
+            resetPreview();
+            break;
+          default:
+            console.warn('Unknown message type:', message.type);
         }
-      } catch (err) {
-        console.error('Error parsing WebSocket message:', err);
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
       }
     });
     
-    // Handle errors
-    ws.addEventListener('error', (event) => {
-      console.error('Theme WebSocket error:', event);
-      setError('WebSocket connection error');
+    // Socket closed
+    socket.addEventListener('close', (event) => {
+      console.log('WebSocket connection closed for theme preview');
     });
     
-    // Connection closed
-    ws.addEventListener('close', (event) => {
-      console.log('Theme WebSocket connection closed:', event.code, event.reason);
-      setIsConnected(false);
-      
-      // Try to reconnect after a delay if the connection was established before
-      if (isConnected) {
-        setTimeout(() => {
-          console.log('Attempting to reconnect to Theme WebSocket...');
-          // The effect cleanup will handle the old connection, and the effect will run again
-        }, 3000);
-      }
+    // Socket error
+    socket.addEventListener('error', (event) => {
+      console.error('WebSocket error:', event);
     });
     
-    // Cleanup function to close WebSocket connection when component unmounts
+    // Clean up WebSocket connection on unmount
     return () => {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close();
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
       }
     };
-  }, [setPreviewTheme]);
+  }, [setPreviewTheme, setPreviewMode, resetPreview, setTheme, previewTheme]);
   
-  // Function to send preview theme to other clients
-  const sendPreviewTheme = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && previewTheme) {
-      const message: ThemeMessage = {
-        type: 'theme_preview',
-        theme: previewTheme
+  // Send preview theme through WebSocket
+  const sendPreviewTheme = useCallback(() => {
+    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/theme`);
+    
+    socket.addEventListener('open', () => {
+      const message: WebSocketMessage = {
+        type: 'PREVIEW_THEME',
+        payload: previewTheme || theme
       };
-      wsRef.current.send(JSON.stringify(message));
-    }
-  };
+      
+      socket.send(JSON.stringify(message));
+      socket.close();
+    });
+  }, [previewTheme, theme]);
   
-  // Function to save theme
-  const broadcastThemeSave = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && previewTheme) {
-      const message: ThemeMessage = {
-        type: 'theme_save',
-        theme: previewTheme
+  // Broadcast theme save through WebSocket
+  const broadcastThemeSave = useCallback(() => {
+    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/theme`);
+    
+    socket.addEventListener('open', () => {
+      const message: WebSocketMessage = {
+        type: 'SAVE_THEME'
       };
-      wsRef.current.send(JSON.stringify(message));
-    }
-  };
+      
+      socket.send(JSON.stringify(message));
+      socket.close();
+    });
+  }, []);
   
-  // Function to reset theme
-  const broadcastThemeReset = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message: ThemeMessage = {
-        type: 'theme_reset'
+  // Broadcast theme reset through WebSocket
+  const broadcastThemeReset = useCallback(() => {
+    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/theme`);
+    
+    socket.addEventListener('open', () => {
+      const message: WebSocketMessage = {
+        type: 'RESET_THEME'
       };
-      wsRef.current.send(JSON.stringify(message));
-    }
-  };
+      
+      socket.send(JSON.stringify(message));
+      socket.close();
+    });
+  }, []);
   
   return {
-    isConnected,
-    lastMessage,
-    error,
     sendPreviewTheme,
     broadcastThemeSave,
     broadcastThemeReset
   };
-}
+};
