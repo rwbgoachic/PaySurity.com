@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard';
 import MerchantServices from './pages/solutions/MerchantServices';
 import RestaurantPOS from './pages/solutions/RestaurantPOS';
 import GroceryPOS from './pages/solutions/GroceryPOS';
+import ThemePreviewTest from './pages/ThemePreviewTest';
 import ChatWidget from './components/chat/ChatWidget';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/verify" element={<Verify />} />
+            <Route path="/theme-preview-test" element={<ThemePreviewTest />} />
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />

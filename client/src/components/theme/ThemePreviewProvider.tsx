@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ThemeProvider } from '../../contexts/ThemeContext';
 import { useThemeWebSocket } from '../../hooks/useThemeWebSocket';
 import ThemePreviewPanel from './ThemePreviewPanel';
