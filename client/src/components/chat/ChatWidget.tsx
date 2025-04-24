@@ -99,11 +99,11 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-[9999]">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-primary text-white rounded-lg p-4 shadow-lg hover:bg-primary/90 transition-colors"
+          className="bg-blue-600 text-white rounded-lg p-4 shadow-xl hover:bg-blue-700 transition-colors"
         >
           <MessageSquare className="h-6 w-6" />
         </button>
