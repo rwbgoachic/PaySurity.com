@@ -1,35 +1,41 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import Section from '../ui/Section';
 
 const CTA = () => {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate('/solutions/merchants');
+  };
+
+  const handleScheduleDemo = () => {
+    navigate('/contact');
+  };
+
   return (
-    <div className="bg-gradient-to-r from-blue-800 to-blue-600 py-16 sm:py-24">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl lg:max-w-4xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Ready to transform your payment experience?
-          </h2>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-blue-100">
-            Join thousands of businesses that trust PaySurity for their payment processing needs.
-            Get started today and see the difference.
-          </p>
-          <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Link
-              to="/signup"
-              className="rounded-md bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              Get started
-            </Link>
-            <Link
-              to="/contact"
-              className="text-sm font-semibold leading-6 text-white hover:text-blue-200"
-            >
-              Contact sales <span aria-hidden="true">→</span>
-            </Link>
-          </div>
+    <Section className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white">
+      <div className="text-center max-w-3xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Business?</h2>
+        <p className="text-xl text-blue-100 mb-8">
+          Join thousands of businesses that trust PaySurity for their payment processing and management needs. Get started today with our all-in-one solution.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button 
+            className="h-11 px-6 text-base inline-flex items-center justify-center font-medium bg-white text-blue-700 border-2 border-white hover:bg-blue-50 w-full sm:w-auto"
+            onClick={handleGetStarted}
+          >
+            Get Started with Merchant Services
+          </button>
+          <button 
+            className="h-11 px-6 text-base inline-flex items-center justify-center font-medium bg-transparent text-white border-2 border-white hover:bg-blue-600 hover:border-blue-600 w-full sm:w-auto"
+            onClick={handleScheduleDemo}
+          >
+            Schedule a Demo
+          </button>
         </div>
       </div>
-    </div>
+    </Section>
   );
 };
 
