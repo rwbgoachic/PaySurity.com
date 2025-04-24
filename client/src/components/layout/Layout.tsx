@@ -1,55 +1,64 @@
 import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Layout = () => {
   const { isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+  const isProductPage = location.pathname.startsWith('/solutions/');
   
   return (
-    <div className="flex min-h-screen flex-col bg-black text-white">
+    <div className="flex flex-col min-h-screen font-sans">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-gray-800 bg-black/70 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent py-4">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center">
-            <Link to="/" className="text-2xl font-bold text-blue-500">
+            <Link to="/" className="text-2xl font-bold text-white">
               PaySurity
             </Link>
           </div>
           
           <nav className="hidden md:flex space-x-8">
-            <Link to="/solutions/merchants" className="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">
+            <Link to="/solutions/merchants" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
               Merchant Services
             </Link>
-            <Link to="/solutions/restaurant" className="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">
-              Restaurant POS
+            <Link to="/solutions/restaurant" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
+              BistroBeast POS
             </Link>
-            <Link to="/solutions/grocery" className="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">
-              Grocery POS
+            <Link to="/solutions/grocery" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
+              GrocerEase POS
             </Link>
-            <Link to="/pricing" className="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">
+            <Link to="/pricing" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
               Pricing
+            </Link>
+            <Link to="/about" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
+              About
+            </Link>
+            <Link to="/contact" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
+              Contact
             </Link>
           </nav>
           
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="text-sm font-medium text-gray-300 hover:text-blue-500 transition-colors">
+                <Link to="/dashboard" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
                   Dashboard
                 </Link>
                 <button 
                   onClick={() => logout()}
-                  className="rounded-md px-4 py-2 text-sm font-medium text-white hover:text-blue-300 transition-colors"
+                  className="h-10 px-4 text-sm inline-flex items-center justify-center font-medium bg-transparent border-2 border-white text-white hover:bg-white/10"
                 >
                   Log out
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="rounded-md px-4 py-2 text-sm font-medium text-white hover:text-blue-300 transition-colors">
+                <Link to="/login" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
                   Log in
                 </Link>
-                <Link to="/signup" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                <Link to="/signup" className="h-10 px-4 text-sm inline-flex items-center justify-center font-medium bg-blue-600 text-white border-2 border-blue-600 hover:bg-blue-700 hover:border-blue-700">
                   Get Started
                 </Link>
               </>
@@ -59,7 +68,7 @@ const Layout = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className={`flex-grow ${!isHomePage && !isProductPage ? 'mt-16' : ''}`}>
         <Outlet />
       </main>
       
@@ -85,12 +94,12 @@ const Layout = () => {
                   </li>
                   <li>
                     <Link to="/solutions/restaurant" className="text-sm text-gray-400 hover:text-blue-500">
-                      Restaurant POS
+                      BistroBeast POS
                     </Link>
                   </li>
                   <li>
                     <Link to="/solutions/grocery" className="text-sm text-gray-400 hover:text-blue-500">
-                      Grocery POS
+                      GrocerEase POS
                     </Link>
                   </li>
                 </ul>
