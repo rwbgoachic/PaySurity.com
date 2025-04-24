@@ -65,6 +65,7 @@ export default function App() {
     <AuthProvider>
       <Router />
       <Toaster />
+      <ChatWidget />
     </AuthProvider>
   );
 }
