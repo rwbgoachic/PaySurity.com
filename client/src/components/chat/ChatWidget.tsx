@@ -15,9 +15,6 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Debug log to verify the component is loading
-  console.log('ChatWidget component loaded');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,7 +67,7 @@ export default function ChatWidget() {
       });
 
       if (!response.ok) throw new Error('Failed to get response');
-
+      
       const data = await response.json();
 
       setMessages(prev => [
@@ -99,19 +96,19 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999]">
+    <div className="fixed bottom-4 right-4 z-50">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-blue-600 text-white rounded-lg p-4 shadow-xl hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-white rounded-lg p-4 shadow-lg hover:bg-blue-700 transition-colors"
         >
           <MessageSquare className="h-6 w-6" />
         </button>
       )}
 
       {isOpen && (
-        <div className="bg-background rounded-lg shadow-xl w-96 max-w-full flex flex-col border">
-          <div className="p-4 bg-primary text-white rounded-t-lg flex justify-between items-center">
+        <div className="bg-white rounded-lg shadow-xl w-96 max-w-full flex flex-col">
+          <div className="p-4 bg-blue-600 text-white rounded-t-lg flex justify-between items-center">
             <h3 className="font-semibold">PaySurity Support</h3>
             <button
               onClick={() => setIsOpen(false)}
@@ -123,7 +120,7 @@ export default function ChatWidget() {
 
           <div className="flex-1 p-4 h-96 overflow-y-auto">
             {messages.length === 0 && (
-              <div className="text-center text-muted-foreground mt-8">
+              <div className="text-center text-gray-500 mt-8">
                 <p>👋 Hi! How can I help you today?</p>
                 <p className="text-sm mt-2">Ask me anything about PaySurity's services.</p>
               </div>
@@ -140,8 +137,8 @@ export default function ChatWidget() {
                     <div
                       className={`rounded-lg p-3 ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-900'
                       }`}
                     >
                       {message.content}
@@ -150,20 +147,20 @@ export default function ChatWidget() {
                       <div className="flex gap-2 mt-1">
                         <button
                           onClick={() => handleFeedback(message.id, 'positive')}
-                          className="text-muted-foreground hover:text-green-600"
+                          className="text-gray-500 hover:text-green-600"
                         >
                           <ThumbsUp className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleFeedback(message.id, 'negative')}
-                          className="text-muted-foreground hover:text-red-600"
+                          className="text-gray-500 hover:text-red-600"
                         >
                           <ThumbsDown className="h-4 w-4" />
                         </button>
                       </div>
                     )}
                     {message.feedback && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Thanks for your feedback!
                       </p>
                     )}
@@ -172,8 +169,8 @@ export default function ChatWidget() {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg p-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="bg-gray-100 rounded-lg p-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                   </div>
                 </div>
               )}
@@ -188,13 +185,13 @@ export default function ChatWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your message..."
-                className="flex-1 rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 disabled={loading}
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="bg-primary text-primary-foreground rounded-md px-4 py-2 hover:bg-primary/90 disabled:opacity-50"
+                className="bg-blue-600 text-white rounded-md px-4 py-2 hover:bg-blue-700 disabled:opacity-50"
               >
                 <Send className="h-5 w-5" />
               </button>

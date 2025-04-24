@@ -14,6 +14,26 @@ const feedbackSchema = z.object({
   feedback: z.enum(['positive', 'negative']),
 });
 
+// Feedback endpoint
+chatRouter.post('/feedback', (req, res) => {
+  try {
+    const validatedData = feedbackSchema.parse(req.body);
+    
+    // In a production environment, we would store this in the database
+    console.log('Received feedback:', validatedData);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Chat feedback API error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    
+    res.status(500).json({ error: 'Failed to process feedback' });
+  }
+});
+
 // Temporary responses for demo purposes - in production, would use a real AI service
 const knowledgeBase = [
   { keyword: 'payment', response: 'PaySurity offers secure payment processing solutions with competitive rates, real-time fraud protection, and seamless integration with your existing systems.' },
@@ -62,24 +82,6 @@ chatRouter.post('/', (req, res) => {
   }
 });
 
-// Feedback endpoint
-chatRouter.post('/feedback', (req, res) => {
-  try {
-    const validatedData = feedbackSchema.parse(req.body);
-    
-    // Here we would store the feedback in a database
-    console.log('Received feedback:', validatedData);
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Feedback API error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid feedback data', details: error.errors });
-    }
-    
-    res.status(500).json({ error: 'Failed to process feedback' });
-  }
-});
+
 
 export default chatRouter;
