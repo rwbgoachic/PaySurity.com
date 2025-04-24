@@ -15,13 +15,7 @@ import Dashboard from './pages/Dashboard';
 import MerchantServices from './pages/solutions/MerchantServices';
 import RestaurantPOS from './pages/solutions/RestaurantPOS';
 import GroceryPOS from './pages/solutions/GroceryPOS';
-import PayrollSolution from './pages/solutions/PayrollSolution';
-import PayrollPricing from './pages/solutions/PayrollPricing';
-import AddClient from './pages/dashboard/admin/AddClient';
-import ClientList from './pages/dashboard/admin/ClientList';
-import AuditLogList from './pages/dashboard/admin/AuditLogList';
 import ChatWidget from './components/chat/ChatWidget';
-import Transactions from './pages/dashboard/Transactions';
 
 function App() {
   // Log to console for debugging
@@ -44,8 +38,6 @@ function App() {
             <Route path="/solutions/merchants" element={<MerchantServices />} />
             <Route path="/solutions/restaurant" element={<RestaurantPOS />} />
             <Route path="/solutions/grocery" element={<GroceryPOS />} />
-            <Route path="/solutions/payroll" element={<PayrollSolution />} />
-            <Route path="/solutions/payroll/pricing" element={<PayrollPricing />} />
           </Route>
           <Route
             path="/dashboard/*"
@@ -54,12 +46,7 @@ function App() {
                 <Dashboard />
               </ProtectedRoute>
             }
-          >
-            <Route path="admin/clients" element={<ClientList />} />
-            <Route path="admin/clients/add" element={<AddClient />} />
-            <Route path="admin/audit-logs" element={<AuditLogList />} />
-            <Route path="transactions" element={<Transactions />} />
-          </Route>
+          />
         </Routes>
       </Router>
       <ChatWidget />
