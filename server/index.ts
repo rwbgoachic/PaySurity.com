@@ -29,13 +29,25 @@ const app = express();
 // Enable compression for all requests
 app.use(compression());
 
-// Secure app with helmet
+// Secure app with helmet - modified to better support WebSockets and Vite HMR
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'", "https://*.replit.dev", "wss://*.replit.dev"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.stripe.com", "wss://*.replit.dev", "https://*.replit.dev"],
-      connectSrc: ["'self'", "api.stripe.com", "newsapi.org", "*.paysurity.com", "wss://*.replit.dev", "https://*.replit.dev", "ws://localhost:*", "ws://*", "wss://*"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.stripe.com", "https://*.replit.dev", "replit.com"],
+      connectSrc: [
+        "'self'", 
+        "api.stripe.com", 
+        "newsapi.org", 
+        "*.paysurity.com", 
+        "https://*.replit.dev", 
+        "wss://*.replit.dev", 
+        "ws://localhost:*", 
+        "ws://0.0.0.0:*",
+        "wss://0.0.0.0:*", 
+        "ws://*", 
+        "wss://*"
+      ],
       frameSrc: ["'self'", "*.stripe.com"],
       imgSrc: ["'self'", "data:", "*.stripe.com", "*.newsapi.org", "*.paysurity.com", "https://*.replit.dev", "*"],
       styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "https://*.replit.dev", "*"],
@@ -48,6 +60,9 @@ app.use(helmet({
   },
   xssFilter: true,
   noSniff: false, // Allow proper MIME type detection for Vite HMR websockets
+  crossOriginEmbedderPolicy: false, // Allow cross-origin iframes and resources
+  crossOriginOpenerPolicy: false, // Needed for some third-party integrations
+  crossOriginResourcePolicy: false, // Allow loading resources from different origins
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   hsts: {
     maxAge: 15552000, // 180 days in seconds
