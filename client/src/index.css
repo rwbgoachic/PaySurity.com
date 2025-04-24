@@ -2,350 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Interactive elements */
-.clickable {
-  @apply cursor-pointer transition-colors duration-200;
-}
-
-.clickable:hover {
-  @apply text-purple-600;
-}
-
-/* Service cards */
-.service-card {
-  @apply cursor-pointer transition-all duration-200;
-}
-
-.service-card:hover {
-  @apply shadow-md;
-}
-
-/* Enhanced touch interface support */
-.bistro-touch-target {
-  touch-action: manipulation;
-  min-height: 44px; /* iOS recommended minimum */
-  min-width: 44px; /* iOS recommended minimum */
-  user-select: none; /* Prevent text selection during taps */
-  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS */
-}
-
-/* Bistro kitchen display specific styles */
-.bistro-order-item {
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.05);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  transition: all 0.2s ease;
-}
-
-.bistro-order-item:active {
-  transform: scale(0.98);
-}
-
-.kitchen-order-card {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.kitchen-order-card:active {
-  transform: scale(0.99);
-}
-
-/* Responsive adjustments for touch devices */
-@media (max-width: 640px) {
-  .bistro-touch-target {
-    min-height: 48px; /* Larger for smaller screens */
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-  
-  .kitchen-display-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .kitchen-display-header > div:last-child {
-    margin-top: 8px;
-    width: 100%;
-  }
-}
-
 @layer base {
   :root {
-    --animation-duration: 0.2s;
-  }
-  
-  * {
-    @apply border-border;
-  }
-
-  html {
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-    height: 100%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --primary: 208 100% 40%;
+    --primary-foreground: 210 40% 98%;
+    --primary-hover: 208 100% 35%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary-hover: 210 40% 92%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 215 20.2% 65.1%;
+    --radius: 0.5rem;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    min-height: 100%;
-    height: 100%;
-    overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+    @apply bg-background text-foreground antialiased;
   }
 
-  img, picture, video, canvas, svg {
-    @apply block max-w-full;
+  ::selection {
+    @apply bg-primary/10;
   }
 
-  /* Improve touch targets on mobile */
-  button, a, input, select, textarea {
-    @apply focus-visible:outline-primary focus-visible:outline-2 focus-visible:outline-offset-2;
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    * {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 }
 
-/* Improved text rendering */
 @layer components {
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  .text-pretty {
-    text-wrap: pretty;
-  }
-}
-
-/* Mobile optimizations */
-@layer utilities {
-  /* Safe area insets for mobile devices with notches */
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .safe-left {
-    padding-left: env(safe-area-inset-left);
-  }
-  
-  .safe-right {
-    padding-right: env(safe-area-inset-right);
-  }
-  
-  /* Better touch targets for mobile */
-  .touchable {
-    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
-  }
-  
-  /* Mobile-specific optimizations */
-  .mobile-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-background border-t z-50 py-2 safe-bottom flex justify-around;
-  }
-  
-  .pos-button {
-    @apply min-h-[60px] text-lg font-medium shadow-sm;
-  }
-  
-  /* Optimizations for POS systems */
-  .pos-container {
-    @apply min-h-[100dvh] overflow-hidden flex flex-col;
-  }
-  
-  .pos-content {
-    @apply flex-1 overflow-y-auto overscroll-contain pb-safe;
-  }
-  
-  /* BistroBeast specific optimizations */
-  .bistro-touch-target {
-    @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
-  }
-  
-  .bistro-order-item {
-    @apply relative p-3 rounded-md border transition-all;
-  }
-  
-  .bistro-menu-item {
-    @apply px-4 py-3 rounded-md border cursor-pointer transition-all hover:bg-background/50;
-  }
-  
-  .bistro-table {
-    @apply cursor-pointer transition-all flex flex-col items-center justify-center p-2 border rounded-md;
-  }
-  
-  /* Kitchen display optimizations with enhanced visual feedback */
-  .kitchen-order-card {
-    @apply border shadow-sm hover:shadow-md;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  /* Kitchen status indicators with improved contrast and animation */
-  .kitchen-status-new {
-    @apply bg-blue-100 text-blue-800 font-medium;
-  }
-  
-  .kitchen-status-preparing {
-    @apply bg-amber-100 text-amber-800 font-medium border border-amber-200;
-    animation: preparing-pulse 2s infinite;
-  }
-  
-  .kitchen-status-ready {
-    @apply bg-green-100 text-green-800 font-medium border border-green-200;
-    animation: ready-appear 0.5s ease-out;
-  }
-  
-  .kitchen-status-modifying {
-    @apply bg-purple-100 text-purple-800 font-medium border border-purple-200;
-    animation: modifying-flash 2s infinite;
-  }
-  
-  /* Kitchen button styles for improved visibility in kitchen environments */
-  .kitchen-button-preparing {
-    @apply bg-amber-600 hover:bg-amber-700 text-white border-amber-700 transition-all;
-    transform-origin: center;
-  }
-  .kitchen-button-preparing:active {
-    @apply bg-amber-800;
-    transform: scale(0.97);
+  .container {
+    @apply max-w-screen-xl px-4 mx-auto sm:px-6 lg:px-8;
   }
 
-  .kitchen-button-ready {
-    @apply bg-green-600 hover:bg-green-700 text-white border-green-700 transition-all;
-    transform-origin: center;
-  }
-  .kitchen-button-ready:active {
-    @apply bg-green-800;
-    transform: scale(0.97);
+  .btn {
+    @apply inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
   }
 
-  .kitchen-button-served {
-    @apply bg-blue-50 border-blue-200 text-blue-800;
-  }
-  
-  .kitchen-button-modifying {
-    @apply bg-purple-600 hover:bg-purple-700 text-white border-purple-700 transition-all;
-    transform-origin: center;
-  }
-  .kitchen-button-modifying:active {
-    @apply bg-purple-800;
-    transform: scale(0.97);
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary-hover;
   }
 
-  .kitchen-button-item-start {
-    @apply bg-background hover:bg-amber-100 border-amber-200 transition-all;
-    transform-origin: center;
-  }
-  .kitchen-button-item-start:active {
-    @apply bg-amber-200;
-    transform: scale(0.97);
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary-hover;
   }
 
-  .kitchen-button-item-ready {
-    @apply bg-amber-100 hover:bg-green-100 border-amber-300 transition-all;
-    transform-origin: center;
-  }
-  .kitchen-button-item-ready:active {
-    @apply bg-green-200;
-    transform: scale(0.97);
-  }
-  
-  /* Larger touch areas for kitchen tabs with better active state */
-  .kitchen-tabs .bistro-touch-target {
-    @apply min-h-[50px] min-w-[90px] text-base;
-  }
-  
-  /* Kitchen animation keyframes */
-  @keyframes preparing-pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.8;
-    }
-  }
-  
-  @keyframes ready-appear {
-    0% {
-      opacity: 0.7;
-      transform: scale(0.98);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-  
-  @keyframes modifying-flash {
-    0%, 100% {
-      opacity: 1;
-      background-color: rgba(216, 180, 254, 0.4);
-    }
-    50% {
-      opacity: 0.8;
-      background-color: rgba(192, 132, 252, 0.5);
-    }
-  }
-  
-  /* Enhanced touch feedback on mobile devices */
-  @media (hover: none) {
-    .kitchen-order-card:active {
-      @apply shadow-md;
-      transform: scale(0.98);
-    }
-    
-    .bistro-order-item:active {
-      transform: scale(0.97);
-      @apply bg-gray-50;
-    }
-  }
-  
-  /* Digital wallet specific styling */
-  .wallet-card {
-    @apply relative overflow-hidden rounded-2xl shadow-lg p-5 bg-gradient-to-br;
-  }
-  
-  /* Optimized grid layouts for different screen sizes */
-  .responsive-grid {
-    @apply grid grid-cols-1 gap-4;
-    @apply sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
-  }
-  
-  /* Optimized images with aspect ratio */
-  .optimized-image {
-    @apply w-full h-auto aspect-video object-cover;
-  }
-  
-  /* Skeleton loading states */
-  .skeleton {
-    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
-  }
-  
-  /* Fluid typography for better responsiveness */
-  .fluid-text-sm {
-    font-size: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-  }
-  
-  .fluid-text-base {
-    font-size: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
-  }
-  
-  .fluid-text-lg {
-    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
-  }
-  
-  .fluid-text-xl {
-    font-size: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
-  }
-  
-  .fluid-text-2xl {
-    font-size: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  .section {
+    @apply py-12 md:py-20;
   }
 }
