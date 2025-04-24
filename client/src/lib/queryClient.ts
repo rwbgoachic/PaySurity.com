@@ -1,78 +1,51 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
 import { getCSRFToken } from "./csrf";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    try {
-      // Try to parse as JSON to get a better error message
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error || errorData.message || `${res.status}: ${res.statusText}`);
-    } catch (e) {
-      // If parsing fails, use the original text
-      throw new Error(`${res.status}: ${text}`);
-    }
-  }
+interface ApiRequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  headers?: Record<string, string>;
+  body?: any;
 }
-
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  // Default headers
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json"
-  };
-  
-  // Add CSRF token for non-GET requests
-  if (method !== 'GET') {
-    const csrfToken = await getCSRFToken();
-    if (csrfToken) {
-      headers["X-CSRF-Token"] = csrfToken;
-    }
-  }
-  
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
-    },
-    mutations: {
-      retry: false,
     },
   },
 });
+
+export const apiRequest = async <T>(url: string, options: ApiRequestOptions = {}): Promise<T> => {
+  const { method = 'GET', headers = {}, body } = options;
+  
+  try {
+    // Get CSRF token for non-GET requests
+    let csrfToken = '';
+    if (method !== 'GET') {
+      csrfToken = await getCSRFToken();
+    }
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken && { 'CSRF-Token': csrfToken }),
+        ...headers,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `API request failed with status ${response.status}`);
+    }
+    
+    return await response.json() as T;
+  } catch (error) {
+    console.error(`API request to ${url} failed:`, error);
+    throw error;
+  }
+};
