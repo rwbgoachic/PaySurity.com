@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
+import ThemePreviewProvider from './components/theme/ThemePreviewProvider';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -24,34 +25,36 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginForm />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/verify" element={<Verify />} />
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/solutions/merchants" element={<MerchantServices />} />
-            <Route path="/solutions/restaurant" element={<RestaurantPOS />} />
-            <Route path="/solutions/grocery" element={<GroceryPOS />} />
-          </Route>
-          <Route
-            path="/dashboard/*"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
-      <ChatWidget />
-      <Toaster position="top-right" />
-    </AuthProvider>
+    <ThemePreviewProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/verify" element={<Verify />} />
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/solutions/merchants" element={<MerchantServices />} />
+              <Route path="/solutions/restaurant" element={<RestaurantPOS />} />
+              <Route path="/solutions/grocery" element={<GroceryPOS />} />
+            </Route>
+            <Route
+              path="/dashboard/*"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+        <ChatWidget />
+        <Toaster position="top-right" />
+      </AuthProvider>
+    </ThemePreviewProvider>
   );
 }
 
