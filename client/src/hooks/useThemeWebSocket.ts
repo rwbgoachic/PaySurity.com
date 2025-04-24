@@ -114,7 +114,7 @@ export const useThemeWebSocket = () => {
       const clientId = localStorage.getItem('themeClientId') || 'unknown-client';
       const message: WebSocketMessage = {
         type: 'theme_save',
-        theme: previewTheme,
+        theme: previewTheme || undefined,
         clientId
       };
       

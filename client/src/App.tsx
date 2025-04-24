@@ -17,6 +17,7 @@ import MerchantServices from './pages/solutions/MerchantServices';
 import RestaurantPOS from './pages/solutions/RestaurantPOS';
 import GroceryPOS from './pages/solutions/GroceryPOS';
 import ThemePreviewTest from './pages/ThemePreviewTest';
+import WebSocketTest from './pages/WebSocketTest';
 import ChatWidget from './components/chat/ChatWidget';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/verify" element={<Verify />} />
             <Route path="/theme-preview-test" element={<ThemePreviewTest />} />
+            <Route path="/websocket-test" element={<WebSocketTest />} />
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
