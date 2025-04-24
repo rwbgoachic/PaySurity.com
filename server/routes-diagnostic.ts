@@ -1,10 +1,15 @@
 import { Router, Express } from 'express';
 import { createServer, type Server } from "http";
 import path from 'path';
+import { setupThemeWebsocket } from './services/theme-websocket';
+import themeRoutes from './routes/theme';
 
 // Create a simple diagnostic-only routes file
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = Router();
+  
+  // Add theme API routes
+  app.use('/api', themeRoutes);
   
   // Add a simple diagnostic route
   router.get('/diagnostic', (req, res) => {
@@ -162,5 +167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create and return an HTTP server
   const server = createServer(app);
   app.set('host', '0.0.0.0');
+  
+  // Setup WebSocket for theme preview
+  setupThemeWebsocket(server);
+  
   return server;
 }
