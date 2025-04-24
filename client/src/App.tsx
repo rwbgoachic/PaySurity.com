@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/providers/auth-provider";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import ChatWidget from "./components/chat/ChatWidget";
 
 // DIRECT APPROACH - Using our simplified dark landing page
 import DirectDarkLanding from "./pages/direct-dark-landing";

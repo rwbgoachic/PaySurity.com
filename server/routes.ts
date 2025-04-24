@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { generateSitemap } from "./sitemap";
 import { getStandaloneTemplate } from "./template-engine";
 import { z } from "zod";
+import chatRouter from "./services/chat";
 import { 
   insertWalletSchema, 
   insertTransactionSchema, 
@@ -2986,6 +2987,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).send("Error loading POS system");
     }
   });
+
+  // Chat API Routes
+  app.use("/api/chat", chatRouter);
 
   return httpServer;
 }

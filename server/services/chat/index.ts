@@ -15,23 +15,23 @@ const feedbackSchema = z.object({
 });
 
 // Temporary responses for demo purposes - in production, would use a real AI service
-const knowledgeBase = new Map([
-  ['payment', 'PaySurity offers secure payment processing solutions with competitive rates, real-time fraud protection, and seamless integration with your existing systems.'],
-  ['digital wallet', 'Our digital wallet solution allows customers to securely store payment information, make quick payments, and manage funds across multiple currencies.'],
-  ['pos', 'BistroBeast and GrocerEase are our specialized POS systems designed for restaurants and grocery stores, with features like inventory management, order tracking, and sales analytics.'],
-  ['legal', 'PaySurity\'s legal billing solution helps law firms manage client billing, trust accounts (IOLTA), and practice management in a single integrated platform.'],
-  ['pricing', 'Our pricing is transparent with no hidden fees. We offer various plans for businesses of all sizes, from startups to enterprise solutions.'],
-  ['security', 'Security is our top priority. We use industry-leading encryption, tokenization, and fraud detection to keep your financial data safe.'],
-]);
+const knowledgeBase = [
+  { keyword: 'payment', response: 'PaySurity offers secure payment processing solutions with competitive rates, real-time fraud protection, and seamless integration with your existing systems.' },
+  { keyword: 'digital wallet', response: 'Our digital wallet solution allows customers to securely store payment information, make quick payments, and manage funds across multiple currencies.' },
+  { keyword: 'pos', response: 'BistroBeast and GrocerEase are our specialized POS systems designed for restaurants and grocery stores, with features like inventory management, order tracking, and sales analytics.' },
+  { keyword: 'legal', response: 'PaySurity\'s legal billing solution helps law firms manage client billing, trust accounts (IOLTA), and practice management in a single integrated platform.' },
+  { keyword: 'pricing', response: 'Our pricing is transparent with no hidden fees. We offer various plans for businesses of all sizes, from startups to enterprise solutions.' },
+  { keyword: 'security', response: 'Security is our top priority. We use industry-leading encryption, tokenization, and fraud detection to keep your financial data safe.' },
+];
 
 // Simple AI response generator
 function generateResponse(question: string): string {
   const lowerQuestion = question.toLowerCase();
   
   // Check if the question contains any of our keywords
-  for (const [keyword, response] of knowledgeBase.entries()) {
-    if (lowerQuestion.includes(keyword)) {
-      return response;
+  for (const entry of knowledgeBase) {
+    if (lowerQuestion.includes(entry.keyword)) {
+      return entry.response;
     }
   }
   
