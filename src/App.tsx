@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import Header from './components/Header';
+import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -18,12 +20,7 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-black">
-          <header className="bg-black text-white p-4">
-            <nav className="container mx-auto">
-              {/* Basic header content */}
-              <h1 className="text-xl font-bold">Paysurity</h1>
-            </nav>
-          </header>
+          <Header />
           <main>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -53,12 +50,7 @@ function App() {
               />
             </Routes>
           </main>
-          <footer className="bg-black text-white p-4 mt-auto">
-            <div className="container mx-auto">
-              {/* Basic footer content */}
-              <p className="text-center">&copy; 2025 Paysurity. All rights reserved.</p>
-            </div>
-          </footer>
+          <Footer />
         </div>
       </Router>
     </AuthProvider>

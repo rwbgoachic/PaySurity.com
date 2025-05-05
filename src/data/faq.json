@@ -1,0 +1,68 @@
+{
+  "categories": [
+    {
+      "name": "General",
+      "description": "Common questions about our services",
+      "items": [
+        {
+          "question": "What payment methods do you support?",
+          "answer": "We support all major credit cards, debit cards, digital wallets (Apple Pay, Google Pay), and ACH transfers.",
+          "category": "payments",
+          "tags": ["payments", "methods"],
+          "lastUpdated": "2024-03-15"
+        },
+        {
+          "question": "How secure are your payment solutions?",
+          "answer": "Our platform uses industry-standard encryption, is PCI DSS compliant, and includes fraud detection systems.",
+          "category": "security",
+          "tags": ["security", "compliance"],
+          "lastUpdated": "2024-03-15"
+        }
+      ]
+    },
+    {
+      "name": "Merchant Services",
+      "description": "Questions about our merchant services offerings",
+      "items": [
+        {
+          "question": "What are your processing fees?",
+          "answer": "Our processing fees vary based on your business volume and type. Contact us for a custom quote.",
+          "category": "pricing",
+          "tags": ["fees", "pricing"],
+          "lastUpdated": "2024-03-15"
+        },
+        {
+          "question": "How long does merchant onboarding take?",
+          "answer": "Most merchants can be onboarded within 1-2 business days after providing all required documentation.",
+          "category": "onboarding",
+          "tags": ["onboarding", "setup"],
+          "lastUpdated": "2024-03-15"
+        }
+      ]
+    },
+    {
+      "name": "Technical Support",
+      "description": "Technical questions and troubleshooting",
+      "items": [
+        {
+          "question": "How do I integrate your payment gateway?",
+          "answer": "We provide comprehensive API documentation and SDKs for major programming languages. Our support team can guide you through the integration process.",
+          "category": "integration",
+          "tags": ["integration", "api"],
+          "lastUpdated": "2024-03-15"
+        },
+        {
+          "question": "What happens if there's a payment failure?",
+          "answer": "Our system automatically retries failed payments and provides detailed error messages. You'll receive notifications for any issues requiring attention.",
+          "category": "troubleshooting",
+          "tags": ["errors", "support"],
+          "lastUpdated": "2024-03-15"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "lastUpdated": "2024-03-15",
+    "version": "1.0.0"
+  }
+}
