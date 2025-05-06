@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Calculator, Clock, FileText, Shield, Users, Wallet, BarChart as ChartBar, Calendar, Globe, Book, Bell, Lock } from 'lucide-react';
 import FeatureCard from '../components/FeatureCard';
 import Testimonials from '../components/Testimonials';
+import { CookieBanner } from '@paysurity/ui';
 
 const features = [
   {
@@ -90,6 +91,7 @@ const testimonials = [
 export default function PayrollServices() {
   return (
     <div className="relative isolate pt-24">
+      <CookieBanner />
       <div className="py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div 
